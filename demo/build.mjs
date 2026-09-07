@@ -11,13 +11,13 @@ import { writeFileSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const here = dirname(new URL(import.meta.url).pathname);
-const { people, content, events, sessions, signUps } = await import(
+const { people, content, events, sessions, signUps, access } = await import(
   join(here, "../server/dist/data/seed.js")
 );
 
 const html = readFileSync(join(here, "hub.template.html"), "utf8").replace(
   "__SEED__",
-  JSON.stringify({ people, content, events, sessions, signUps }),
+  JSON.stringify({ people, content, events, sessions, signUps, access }),
 );
 
 const out = join(here, "forecasters-hub.html");

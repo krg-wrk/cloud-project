@@ -43,6 +43,10 @@
     --kind-critique: #9c6b16;
     --kind-training: #2f5f9e;
 
+    /* Things only the signed-in person sees — kept clear of every shared hue. */
+    --mine: #8e3b74;
+    --review: #c2571a;
+
     --sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     --mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
@@ -77,6 +81,8 @@
       --kind-lunch-and-learn: #57b3ae;
       --kind-critique: #dcab5b;
       --kind-training: #7aa8dd;
+      --mine: #e08cc4;
+      --review: #eb9a5c;
       color-scheme: dark;
     }
   }
@@ -107,6 +113,8 @@
     --kind-lunch-and-learn: #57b3ae;
     --kind-critique: #dcab5b;
     --kind-training: #7aa8dd;
+    --mine: #e08cc4;
+    --review: #eb9a5c;
     color-scheme: dark;
   }
 
@@ -1162,6 +1170,178 @@
     margin-top: 0;
   }
 
+  /* ---- Notes, reminders, peer review ------------------------------------- */
+
+  .role-line {
+    font-size: 11px;
+    line-height: 1.45;
+    color: var(--ink-mid);
+  }
+
+  .note-composer {
+    padding: 14px 15px;
+    margin-bottom: 16px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+  }
+
+  .note-input {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-family: var(--sans);
+    font-size: 13.5px;
+    line-height: 1.55;
+    resize: vertical;
+  }
+
+  .composer-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 10px;
+  }
+
+  .steer {
+    flex: 1;
+    min-width: 190px;
+    padding: 7px 9px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-size: 12.5px;
+  }
+
+  /* An AI draft is marked while it is still a draft, not only once saved. */
+  .ai-banner {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-left: 3px solid var(--mine);
+    background: color-mix(in srgb, var(--mine) 8%, transparent);
+    font-size: 12.5px;
+  }
+
+  .note-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .note {
+    padding: 13px 15px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+  }
+
+  .note-ai {
+    border-left: 3px solid var(--mine);
+  }
+
+  .note-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 12.5px;
+  }
+
+  .note-when {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+
+  .note-actions {
+    margin-left: auto;
+  }
+
+  .note-actions .toggle {
+    padding: 3px 8px;
+    font-size: 11.5px;
+  }
+
+  .note-body {
+    white-space: pre-wrap;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+
+  .mark-button {
+    width: 100%;
+    text-align: left;
+    border-top: none;
+    border-right: none;
+    border-bottom: none;
+    font: inherit;
+    font-family: var(--sans);
+    font-size: 11px;
+    cursor: pointer;
+  }
+
+  .peer-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .peer-form .field select,
+  .peer-form .field input {
+    width: 100%;
+    min-width: 0;
+    padding: 7px 9px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+  }
+
+  .entry-form input,
+  .entry-form select {
+    padding: 7px 9px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+  }
+
+  .steps-list {
+    margin: 0;
+    padding-left: 20px;
+    max-width: 64ch;
+    color: var(--ink-mid);
+    font-size: 13.5px;
+    line-height: 1.7;
+  }
+
+  .steps-list li {
+    margin-bottom: 6px;
+  }
+
+  .feed-address {
+    padding: 16px 17px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    background: var(--paper);
+  }
+
+  .feed-url {
+    display: block;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    background: var(--ground);
+    font-family: var(--mono);
+    font-size: 12px;
+    word-break: break-all;
+  }
+
   /* ---- Learning ---------------------------------------------------------- */
 
   .session {
@@ -1415,9 +1595,10 @@
 <div class="demo-note">
   <strong>Proof of concept</strong>
   <span
-    >Sample schedule, not live data. The address bar below is part of the demo &mdash; watch it
-    change as you move around. Workshop sign-ups are real and shared: they save, and anyone
-    else on this page sees them.</span
+    >Sample schedule, not live data. Two things are real: the address bar below changes as you
+    move around, and what you write &mdash; notes, reminders, peer reviews, workshop sign-ups
+    &mdash; saves and is visible to anyone else on this page. Switch account at the bottom left
+    to see the view follow whoever is signed in.</span
   >
 </div>
 
@@ -1439,8 +1620,9 @@
     </a>
     <nav id="nav"></nav>
     <div class="rail-foot">
-      <div class="as-label">Viewing as</div>
+      <div class="as-label">Signed in as (demo)</div>
       <select id="as"></select>
+      <div class="role-line" id="role-line"></div>
       <div class="swatch-note">
         <i></i>
         <span>Accent: Future Dusk<br />Coloro 129-35-18</span>
@@ -1492,7 +1674,8 @@
   const esc = (s) =>
     String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
-  const person = (id) => people.find((p) => p.id === id);
+  /** Falls back to the first account, so an unknown id cannot break a render. */
+  const person = (id) => people.find((p) => p.id === id) ?? people[0];
   const nameOf = (id) => person(id)?.name ?? "Unassigned";
 
   function hue(id) {
@@ -1568,7 +1751,59 @@
     return `<span class="chip" style="--c:${colour}"><i></i>${label}</span>`;
   }
 
-  /* ---- sign-ups --------------------------------------------------------- */
+  /* ---- who is signed in ------------------------------------------------- */
+
+  /**
+   * The access rows — the sheet the commissioning managers maintain. Only
+   * exceptions need a row; everyone else on the team gets a forecaster's view.
+   * Same rules as the server, so the demo behaves like the real thing.
+   */
+  const ACCESS = new Map(
+    (DATA.access ?? []).map((row) => [row.email.toLowerCase(), row]),
+  );
+
+  function viewer() {
+    const p = person(viewerId);
+    const row = ACCESS.get((p.email ?? "").toLowerCase());
+    const role =
+      row?.role ?? (p.role === "commissioning-manager" ? "commissioning-manager" : "forecaster");
+    const verticals =
+      !row?.verticals || /^all$/i.test(row.verticals)
+        ? "all"
+        : row.verticals.split(/\s*,\s*/).filter(Boolean);
+    return {
+      person: p,
+      role,
+      verticals,
+      isAdmin: role === "admin",
+      isManager: role === "admin" || role === "commissioning-manager",
+    };
+  }
+
+  const inScope = (v, vertical) => v.verticals === "all" || v.verticals.includes(vertical);
+
+  /** Notes: the forecaster on the piece, a manager for that vertical, an admin. */
+  function canWriteNote(v, item) {
+    if (v.isAdmin) return true;
+    if (v.person.id === item.forecasterId) return true;
+    return v.isManager && inScope(v, item.vertical);
+  }
+
+  /** A peer review is a two-person arrangement, so either side can change it. */
+  function canWriteReview(v, item, currentReviewerId) {
+    if (v.isAdmin) return true;
+    if (v.person.id === item.forecasterId) return true;
+    if (currentReviewerId && v.person.id === currentReviewerId) return true;
+    return v.isManager && inScope(v, item.vertical);
+  }
+
+  const ROLE_LABELS = {
+    forecaster: "Forecaster",
+    "commissioning-manager": "Commissioning manager",
+    admin: "Admin",
+  };
+
+  /* ---- shared state ----------------------------------------------------- */
 
   /**
    * Sign-ups are the one thing on this page people change, so they are shared:
@@ -1583,8 +1818,79 @@
     signUps.set(id, { going: [...value.going], waiting: [...value.waiting] });
   }
 
+  /** Notes by content id, reminders by person id, one review per piece. */
+  const notes = new Map();
+  const entries = new Map();
+  const reviews = new Map();
+
   let store = null;
   let shared = false;
+  let ai = null;
+
+  const notesFor = (contentId) => notes.get(contentId) ?? [];
+  const entriesFor = (personId) => entries.get(personId) ?? [];
+  const reviewFor = (contentId) => reviews.get(contentId) ?? null;
+
+  /** Reviews this person is either side of — author or reviewer. */
+  function myReviews(personId) {
+    const out = [];
+    for (const [contentId, review] of reviews) {
+      const item = content.find((c) => c.id === contentId);
+      if (!item) continue;
+      if (review.reviewerId === personId || item.forecasterId === personId) {
+        out.push({ ...review, contentId, item, iAmReviewer: review.reviewerId === personId });
+      }
+    }
+    return out;
+  }
+
+  const uid = () =>
+    (crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random())).slice(0, 18);
+
+  /** Writes a document and lets the snapshot confirm it. */
+  function put(path, body) {
+    if (!store) return;
+    store
+      .doc(path)
+      .set(body)
+      .catch(() => {
+        // Did not land; the next snapshot puts us back in step.
+      });
+  }
+
+  function addNote(contentId, note) {
+    const next = [note, ...notesFor(contentId)];
+    notes.set(contentId, next);
+    put(`notes/${contentId}`, { items: next });
+  }
+
+  function removeNote(contentId, noteId) {
+    const next = notesFor(contentId).filter((n) => n.id !== noteId);
+    notes.set(contentId, next);
+    put(`notes/${contentId}`, { items: next });
+  }
+
+  function addEntry(personId, entry) {
+    const next = [...entriesFor(personId), entry].sort((a, b) => a.date.localeCompare(b.date));
+    entries.set(personId, next);
+    put(`entries/${personId}`, { items: next });
+  }
+
+  function removeEntry(personId, entryId) {
+    const next = entriesFor(personId).filter((e) => e.id !== entryId);
+    entries.set(personId, next);
+    put(`entries/${personId}`, { items: next });
+  }
+
+  function setReview(contentId, review) {
+    reviews.set(contentId, review);
+    put(`reviews/${contentId}`, review);
+  }
+
+  function clearReview(contentId) {
+    reviews.delete(contentId);
+    if (store) store.doc(`reviews/${contentId}`).delete().catch(() => {});
+  }
 
   const seatsFor = (id) => signUps.get(id) ?? { going: [], waiting: [] };
   const isFull = (s) => s.capacity !== null && seatsFor(s.id).going.length >= s.capacity;
@@ -1634,27 +1940,45 @@
   }
 
   async function connectStore() {
-    const db = window.claude ? await window.claude.use("db") : null;
+    if (!window.claude) return;
+
+    // Asking Claude stands in for the Gemini key the real Hub uses.
+    window.claude.use("sample").then((s) => {
+      ai = s;
+      render();
+    });
+
+    const db = await window.claude.use("db");
     if (!db) return;
     store = db;
-    db.collection("signups").onSnapshot(
-      (snap) => {
-        for (const doc of snap.docs) {
-          const body = doc.data();
-          if (!body) continue;
-          signUps.set(doc.id, {
-            going: Array.isArray(body.going) ? body.going : [],
-            waiting: Array.isArray(body.waiting) ? body.waiting : [],
-          });
-        }
-        shared = true;
-        if (route().parts[0] === "learning") render();
-      },
-      () => {
-        // Subscription died — keep the page usable on local state.
-        shared = false;
-      },
+
+    const watch = (name, apply) =>
+      db.collection(name).onSnapshot(
+        (snap) => {
+          for (const doc of snap.docs) {
+            const body = doc.data();
+            if (body) apply(doc.id, body);
+          }
+          shared = true;
+          render();
+        },
+        () => {
+          // Subscription died — keep the page usable on local state.
+          shared = false;
+        },
+      );
+
+    watch("signups", (id, body) =>
+      signUps.set(id, {
+        going: Array.isArray(body.going) ? body.going : [],
+        waiting: Array.isArray(body.waiting) ? body.waiting : [],
+      }),
     );
+    watch("notes", (id, body) => notes.set(id, Array.isArray(body.items) ? body.items : []));
+    watch("entries", (id, body) => entries.set(id, Array.isArray(body.items) ? body.items : []));
+    watch("reviews", (id, body) => {
+      if (body.reviewerId && body.reviewDate) reviews.set(id, body);
+    });
   }
 
   /* ---- routing ---------------------------------------------------------- */
@@ -1713,6 +2037,7 @@
       ["Learning", "#/learning", "learning", mySessionCount(me.id) || ""],
       ["Forecasters", "#/team", "team", String(people.filter((p) => p.role === "forecaster").length)],
       ["What’s on", "#/whats-on", "whats-on", ""],
+      ["Add to your calendar", "#/subscribe", "subscribe", ""],
     ];
     document.getElementById("nav").innerHTML = links
       .map(([label, href, key, badge]) =>
@@ -1730,7 +2055,7 @@
         `<optgroup label="${label}">` +
         people
           .filter((p) => p.role === role)
-          .map((p) => `<option value="${p.id}">${esc(p.name)}</option>`)
+          .map((p) => `<option value="${p.id}">${esc(p.name)} — ${esc(p.email)}</option>`)
           .join("") +
         `</optgroup>`;
       sel.innerHTML = group("forecaster", "Forecasters") + group("commissioning-manager", "Commissioning managers");
@@ -1740,6 +2065,13 @@
       });
     }
     sel.value = viewerId;
+
+    // The view follows the account, so say which account and what it can do.
+    const v = viewer();
+    document.getElementById("role-line").innerHTML =
+      `<span class="who">${face(v.person.id)}<span>${esc(v.person.name)}<br />${
+        ROLE_LABELS[v.role]
+      }${v.role !== "forecaster" && v.verticals !== "all" ? ` · ${v.verticals.length} verticals` : ""}</span></span>`;
   }
 
   function renderUrl() {
@@ -2035,7 +2367,10 @@
       submissions: params.get("submissions") !== "0",
       publications: params.get("publications") !== "0",
       events: params.get("events") !== "0",
+      mine: params.get("mine") !== "0",
     };
+    const myEntries = entriesFor(me.id);
+    const myReviewList = myReviews(me.id);
 
     const [y, m] = key.split("-").map(Number);
     const first = new Date(Date.UTC(y, m - 1, 1));
@@ -2054,6 +2389,27 @@
 
     const cellMarks = (date) => {
       const out = [];
+      if (show.mine) {
+        for (const entry of myEntries) {
+          if (entry.date <= date && entry.endDate >= date) {
+            out.push(
+              `<button class="mark mark-button" style="--c:var(--mine)"
+                 data-entry-delete="${entry.id}"
+                 title="${esc(entry.title)}${entry.note ? ` — ${esc(entry.note)}` : ""} (yours — click to remove)">
+                 <em>Mine</em>${esc(entry.title)}</button>`,
+            );
+          }
+        }
+        for (const review of myReviewList) {
+          if (review.reviewDate !== date) continue;
+          out.push(
+            `<a class="mark" style="--c:var(--review)" href="#/content/${review.contentId}"
+               title="Peer review: ${esc(review.item.title)}"><em>${
+              review.iAmReviewer ? "Review" : "Reviewed"
+            }</em>${esc(review.item.title)}</a>`,
+          );
+        }
+      }
       if (show.events) {
         for (const e of scopedEvents) {
           if (!covers(e, date)) continue;
@@ -2079,7 +2435,7 @@
         for (const c of scope) {
           if (c.submissionDate === date)
             out.push(
-              `<a class="mark" style="--c:var(--late)" href="#/content/${c.id}" title="Due: ${esc(
+              `<a class="mark" style="--c:var(--ink)" href="#/content/${c.id}" title="Due: ${esc(
                 c.title,
               )}"><em>Due</em>${esc(c.title)}</a>`,
             );
@@ -2131,7 +2487,46 @@
             <button class="toggle${show.events ? " on" : ""}" data-toggle="events">Diary</button>
           </div>
         </div>
+        <div class="field"><span>Mine</span>
+          <div class="toggles">
+            <button class="toggle${show.mine ? " on" : ""}" data-toggle="mine"
+              title="Your own reminders and peer reviews">My plan</button>
+          </div>
+        </div>
+        <div class="filters-right">
+          <button class="toggle solid" data-entry-open="${entryOpen ? "" : "1"}">${
+            entryOpen ? "Close" : "Add a reminder"
+          }</button>
+        </div>
       </div>
+
+      ${
+        entryOpen
+          ? `<div class="filters entry-form">
+              <label class="field" style="flex:1;min-width:230px"><span>What</span>
+                <input type="text" id="entry-title" placeholder="Chase colour chips with the studio"
+                  style="width:100%" /></label>
+              <label class="field"><span>Kind</span>
+                <select id="entry-kind">
+                  <option value="reminder">Reminder</option>
+                  <option value="focus-time">Focus time</option>
+                  <option value="milestone">Milestone</option>
+                  <option value="personal">Personal</option>
+                </select></label>
+              <label class="field"><span>Date</span>
+                <input type="date" id="entry-date" value="${
+                  key + "-01" > TODAY ? key + "-01" : TODAY
+                }" /></label>
+              <label class="field"><span>Until (optional)</span>
+                <input type="date" id="entry-end" /></label>
+              <div class="filters-right">
+                <button class="toggle solid" data-entry-save="1">Add to my calendar</button>
+              </div>
+              <p class="signup-note" style="flex-basis:100%;margin:4px 0 0">Private to you, and
+                it appears in your calendar feed.</p>
+            </div>`
+          : ""
+      }
 
       <div class="cal">
         <div class="cal-head">${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -2164,9 +2559,11 @@
       </div>
 
       <div class="key">
-        <span style="--c:var(--late)"><i></i>Submission due</span>
+        <span style="--c:var(--ink)"><i></i>Submission due</span>
         <span style="--c:var(--ok)"><i></i>Publication</span>
         <span style="--c:var(--kind-workshop)"><i></i>Workshop / session</span>
+        <span style="--c:var(--review)"><i></i>Peer review</span>
+        <span style="--c:var(--mine)"><i></i>Yours only</span>
         ${Object.entries(EVENTS)
           .map(([, [label, , colour]]) => `<span style="--c:${colour}"><i></i>${label}</span>`)
           .join("")}
@@ -2229,7 +2626,13 @@
                 }</span></div></li>
           </ul>
 
-          ${c.notes ? `<h2 style="margin-top:24px">Notes</h2><p>${esc(c.notes)}</p>` : ""}
+          ${
+            c.notes
+              ? `<h2 style="margin-top:24px">Commissioning note</h2><p>${esc(c.notes)}</p>`
+              : ""
+          }
+
+          <section class="sec" style="margin-top:28px">${notesMarkup(c)}</section>
 
           <h2 style="margin:24px 0 10px">Also in ${esc(c.vertical)}</h2>
           ${
@@ -2269,6 +2672,7 @@
               c.forecasterId
             }">See this month</a>
           </div>
+          ${peerReviewMarkup(c)}
           ${
             hits.length
               ? `<div class="panel"><div class="panel-label">Around the deadline</div>${hits
@@ -2371,6 +2775,238 @@
             : `<div class="none">Nothing booked in.</div>`
         }
       </section>`;
+  }
+
+  /* ---- notes ------------------------------------------------------------ */
+
+  /** Draft text held between renders, so typing survives a re-render. */
+  let composer = { contentId: null, body: "", isAi: false, model: null, steer: "", busy: false, problem: null };
+
+  function notesMarkup(item) {
+    const v = viewer();
+    const canWrite = canWriteNote(v, item);
+    const list = notesFor(item.id);
+    const mine = composer.contentId === item.id ? composer : null;
+
+    return `
+      <div class="sec-head">
+        <h2>Notes${list.length ? ` (${list.length})` : ""}</h2>
+        ${canWrite ? "" : `<span class="signup-note">Read only — ${esc(
+          nameOf(item.forecasterId),
+        )}'s piece</span>`}
+      </div>
+
+      ${
+        canWrite
+          ? `<div class="note-composer">
+              <textarea class="note-input" id="note-body" rows="${mine?.isAi ? 10 : 3}"
+                placeholder="What are you thinking about this piece? Angles, evidence to chase, anything the deadline makes tight."
+                >${esc(mine?.body ?? "")}</textarea>
+              ${
+                mine?.isAi
+                  ? `<div class="ai-banner"><strong>AI draft — yours to edit.</strong> Nothing is
+                     saved until you keep it, and it will be labelled as an AI note. Check
+                     anything it asserts.</div>`
+                  : ""
+              }
+              <div class="composer-row">
+                <button class="toggle solid" data-note-save="${item.id}">
+                  ${mine?.isAi ? "Keep this note" : "Add note"}
+                </button>
+                <input class="steer" id="note-steer" placeholder="Steer the draft (optional) — e.g. focus on the colour story"
+                  value="${esc(mine?.steer ?? "")}" />
+                <button class="toggle" data-note-ai="${item.id}" ${composer.busy ? "disabled" : ""}>
+                  ${composer.busy ? "Drafting…" : "Draft with AI"}
+                </button>
+                ${mine?.body ? `<button class="toggle" data-note-clear="1">Discard</button>` : ""}
+              </div>
+              ${composer.problem ? `<div class="flag warn">${esc(composer.problem)}</div>` : ""}
+            </div>`
+          : ""
+      }
+
+      ${
+        list.length
+          ? `<div class="note-list">${list
+              .map(
+                (n) => `<article class="note${n.source === "ai" ? " note-ai" : ""}">
+                  <header class="note-head">
+                    <span class="who">${face(n.authorId)}${esc(nameOf(n.authorId))}</span>
+                    ${
+                      n.source === "ai"
+                        ? `<span class="tag">AI draft${n.model ? ` · ${esc(n.model)}` : ""}</span>`
+                        : ""
+                    }
+                    <span class="note-when">${long(n.createdAt.slice(0, 10))}</span>
+                    ${
+                      canWrite
+                        ? `<span class="note-actions"><button class="toggle"
+                             data-note-delete="${item.id}:${n.id}">Delete</button></span>`
+                        : ""
+                    }
+                  </header>
+                  <div class="note-body">${esc(n.body)}</div>
+                </article>`,
+              )
+              .join("")}</div>`
+          : `<div class="none">No notes on this piece yet.</div>`
+      }`;
+  }
+
+  /** The same brief the server sends Gemini, so the demo reads true. */
+  const AI_BRIEF = `You are helping a WGSN trend forecaster plan a piece of commissioned content.
+Write working notes for the forecaster's own use, not copy for publication.
+
+Keep it to:
+- three or four angles worth researching, each one sentence
+- the evidence that would support or kill each angle
+- anything the deadline makes tight
+
+British English. No preamble, no headings, no bullet symbols other than "-".
+Be concrete about the vertical and season. Never invent statistics, brand names, or sources —
+if evidence is needed, say what to go and look for.`;
+
+  async function draftNote(item) {
+    if (!ai) {
+      composer = {
+        ...composer,
+        contentId: item.id,
+        problem:
+          "AI notes need a model key. In the Hub that is your Gemini key on the server; this demo asks Claude, which is not available in this view.",
+      };
+      render();
+      return;
+    }
+    composer = { ...composer, contentId: item.id, busy: true, problem: null };
+    render();
+
+    const siblings = content
+      .filter((c) => c.vertical === item.vertical && c.id !== item.id)
+      .slice(0, 8)
+      .map((c) => `- ${c.title} (${c.type}, ${c.season}, publishes ${c.publicationDate})`)
+      .join("\n");
+    const existing = notesFor(item.id).map((n) => `- ${n.body}`).join("\n");
+
+    const prompt = `${AI_BRIEF}
+
+Piece: ${item.title}
+Type: ${item.type}
+Vertical: ${item.vertical}
+Season: ${item.season}
+Copy due: ${item.submissionDate}
+Publishes: ${item.publicationDate}
+Status: ${item.status}
+Forecaster: ${nameOf(item.forecasterId)}
+${item.notes ? `Commissioning note: ${item.notes}` : ""}
+${existing ? `\nNotes already on this piece:\n${existing}` : ""}
+${siblings ? `\nOther pieces commissioned in this vertical (avoid overlapping):\n${siblings}` : ""}
+${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` : ""}`;
+
+    try {
+      const res = await ai(prompt, { modelTier: "default" });
+      composer = {
+        contentId: item.id,
+        body: res.text.trim(),
+        isAi: true,
+        model: "Claude (demo)",
+        steer: composer.steer,
+        busy: false,
+        problem: null,
+      };
+    } catch (err) {
+      composer = { ...composer, busy: false, problem: err?.message ?? "The draft did not come back." };
+    }
+    render();
+  }
+
+  /* ---- peer review ------------------------------------------------------ */
+
+  let reviewForm = null;
+  let entryOpen = false;
+
+  function peerReviewMarkup(item) {
+    const v = viewer();
+    const review = reviewFor(item.id);
+    const canChange = canWriteReview(v, item, review?.reviewerId);
+    const iAmReviewer = review?.reviewerId === v.person.id;
+
+    if (reviewForm === item.id) {
+      const candidates = people.filter(
+        (p) => p.role === "forecaster" && p.id !== item.forecasterId,
+      );
+      return `<div class="panel">
+        <div class="panel-label">Peer review</div>
+        <div class="peer-form">
+          <label class="field"><span>Reviewer</span>
+            <select id="review-who">
+              <option value="">Choose a colleague…</option>
+              ${candidates
+                .map(
+                  (p) =>
+                    `<option value="${p.id}"${p.id === review?.reviewerId ? " selected" : ""}>${esc(
+                      p.name,
+                    )} — ${esc(p.vertical)}</option>`,
+                )
+                .join("")}
+            </select></label>
+          <label class="field"><span>Review date</span>
+            <input type="date" id="review-date" max="${item.publicationDate}"
+              value="${review?.reviewDate ?? ""}" /></label>
+          <label class="field"><span>Note (optional)</span>
+            <input type="text" id="review-note" placeholder="What you want them to look at"
+              value="${esc(review?.note ?? "")}" /></label>
+          <div style="display:flex;gap:6px">
+            <button class="toggle solid" data-review-save="${item.id}">
+              ${review ? "Save changes" : "Book it"}</button>
+            <button class="toggle" data-review-cancel="1">Cancel</button>
+          </div>
+          <p class="signup-note">Copy is due ${long(item.submissionDate)} — a review before
+            that is the point of it.</p>
+        </div>
+      </div>`;
+    }
+
+    if (!review) {
+      return `<div class="panel">
+        <div class="panel-label">Peer review</div>
+        <p style="font-size:12.5px;color:var(--ink-mid);margin:0 0 12px">No reviewer yet. Booking
+          one puts the date in both your calendars.</p>
+        ${
+          canChange
+            ? `<button class="toggle solid" data-review-open="${item.id}">Add a peer reviewer</button>`
+            : `<span class="signup-note">Only ${esc(
+                nameOf(item.forecasterId),
+              )} or a commissioning manager can set this.</span>`
+        }
+      </div>`;
+    }
+
+    return `<div class="panel">
+      <div class="panel-label">Peer review</div>
+      <a href="#/team/${review.reviewerId}" class="who" style="margin-bottom:10px">
+        ${face(review.reviewerId, true)}
+        <span><b>${esc(nameOf(review.reviewerId))}</b>
+          <span style="display:block;font-size:12px;color:var(--ink-soft)">${
+            iAmReviewer ? "You are reviewing this" : "Reviewing this piece"
+          }</span></span>
+      </a>
+      <dl>
+        <div class="fact"><dt>Review date</dt><dd>${long(review.reviewDate)}</dd></div>
+        <div class="fact"><dt>When</dt><dd>${rel(review.reviewDate)}</dd></div>
+        <div class="fact"><dt>Arranged by</dt><dd>${esc(nameOf(review.arrangedBy))}</dd></div>
+      </dl>
+      ${review.note ? `<p style="font-size:12.5px;color:var(--ink-mid);margin:10px 0 0">${esc(review.note)}</p>` : ""}
+      <p class="signup-note" style="margin-top:10px">In both calendars. Either of you can move
+        or cancel it.</p>
+      ${
+        canChange
+          ? `<div style="display:flex;gap:6px;margin-top:12px">
+               <button class="toggle" data-review-open="${item.id}">Amend</button>
+               <button class="toggle" data-review-remove="${item.id}">Remove</button>
+             </div>`
+          : ""
+      }
+    </div>`;
   }
 
   function placesMarkup(session) {
@@ -2685,6 +3321,76 @@
       </div>`;
   }
 
+  function pageSubscribe() {
+    const me = person(viewerId);
+    const example = `forecasters.wgsn.com/api/calendar/${uid()}${uid()}.ics`;
+    return `
+      <div class="head">
+        <div>
+          <div class="eyebrow">Google Calendar · Outlook · phone</div>
+          <h1>Add to your calendar</h1>
+          <p class="lede">Subscribe once and your deadlines sit alongside your meetings —
+            including on your phone. Your feed carries your submission dates, your publication
+            dates, peer reviews either side of, sessions you signed up to, your own reminders,
+            and the holidays for your region.</p>
+        </div>
+      </div>
+
+      <div class="split">
+        <div class="prose">
+          <div class="feed-address">
+            <div class="eyebrow" style="margin-bottom:8px">
+              ${esc(me.name)}&rsquo;s private calendar address
+            </div>
+            <code class="feed-url">https://${example}</code>
+            <p class="signup-note" style="margin-top:10px">Illustrative address — the running
+              Hub mints a real one per person, and it is rotatable from this page.</p>
+          </div>
+
+          <h2 style="margin:28px 0 10px">In Google Calendar</h2>
+          <ol class="steps-list">
+            <li>Copy the address above.</li>
+            <li>Open Google Calendar on the web. In the left column, next to
+              <strong>Other calendars</strong>, click <strong>+</strong>.</li>
+            <li>Choose <strong>From URL</strong>, paste the address, and click
+              <strong>Add calendar</strong>.</li>
+            <li>It appears under Other calendars. Rename it and give it a colour from its
+              three-dot menu.</li>
+          </ol>
+
+          <h2 style="margin:28px 0 10px">In Outlook</h2>
+          <ol class="steps-list">
+            <li>Calendar → <strong>Add calendar</strong> → <strong>Subscribe from web</strong>.</li>
+            <li>Paste the address, name it, and import.</li>
+          </ol>
+
+          <div class="flag" style="margin-top:26px">
+            <strong>Worth knowing.</strong> This is one-way: the Hub fills your calendar, and
+            changes you make in Google don&rsquo;t come back. Google also decides how often to
+            re-read a subscribed feed — usually hours, occasionally longer — so a deadline moved
+            this morning may not show in Google until later today. The Hub itself is always
+            current.
+          </div>
+        </div>
+
+        <aside>
+          <div class="panel">
+            <div class="panel-label">Keep it to yourself</div>
+            <p style="font-size:12.5px;color:var(--ink-mid);margin:0">Anyone with this address
+              can read your calendar without signing in — that is how subscribable feeds work
+              everywhere. Don&rsquo;t paste it into a shared channel. If it gets out, replace it
+              and the old address stops working immediately.</p>
+          </div>
+          <div class="panel">
+            <div class="panel-label">Why not full sync</div>
+            <p style="font-size:12.5px;color:var(--ink-mid);margin:0">Two-way sync needs the
+              Google Calendar API and every forecaster approving access to their account. A
+              subscribed feed needs neither, and works the same in Outlook.</p>
+          </div>
+        </aside>
+      </div>`;
+  }
+
   function pageWhatsOn(params) {
     const type = params.get("type") ?? "";
     const rows = events
@@ -2782,13 +3488,28 @@
       case "whats-on":
         html = pageWhatsOn(params);
         break;
+      case "subscribe":
+        html = pageSubscribe();
+        break;
       default:
         html = pageToday();
     }
 
+    const focusId = document.activeElement?.id;
+    const caret = document.activeElement?.selectionStart;
+
     view.innerHTML = html;
     renderNav();
     renderUrl();
+
+    // Keep the cursor where it was when a render lands mid-typing.
+    if (focusId) {
+      const again = view.querySelector(`#${focusId}`);
+      if (again) {
+        again.focus();
+        if (caret != null && again.setSelectionRange) again.setSelectionRange(caret, caret);
+      }
+    }
 
     view.querySelectorAll("[data-filter]").forEach((el) =>
       el.addEventListener("change", () => setParam(el.dataset.filter, el.value)),
@@ -2818,6 +3539,137 @@
     view.querySelectorAll("[data-mine]").forEach((el) =>
       el.addEventListener("click", () => setParam("mine", el.dataset.mine)),
     );
+    // Notes -----------------------------------------------------------------
+    const bodyBox = view.querySelector("#note-body");
+    const steerBox = view.querySelector("#note-steer");
+    const readComposer = (contentId) => {
+      composer = {
+        ...composer,
+        contentId,
+        body: bodyBox ? bodyBox.value : composer.body,
+        steer: steerBox ? steerBox.value : composer.steer,
+      };
+    };
+    if (bodyBox) {
+      bodyBox.addEventListener("input", () => {
+        composer = { ...composer, contentId: composer.contentId, body: bodyBox.value, isAi: false };
+      });
+    }
+    if (steerBox) {
+      steerBox.addEventListener("input", () => {
+        composer = { ...composer, steer: steerBox.value };
+      });
+    }
+
+    view.querySelectorAll("[data-note-save]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const contentId = el.dataset.noteSave;
+        readComposer(contentId);
+        const body = (composer.body ?? "").trim();
+        if (!body) return;
+        addNote(contentId, {
+          id: uid(),
+          authorId: viewerId,
+          body,
+          source: composer.isAi ? "ai" : "human",
+          model: composer.isAi ? composer.model : null,
+          createdAt: new Date().toISOString(),
+        });
+        composer = { contentId: null, body: "", isAi: false, model: null, steer: "", busy: false, problem: null };
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-note-ai]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const item = content.find((c) => c.id === el.dataset.noteAi);
+        if (!item) return;
+        readComposer(item.id);
+        draftNote(item);
+      }),
+    );
+    view.querySelectorAll("[data-note-clear]").forEach((el) =>
+      el.addEventListener("click", () => {
+        composer = { contentId: null, body: "", isAi: false, model: null, steer: "", busy: false, problem: null };
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-note-delete]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const [contentId, noteId] = el.dataset.noteDelete.split(":");
+        removeNote(contentId, noteId);
+        render();
+      }),
+    );
+
+    // Peer review -----------------------------------------------------------
+    view.querySelectorAll("[data-review-open]").forEach((el) =>
+      el.addEventListener("click", () => {
+        reviewForm = el.dataset.reviewOpen;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-review-cancel]").forEach((el) =>
+      el.addEventListener("click", () => {
+        reviewForm = null;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-review-remove]").forEach((el) =>
+      el.addEventListener("click", () => {
+        clearReview(el.dataset.reviewRemove);
+        reviewForm = null;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-review-save]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const contentId = el.dataset.reviewSave;
+        const reviewerId = view.querySelector("#review-who").value;
+        const reviewDate = view.querySelector("#review-date").value;
+        if (!reviewerId || !reviewDate) return;
+        const existing = reviewFor(contentId);
+        setReview(contentId, {
+          reviewerId,
+          reviewDate,
+          arrangedBy: existing?.arrangedBy ?? viewerId,
+          note: view.querySelector("#review-note").value.trim() || null,
+        });
+        reviewForm = null;
+        render();
+      }),
+    );
+
+    // Personal entries ------------------------------------------------------
+    view.querySelectorAll("[data-entry-open]").forEach((el) =>
+      el.addEventListener("click", () => {
+        entryOpen = el.dataset.entryOpen === "1";
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-entry-save]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const title = view.querySelector("#entry-title").value.trim();
+        const date = view.querySelector("#entry-date").value;
+        if (!title || !date) return;
+        const end = view.querySelector("#entry-end").value;
+        addEntry(viewerId, {
+          id: uid(),
+          title,
+          kind: view.querySelector("#entry-kind").value,
+          date,
+          endDate: end && end >= date ? end : date,
+        });
+        entryOpen = false;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-entry-delete]").forEach((el) =>
+      el.addEventListener("click", () => {
+        removeEntry(viewerId, el.dataset.entryDelete);
+        render();
+      }),
+    );
+
     view.querySelectorAll("[data-signup]").forEach((el) =>
       el.addEventListener("click", () => {
         const session = sessions.find((s) => s.id === el.dataset.signup);
@@ -2826,7 +3678,7 @@
         render();
       }),
     );
-    window.scrollTo({ top: 0 });
+    if (!focusId) window.scrollTo({ top: 0 });
   }
 
   window.addEventListener("hashchange", render);
