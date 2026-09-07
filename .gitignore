@@ -6,3 +6,6 @@ build/
 *.log
 .DS_Store
 *.tsbuildinfo
+
+# Built demo page (regenerate with node demo/build.mjs)
+demo/forecasters-hub.html

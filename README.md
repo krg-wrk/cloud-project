@@ -68,6 +68,19 @@ so you can see the Hub as any forecaster, and `?as=ao` works as a URL. The real
 version should read the signed-in user from Google SSO and show the switcher
 only to commissioning managers.
 
+## The shareable demo
+
+`demo/` holds a standalone single-file version of the same views — data inlined,
+hash routing, no server — for showing the idea to people who can't run the app.
+It's what gets published as an Artifact.
+
+```bash
+npm run build -w server && node demo/build.mjs   # writes demo/forecasters-hub.html
+```
+
+Edit `demo/hub.template.html` and rebuild; the schedule comes from the same
+seed module as the app, so the two never drift apart.
+
 ## Scripts
 
 - `npm run dev` — API on :3001 and the client on :5173 together
