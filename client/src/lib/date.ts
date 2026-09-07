@@ -100,6 +100,24 @@ export function formatMedium(date: string): string {
   });
 }
 
+/** "Sep" — for a date block that shows the day separately. */
+export function formatMonthShort(date: string): string {
+  if (!date) return "";
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", {
+    month: "short",
+    timeZone: "UTC",
+  });
+}
+
+/** "Thu" */
+export function formatWeekday(date: string): string {
+  if (!date) return "";
+  return new Date(`${date}T00:00:00Z`).toLocaleDateString("en-GB", {
+    weekday: "short",
+    timeZone: "UTC",
+  });
+}
+
 /** "25 Sep" */
 export function formatShort(date: string): string {
   if (!date) return "—";

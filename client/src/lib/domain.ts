@@ -1,4 +1,12 @@
-import type { CalendarEvent, ContentItem, EventType, Person, Status } from "../types";
+import type {
+  CalendarEvent,
+  ContentItem,
+  EventType,
+  Person,
+  SessionKind,
+  SessionWithSignUps,
+  Status,
+} from "../types";
 import { TODAY, daysBetween } from "./date";
 
 export const STATUS_LABELS: Record<Status, string> = {
@@ -26,6 +34,46 @@ export const EVENT_LABELS: Record<EventType, string> = {
   training: "Training",
   conference: "Show / conference",
 };
+
+export const KIND_LABELS: Record<SessionKind, string> = {
+  workshop: "Workshop",
+  masterclass: "Masterclass",
+  "lunch-and-learn": "Lunch & Learn",
+  critique: "Critique",
+  training: "Training",
+};
+
+export const KIND_ORDER: SessionKind[] = [
+  "workshop",
+  "masterclass",
+  "lunch-and-learn",
+  "critique",
+  "training",
+];
+
+/** What the sign-up control should offer this person for this session. */
+export type SignUpState =
+  | "going"
+  | "waiting"
+  | "can-sign-up"
+  | "full"
+  | "closed"
+  | "required"
+  | "past";
+
+export function signUpState(
+  session: SessionWithSignUps,
+  personId: string | undefined,
+  today = TODAY,
+): SignUpState {
+  if (session.date < today) return "past";
+  if (personId && session.going.includes(personId)) return "going";
+  if (personId && session.waiting.includes(personId)) return "waiting";
+  if (session.required) return "required";
+  if (!session.signUpsOpen) return "closed";
+  if (session.full) return "full";
+  return "can-sign-up";
+}
 
 /** Calendar cells are narrow — these fit next to a title. */
 export const EVENT_LABELS_SHORT: Record<EventType, string> = {

@@ -7,13 +7,14 @@ import {
   relativeDays,
 } from "../lib/date";
 import {
+  KIND_LABELS,
   clashesFor,
   isOutstanding,
   isOverdue,
   personName,
 } from "../lib/domain";
 import { useViewer } from "../lib/viewer";
-import type { ContentItem, Schedule } from "../types";
+import type { ContentItem, Schedule, SessionWithSignUps } from "../types";
 import { ErrorNote, EventPill, Loading, StatusPill, Who } from "../components/bits";
 
 function DeadlineRow({
@@ -50,6 +51,10 @@ function DeadlineRow({
 export default function Today() {
   const { person, isManager } = useViewer();
   const { data, error, loading } = useApi<Schedule>("/schedule");
+  const sessions = useApi<SessionWithSignUps[]>(
+    person ? `/sessions?when=upcoming&person=${person.id}` : "/sessions?when=upcoming",
+  );
+  const mySessions = person ? (sessions.data ?? []) : [];
 
   if (error) return <ErrorNote message={error} />;
   if (loading || !data) return <Loading />;
@@ -221,13 +226,35 @@ export default function Today() {
 
         <div>
           <div className="section-head">
-            <h2 className="section-title">In the diary</h2>
-            <Link to="/whats-on" className="section-link">
-              What&rsquo;s on →
+            <h2 className="section-title">
+              {mySessions.length > 0 ? "Your next sessions" : "In the diary"}
+            </h2>
+            <Link to={mySessions.length > 0 ? "/workshops?mine=1" : "/whats-on"} className="section-link">
+              {mySessions.length > 0 ? "Learning →" : "What’s on →"}
             </Link>
           </div>
           <div className="deadline-list">
-            {upcomingEvents.map((event) => (
+            {mySessions.slice(0, 5).map((session) => (
+              <Link key={session.id} to={`/workshops/${session.id}`} className="deadline">
+                <div className="deadline-date">
+                  {formatShort(session.date)}
+                  <span className="rel">{session.startTime}</span>
+                </div>
+                <div>
+                  <div className="deadline-title">{session.title}</div>
+                  <div className="deadline-meta">
+                    {KIND_LABELS[session.kind]} · {session.location}
+                  </div>
+                </div>
+                <div className="deadline-right">
+                  {session.waiting.includes(person?.id ?? "") ? (
+                    <span className="tag">Waitlist</span>
+                  ) : null}
+                </div>
+              </Link>
+            ))}
+            {mySessions.length === 0 &&
+              upcomingEvents.map((event) => (
               <div key={event.id} className="deadline">
                 <div className="deadline-date">
                   {formatShort(event.startDate)}
@@ -245,7 +272,7 @@ export default function Today() {
                   <EventPill type={event.type} />
                 </div>
               </div>
-            ))}
+              ))}
           </div>
         </div>
       </div>

@@ -23,16 +23,47 @@ credentials to set up first.
 | --- | --- | --- |
 | Today | `/` | The viewer's own deadlines, what publishes next, clashes |
 | Deadlines | `/deadlines` | Filterable table of every commissioned piece |
-| Calendar | `/calendar/2026-09` | Month grid of submissions, publications and the diary |
+| Calendar | `/calendar/2026-09` | Month grid of submissions, publications, sessions and the diary |
 | Content | `/content/ss-4013` | One piece: dates, status, where it is, who owns it |
 | Team | `/team`, `/team/ao` | Per-forecaster pages |
-| What's on | `/whats-on` | Leave, holidays, workshops, shows |
+| Learning | `/workshops`, `/workshops/ws-201` | The workshop and knowledge-sharing programme, with sign-ups |
+| What's on | `/whats-on` | Leave, public holidays, shows |
 
 Every view is addressable, and every filter lives in the query string — so
 `/deadlines?forecaster=rc&status=not-started` and
 `/calendar/2026-10?forecaster=ao&publications=0` are links you can paste into
 Slack and someone else opens the same thing. That's the main thing AppSheet
 could not do.
+
+## Workshops and knowledge sharing
+
+`/workshops` is the one part of the Hub people write to rather than read.
+Sessions carry a kind (workshop, masterclass, lunch & learn, critique,
+training), a host, a capacity and a `signUpsOpen` flag:
+
+- **Open sessions** take sign-ups until they fill, then move people onto a
+  waitlist. Give up a place and the first person waiting takes it — handled in
+  `server/src/signUps.ts`, not in the UI.
+- **Required sessions** (`required: true`) have nothing to opt into, so they
+  show "everyone is expected" instead of a button.
+- **Past sessions** move to "been and gone" with a link to notes or a
+  recording where there is one.
+
+Sign-ups live in `SignUpStore`, which is **in memory for the POC** — restart
+the server and they reset. Pointing it at a sign-ups sheet (one row per person
+per session: Session ID, Person, State) is the only change needed to make them
+stick; the routes and the UI don't care where the rows live.
+
+## Branding
+
+WGSN house style: white surfaces, hairline rules, uppercase micro-labels,
+squared corners, DM Sans throughout with DM Mono for dates and references.
+Colour is the accent rather than the furniture. The accent is Future Dusk —
+WGSN and Coloro's Colour of the Year 2025, Coloro 129-35-18 — kept separate
+from the semantic reds, ambers and greens that carry status.
+
+Everything visual is tokenised at the top of `client/src/index.css`, so
+swapping the palette or the typefaces is a change in one place.
 
 ## Pointing it at Smartsheet
 
@@ -48,8 +79,10 @@ Switch over with environment variables:
 DATA_SOURCE=smartsheet
 SMARTSHEET_TOKEN=...              # a service token, not a personal one
 SMARTSHEET_CONTENT_SHEET_ID=...   # the commissioning sheet
-SMARTSHEET_EVENTS_SHEET_ID=...    # leave / holidays / workshops
+SMARTSHEET_EVENTS_SHEET_ID=...    # leave / public holidays / shows
 SMARTSHEET_PEOPLE_SHEET_ID=...    # the team
+SMARTSHEET_SESSIONS_SHEET_ID=...  # the workshop programme
+SMARTSHEET_SIGNUPS_SHEET_ID=...   # one row per person per session
 ```
 
 Column titles are mapped in one place — the `COLUMNS` object at the top of

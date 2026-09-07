@@ -34,6 +34,22 @@ export function useApi<T>(path: string): Async<T> {
   return state;
 }
 
+/** Sends a write and returns the parsed body, throwing the server's message. */
+export async function send<T>(
+  path: string,
+  method: "POST" | "DELETE",
+  body?: unknown,
+): Promise<T> {
+  const res = await fetch(`/api${path}`, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const parsed = (await res.json().catch(() => null)) as (T & { error?: string }) | null;
+  if (!res.ok) throw new Error(parsed?.error ?? `Request failed: ${res.status}`);
+  return parsed as T;
+}
+
 /** Builds an /api query string, dropping empty values. */
 export function query(params: Record<string, string | undefined>): string {
   const search = new URLSearchParams();

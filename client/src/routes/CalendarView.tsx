@@ -17,11 +17,12 @@ import {
 import {
   EVENT_LABELS,
   EVENT_LABELS_SHORT,
+  KIND_LABELS,
   eventCovers,
   personName,
 } from "../lib/domain";
 import { useViewer } from "../lib/viewer";
-import type { CalendarEvent, ContentItem, Schedule } from "../types";
+import type { CalendarEvent, ContentItem, Schedule, SessionWithSignUps } from "../types";
 import { ErrorNote, Loading } from "../components/bits";
 import ShareLink from "../components/ShareLink";
 
@@ -30,18 +31,23 @@ const MAX_CHIPS = 3;
 
 type Chip =
   | { kind: "submission" | "publication"; item: ContentItem }
-  | { kind: "event"; event: CalendarEvent };
+  | { kind: "event"; event: CalendarEvent }
+  | { kind: "session"; session: SessionWithSignUps };
 
 function chipsForDay(
   date: string,
   content: ContentItem[],
   events: CalendarEvent[],
+  sessions: SessionWithSignUps[],
   show: { submissions: boolean; publications: boolean; events: boolean },
 ): Chip[] {
   const chips: Chip[] = [];
   if (show.events) {
     for (const event of events) {
       if (eventCovers(event, date)) chips.push({ kind: "event", event });
+    }
+    for (const session of sessions) {
+      if (session.date === date) chips.push({ kind: "session", session });
     }
   }
   if (show.submissions) {
@@ -81,6 +87,8 @@ export default function CalendarView() {
       forecaster: forecaster || undefined,
     })}`,
   );
+  // Workshops belong to the whole team, so they are not narrowed by forecaster.
+  const sessions = useApi<SessionWithSignUps[]>("/sessions");
 
   function setParam(name: string, value: string) {
     const next = new URLSearchParams(params);
@@ -186,7 +194,13 @@ export default function CalendarView() {
             {grid.map((week) => (
               <div className="cal-week" key={week[0]}>
                 {week.map((date) => {
-                  const chips = chipsForDay(date, data.content, data.events, show);
+                  const chips = chipsForDay(
+                    date,
+                    data.content,
+                    data.events,
+                    sessions.data ?? [],
+                    show,
+                  );
                   const classes = ["cal-day"];
                   if (!isSameMonth(date, key)) classes.push("outside");
                   if (isWeekend(date)) classes.push("weekend");
@@ -195,7 +209,22 @@ export default function CalendarView() {
                     <div className={classes.join(" ")} key={date}>
                       <div className="cal-daynum">{dayOfMonth(date)}</div>
                       {chips.slice(0, MAX_CHIPS).map((chip, i) =>
-                        chip.kind === "event" ? (
+                        chip.kind === "session" ? (
+                          <Link
+                            key={chip.session.id}
+                            to={`/workshops/${chip.session.id}`}
+                            className="cal-chip"
+                            style={
+                              { "--chip-color": `var(--kind-${chip.session.kind})` } as CSSProperties
+                            }
+                            title={`${KIND_LABELS[chip.session.kind]}: ${chip.session.title}`}
+                          >
+                            <span className="chip-kind">
+                              {chip.session.startTime}
+                            </span>
+                            {chip.session.title}
+                          </Link>
+                        ) : chip.kind === "event" ? (
                           <Link
                             key={`${chip.event.id}-${i}`}
                             to={`/whats-on?type=${chip.event.type}`}
@@ -250,6 +279,9 @@ export default function CalendarView() {
             </span>
             <span style={{ "--legend-color": "var(--status-published)" } as CSSProperties}>
               <i /> Publication
+            </span>
+            <span style={{ "--legend-color": "var(--kind-workshop)" } as CSSProperties}>
+              <i /> Workshop / session
             </span>
             {(Object.keys(EVENT_LABELS) as (keyof typeof EVENT_LABELS)[]).map((type) => (
               <span key={type} style={{ "--legend-color": `var(--event-${type})` } as CSSProperties}>

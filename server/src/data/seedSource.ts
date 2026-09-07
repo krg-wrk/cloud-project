@@ -1,5 +1,12 @@
-import type { CalendarEvent, ContentItem, DataSource, Person } from "../types.js";
-import { content, events, people } from "./seed.js";
+import type {
+  CalendarEvent,
+  ContentItem,
+  DataSource,
+  KnowledgeSession,
+  Person,
+  SessionSignUps,
+} from "../types.js";
+import { content, events, people, sessions, signUps } from "./seed.js";
 
 /**
  * In-memory data source used for the POC and for local development, so the Hub
@@ -18,5 +25,13 @@ export class SeedSource implements DataSource {
 
   async listEvents(): Promise<CalendarEvent[]> {
     return events;
+  }
+
+  async listSessions(): Promise<KnowledgeSession[]> {
+    return sessions;
+  }
+
+  async listSignUps(): Promise<Record<string, SessionSignUps>> {
+    return signUps;
   }
 }

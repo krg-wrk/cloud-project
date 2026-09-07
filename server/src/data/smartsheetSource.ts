@@ -4,7 +4,10 @@ import type {
   ContentType,
   DataSource,
   EventType,
+  KnowledgeSession,
   Person,
+  SessionKind,
+  SessionSignUps,
   Status,
   Vertical,
 } from "../types.js";
@@ -46,6 +49,28 @@ export const COLUMNS = {
     vertical: "Vertical",
     region: "Region",
   },
+  sessions: {
+    id: "Session ID",
+    title: "Title",
+    kind: "Kind",
+    host: "Host",
+    guest: "Guest Speaker",
+    date: "Date",
+    startTime: "Start Time",
+    endTime: "End Time",
+    location: "Location",
+    capacity: "Capacity",
+    signUpsOpen: "Sign-ups Open",
+    required: "Required",
+    summary: "Summary",
+    topics: "Topics",
+    recapUrl: "Recap",
+  },
+  signUps: {
+    session: "Session ID",
+    person: "Person",
+    state: "State",
+  },
 } as const;
 
 interface SmartsheetCell {
@@ -75,6 +100,9 @@ export interface SmartsheetConfig {
   contentSheetId: string;
   eventsSheetId?: string;
   peopleSheetId?: string;
+  sessionsSheetId?: string;
+  /** One row per person per session: Session ID, Person, State. */
+  signUpsSheetId?: string;
 }
 
 /**
@@ -173,6 +201,68 @@ export class SmartsheetSource implements DataSource {
         notes: row[c.notes] || undefined,
       }));
   }
+
+  async listSessions(): Promise<KnowledgeSession[]> {
+    if (!this.config.sessionsSheetId) return [];
+    const c = COLUMNS.sessions;
+    const rows = await this.fetchRows(this.config.sessionsSheetId);
+    return rows
+      .filter((row) => row[c.title] && row[c.date])
+      .map((row) => {
+        const capacity = Number.parseInt(row[c.capacity] ?? "", 10);
+        const location = row[c.location] ?? "";
+        return {
+          id: row[c.id] || `ws-${row._rowId}`,
+          title: row[c.title],
+          kind: normaliseSessionKind(row[c.kind]),
+          hostId: row[c.host] ? personId(row[c.host]) : undefined,
+          hostExternal: row[c.guest] || undefined,
+          date: isoDate(row[c.date]),
+          startTime: row[c.startTime] || "09:00",
+          endTime: row[c.endTime] || "10:00",
+          location,
+          online: /remote|zoom|teams|online/i.test(location),
+          capacity: Number.isFinite(capacity) ? capacity : null,
+          signUpsOpen: isYes(row[c.signUpsOpen]),
+          required: isYes(row[c.required]) || undefined,
+          summary: row[c.summary] || "",
+          topics: (row[c.topics] || "")
+            .split(/\s*,\s*/)
+            .filter(Boolean),
+          recapUrl: row[c.recapUrl] || undefined,
+        };
+      });
+  }
+
+  async listSignUps(): Promise<Record<string, SessionSignUps>> {
+    if (!this.config.signUpsSheetId) return {};
+    const c = COLUMNS.signUps;
+    const rows = await this.fetchRows(this.config.signUpsSheetId);
+    const out: Record<string, SessionSignUps> = {};
+    for (const row of rows) {
+      const session = row[c.session];
+      const who = row[c.person];
+      if (!session || !who) continue;
+      out[session] ??= { going: [], waiting: [] };
+      const waiting = /wait/i.test(row[c.state] ?? "");
+      out[session][waiting ? "waiting" : "going"].push(personId(who));
+    }
+    return out;
+  }
+}
+
+/** Smartsheet checkboxes come back as "true"/"false"; humans type "Yes". */
+function isYes(value: string | undefined): boolean {
+  return /^(true|yes|y|1)$/i.test((value ?? "").trim());
+}
+
+function normaliseSessionKind(value: string | undefined): SessionKind {
+  const v = (value ?? "").toLowerCase();
+  if (v.includes("masterclass")) return "masterclass";
+  if (v.includes("lunch")) return "lunch-and-learn";
+  if (v.includes("critique") || v.includes("review")) return "critique";
+  if (v.includes("training") || v.includes("course")) return "training";
+  return "workshop";
 }
 
 /**

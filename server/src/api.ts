@@ -1,5 +1,9 @@
 import { Router } from "express";
+import type { SignUpStore } from "./signUps.js";
 import type { CalendarEvent, ContentItem, DataSource, Person } from "./types.js";
+
+/** Deadlines are calendar days, so "today" is a date string, read per request. */
+const TODAY = () => new Date().toISOString().slice(0, 10);
 
 /**
  * Filters are read from the query string so that every view in the Hub has a
@@ -52,7 +56,7 @@ function eventAppliesTo(event: CalendarEvent, person: Person | undefined): boole
   return true;
 }
 
-export function createApiRouter(data: DataSource): Router {
+export function createApiRouter(data: DataSource, store: SignUpStore): Router {
   const router = Router();
 
   router.get("/health", (_req, res) => {
@@ -157,6 +161,117 @@ export function createApiRouter(data: DataSource): Router {
       next(err);
     }
   });
+
+  /**
+   * Workshops and knowledge-sharing sessions, each with its sign-ups
+   * attached so a card can be drawn without a second request.
+   */
+  router.get("/sessions", async (req, res, next) => {
+    try {
+      const { kind, when, person } = req.query as Record<string, string | undefined>;
+      const [sessions, people] = await Promise.all([data.listSessions(), data.listPeople()]);
+      const known = new Set(people.map((p) => p.id));
+
+      const decorated = sessions
+        .filter((s) => (kind ? s.kind === kind : true))
+        .filter((s) => {
+          if (when === "past") return s.date < TODAY();
+          if (when === "upcoming") return s.date >= TODAY();
+          return true;
+        })
+        .map((session) => {
+          const signUps = store.get(session.id);
+          // Drop anyone who has since left the team.
+          const going = signUps.going.filter((id) => known.has(id));
+          const waiting = signUps.waiting.filter((id) => known.has(id));
+          return {
+            ...session,
+            going,
+            waiting,
+            placesLeft: session.capacity === null ? null : Math.max(0, session.capacity - going.length),
+            full: session.capacity !== null && going.length >= session.capacity,
+          };
+        })
+        .filter((s) => (person ? s.going.includes(person) || s.waiting.includes(person) : true))
+        .sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
+
+      res.json(decorated);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get("/sessions/:id", async (req, res, next) => {
+    try {
+      const sessions = await data.listSessions();
+      const session = sessions.find((s) => s.id === req.params.id);
+      if (!session) {
+        res.status(404).json({ error: `No session with id "${req.params.id}"` });
+        return;
+      }
+      const signUps = store.get(session.id);
+      res.json({
+        ...session,
+        ...signUps,
+        placesLeft:
+          session.capacity === null ? null : Math.max(0, session.capacity - signUps.going.length),
+        full: session.capacity !== null && signUps.going.length >= session.capacity,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /** Take a place, or join the waitlist when the session is full. */
+  router.post("/sessions/:id/sign-up", async (req, res, next) => {
+    try {
+      const { session, personId, error } = await resolveSignUp(req.params.id, req.body?.personId);
+      if (error) {
+        res.status(error.status).json({ error: error.message });
+        return;
+      }
+      const outcome = store.add(session!, personId!);
+      if (outcome.result === "closed") {
+        res.status(409).json({ error: "This session is not taking sign-ups." });
+        return;
+      }
+      res.json({ ...outcome, signUps: store.get(session!.id) });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /** Give up a place; the first person waiting takes it. */
+  router.delete("/sessions/:id/sign-up", async (req, res, next) => {
+    try {
+      const personIdParam = (req.query.personId as string | undefined) ?? req.body?.personId;
+      const { session, personId, error } = await resolveSignUp(req.params.id, personIdParam);
+      if (error) {
+        res.status(error.status).json({ error: error.message });
+        return;
+      }
+      const outcome = store.remove(session!, personId!);
+      res.json({ ...outcome, signUps: store.get(session!.id) });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /** Shared validation for the two sign-up routes. */
+  async function resolveSignUp(sessionId: string, personId: unknown) {
+    if (typeof personId !== "string" || !personId) {
+      return { error: { status: 400, message: "personId is required" } };
+    }
+    const [sessions, people] = await Promise.all([data.listSessions(), data.listPeople()]);
+    const session = sessions.find((s) => s.id === sessionId);
+    if (!session) {
+      return { error: { status: 404, message: `No session with id "${sessionId}"` } };
+    }
+    if (!people.some((p) => p.id === personId)) {
+      return { error: { status: 400, message: `No person with id "${personId}"` } };
+    }
+    return { session, personId };
+  }
 
   return router;
 }

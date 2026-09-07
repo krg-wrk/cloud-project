@@ -2,85 +2,111 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
-  href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=Archivo:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+  href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=DM+Mono:wght@400;500&display=swap"
   rel="stylesheet"
 />
 
 <style>
-  :root {
-    --ground: #f3f4f1;
-    --surface: #fcfcfa;
-    --surface-2: #e9ebe6;
-    --ink: #171a18;
-    --ink-mid: #5a605b;
-    --ink-soft: #8d948e;
-    --line: #dcded8;
-    --line-firm: #c3c7bf;
-    --accent: #3a34c9;
-    --accent-wash: #e7e6fb;
+  /* -------------------------------------------------------------------------
+     WGSN house style: white surfaces, hairline rules, uppercase micro-labels,
+     squared corners, DM Sans throughout. Colour is the accent, not the
+     furniture — which is how a colour-forecasting company ought to look.
 
-    --late: #c33a28;
-    --warn: #a6741a;
-    --ok: #2e6b4f;
-    --info: #2c5c93;
+     Accent is Future Dusk, WGSN + Coloro's Colour of the Year 2025
+     (Coloro 129-35-18).
+     ------------------------------------------------------------------------- */
+
+  :root {
+    --paper: #ffffff;
+    --ground: #f4f4f2;
+    --sunken: #ebebe8;
+    --ink: #0e0e10;
+    --ink-mid: #56565c;
+    --ink-soft: #8b8b91;
+    --line: #e2e2de;
+    --line-firm: #c7c7c1;
+    --accent: #4c5578;
+    --accent-wash: #eceef4;
+    --accent-ink: #ffffff;
+
+    --late: #b8341f;
+    --warn: #9c6b16;
+    --ok: #256b48;
+    --info: #2f5f9e;
     --violet: #6b4fc0;
     --teal: #17706c;
-    --rose: #a83a63;
+    --rose: #a33a60;
 
-    --display: "Bricolage Grotesque", "Helvetica Neue", Helvetica, Arial, sans-serif;
-    --body: "Archivo", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
-    --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+    --kind-workshop: #4c5578;
+    --kind-masterclass: #a33a60;
+    --kind-lunch-and-learn: #17706c;
+    --kind-critique: #9c6b16;
+    --kind-training: #2f5f9e;
 
-    --rail: 236px;
-  }
+    --sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    --mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
-  :root:not([data-theme="light"]) {
+    --rail: 240px;
     color-scheme: light;
   }
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --ground: #121513;
-      --surface: #1a1e1b;
-      --surface-2: #232824;
-      --ink: #eceee9;
-      --ink-mid: #a3aaa4;
-      --ink-soft: #7b827c;
-      --line: #2c322d;
-      --line-firm: #3d443e;
-      --accent: #9a95ff;
-      --accent-wash: #23224a;
+      --paper: #16161a;
+      --ground: #0d0d10;
+      --sunken: #1e1e23;
+      --ink: #f1f1ef;
+      --ink-mid: #a4a4ab;
+      --ink-soft: #7c7c84;
+      --line: #2a2a30;
+      --line-firm: #3c3c44;
+      --accent: #9aa3cc;
+      --accent-wash: #23253a;
+      --accent-ink: #14151c;
 
-      --late: #f08573;
-      --warn: #dfae56;
-      --ok: #6bbf93;
-      --info: #7aa9dd;
-      --violet: #a893f0;
-      --teal: #5cb5b0;
-      --rose: #e089a8;
+      --late: #ef8676;
+      --warn: #dcab5b;
+      --ok: #64bd8f;
+      --info: #7aa8dd;
+      --violet: #a793ef;
+      --teal: #57b3ae;
+      --rose: #e087a6;
+
+      --kind-workshop: #9aa3cc;
+      --kind-masterclass: #e087a6;
+      --kind-lunch-and-learn: #57b3ae;
+      --kind-critique: #dcab5b;
+      --kind-training: #7aa8dd;
       color-scheme: dark;
     }
   }
 
   :root[data-theme="dark"] {
-    --ground: #121513;
-    --surface: #1a1e1b;
-    --surface-2: #232824;
-    --ink: #eceee9;
-    --ink-mid: #a3aaa4;
-    --ink-soft: #7b827c;
-    --line: #2c322d;
-    --line-firm: #3d443e;
-    --accent: #9a95ff;
-    --accent-wash: #23224a;
+    --paper: #16161a;
+    --ground: #0d0d10;
+    --sunken: #1e1e23;
+    --ink: #f1f1ef;
+    --ink-mid: #a4a4ab;
+    --ink-soft: #7c7c84;
+    --line: #2a2a30;
+    --line-firm: #3c3c44;
+    --accent: #9aa3cc;
+    --accent-wash: #23253a;
+    --accent-ink: #14151c;
 
-    --late: #f08573;
-    --warn: #dfae56;
-    --ok: #6bbf93;
-    --info: #7aa9dd;
-    --violet: #a893f0;
-    --teal: #5cb5b0;
-    --rose: #e089a8;
+    --late: #ef8676;
+    --warn: #dcab5b;
+    --ok: #64bd8f;
+    --info: #7aa8dd;
+    --violet: #a793ef;
+    --teal: #57b3ae;
+    --rose: #e087a6;
+
+    --kind-workshop: #9aa3cc;
+    --kind-masterclass: #e087a6;
+    --kind-lunch-and-learn: #57b3ae;
+    --kind-critique: #dcab5b;
+    --kind-training: #7aa8dd;
     color-scheme: dark;
   }
 
@@ -92,7 +118,7 @@
     margin: 0;
     background: var(--ground);
     color: var(--ink);
-    font-family: var(--body);
+    font-family: var(--sans);
     font-size: 14px;
     line-height: 1.5;
     -webkit-font-smoothing: antialiased;
@@ -116,9 +142,9 @@
 
   h1, h2, h3 {
     margin: 0;
-    font-family: var(--display);
-    font-weight: 600;
-    letter-spacing: -0.02em;
+    font-family: var(--sans);
+    font-weight: 500;
+    letter-spacing: -0.025em;
     text-wrap: balance;
   }
 
@@ -131,17 +157,19 @@
     flex-wrap: wrap;
     padding: 9px 20px;
     background: var(--ink);
-    color: var(--ground);
+    color: var(--paper);
     font-size: 12px;
   }
 
   .demo-note strong {
-    font-family: var(--display);
-    letter-spacing: 0.01em;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    font-size: 10px;
   }
 
   .demo-note span {
-    opacity: 0.72;
+    opacity: 0.74;
   }
 
   /* The point of the whole pitch: the address changes as you move around. */
@@ -154,7 +182,7 @@
     gap: 12px;
     padding: 10px 20px;
     border-bottom: 1px solid var(--line);
-    background: var(--surface);
+    background: var(--paper);
   }
 
   .urlbar-dots {
@@ -164,8 +192,8 @@
   }
 
   .urlbar-dots i {
-    width: 9px;
-    height: 9px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
     background: var(--line-firm);
   }
@@ -175,10 +203,8 @@
     min-width: 0;
     display: flex;
     align-items: center;
-    gap: 2px;
     padding: 7px 12px;
     border: 1px solid var(--line);
-    border-radius: 999px;
     background: var(--ground);
     font-family: var(--mono);
     font-size: 12.5px;
@@ -202,15 +228,13 @@
     flex: none;
     padding: 7px 13px;
     border: 1px solid var(--line-firm);
-    border-radius: 999px;
-    background: var(--surface);
+    background: var(--paper);
     font-size: 12.5px;
     font-weight: 500;
   }
 
   .copy-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
+    border-color: var(--ink);
   }
 
   .copy-btn.done {
@@ -231,26 +255,40 @@
     top: 57px;
     display: flex;
     flex-direction: column;
-    gap: 26px;
-    padding: 24px 18px 30px;
+    gap: 24px;
+    padding: 22px 18px 26px;
     border-right: 1px solid var(--line);
+    background: var(--paper);
     min-height: calc(100vh - 57px);
   }
 
-  .brand {
-    font-family: var(--display);
-    font-size: 23px;
+  /* The wordmark is set as a solid block, the way WGSN sets its own. */
+  .brand-mark {
+    display: inline-block;
+    padding: 5px 9px 4px;
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 19px;
     font-weight: 700;
-    line-height: 1.02;
-    letter-spacing: -0.035em;
+    line-height: 1;
+    letter-spacing: 0.02em;
+  }
+
+  .brand-sub {
+    display: block;
+    margin-top: 9px;
+    font-size: 12.5px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
   }
 
   .brand em {
     display: block;
-    margin-top: 5px;
-    font: 500 10px/1.4 var(--body);
+    margin-top: 2px;
     font-style: normal;
-    letter-spacing: 0.14em;
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.17em;
     text-transform: uppercase;
     color: var(--ink-soft);
   }
@@ -258,40 +296,41 @@
   nav {
     display: flex;
     flex-direction: column;
-    gap: 1px;
   }
 
   .nav-group {
-    padding: 0 10px 7px;
+    padding: 0 0 7px;
+    margin-bottom: 3px;
+    border-bottom: 1px solid var(--line);
     font-size: 9.5px;
-    font-weight: 600;
-    letter-spacing: 0.15em;
+    font-weight: 500;
+    letter-spacing: 0.17em;
     text-transform: uppercase;
     color: var(--ink-soft);
   }
 
   .nav-group:not(:first-child) {
-    padding-top: 18px;
+    margin-top: 20px;
   }
 
   .nav-link {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 7px 10px;
-    border-radius: 7px;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
     font-weight: 500;
     color: var(--ink-mid);
   }
 
   .nav-link:hover {
-    background: var(--surface-2);
-    color: var(--ink);
+    color: var(--accent);
   }
 
   .nav-link.on {
-    background: var(--accent-wash);
-    color: var(--accent);
+    color: var(--ink);
+    padding-left: 10px;
+    box-shadow: inset 2px 0 0 var(--accent);
   }
 
   .nav-link b {
@@ -311,13 +350,15 @@
     margin-top: auto;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 9px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
   }
 
   .as-label {
     font-size: 9.5px;
-    font-weight: 600;
-    letter-spacing: 0.14em;
+    font-weight: 500;
+    letter-spacing: 0.17em;
     text-transform: uppercase;
     color: var(--ink-soft);
   }
@@ -326,11 +367,27 @@
     width: 100%;
     padding: 7px 9px;
     border: 1px solid var(--line-firm);
-    border-radius: 7px;
-    background: var(--surface);
+    background: var(--paper);
     color: var(--ink);
     font: inherit;
     font-size: 13px;
+  }
+
+  /* A real WGSN detail: the accent is one of their Colours of the Year. */
+  .swatch-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 10px;
+    line-height: 1.35;
+    color: var(--ink-soft);
+  }
+
+  .swatch-note i {
+    width: 22px;
+    height: 22px;
+    flex: none;
+    background: #4c5578;
   }
 
   main {
@@ -346,29 +403,29 @@
     gap: 18px;
     align-items: flex-end;
     justify-content: space-between;
-    padding-bottom: 18px;
+    padding-bottom: 16px;
     margin-bottom: 24px;
-    border-bottom: 1px solid var(--line);
+    border-bottom: 1px solid var(--ink);
   }
 
   .eyebrow {
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.16em;
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.17em;
     text-transform: uppercase;
     color: var(--ink-soft);
   }
 
   h1 {
-    margin-top: 7px;
-    font-size: 36px;
-    line-height: 1.04;
-    letter-spacing: -0.038em;
+    margin-top: 8px;
+    font-size: 40px;
+    line-height: 1.02;
+    letter-spacing: -0.04em;
   }
 
   .lede {
     margin: 9px 0 0;
-    max-width: 60ch;
+    max-width: 62ch;
     color: var(--ink-mid);
   }
 
@@ -399,7 +456,9 @@
     align-items: baseline;
     justify-content: space-between;
     gap: 12px;
+    padding-bottom: 9px;
     margin-bottom: 11px;
+    border-bottom: 1px solid var(--line);
   }
 
   .sec-link {
@@ -415,36 +474,33 @@
   /* Figures earn a tile only here, where they are the headline. */
   .figures {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(142px, 1fr));
     gap: 1px;
     margin-bottom: 30px;
     background: var(--line);
     border: 1px solid var(--line);
-    border-radius: 10px;
-    overflow: hidden;
   }
 
   .figure {
     padding: 15px 17px;
-    background: var(--surface);
+    background: var(--paper);
   }
 
   .figure b {
     display: block;
-    font-family: var(--display);
-    font-size: 30px;
-    font-weight: 600;
+    font-size: 32px;
+    font-weight: 500;
     line-height: 1;
-    letter-spacing: -0.03em;
+    letter-spacing: -0.04em;
     font-variant-numeric: tabular-nums;
   }
 
   .figure span {
     display: block;
-    margin-top: 7px;
-    font-size: 10px;
-    font-weight: 600;
-    letter-spacing: 0.11em;
+    margin-top: 8px;
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
     text-transform: uppercase;
     color: var(--ink-soft);
   }
@@ -457,14 +513,13 @@
 
   .rows {
     border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--surface);
+    background: var(--paper);
     overflow: hidden;
   }
 
   .row {
     display: grid;
-    grid-template-columns: 82px minmax(0, 1fr) auto;
+    grid-template-columns: 80px minmax(0, 1fr) auto;
     gap: 15px;
     align-items: center;
     padding: 11px 16px;
@@ -476,7 +531,7 @@
   }
 
   a.row:hover {
-    background: var(--surface-2);
+    background: var(--ground);
   }
 
   .when {
@@ -489,8 +544,9 @@
   .when i {
     display: block;
     margin-top: 1px;
-    font: 400 10.5px/1.4 var(--body);
+    font-family: var(--sans);
     font-style: normal;
+    font-size: 10.5px;
     color: var(--ink-soft);
   }
 
@@ -519,7 +575,6 @@
   .none {
     padding: 24px 16px;
     border: 1px dashed var(--line-firm);
-    border-radius: 10px;
     color: var(--ink-soft);
     text-align: center;
   }
@@ -530,18 +585,20 @@
     display: inline-flex;
     align-items: center;
     gap: 5px;
-    padding: 3px 9px 3px 7px;
-    border-radius: 999px;
-    font-size: 11px;
-    font-weight: 600;
+    padding: 3px 8px;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
     white-space: nowrap;
-    background: color-mix(in srgb, var(--c) 14%, transparent);
-    color: color-mix(in srgb, var(--c) 72%, var(--ink));
+    background: color-mix(in srgb, var(--c) 11%, transparent);
+    color: color-mix(in srgb, var(--c) 80%, var(--ink));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 24%, transparent);
   }
 
   .chip i {
-    width: 6px;
-    height: 6px;
+    width: 5px;
+    height: 5px;
     border-radius: 50%;
     background: var(--c);
   }
@@ -563,22 +620,31 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 25px;
-    height: 25px;
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
     flex: none;
-    font-size: 9.5px;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    background: color-mix(in srgb, var(--c) 20%, var(--surface));
-    color: color-mix(in srgb, var(--c) 70%, var(--ink));
-    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 35%, transparent);
+    font-size: 9px;
+    font-weight: 700;
+    background: color-mix(in srgb, var(--c) 18%, var(--paper));
+    color: color-mix(in srgb, var(--c) 72%, var(--ink));
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--c) 32%, transparent);
   }
 
   .face.big {
     width: 44px;
     height: 44px;
     font-size: 15px;
+  }
+
+  .tag {
+    display: inline-flex;
+    padding: 3px 7px;
+    border: 1px solid var(--line);
+    background: var(--ground);
+    font-size: 11px;
+    color: var(--ink-mid);
+    white-space: nowrap;
   }
 
   /* ---- Filters ----------------------------------------------------------- */
@@ -591,8 +657,7 @@
     padding: 13px 15px;
     margin-bottom: 18px;
     border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--surface);
+    background: var(--paper);
   }
 
   .field {
@@ -603,14 +668,14 @@
 
   .field > span {
     font-size: 9.5px;
-    font-weight: 600;
-    letter-spacing: 0.13em;
+    font-weight: 500;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
     color: var(--ink-soft);
   }
 
   .field select {
-    min-width: 138px;
+    min-width: 140px;
   }
 
   .toggles {
@@ -622,28 +687,38 @@
   .toggle {
     padding: 6px 11px;
     border: 1px solid var(--line-firm);
-    border-radius: 999px;
-    background: var(--surface);
+    background: var(--paper);
     font-size: 12.5px;
     font-weight: 500;
     color: var(--ink-mid);
+    white-space: nowrap;
+  }
+
+  .toggle:hover {
+    border-color: var(--ink);
+    color: var(--ink);
   }
 
   .toggle.on {
     border-color: var(--accent);
     background: var(--accent);
-    color: #fff;
+    color: var(--accent-ink);
   }
 
-  /* The accent lightens in dark mode, so an active toggle needs dark label text. */
-  @media (prefers-color-scheme: dark) {
-    :root:not([data-theme="light"]) .toggle.on {
-      color: #14161a;
-    }
+  .toggle.solid {
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--paper);
   }
 
-  :root[data-theme="dark"] .toggle.on {
-    color: #14161a;
+  .toggle.solid:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  .toggle:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   .filters-right {
@@ -660,8 +735,7 @@
   .table-scroll {
     overflow-x: auto;
     border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--surface);
+    background: var(--paper);
   }
 
   table {
@@ -672,11 +746,11 @@
 
   th {
     padding: 10px 13px;
-    border-bottom: 1px solid var(--line-firm);
-    background: var(--surface-2);
+    border-bottom: 1px solid var(--ink);
+    background: var(--paper);
     font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: 0.13em;
+    font-weight: 500;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
     color: var(--ink-soft);
     text-align: left;
@@ -694,7 +768,7 @@
   }
 
   tbody tr:hover {
-    background: var(--surface-2);
+    background: var(--ground);
   }
 
   td.num {
@@ -726,18 +800,16 @@
   }
 
   .month-name {
-    min-width: 178px;
+    min-width: 180px;
     text-align: center;
-    font-family: var(--display);
     font-size: 19px;
-    font-weight: 600;
+    font-weight: 500;
     letter-spacing: -0.025em;
   }
 
   .cal {
     border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--surface);
+    background: var(--paper);
     overflow: hidden;
   }
 
@@ -749,11 +821,11 @@
 
   .cal-head div {
     padding: 8px 10px;
-    border-bottom: 1px solid var(--line-firm);
-    background: var(--surface-2);
+    border-bottom: 1px solid var(--ink);
+    background: var(--paper);
     font-size: 9.5px;
-    font-weight: 700;
-    letter-spacing: 0.13em;
+    font-weight: 500;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
     color: var(--ink-soft);
   }
@@ -777,11 +849,11 @@
   }
 
   .cell.pad {
-    background: var(--surface-2);
+    background: var(--sunken);
   }
 
   .cell.rest:not(.pad) {
-    background: color-mix(in srgb, var(--surface-2) 45%, var(--surface));
+    background: var(--ground);
   }
 
   .cell.now {
@@ -805,8 +877,7 @@
     display: block;
     padding: 3px 6px;
     border-left: 3px solid var(--c);
-    border-radius: 4px;
-    background: color-mix(in srgb, var(--c) 11%, transparent);
+    background: color-mix(in srgb, var(--c) 9%, transparent);
     font-size: 11px;
     line-height: 1.32;
     white-space: nowrap;
@@ -815,14 +886,15 @@
   }
 
   a.mark:hover {
-    background: color-mix(in srgb, var(--c) 22%, transparent);
+    background: color-mix(in srgb, var(--c) 20%, transparent);
   }
 
   .mark em {
     margin-right: 5px;
-    font: 600 9px/1 var(--body);
     font-style: normal;
-    letter-spacing: 0.07em;
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
     color: color-mix(in srgb, var(--c) 78%, var(--ink));
   }
@@ -851,7 +923,6 @@
   .key i {
     width: 10px;
     height: 10px;
-    border-radius: 3px;
     background: var(--c);
   }
 
@@ -859,7 +930,7 @@
 
   .split {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 282px;
+    grid-template-columns: minmax(0, 1fr) 286px;
     gap: 26px;
     align-items: start;
   }
@@ -867,14 +938,18 @@
   .flag {
     padding: 13px 15px;
     margin-bottom: 18px;
-    border-left: 3px solid var(--late);
-    border-radius: 0 8px 8px 0;
-    background: color-mix(in srgb, var(--late) 9%, transparent);
+    border-left: 3px solid var(--accent);
+    background: var(--accent-wash);
     font-size: 13px;
   }
 
+  .flag.warn {
+    border-left-color: var(--late);
+    background: color-mix(in srgb, var(--late) 8%, transparent);
+  }
+
   .flag strong {
-    font-weight: 600;
+    font-weight: 500;
   }
 
   .steps {
@@ -897,8 +972,8 @@
     left: 9px;
     top: 17px;
     bottom: 0;
-    width: 2px;
-    background: var(--line);
+    width: 1px;
+    background: var(--line-firm);
   }
 
   .step i {
@@ -906,7 +981,7 @@
     height: 11px;
     margin: 4px;
     border-radius: 50%;
-    background: var(--ground);
+    background: var(--paper);
     box-shadow: inset 0 0 0 2px var(--line-firm);
     z-index: 1;
   }
@@ -918,11 +993,11 @@
 
   .step.here i {
     background: var(--accent);
-    box-shadow: 0 0 0 4px var(--accent-wash);
+    box-shadow: 0 0 0 3px var(--accent-wash);
   }
 
   .step b {
-    font-weight: 600;
+    font-weight: 500;
   }
 
   .step span {
@@ -934,8 +1009,7 @@
   .panel {
     padding: 16px 17px;
     border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--surface);
+    background: var(--paper);
   }
 
   .panel + .panel {
@@ -971,8 +1045,8 @@
 
   .panel-label {
     font-size: 9.5px;
-    font-weight: 600;
-    letter-spacing: 0.13em;
+    font-weight: 500;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
     color: var(--ink-soft);
     margin-bottom: 10px;
@@ -983,19 +1057,17 @@
     margin-top: 14px;
     padding: 8px;
     border: 1px solid var(--line-firm);
-    border-radius: 7px;
     text-align: center;
     font-size: 13px;
     font-weight: 500;
   }
 
   .wide-btn:hover {
-    border-color: var(--accent);
-    color: var(--accent);
+    border-color: var(--ink);
   }
 
   .prose p {
-    max-width: 62ch;
+    max-width: 64ch;
     color: var(--ink-mid);
   }
 
@@ -1003,7 +1075,7 @@
 
   .cards {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(252px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(254px, 1fr));
     gap: 12px;
   }
 
@@ -1012,16 +1084,15 @@
     gap: 13px;
     padding: 15px;
     border: 1px solid var(--line);
-    border-radius: 10px;
-    background: var(--surface);
+    background: var(--paper);
   }
 
   .person:hover {
-    border-color: var(--line-firm);
+    border-color: var(--ink);
   }
 
   .person b {
-    font-weight: 600;
+    font-weight: 500;
   }
 
   .person span {
@@ -1046,7 +1117,7 @@
 
   .tallies .bad {
     color: var(--late);
-    font-weight: 600;
+    font-weight: 500;
   }
 
   /* ---- What's on --------------------------------------------------------- */
@@ -1054,36 +1125,240 @@
   .diary {
     display: flex;
     flex-direction: column;
-    gap: 7px;
+    gap: 6px;
   }
 
   .entry {
     display: grid;
-    grid-template-columns: 124px minmax(0, 1fr) auto;
+    grid-template-columns: 126px minmax(0, 1fr) auto;
     gap: 15px;
     align-items: center;
     padding: 12px 15px;
     border: 1px solid var(--line);
     border-left: 3px solid var(--c);
-    border-radius: 0 8px 8px 0;
-    background: var(--surface);
+    background: var(--paper);
   }
 
   .month-rule {
-    margin: 22px 0 11px;
-    font-family: var(--display);
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--ink-mid);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 24px 0 11px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .month-rule::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
   }
 
   .month-rule:first-child {
     margin-top: 0;
   }
 
-  @media (max-width: 1040px) {
+  /* ---- Learning ---------------------------------------------------------- */
+
+  .session {
+    display: grid;
+    grid-template-columns: 104px minmax(0, 1fr) 210px;
+    gap: 20px;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-top: 2px solid var(--c, var(--accent));
+    background: var(--paper);
+  }
+
+  .session + .session {
+    margin-top: 10px;
+  }
+
+  .session.mine {
+    background: var(--accent-wash);
+  }
+
+  .session-when {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-mid);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .session-day {
+    display: block;
+    font-family: var(--sans);
+    font-size: 27px;
+    font-weight: 500;
+    letter-spacing: -0.04em;
+    line-height: 1;
+    color: var(--ink);
+  }
+
+  .session-month {
+    display: block;
+    margin: 3px 0 7px;
+    font-family: var(--sans);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .session-title {
+    display: block;
+    margin-top: 8px;
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  a.session-title:hover {
+    color: var(--accent);
+  }
+
+  .session-host {
+    margin-top: 6px;
+    font-size: 12.5px;
+    color: var(--ink-mid);
+  }
+
+  .session-summary {
+    margin: 9px 0 0;
+    max-width: 60ch;
+    font-size: 13px;
+    color: var(--ink-mid);
+  }
+
+  .session-topics {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 11px;
+  }
+
+  .session-side {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    align-items: flex-start;
+    padding-left: 20px;
+    border-left: 1px solid var(--line);
+  }
+
+  /* Places left, drawn to the real capacity. */
+  .places {
+    width: 100%;
+  }
+
+  .places-bar {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 6px;
+  }
+
+  .places-bar i {
+    flex: 1;
+    height: 5px;
+    background: var(--line);
+  }
+
+  .places-bar i.taken {
+    background: var(--c, var(--accent));
+  }
+
+  .places-text {
+    font-size: 11.5px;
+    color: var(--ink-mid);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .places-text.tight {
+    color: var(--warn);
+    font-weight: 500;
+  }
+
+  .places-text.full {
+    color: var(--late);
+    font-weight: 500;
+  }
+
+  .attendees {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .attendees .face {
+    width: 22px;
+    height: 22px;
+    font-size: 8.5px;
+  }
+
+  .signup-note {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+
+  .signup-note.going {
+    color: var(--ok);
+    font-weight: 500;
+  }
+
+  .signup-note.waiting {
+    color: var(--warn);
+    font-weight: 500;
+  }
+
+  .session-past {
+    opacity: 0.78;
+  }
+
+  .session-past .session-day {
+    color: var(--ink-soft);
+  }
+
+  /* Whether sign-ups are shared with everyone else looking at the page. */
+  .live-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+
+  .live-state i {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--ink-soft);
+    flex: none;
+  }
+
+  .live-state.live i {
+    background: var(--ok);
+  }
+
+  @media (max-width: 1100px) {
     .split {
       grid-template-columns: minmax(0, 1fr);
+    }
+
+    .session {
+      grid-template-columns: 86px minmax(0, 1fr);
+    }
+
+    .session-side {
+      grid-column: 1 / -1;
+      padding-left: 0;
+      padding-top: 14px;
+      border-left: none;
+      border-top: 1px solid var(--line);
     }
   }
 
@@ -1102,6 +1377,11 @@
     nav {
       flex-direction: row;
       flex-wrap: wrap;
+      gap: 0 16px;
+    }
+
+    .nav-link {
+      border-bottom: none;
     }
 
     .nav-group {
@@ -1113,7 +1393,7 @@
     }
 
     h1 {
-      font-size: 27px;
+      font-size: 28px;
     }
 
     .cell {
@@ -1135,8 +1415,9 @@
 <div class="demo-note">
   <strong>Proof of concept</strong>
   <span
-    >Sample schedule, not live data. The address bar below is part of the demo &mdash;
-    watch it change as you move around, and copy a link to any view.</span
+    >Sample schedule, not live data. The address bar below is part of the demo &mdash; watch it
+    change as you move around. Workshop sign-ups are real and shared: they save, and anyone
+    else on this page sees them.</span
   >
 </div>
 
@@ -1151,11 +1432,19 @@
 
 <div class="shell">
   <aside class="rail">
-    <a class="brand" href="#/">Forecasters<br />Hub<em>Content calendar</em></a>
+    <a class="brand" href="#/">
+      <span class="brand-mark">WGSN</span>
+      <span class="brand-sub">Forecasters Hub</span>
+      <em>Content calendar</em>
+    </a>
     <nav id="nav"></nav>
     <div class="rail-foot">
       <div class="as-label">Viewing as</div>
       <select id="as"></select>
+      <div class="swatch-note">
+        <i></i>
+        <span>Accent: Future Dusk<br />Coloro 129-35-18</span>
+      </div>
     </div>
   </aside>
   <main id="view"></main>
@@ -1167,8 +1456,16 @@
 
 <script>
   const DATA = JSON.parse(document.getElementById("seed").textContent);
-  const { people, content, events } = DATA;
+  const { people, content, events, sessions } = DATA;
   const TODAY = new Date().toISOString().slice(0, 10);
+
+  const KINDS = {
+    workshop: ["Workshop", "var(--kind-workshop)", "Working session with an output the whole team uses."],
+    masterclass: ["Masterclass", "var(--kind-masterclass)", "A deep session on one subject, usually with a specialist host."],
+    "lunch-and-learn": ["Lunch & Learn", "var(--kind-lunch-and-learn)", "Short, informal, over lunch. No preparation expected."],
+    critique: ["Critique", "var(--kind-critique)", "We read each other's work and say what isn't landing."],
+    training: ["Training", "var(--kind-training)", "Practical skills session — bring your own work to it."],
+  };
 
   const STATUS = {
     "not-started": ["Not started", "var(--ink-soft)"],
@@ -1271,6 +1568,95 @@
     return `<span class="chip" style="--c:${colour}"><i></i>${label}</span>`;
   }
 
+  /* ---- sign-ups --------------------------------------------------------- */
+
+  /**
+   * Sign-ups are the one thing on this page people change, so they are shared:
+   * when the artifact's store is available every viewer sees the same list and
+   * updates arrive live. Without it the page still works — sign-ups just stay
+   * in this browser for the session.
+   */
+  const signUps = new Map(
+    sessions.map((s) => [s.id, { going: [], waiting: [] }]),
+  );
+  for (const [id, value] of Object.entries(DATA.signUps ?? {})) {
+    signUps.set(id, { going: [...value.going], waiting: [...value.waiting] });
+  }
+
+  let store = null;
+  let shared = false;
+
+  const seatsFor = (id) => signUps.get(id) ?? { going: [], waiting: [] };
+  const isFull = (s) => s.capacity !== null && seatsFor(s.id).going.length >= s.capacity;
+
+  function signUpState(session, personId) {
+    const seats = seatsFor(session.id);
+    if (session.date < TODAY) return "past";
+    if (seats.going.includes(personId)) return "going";
+    if (seats.waiting.includes(personId)) return "waiting";
+    if (session.required) return "required";
+    if (!session.signUpsOpen) return "closed";
+    if (isFull(session)) return "full";
+    return "can-sign-up";
+  }
+
+  /** Take a place, join the queue, or give a place up — mirroring the server. */
+  function applyChange(session, personId) {
+    const seats = seatsFor(session.id);
+    const going = [...seats.going];
+    const waiting = [...seats.waiting];
+    const wasGoing = going.includes(personId);
+    const wasWaiting = waiting.includes(personId);
+
+    if (wasGoing || wasWaiting) {
+      const i = going.indexOf(personId);
+      if (i > -1) going.splice(i, 1);
+      const j = waiting.indexOf(personId);
+      if (j > -1) waiting.splice(j, 1);
+      // A freed place goes to whoever has waited longest.
+      const room = session.capacity === null || going.length < session.capacity;
+      if (wasGoing && room && waiting.length) going.push(waiting.shift());
+    } else if (session.capacity !== null && going.length >= session.capacity) {
+      waiting.push(personId);
+    } else {
+      going.push(personId);
+    }
+
+    signUps.set(session.id, { going, waiting });
+    if (store) {
+      store
+        .doc(`signups/${session.id}`)
+        .set({ going, waiting })
+        .catch(() => {
+          // The write did not land; the next snapshot puts us back in step.
+        });
+    }
+  }
+
+  async function connectStore() {
+    const db = window.claude ? await window.claude.use("db") : null;
+    if (!db) return;
+    store = db;
+    db.collection("signups").onSnapshot(
+      (snap) => {
+        for (const doc of snap.docs) {
+          const body = doc.data();
+          if (!body) continue;
+          signUps.set(doc.id, {
+            going: Array.isArray(body.going) ? body.going : [],
+            waiting: Array.isArray(body.waiting) ? body.waiting : [],
+          });
+        }
+        shared = true;
+        if (route().parts[0] === "learning") render();
+      },
+      () => {
+        // Subscription died — keep the page usable on local state.
+        shared = false;
+      },
+    );
+  }
+
   /* ---- routing ---------------------------------------------------------- */
 
   let viewerId = people.find((p) => p.role === "forecaster").id;
@@ -1301,6 +1687,16 @@
 
   /* ---- chrome ----------------------------------------------------------- */
 
+  /** Upcoming sessions this person has a place on, or is waiting for. */
+  function mySessionCount(personId) {
+    const n = sessions.filter((s) => {
+      if (s.date < TODAY) return false;
+      const seats = seatsFor(s.id);
+      return seats.going.includes(personId) || seats.waiting.includes(personId);
+    }).length;
+    return n ? String(n) : "";
+  }
+
   function renderNav() {
     const { parts } = route();
     const here = parts[0] ?? "";
@@ -1314,6 +1710,7 @@
       ["Deadlines", "#/deadlines", "deadlines", String(open)],
       ["Calendar", `#/calendar/${TODAY.slice(0, 7)}`, "calendar", ""],
       ["The team", null, null, null],
+      ["Learning", "#/learning", "learning", mySessionCount(me.id) || ""],
       ["Forecasters", "#/team", "team", String(people.filter((p) => p.role === "forecaster").length)],
       ["What’s on", "#/whats-on", "whats-on", ""],
     ];
@@ -1405,6 +1802,14 @@
       .map((item) => ({ item, hits: clashes(item) }))
       .filter((r) => r.hits.length)
       .slice(0, 3);
+    // Sessions this person has a place on, or is queuing for.
+    const mine = sessions
+      .filter((s) => s.date >= TODAY)
+      .filter((s) => {
+        const seats = seatsFor(s.id);
+        return seats.going.includes(me.id) || seats.waiting.includes(me.id);
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
 
     return `
       <div class="head">
@@ -1473,18 +1878,42 @@
             .join("")}</div>
         </div>
         <div>
-          <div class="sec-head"><h2>In the diary</h2><a class="sec-link" href="#/whats-on">What’s on →</a></div>
-          <div class="rows">${diary
-            .map(
-              (e) => `<div class="row">
-                <span class="when">${short(e.startDate)}<i>${rel(e.startDate)}</i></span>
-                <span><span class="row-title">${esc(e.title)}</span>
-                  <span class="row-meta">${esc(
-                    e.personId ? nameOf(e.personId) : e.location || (e.region ? e.region + " team" : "Everyone"),
-                  )}</span></span>
-                <span>${eventChip(e.type)}</span></div>`,
-            )
-            .join("")}</div>
+          <div class="sec-head">
+            <h2>${mine.length ? "Your next sessions" : "In the diary"}</h2>
+            <a class="sec-link" href="${mine.length ? "#/learning?mine=1" : "#/whats-on"}">${
+              mine.length ? "Learning →" : "What’s on →"
+            }</a>
+          </div>
+          <div class="rows">${
+            mine.length
+              ? mine
+                  .slice(0, 5)
+                  .map(
+                    (s) => `<a class="row" href="#/learning/${s.id}">
+                      <span class="when">${short(s.date)}<i>${s.startTime}</i></span>
+                      <span><span class="row-title">${esc(s.title)}</span>
+                        <span class="row-meta">${KINDS[s.kind][0]} · ${esc(s.location)}</span></span>
+                      <span>${
+                        seatsFor(s.id).waiting.includes(me.id)
+                          ? `<span class="tag">Waitlist</span>`
+                          : ""
+                      }</span></a>`,
+                  )
+                  .join("")
+              : diary
+                  .map(
+                    (e) => `<div class="row">
+                      <span class="when">${short(e.startDate)}<i>${rel(e.startDate)}</i></span>
+                      <span><span class="row-title">${esc(e.title)}</span>
+                        <span class="row-meta">${esc(
+                          e.personId
+                            ? nameOf(e.personId)
+                            : e.location || (e.region ? e.region + " team" : "Everyone"),
+                        )}</span></span>
+                      <span>${eventChip(e.type)}</span></div>`,
+                  )
+                  .join("")
+          }</div>
         </div>
       </div>
 
@@ -1635,6 +2064,16 @@
             )}"><em>${esc(e.personId ? nameOf(e.personId).split(" ")[0] : brief)}</em>${esc(e.title)}</a>`,
           );
         }
+        // Workshops belong to the whole team, so they show whoever is filtered in.
+        for (const s of sessions) {
+          if (s.date !== date) continue;
+          out.push(
+            `<a class="mark" style="--c:${KINDS[s.kind][1]}" href="#/learning/${s.id}"
+               title="${esc(KINDS[s.kind][0])}: ${esc(s.title)}"><em>${s.startTime}</em>${esc(
+              s.title,
+            )}</a>`,
+          );
+        }
       }
       if (show.submissions) {
         for (const c of scope) {
@@ -1727,6 +2166,7 @@
       <div class="key">
         <span style="--c:var(--late)"><i></i>Submission due</span>
         <span style="--c:var(--ok)"><i></i>Publication</span>
+        <span style="--c:var(--kind-workshop)"><i></i>Workshop / session</span>
         ${Object.entries(EVENTS)
           .map(([, [label, , colour]]) => `<span style="--c:${colour}"><i></i>${label}</span>`)
           .join("")}
@@ -1933,6 +2373,318 @@
       </section>`;
   }
 
+  function placesMarkup(session) {
+    const seats = seatsFor(session.id);
+    if (session.capacity === null) {
+      return `<div class="places-text">No limit on numbers</div>`;
+    }
+    const taken = seats.going.length;
+    const left = Math.max(0, session.capacity - taken);
+    const tone = left === 0 ? "full" : left <= 3 ? "tight" : "";
+    // One tick per place reads well up to about twenty; past that it turns to mush.
+    const ticks =
+      session.capacity <= 20
+        ? Array.from({ length: session.capacity }, (_, i) => `<i class="${i < taken ? "taken" : ""}"></i>`).join("")
+        : `<i class="taken" style="flex:0 0 ${(taken / session.capacity) * 100}%"></i><i></i>`;
+    return `<div class="places">
+      <div class="places-bar" aria-hidden="true">${ticks}</div>
+      <div class="places-text ${tone}">${
+        left === 0
+          ? `Full — ${taken} of ${session.capacity}${seats.waiting.length ? `, ${seats.waiting.length} waiting` : ""}`
+          : `${left} of ${session.capacity} places left`
+      }</div>
+    </div>`;
+  }
+
+  const ACTION = {
+    "can-sign-up": "Sign up",
+    going: "Cancel my place",
+    waiting: "Leave the waitlist",
+    full: "Join the waitlist",
+    closed: null,
+    required: null,
+    past: null,
+  };
+
+  function sessionCard(session, me) {
+    const [kindLabel, kindColour] = KINDS[session.kind];
+    const seats = seatsFor(session.id);
+    const state = signUpState(session, me.id);
+    const past = state === "past";
+    const mine = state === "going" || state === "waiting";
+    const host = session.hostExternal || nameOf(session.hostId);
+
+    return `<article class="session${mine ? " mine" : ""}${past ? " session-past" : ""}"
+      style="--c:${kindColour}">
+      <div class="session-when">
+        <span class="session-day">${session.date.slice(8)}</span>
+        <span class="session-month">${fmt(session.date, { month: "short" })}</span>
+        <div>${fmt(session.date, { weekday: "short" })} ${session.startTime}–${session.endTime}</div>
+        ${past ? "" : `<div style="margin-top:4px">${rel(session.date)}</div>`}
+      </div>
+      <div>
+        <span class="chip" style="--c:${kindColour}"><i></i>${kindLabel}</span>
+        ${session.required ? `<span class="chip" style="--c:var(--ink)"><i></i>Whole team</span>` : ""}
+        <a class="session-title" href="#/learning/${session.id}">${esc(session.title)}</a>
+        <div class="session-host">${esc(host)} · ${esc(session.location)}</div>
+        <p class="session-summary">${esc(session.summary)}</p>
+        <div class="session-topics">${session.topics
+          .map((t) => `<span class="tag">${esc(t)}</span>`)
+          .join("")}</div>
+      </div>
+      <div class="session-side">
+        ${past ? "" : placesMarkup(session)}
+        ${
+          seats.going.length
+            ? `<div class="signup-note">${past ? "Attended" : "Going"} (${seats.going.length})</div>
+               <div class="attendees">${seats.going
+                 .slice(0, 10)
+                 .map((id) => face(id))
+                 .join("")}</div>`
+            : ""
+        }
+        ${state === "going" ? `<div class="signup-note going">You have a place</div>` : ""}
+        ${
+          state === "waiting"
+            ? `<div class="signup-note waiting">You are ${
+                seats.waiting.indexOf(me.id) + 1
+              } on the waitlist</div>`
+            : ""
+        }
+        ${state === "required" ? `<div class="signup-note">Everyone is expected</div>` : ""}
+        ${state === "closed" ? `<div class="signup-note">Sign-ups are closed</div>` : ""}
+        ${
+          ACTION[state]
+            ? `<button class="toggle${state === "can-sign-up" ? " solid" : ""}"
+                 data-signup="${session.id}">${ACTION[state]}</button>`
+            : ""
+        }
+        ${
+          past && session.recapUrl
+            ? `<a class="toggle" href="${esc(session.recapUrl)}">Notes and recording</a>`
+            : ""
+        }
+      </div>
+    </article>`;
+  }
+
+  function pageLearning(params) {
+    const me = person(viewerId);
+    const kind = params.get("kind") ?? "";
+    const when = params.get("when") === "past" ? "past" : "upcoming";
+    const mineOnly = params.get("mine") === "1";
+
+    const list = sessions
+      .filter((s) => (kind ? s.kind === kind : true))
+      .filter((s) => (when === "past" ? s.date < TODAY : s.date >= TODAY))
+      .filter((s) => {
+        if (!mineOnly) return true;
+        const seats = seatsFor(s.id);
+        return seats.going.includes(me.id) || seats.waiting.includes(me.id);
+      })
+      .sort((a, b) =>
+        when === "past"
+          ? b.date.localeCompare(a.date)
+          : a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime),
+      );
+
+    const mineCount = sessions.filter((s) => {
+      if (s.date < TODAY) return false;
+      const seats = seatsFor(s.id);
+      return seats.going.includes(me.id) || seats.waiting.includes(me.id);
+    }).length;
+
+    const byMonth = new Map();
+    for (const s of list) {
+      const k = s.date.slice(0, 7);
+      byMonth.set(k, [...(byMonth.get(k) ?? []), s]);
+    }
+
+    return `
+      <div class="head">
+        <div>
+          <div class="eyebrow">Workshops · masterclasses · lunch &amp; learns</div>
+          <h1>Learning</h1>
+          <p class="lede">What is coming up across the team, and what you can put your name down
+            for. Sessions with a limit fill up, so the waitlist moves you into a place when
+            someone drops out.</p>
+        </div>
+        <div class="live-state${shared ? " live" : ""}">
+          <i></i>${
+            shared
+              ? "Sign-ups shared with everyone on this page"
+              : "Sign-ups kept in this browser"
+          }
+        </div>
+      </div>
+
+      <div class="filters">
+        <div class="field"><span>When</span>
+          <div class="toggles">
+            <button class="toggle${when === "upcoming" ? " on" : ""}" data-when="">Coming up</button>
+            <button class="toggle${when === "past" ? " on" : ""}" data-when="past">Been and gone</button>
+          </div>
+        </div>
+        <div class="field"><span>Kind</span>
+          <div class="toggles">
+            <button class="toggle${kind ? "" : " on"}" data-kind="">Everything</button>
+            ${Object.entries(KINDS)
+              .map(
+                ([k, [label]]) =>
+                  `<button class="toggle${kind === k ? " on" : ""}" data-kind="${k}">${label}</button>`,
+              )
+              .join("")}
+          </div>
+        </div>
+        <div class="filters-right">
+          <button class="toggle${mineOnly ? " on" : ""}" data-mine="${mineOnly ? "" : "1"}">${
+            mineOnly ? "Showing mine" : `Just mine${mineCount ? ` (${mineCount})` : ""}`
+          }</button>
+        </div>
+      </div>
+
+      ${
+        list.length
+          ? [...byMonth.entries()]
+              .map(
+                ([k, items]) =>
+                  `<div class="month-rule">${monthName(k)}</div>${items
+                    .map((s) => sessionCard(s, me))
+                    .join("")}`,
+              )
+              .join("")
+          : `<div class="none">${
+              mineOnly
+                ? "You have not signed up for anything yet."
+                : "Nothing in the programme for that filter."
+            }</div>`
+      }`;
+  }
+
+  function pageSession(id) {
+    const session = sessions.find((s) => s.id === id);
+    if (!session) return `<div class="none">No session with that reference.</div>`;
+    const me = person(viewerId);
+    const [kindLabel, kindColour, kindBlurb] = KINDS[session.kind];
+    const seats = seatsFor(session.id);
+    const state = signUpState(session, me.id);
+    const host = session.hostExternal || nameOf(session.hostId);
+
+    return `
+      <div class="crumb"><a href="#/learning">Learning</a><span>/</span>
+        <span>${kindLabel}</span><span>/</span><span>${esc(session.id)}</span></div>
+
+      <div class="head">
+        <div>
+          <div class="eyebrow">${kindLabel} · ${long(session.date)} · ${session.startTime}–${session.endTime}</div>
+          <h1>${esc(session.title)}</h1>
+          <p class="lede">Hosted by ${esc(host)} · ${esc(session.location)}${
+            state === "past" ? "" : ` · ${rel(session.date)}`
+          }</p>
+        </div>
+        ${
+          ACTION[state]
+            ? `<button class="toggle${state === "can-sign-up" ? " solid" : ""}"
+                 data-signup="${session.id}">${ACTION[state]}</button>`
+            : ""
+        }
+      </div>
+
+      <div class="split">
+        <div class="prose">
+          ${
+            state === "going"
+              ? `<div class="flag"><strong>You have a place.</strong> Cancel if you can’t make it —
+                 someone on the waitlist takes it straight away.</div>`
+              : ""
+          }
+          ${
+            state === "waiting"
+              ? `<div class="flag warn"><strong>You are ${
+                  seats.waiting.indexOf(me.id) + 1
+                } on the waitlist.</strong> You move into a place automatically if someone drops
+                 out.</div>`
+              : ""
+          }
+
+          <h2>What it covers</h2>
+          <p>${esc(session.summary)}</p>
+          <div class="session-topics" style="margin-bottom:24px">${session.topics
+            .map((t) => `<span class="tag">${esc(t)}</span>`)
+            .join("")}</div>
+
+          <h2 style="margin-bottom:10px">Who’s going (${seats.going.length})</h2>
+          ${
+            seats.going.length
+              ? `<div class="rows">${seats.going
+                  .map(
+                    (pid) => `<a class="row" href="#/team/${pid}">
+                      <span class="when">${pid === session.hostId ? "Host" : ""}</span>
+                      <span><span class="row-title"><span class="who">${face(pid)}${esc(
+                        nameOf(pid),
+                      )}</span></span></span><span></span></a>`,
+                  )
+                  .join("")}</div>`
+              : `<div class="none">Nobody yet. Be the first.</div>`
+          }
+
+          ${
+            seats.waiting.length
+              ? `<h2 style="margin:24px 0 10px">Waitlist (${seats.waiting.length})</h2>
+                 <div class="rows">${seats.waiting
+                   .map(
+                     (pid, i) => `<div class="row"><span class="when">${i + 1}</span>
+                       <span><span class="row-title"><span class="who">${face(pid)}${esc(
+                         nameOf(pid),
+                       )}</span></span></span><span></span></div>`,
+                   )
+                   .join("")}</div>`
+              : ""
+          }
+        </div>
+
+        <aside>
+          <div class="panel">
+            <dl>
+              <div class="fact"><dt>Date</dt><dd>${long(session.date)}</dd></div>
+              <div class="fact"><dt>Time</dt><dd>${session.startTime}–${session.endTime}</dd></div>
+              <div class="fact"><dt>Where</dt><dd>${esc(session.location)}</dd></div>
+              <div class="fact"><dt>Format</dt><dd>${session.online ? "Remote" : "In person"}</dd></div>
+              <div class="fact"><dt>Places</dt><dd>${
+                session.capacity === null
+                  ? "No limit"
+                  : `${seats.going.length} of ${session.capacity}`
+              }</dd></div>
+              <div class="fact"><dt>Host</dt><dd>${esc(host)}</dd></div>
+            </dl>
+            ${
+              session.hostId
+                ? `<a href="#/team/${session.hostId}"
+                     style="display:flex;gap:12px;align-items:center;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+                     ${face(session.hostId, true)}
+                     <span><b>${esc(nameOf(session.hostId))}</b>
+                       <span style="display:block;font-size:12px;color:var(--ink-soft)">Hosting this session</span></span>
+                   </a>`
+                : ""
+            }
+            <a class="wide-btn" href="#/calendar/${session.date.slice(0, 7)}">See this month</a>
+          </div>
+          ${
+            session.recapUrl
+              ? `<div class="panel"><div class="panel-label">After the session</div>
+                 <a class="wide-btn" style="margin-top:0" href="${esc(
+                   session.recapUrl,
+                 )}">Notes and recording</a></div>`
+              : ""
+          }
+          <div class="panel" style="border-left:3px solid ${kindColour}">
+            <div class="panel-label">${kindLabel}</div>
+            <div style="font-size:12.5px;color:var(--ink-mid)">${kindBlurb}</div>
+          </div>
+        </aside>
+      </div>`;
+  }
+
   function pageWhatsOn(params) {
     const type = params.get("type") ?? "";
     const rows = events
@@ -2024,6 +2776,9 @@
       case "team":
         html = parts[1] ? pageMember(parts[1]) : pageTeam();
         break;
+      case "learning":
+        html = parts[1] ? pageSession(parts[1]) : pageLearning(params);
+        break;
       case "whats-on":
         html = pageWhatsOn(params);
         break;
@@ -2054,9 +2809,27 @@
     view.querySelectorAll("[data-type]").forEach((el) =>
       el.addEventListener("click", () => setParam("type", el.dataset.type)),
     );
+    view.querySelectorAll("[data-kind]").forEach((el) =>
+      el.addEventListener("click", () => setParam("kind", el.dataset.kind)),
+    );
+    view.querySelectorAll("[data-when]").forEach((el) =>
+      el.addEventListener("click", () => setParam("when", el.dataset.when)),
+    );
+    view.querySelectorAll("[data-mine]").forEach((el) =>
+      el.addEventListener("click", () => setParam("mine", el.dataset.mine)),
+    );
+    view.querySelectorAll("[data-signup]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const session = sessions.find((s) => s.id === el.dataset.signup);
+        if (!session) return;
+        applyChange(session, viewerId);
+        render();
+      }),
+    );
     window.scrollTo({ top: 0 });
   }
 
   window.addEventListener("hashchange", render);
   render();
+  connectStore();
 </script>

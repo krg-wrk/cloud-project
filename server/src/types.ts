@@ -76,6 +76,50 @@ export interface CalendarEvent {
   notes?: string;
 }
 
+export type SessionKind =
+  | "workshop"
+  | "masterclass"
+  | "lunch-and-learn"
+  | "critique"
+  | "training";
+
+/**
+ * A workshop or knowledge-sharing session. Separate from CalendarEvent
+ * because these are things people attend and sign up for, rather than
+ * blocks of time to plan around.
+ */
+export interface KnowledgeSession {
+  id: string;
+  title: string;
+  kind: SessionKind;
+  /** Person id of an internal host. */
+  hostId?: string;
+  /** Named guest speaker, when the host is not on the team. */
+  hostExternal?: string;
+  date: string;
+  /** 24h "HH:MM", in UK time. */
+  startTime: string;
+  endTime: string;
+  location: string;
+  online: boolean;
+  /** null when there is no limit on numbers. */
+  capacity: number | null;
+  /** False for sessions nobody signs up for — the required ones. */
+  signUpsOpen: boolean;
+  /** The whole team is expected, so there is nothing to opt into. */
+  required?: boolean;
+  summary: string;
+  topics: string[];
+  /** Notes or a recording, once the session has run. */
+  recapUrl?: string;
+}
+
+/** Who is going to a session, and who is next in line if it is full. */
+export interface SessionSignUps {
+  going: string[];
+  waiting: string[];
+}
+
 /**
  * Everything the Hub reads. Implemented by the seed adapter today and by the
  * Smartsheet / Google Sheets adapters against the live sheets.
@@ -85,4 +129,7 @@ export interface DataSource {
   listPeople(): Promise<Person[]>;
   listContent(): Promise<ContentItem[]>;
   listEvents(): Promise<CalendarEvent[]>;
+  listSessions(): Promise<KnowledgeSession[]>;
+  /** Sign-ups keyed by session id. */
+  listSignUps(): Promise<Record<string, SessionSignUps>>;
 }

@@ -27,6 +27,8 @@ export function createDataSource(): DataSource {
       contentSheetId,
       eventsSheetId: process.env.SMARTSHEET_EVENTS_SHEET_ID,
       peopleSheetId: process.env.SMARTSHEET_PEOPLE_SHEET_ID,
+      sessionsSheetId: process.env.SMARTSHEET_SESSIONS_SHEET_ID,
+      signUpsSheetId: process.env.SMARTSHEET_SIGNUPS_SHEET_ID,
     });
   }
 
@@ -70,5 +72,13 @@ export class CachedDataSource implements DataSource {
 
   listEvents() {
     return this.through("events", () => this.inner.listEvents());
+  }
+
+  listSessions() {
+    return this.through("sessions", () => this.inner.listSessions());
+  }
+
+  listSignUps() {
+    return this.through("signups", () => this.inner.listSignUps());
   }
 }

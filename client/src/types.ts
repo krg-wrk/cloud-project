@@ -54,6 +54,40 @@ export interface CalendarEvent {
   notes?: string;
 }
 
+export type SessionKind =
+  | "workshop"
+  | "masterclass"
+  | "lunch-and-learn"
+  | "critique"
+  | "training";
+
+export interface KnowledgeSession {
+  id: string;
+  title: string;
+  kind: SessionKind;
+  hostId?: string;
+  hostExternal?: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  location: string;
+  online: boolean;
+  capacity: number | null;
+  signUpsOpen: boolean;
+  required?: boolean;
+  summary: string;
+  topics: string[];
+  recapUrl?: string;
+}
+
+/** A session as the API returns it, with its sign-ups attached. */
+export interface SessionWithSignUps extends KnowledgeSession {
+  going: string[];
+  waiting: string[];
+  placesLeft: number | null;
+  full: boolean;
+}
+
 export interface Schedule {
   people: Person[];
   content: ContentItem[];

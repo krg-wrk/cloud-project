@@ -3,7 +3,7 @@ import { useApi } from "../lib/api";
 import { TODAY, monthKey } from "../lib/date";
 import { isOutstanding, isOverdue } from "../lib/domain";
 import { ViewerProvider, useViewer } from "../lib/viewer";
-import type { ContentItem, Person } from "../types";
+import type { ContentItem, Person, SessionWithSignUps } from "../types";
 import { Avatar, ErrorNote, Loading } from "./bits";
 
 function ViewerSwitch() {
@@ -44,11 +44,18 @@ function Sidebar({ content }: { content: ContentItem[] }) {
   const outstanding = scope.filter(isOutstanding).length;
   const overdue = scope.filter((c) => isOverdue(c)).length;
 
+  // The badge counts what this person has put their name down for.
+  const sessions = useApi<SessionWithSignUps[]>(
+    person ? `/sessions?when=upcoming&person=${person.id}` : "/sessions?when=upcoming",
+  );
+  const mySessions = person ? (sessions.data?.length ?? 0) : 0;
+
   return (
     <aside className="sidebar">
       <NavLink to="/" className="brand">
-        <div className="brand-mark">Forecasters&nbsp;Hub</div>
-        <div className="brand-sub">Content Calendar</div>
+        <div className="brand-mark">WGSN</div>
+        <div className="brand-sub">Forecasters Hub</div>
+        <div className="brand-kicker">Content Calendar</div>
       </NavLink>
 
       <nav className="nav">
@@ -68,6 +75,10 @@ function Sidebar({ content }: { content: ContentItem[] }) {
         <div className="nav-label" style={{ marginTop: 20 }}>
           The team
         </div>
+        <NavLink to="/workshops" className="nav-link">
+          Learning
+          {mySessions > 0 && <span className="count">{mySessions}</span>}
+        </NavLink>
         <NavLink to="/team" className="nav-link">
           Forecasters
           <span className="count">
