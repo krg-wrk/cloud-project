@@ -1,3 +1,4 @@
+import type { AccessRow, Role } from "../auth.js";
 import type {
   CalendarEvent,
   ContentItem,
@@ -71,6 +72,17 @@ export const COLUMNS = {
     person: "Person",
     state: "State",
   },
+  /**
+   * The access sheet. One row per exception — managers, admins, leavers.
+   * Team members absent from it get an ordinary forecaster's view.
+   */
+  access: {
+    email: "Email",
+    name: "Name",
+    role: "Role",
+    verticals: "Verticals",
+    active: "Active",
+  },
 } as const;
 
 interface SmartsheetCell {
@@ -103,6 +115,7 @@ export interface SmartsheetConfig {
   sessionsSheetId?: string;
   /** One row per person per session: Session ID, Person, State. */
   signUpsSheetId?: string;
+  accessSheetId?: string;
 }
 
 /**
@@ -249,6 +262,29 @@ export class SmartsheetSource implements DataSource {
     }
     return out;
   }
+
+  async listAccess(): Promise<AccessRow[]> {
+    if (!this.config.accessSheetId) return [];
+    const c = COLUMNS.access;
+    const rows = await this.fetchRows(this.config.accessSheetId);
+    return rows
+      .filter((row) => row[c.email]?.includes("@"))
+      .map((row) => ({
+        email: row[c.email].trim().toLowerCase(),
+        name: row[c.name] || undefined,
+        role: normaliseRole(row[c.role]),
+        verticals: row[c.verticals] || undefined,
+        // Blank means active; only an explicit "no" removes access.
+        active: !/^(false|no|n|0|inactive|left)$/i.test((row[c.active] ?? "").trim()),
+      }));
+  }
+}
+
+function normaliseRole(value: string | undefined): Role {
+  const v = (value ?? "").toLowerCase();
+  if (v.includes("admin")) return "admin";
+  if (v.includes("commission") || v.includes("manager")) return "commissioning-manager";
+  return "forecaster";
 }
 
 /** Smartsheet checkboxes come back as "true"/"false"; humans type "Yes". */

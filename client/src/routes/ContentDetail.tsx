@@ -1,9 +1,12 @@
+import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useApi } from "../lib/api";
 import { TODAY, formatLong, formatShort, monthKey, relativeDays } from "../lib/date";
 import { STATUS_LABELS, clashesFor, isOverdue, personName } from "../lib/domain";
-import type { CalendarEvent, ContentItem, Person } from "../types";
+import type { CalendarEvent, ContentItem, PeerReview, Person } from "../types";
 import { Avatar, ErrorNote, EventPill, Loading, StatusPill } from "../components/bits";
+import Notes from "../components/Notes";
+import PeerReviewPanel from "../components/PeerReviewPanel";
 import ShareLink from "../components/ShareLink";
 
 export default function ContentDetail() {
@@ -11,6 +14,11 @@ export default function ContentDetail() {
   const item = useApi<ContentItem>(`/content/${id}`);
   const people = useApi<Person[]>("/people");
   const events = useApi<CalendarEvent[]>("/events");
+
+  const [review, setReview] = useState<PeerReview | null>(null);
+  useEffect(() => {
+    if (item.data) setReview(item.data.peerReview ?? null);
+  }, [item.data]);
 
   if (item.error) return <ErrorNote message={item.error} />;
   if (!item.data || !people.data) return <Loading what="this piece" />;
@@ -104,11 +112,15 @@ export default function ContentDetail() {
           {c.notes && (
             <>
               <h2 className="section-title" style={{ margin: "26px 0 6px" }}>
-                Notes
+                Commissioning note
               </h2>
               <p>{c.notes}</p>
             </>
           )}
+
+          <section className="section" style={{ marginTop: 28 }}>
+            <Notes contentId={c.id} people={people.data} />
+          </section>
 
           <h2 className="section-title" style={{ margin: "26px 0 10px" }}>
             Also in {c.vertical}
@@ -169,6 +181,15 @@ export default function ContentDetail() {
             >
               See this month
             </Link>
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <PeerReviewPanel
+              item={c}
+              people={people.data}
+              review={review}
+              onChange={setReview}
+            />
           </div>
 
           {clashes.length > 0 && (

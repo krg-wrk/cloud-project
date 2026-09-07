@@ -1,3 +1,4 @@
+import type { AccessRow } from "../auth.js";
 import type {
   CalendarEvent,
   ContentItem,
@@ -6,7 +7,7 @@ import type {
   Person,
   SessionSignUps,
 } from "../types.js";
-import { content, events, people, sessions, signUps } from "./seed.js";
+import { access, content, events, people, sessions, signUps } from "./seed.js";
 
 /**
  * In-memory data source used for the POC and for local development, so the Hub
@@ -33,5 +34,9 @@ export class SeedSource implements DataSource {
 
   async listSignUps(): Promise<Record<string, SessionSignUps>> {
     return signUps;
+  }
+
+  async listAccess(): Promise<AccessRow[]> {
+    return access;
   }
 }

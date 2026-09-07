@@ -1,6 +1,6 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
-import { useApi, query } from "../lib/api";
+import { send, useApi, query } from "../lib/api";
 import {
   TODAY,
   dayOfMonth,
@@ -22,8 +22,16 @@ import {
   personName,
 } from "../lib/domain";
 import { useViewer } from "../lib/viewer";
-import type { CalendarEvent, ContentItem, Schedule, SessionWithSignUps } from "../types";
+import type {
+  CalendarEvent,
+  ContentItem,
+  MyPeerReview,
+  PersonalEntry,
+  Schedule,
+  SessionWithSignUps,
+} from "../types";
 import { ErrorNote, Loading } from "../components/bits";
+import EntryForm from "../components/EntryForm";
 import ShareLink from "../components/ShareLink";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -32,16 +40,28 @@ const MAX_CHIPS = 3;
 type Chip =
   | { kind: "submission" | "publication"; item: ContentItem }
   | { kind: "event"; event: CalendarEvent }
-  | { kind: "session"; session: SessionWithSignUps };
+  | { kind: "session"; session: SessionWithSignUps }
+  | { kind: "entry"; entry: PersonalEntry }
+  | { kind: "review"; review: MyPeerReview };
 
 function chipsForDay(
   date: string,
   content: ContentItem[],
   events: CalendarEvent[],
   sessions: SessionWithSignUps[],
-  show: { submissions: boolean; publications: boolean; events: boolean },
+  entries: PersonalEntry[],
+  reviews: MyPeerReview[],
+  show: { submissions: boolean; publications: boolean; events: boolean; mine: boolean },
 ): Chip[] {
   const chips: Chip[] = [];
+  if (show.mine) {
+    for (const entry of entries) {
+      if (entry.date <= date && entry.endDate >= date) chips.push({ kind: "entry", entry });
+    }
+    for (const review of reviews) {
+      if (review.reviewDate === date) chips.push({ kind: "review", review });
+    }
+  }
   if (show.events) {
     for (const event of events) {
       if (eventCovers(event, date)) chips.push({ kind: "event", event });
@@ -77,6 +97,7 @@ export default function CalendarView() {
     submissions: params.get("submissions") !== "0",
     publications: params.get("publications") !== "0",
     events: params.get("events") !== "0",
+    mine: params.get("mine") !== "0",
   };
 
   const grid = monthGrid(key);
@@ -89,6 +110,24 @@ export default function CalendarView() {
   );
   // Workshops belong to the whole team, so they are not narrowed by forecaster.
   const sessions = useApi<SessionWithSignUps[]>("/sessions");
+
+  const [adding, setAdding] = useState(false);
+  const [extraEntries, setExtraEntries] = useState<PersonalEntry[]>([]);
+  const [dropped, setDropped] = useState<string[]>([]);
+
+  const entries = [...(data?.entries ?? []), ...extraEntries].filter(
+    (e) => !dropped.includes(e.id),
+  );
+
+  async function removeEntry(id: string) {
+    // Optimistic: the chip is the only place it appears on this page.
+    setDropped((current) => [...current, id]);
+    try {
+      await send(`/my/entries/${id}`, "DELETE");
+    } catch {
+      setDropped((current) => current.filter((x) => x !== id));
+    }
+  }
 
   function setParam(name: string, value: string) {
     const next = new URLSearchParams(params);
@@ -176,10 +215,34 @@ export default function CalendarView() {
             </button>
           </div>
         </div>
+        <div className="field">
+          <label>Mine</label>
+          <button
+            className={show.mine ? "btn accent" : "btn"}
+            onClick={() => toggle("mine")}
+            title="Your own reminders and peer reviews"
+          >
+            My plan
+          </button>
+        </div>
         <div className="filters-right">
+          <button className="btn solid" onClick={() => setAdding((v) => !v)}>
+            {adding ? "Close" : "Add a reminder"}
+          </button>
           <ShareLink />
         </div>
       </div>
+
+      {adding && (
+        <EntryForm
+          defaultDate={`${key}-01` > TODAY ? `${key}-01` : TODAY}
+          onSaved={(entry) => {
+            setExtraEntries((current) => [...current, entry]);
+            setAdding(false);
+          }}
+          onCancel={() => setAdding(false)}
+        />
+      )}
 
       {loading || !data ? (
         <Loading what="the month" />
@@ -199,6 +262,8 @@ export default function CalendarView() {
                     data.content,
                     data.events,
                     sessions.data ?? [],
+                    entries,
+                    data.peerReviews ?? [],
                     show,
                   );
                   const classes = ["cal-day"];
@@ -209,7 +274,31 @@ export default function CalendarView() {
                     <div className={classes.join(" ")} key={date}>
                       <div className="cal-daynum">{dayOfMonth(date)}</div>
                       {chips.slice(0, MAX_CHIPS).map((chip, i) =>
-                        chip.kind === "session" ? (
+                        chip.kind === "entry" ? (
+                          <button
+                            key={chip.entry.id}
+                            className="cal-chip cal-chip-button"
+                            style={{ "--chip-color": "var(--mine)" } as CSSProperties}
+                            title={`${chip.entry.title}${chip.entry.note ? ` — ${chip.entry.note}` : ""} (yours — click to remove)`}
+                            onClick={() => removeEntry(chip.entry.id)}
+                          >
+                            <span className="chip-kind">Mine</span>
+                            {chip.entry.title}
+                          </button>
+                        ) : chip.kind === "review" ? (
+                          <Link
+                            key={`review-${chip.review.contentId}`}
+                            to={`/content/${chip.review.contentId}`}
+                            className="cal-chip"
+                            style={{ "--chip-color": "var(--review)" } as CSSProperties}
+                            title={`Peer review: ${chip.review.item?.title ?? ""}`}
+                          >
+                            <span className="chip-kind">
+                              {chip.review.iAmReviewer ? "Review" : "Reviewed"}
+                            </span>
+                            {chip.review.item?.title ?? "Peer review"}
+                          </Link>
+                        ) : chip.kind === "session" ? (
                           <Link
                             key={chip.session.id}
                             to={`/workshops/${chip.session.id}`}
@@ -250,7 +339,7 @@ export default function CalendarView() {
                               {
                                 "--chip-color":
                                   chip.kind === "submission"
-                                    ? "var(--accent)"
+                                    ? "var(--ink)"
                                     : "var(--status-published)",
                               } as CSSProperties
                             }
@@ -274,7 +363,7 @@ export default function CalendarView() {
           </div>
 
           <div className="legend">
-            <span style={{ "--legend-color": "var(--accent)" } as CSSProperties}>
+            <span style={{ "--legend-color": "var(--ink)" } as CSSProperties}>
               <i /> Submission due
             </span>
             <span style={{ "--legend-color": "var(--status-published)" } as CSSProperties}>
@@ -283,7 +372,13 @@ export default function CalendarView() {
             <span style={{ "--legend-color": "var(--kind-workshop)" } as CSSProperties}>
               <i /> Workshop / session
             </span>
-            {(Object.keys(EVENT_LABELS) as (keyof typeof EVENT_LABELS)[]).map((type) => (
+            <span style={{ "--legend-color": "var(--review)" } as CSSProperties}>
+              <i /> Peer review
+            </span>
+            <span style={{ "--legend-color": "var(--mine)" } as CSSProperties}>
+              <i /> Yours only
+            </span>
+            {(["leave", "public-holiday", "conference"] as (keyof typeof EVENT_LABELS)[]).map((type) => (
               <span key={type} style={{ "--legend-color": `var(--event-${type})` } as CSSProperties}>
                 <i /> {EVENT_LABELS[type]}
               </span>

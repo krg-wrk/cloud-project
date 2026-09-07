@@ -1,3 +1,4 @@
+import type { HubStore } from "./store.js";
 import type { KnowledgeSession, SessionSignUps } from "./types.js";
 
 export type SignUpOutcome =
@@ -11,37 +12,30 @@ export type CancelOutcome =
   | { result: "not-signed-up" };
 
 /**
- * Who is going to which session.
+ * Who is going to which session, over the store.
  *
- * The POC keeps this in memory, so sign-ups reset when the server restarts.
- * In production this is the one part of the Hub that writes rather than reads:
- * point it at a sign-ups sheet (or a small table of its own) and keep the same
- * interface — the routes and the UI do not care where the rows live.
+ * The rules live here rather than in the UI so the app, the calendar feed and
+ * anything added later all agree on what "full" means.
  */
-export class SignUpStore {
-  private byId = new Map<string, SessionSignUps>();
-
-  constructor(seed: Record<string, SessionSignUps> = {}) {
-    for (const [id, value] of Object.entries(seed)) {
-      this.byId.set(id, { going: [...value.going], waiting: [...value.waiting] });
-    }
-  }
+export class SignUps {
+  constructor(private readonly store: HubStore) {}
 
   get(sessionId: string): SessionSignUps {
-    const current = this.byId.get(sessionId);
-    return current
-      ? { going: [...current.going], waiting: [...current.waiting] }
-      : { going: [], waiting: [] };
+    const rows = this.store.signUpsFor(sessionId);
+    return {
+      going: rows.filter((r) => r.state === "going").map((r) => r.personId),
+      waiting: rows.filter((r) => r.state === "waiting").map((r) => r.personId),
+    };
   }
 
+  /** One pass over the table, for pages that need every session at once. */
   all(): Record<string, SessionSignUps> {
     const out: Record<string, SessionSignUps> = {};
-    for (const id of this.byId.keys()) out[id] = this.get(id);
+    for (const row of this.store.allSignUps()) {
+      out[row.sessionId] ??= { going: [], waiting: [] };
+      out[row.sessionId][row.state].push(row.personId);
+    }
     return out;
-  }
-
-  private set(sessionId: string, value: SessionSignUps): void {
-    this.byId.set(sessionId, value);
   }
 
   /** Takes a place if there is one, joins the queue if there isn't. */
@@ -52,34 +46,39 @@ export class SignUpStore {
       return { result: "already" };
     }
     const full = session.capacity !== null && current.going.length >= session.capacity;
-    if (full) {
-      current.waiting.push(personId);
-      this.set(session.id, current);
-      return { result: "waiting", position: current.waiting.length };
-    }
-    current.going.push(personId);
-    this.set(session.id, current);
-    return { result: "going" };
+    this.store.addSignUp(session.id, personId, full ? "waiting" : "going");
+    return full
+      ? { result: "waiting", position: current.waiting.length + 1 }
+      : { result: "going" };
   }
 
   /** Giving up a place moves the first person on the waitlist into it. */
   remove(session: KnowledgeSession, personId: string): CancelOutcome {
-    const current = this.get(session.id);
-    const wasGoing = current.going.includes(personId);
-    const wasWaiting = current.waiting.includes(personId);
+    const before = this.get(session.id);
+    const wasGoing = before.going.includes(personId);
+    const wasWaiting = before.waiting.includes(personId);
     if (!wasGoing && !wasWaiting) return { result: "not-signed-up" };
 
-    current.going = current.going.filter((id) => id !== personId);
-    current.waiting = current.waiting.filter((id) => id !== personId);
+    this.store.removeSignUp(session.id, personId);
 
-    let promoted: string | undefined;
-    const hasRoom = session.capacity === null || current.going.length < session.capacity;
-    if (wasGoing && hasRoom && current.waiting.length > 0) {
-      promoted = current.waiting.shift();
-      if (promoted) current.going.push(promoted);
+    if (!wasGoing) return { result: "cancelled" };
+
+    const after = this.get(session.id);
+    const hasRoom = session.capacity === null || after.going.length < session.capacity;
+    const next = after.waiting[0];
+    if (hasRoom && next) {
+      this.store.promoteSignUp(session.id, next);
+      return { result: "cancelled", promoted: next };
     }
+    return { result: "cancelled" };
+  }
 
-    this.set(session.id, current);
-    return promoted ? { result: "cancelled", promoted } : { result: "cancelled" };
+  /** Session ids this person is going to or waiting for. */
+  forPerson(personId: string): Set<string> {
+    const out = new Set<string>();
+    for (const row of this.store.allSignUps()) {
+      if (row.personId === personId) out.add(row.sessionId);
+    }
+    return out;
   }
 }

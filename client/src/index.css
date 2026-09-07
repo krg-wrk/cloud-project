@@ -41,6 +41,10 @@
   --kind-critique: #9c6b16;
   --kind-training: #2f5f9e;
 
+  /* Things only the signed-in person sees — kept clear of every shared hue. */
+  --mine: #8e3b74;
+  --review: #c2571a;
+
   --display: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --ui: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -1235,4 +1239,169 @@ a.session-title:hover {
   * {
     transition: none !important;
   }
+}
+
+/* --- Notes, entries, peer review ---------------------------------------- */
+
+.note-composer {
+  padding: 14px 15px;
+  margin-bottom: 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.note-input {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.composer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.steer {
+  flex: 1;
+  min-width: 200px;
+  padding: 7px 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+}
+
+/* An AI draft is marked while it is still a draft, not only once saved. */
+.ai-banner {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border-left: 3px solid var(--mine);
+  background: color-mix(in srgb, var(--mine) 8%, transparent);
+  font-size: 12.5px;
+}
+
+.note-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.note {
+  padding: 13px 15px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.note-ai {
+  border-left: 3px solid var(--mine);
+}
+
+.note-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 12.5px;
+}
+
+.note-when {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-45);
+}
+
+.note-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+}
+
+.note-actions .btn {
+  padding: 3px 8px;
+  font-size: 11.5px;
+}
+
+.note-body {
+  white-space: pre-wrap;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+
+.entry-form {
+  margin-bottom: 18px;
+}
+
+.cal-chip-button {
+  width: 100%;
+  text-align: left;
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.peer-card .facts {
+  margin-top: 4px;
+}
+
+.peer-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.peer-form .field select,
+.peer-form .field input {
+  width: 100%;
+  min-width: 0;
+}
+
+.steps-list {
+  margin: 0;
+  padding-left: 20px;
+  max-width: 64ch;
+  color: var(--ink-70);
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+.steps-list li {
+  margin-bottom: 6px;
+}
+
+.feed-address {
+  padding: 16px 17px;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.feed-url {
+  display: block;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  background: var(--ground);
+  font-family: var(--mono);
+  font-size: 12px;
+  word-break: break-all;
+  color: var(--ink);
 }

@@ -1,0 +1,498 @@
+import { DatabaseSync } from "node:sqlite";
+import { randomUUID } from "node:crypto";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+
+/**
+ * Everything the Hub owns rather than reads.
+ *
+ * The commissioning schedule stays in Smartsheet, where the managers work.
+ * Notes, personal entries, peer reviews and sign-ups are written by the team
+ * — hundreds of small writes a day across 200 people — which a sheet cannot
+ * take, so they live here instead.
+ *
+ * SQLite is deliberate for the POC: it needs no service, it is a real
+ * database with real indexes, and every query below is ordinary SQL that
+ * moves to Postgres unchanged when the Hub is deployed for the whole team.
+ */
+
+export type NoteSource = "human" | "ai";
+
+export interface ContentNote {
+  id: string;
+  contentId: string;
+  authorId: string;
+  body: string;
+  source: NoteSource;
+  /** Which model wrote it, for AI notes. */
+  model?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type EntryKind = "reminder" | "focus-time" | "personal" | "milestone";
+
+export interface PersonalEntry {
+  id: string;
+  personId: string;
+  title: string;
+  kind: EntryKind;
+  date: string;
+  endDate: string;
+  note?: string;
+  /** Optionally pinned to a piece of content. */
+  contentId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PeerReview {
+  contentId: string;
+  reviewerId: string;
+  reviewDate: string;
+  /** Who set it up — kept so either side can see who arranged it. */
+  arrangedBy: string;
+  note?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SignUpRow {
+  sessionId: string;
+  personId: string;
+  state: "going" | "waiting";
+  createdAt: string;
+}
+
+const SCHEMA = `
+CREATE TABLE IF NOT EXISTS content_notes (
+  id TEXT PRIMARY KEY,
+  content_id TEXT NOT NULL,
+  author_id TEXT NOT NULL,
+  body TEXT NOT NULL,
+  source TEXT NOT NULL DEFAULT 'human',
+  model TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS content_notes_by_content ON content_notes (content_id, created_at);
+
+CREATE TABLE IF NOT EXISTS personal_entries (
+  id TEXT PRIMARY KEY,
+  person_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'reminder',
+  date TEXT NOT NULL,
+  end_date TEXT NOT NULL,
+  note TEXT,
+  content_id TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS personal_entries_by_person ON personal_entries (person_id, date);
+
+CREATE TABLE IF NOT EXISTS peer_reviews (
+  content_id TEXT PRIMARY KEY,
+  reviewer_id TEXT NOT NULL,
+  review_date TEXT NOT NULL,
+  arranged_by TEXT NOT NULL,
+  note TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS peer_reviews_by_reviewer ON peer_reviews (reviewer_id, review_date);
+
+CREATE TABLE IF NOT EXISTS session_signups (
+  session_id TEXT NOT NULL,
+  person_id TEXT NOT NULL,
+  state TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (session_id, person_id)
+);
+
+CREATE TABLE IF NOT EXISTS calendar_tokens (
+  person_id TEXT PRIMARY KEY,
+  token TEXT NOT NULL UNIQUE,
+  created_at TEXT NOT NULL
+);
+`;
+
+const now = () => new Date().toISOString();
+
+export class HubStore {
+  private db: DatabaseSync;
+
+  constructor(file = process.env.HUB_DB ?? "./data/hub.db") {
+    if (file !== ":memory:") mkdirSync(dirname(file), { recursive: true });
+    this.db = new DatabaseSync(file);
+    this.db.exec("PRAGMA journal_mode = WAL");
+    this.db.exec("PRAGMA foreign_keys = ON");
+    this.db.exec(SCHEMA);
+  }
+
+  close(): void {
+    this.db.close();
+  }
+
+  // --- Notes -------------------------------------------------------------
+
+  notesFor(contentId: string): ContentNote[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, content_id, author_id, body, source, model, created_at, updated_at
+         FROM content_notes WHERE content_id = ? ORDER BY created_at DESC`,
+      )
+      .all(contentId) as Record<string, string>[];
+    return rows.map(toNote);
+  }
+
+  /** How many notes each piece has, for badging a list without N queries. */
+  noteCounts(): Record<string, number> {
+    const rows = this.db
+      .prepare(`SELECT content_id, COUNT(*) AS n FROM content_notes GROUP BY content_id`)
+      .all() as { content_id: string; n: number }[];
+    return Object.fromEntries(rows.map((r) => [r.content_id, Number(r.n)]));
+  }
+
+  addNote(input: {
+    contentId: string;
+    authorId: string;
+    body: string;
+    source?: NoteSource;
+    model?: string;
+  }): ContentNote {
+    const stamp = now();
+    const note: ContentNote = {
+      id: randomUUID(),
+      contentId: input.contentId,
+      authorId: input.authorId,
+      body: input.body,
+      source: input.source ?? "human",
+      model: input.model,
+      createdAt: stamp,
+      updatedAt: stamp,
+    };
+    this.db
+      .prepare(
+        `INSERT INTO content_notes
+           (id, content_id, author_id, body, source, model, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        note.id,
+        note.contentId,
+        note.authorId,
+        note.body,
+        note.source,
+        note.model ?? null,
+        note.createdAt,
+        note.updatedAt,
+      );
+    return note;
+  }
+
+  getNote(id: string): ContentNote | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT id, content_id, author_id, body, source, model, created_at, updated_at
+         FROM content_notes WHERE id = ?`,
+      )
+      .get(id) as Record<string, string> | undefined;
+    return row ? toNote(row) : undefined;
+  }
+
+  updateNote(id: string, body: string): ContentNote | undefined {
+    this.db
+      .prepare(`UPDATE content_notes SET body = ?, updated_at = ? WHERE id = ?`)
+      .run(body, now(), id);
+    return this.getNote(id);
+  }
+
+  deleteNote(id: string): void {
+    this.db.prepare(`DELETE FROM content_notes WHERE id = ?`).run(id);
+  }
+
+  // --- Personal entries --------------------------------------------------
+
+  entriesFor(personId: string, from?: string, to?: string): PersonalEntry[] {
+    const rows = this.db
+      .prepare(
+        `SELECT id, person_id, title, kind, date, end_date, note, content_id, created_at, updated_at
+         FROM personal_entries
+         WHERE person_id = ?
+           AND (? IS NULL OR end_date >= ?)
+           AND (? IS NULL OR date <= ?)
+         ORDER BY date`,
+      )
+      .all(personId, from ?? null, from ?? null, to ?? null, to ?? null) as Record<string, string>[];
+    return rows.map(toEntry);
+  }
+
+  getEntry(id: string): PersonalEntry | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT id, person_id, title, kind, date, end_date, note, content_id, created_at, updated_at
+         FROM personal_entries WHERE id = ?`,
+      )
+      .get(id) as Record<string, string> | undefined;
+    return row ? toEntry(row) : undefined;
+  }
+
+  addEntry(input: {
+    personId: string;
+    title: string;
+    kind: EntryKind;
+    date: string;
+    endDate?: string;
+    note?: string;
+    contentId?: string;
+  }): PersonalEntry {
+    const stamp = now();
+    const entry: PersonalEntry = {
+      id: randomUUID(),
+      personId: input.personId,
+      title: input.title,
+      kind: input.kind,
+      date: input.date,
+      endDate: input.endDate || input.date,
+      note: input.note,
+      contentId: input.contentId,
+      createdAt: stamp,
+      updatedAt: stamp,
+    };
+    this.db
+      .prepare(
+        `INSERT INTO personal_entries
+           (id, person_id, title, kind, date, end_date, note, content_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        entry.id,
+        entry.personId,
+        entry.title,
+        entry.kind,
+        entry.date,
+        entry.endDate,
+        entry.note ?? null,
+        entry.contentId ?? null,
+        entry.createdAt,
+        entry.updatedAt,
+      );
+    return entry;
+  }
+
+  updateEntry(
+    id: string,
+    patch: Partial<Pick<PersonalEntry, "title" | "kind" | "date" | "endDate" | "note">>,
+  ): PersonalEntry | undefined {
+    const current = this.getEntry(id);
+    if (!current) return undefined;
+    const next = { ...current, ...patch };
+    this.db
+      .prepare(
+        `UPDATE personal_entries
+         SET title = ?, kind = ?, date = ?, end_date = ?, note = ?, updated_at = ?
+         WHERE id = ?`,
+      )
+      .run(next.title, next.kind, next.date, next.endDate || next.date, next.note ?? null, now(), id);
+    return this.getEntry(id);
+  }
+
+  deleteEntry(id: string): void {
+    this.db.prepare(`DELETE FROM personal_entries WHERE id = ?`).run(id);
+  }
+
+  // --- Peer reviews ------------------------------------------------------
+
+  peerReviewFor(contentId: string): PeerReview | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT content_id, reviewer_id, review_date, arranged_by, note, created_at, updated_at
+         FROM peer_reviews WHERE content_id = ?`,
+      )
+      .get(contentId) as Record<string, string> | undefined;
+    return row ? toPeerReview(row) : undefined;
+  }
+
+  allPeerReviews(): PeerReview[] {
+    const rows = this.db
+      .prepare(
+        `SELECT content_id, reviewer_id, review_date, arranged_by, note, created_at, updated_at
+         FROM peer_reviews ORDER BY review_date`,
+      )
+      .all() as Record<string, string>[];
+    return rows.map(toPeerReview);
+  }
+
+  /** One review per piece, so setting it again amends the existing one. */
+  setPeerReview(input: {
+    contentId: string;
+    reviewerId: string;
+    reviewDate: string;
+    arrangedBy: string;
+    note?: string;
+  }): PeerReview {
+    const existing = this.peerReviewFor(input.contentId);
+    const stamp = now();
+    this.db
+      .prepare(
+        `INSERT INTO peer_reviews
+           (content_id, reviewer_id, review_date, arranged_by, note, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (content_id) DO UPDATE SET
+           reviewer_id = excluded.reviewer_id,
+           review_date = excluded.review_date,
+           note = excluded.note,
+           updated_at = excluded.updated_at`,
+      )
+      .run(
+        input.contentId,
+        input.reviewerId,
+        input.reviewDate,
+        existing?.arrangedBy ?? input.arrangedBy,
+        input.note ?? null,
+        existing?.createdAt ?? stamp,
+        stamp,
+      );
+    return this.peerReviewFor(input.contentId)!;
+  }
+
+  deletePeerReview(contentId: string): void {
+    this.db.prepare(`DELETE FROM peer_reviews WHERE content_id = ?`).run(contentId);
+  }
+
+  // --- Session sign-ups --------------------------------------------------
+
+  signUpsFor(sessionId: string): SignUpRow[] {
+    const rows = this.db
+      .prepare(
+        `SELECT session_id, person_id, state, created_at
+         FROM session_signups WHERE session_id = ? ORDER BY created_at`,
+      )
+      .all(sessionId) as Record<string, string>[];
+    return rows.map(toSignUp);
+  }
+
+  allSignUps(): SignUpRow[] {
+    const rows = this.db
+      .prepare(
+        `SELECT session_id, person_id, state, created_at FROM session_signups ORDER BY created_at`,
+      )
+      .all() as Record<string, string>[];
+    return rows.map(toSignUp);
+  }
+
+  addSignUp(sessionId: string, personId: string, state: "going" | "waiting"): void {
+    this.db
+      .prepare(
+        `INSERT INTO session_signups (session_id, person_id, state, created_at)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT (session_id, person_id) DO UPDATE SET state = excluded.state`,
+      )
+      .run(sessionId, personId, state, now());
+  }
+
+  removeSignUp(sessionId: string, personId: string): void {
+    this.db
+      .prepare(`DELETE FROM session_signups WHERE session_id = ? AND person_id = ?`)
+      .run(sessionId, personId);
+  }
+
+  promoteSignUp(sessionId: string, personId: string): void {
+    this.db
+      .prepare(`UPDATE session_signups SET state = 'going' WHERE session_id = ? AND person_id = ?`)
+      .run(sessionId, personId);
+  }
+
+  /** Seeds sign-ups on an empty table so the POC starts with a realistic mix. */
+  seedSignUpsIfEmpty(seed: Record<string, { going: string[]; waiting: string[] }>): void {
+    const { n } = this.db.prepare(`SELECT COUNT(*) AS n FROM session_signups`).get() as {
+      n: number;
+    };
+    if (Number(n) > 0) return;
+    for (const [sessionId, value] of Object.entries(seed)) {
+      for (const personId of value.going) this.addSignUp(sessionId, personId, "going");
+      for (const personId of value.waiting) this.addSignUp(sessionId, personId, "waiting");
+    }
+  }
+
+  // --- Calendar feed tokens ---------------------------------------------
+
+  /**
+   * A per-person secret in the feed URL. Anyone with the URL can read that
+   * person's calendar, which is how subscribable feeds work — so it is
+   * rotatable, and rotating invalidates the old one immediately.
+   */
+  calendarToken(personId: string): string {
+    const row = this.db
+      .prepare(`SELECT token FROM calendar_tokens WHERE person_id = ?`)
+      .get(personId) as { token: string } | undefined;
+    if (row) return row.token;
+    const token = randomUUID().replace(/-/g, "");
+    this.db
+      .prepare(`INSERT INTO calendar_tokens (person_id, token, created_at) VALUES (?, ?, ?)`)
+      .run(personId, token, now());
+    return token;
+  }
+
+  rotateCalendarToken(personId: string): string {
+    this.db.prepare(`DELETE FROM calendar_tokens WHERE person_id = ?`).run(personId);
+    return this.calendarToken(personId);
+  }
+
+  personForToken(token: string): string | undefined {
+    const row = this.db
+      .prepare(`SELECT person_id FROM calendar_tokens WHERE token = ?`)
+      .get(token) as { person_id: string } | undefined;
+    return row?.person_id;
+  }
+}
+
+function toNote(row: Record<string, unknown>): ContentNote {
+  return {
+    id: String(row.id),
+    contentId: String(row.content_id),
+    authorId: String(row.author_id),
+    body: String(row.body),
+    source: row.source === "ai" ? "ai" : "human",
+    model: row.model ? String(row.model) : undefined,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  };
+}
+
+function toEntry(row: Record<string, unknown>): PersonalEntry {
+  return {
+    id: String(row.id),
+    personId: String(row.person_id),
+    title: String(row.title),
+    kind: String(row.kind) as EntryKind,
+    date: String(row.date),
+    endDate: String(row.end_date),
+    note: row.note ? String(row.note) : undefined,
+    contentId: row.content_id ? String(row.content_id) : undefined,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  };
+}
+
+function toPeerReview(row: Record<string, unknown>): PeerReview {
+  return {
+    contentId: String(row.content_id),
+    reviewerId: String(row.reviewer_id),
+    reviewDate: String(row.review_date),
+    arrangedBy: String(row.arranged_by),
+    note: row.note ? String(row.note) : undefined,
+    createdAt: String(row.created_at),
+    updatedAt: String(row.updated_at),
+  };
+}
+
+function toSignUp(row: Record<string, unknown>): SignUpRow {
+  return {
+    sessionId: String(row.session_id),
+    personId: String(row.person_id),
+    state: row.state === "waiting" ? "waiting" : "going",
+    createdAt: String(row.created_at),
+  };
+}

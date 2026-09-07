@@ -49,10 +49,7 @@ training), a host, a capacity and a `signUpsOpen` flag:
 - **Past sessions** move to "been and gone" with a link to notes or a
   recording where there is one.
 
-Sign-ups live in `SignUpStore`, which is **in memory for the POC** — restart
-the server and they reset. Pointing it at a sign-ups sheet (one row per person
-per session: Session ID, Person, State) is the only change needed to make them
-stick; the routes and the UI don't care where the rows live.
+Sign-ups persist in the store (see **Data** below), so they survive restarts.
 
 ## Branding
 
@@ -64,6 +61,26 @@ from the semantic reds, ambers and greens that carry status.
 
 Everything visual is tokenised at the top of `client/src/index.css`, so
 swapping the palette or the typefaces is a change in one place.
+
+## Data: what lives where, and why
+
+At 200 forecasters this split matters, so it is deliberate:
+
+**Smartsheet stays the schedule.** Commissioning is where the managers work,
+and the Hub only reads it. Read-only, cached, no writes.
+
+**Everything the team writes goes in the Hub's own database** — notes,
+personal entries, peer reviews, session sign-ups, calendar tokens. Two hundred
+people adding notes and moving reminders is thousands of small writes; a
+spreadsheet is the wrong shape for that, and Smartsheet's API rate limits
+would make it the bottleneck rather than the source of truth.
+
+The POC uses SQLite through Node's built-in `node:sqlite` — no service to run,
+a real database with real indexes, and it persists across restarts (`HUB_DB`,
+default `./data/hub.db`). Every query in `server/src/store.ts` is ordinary SQL
+that moves to Postgres unchanged when the Hub is deployed for the whole team.
+That is the one change I would make before rollout: Postgres, so more than one
+app instance can serve the team.
 
 ## Pointing it at Smartsheet
 
@@ -83,6 +100,7 @@ SMARTSHEET_EVENTS_SHEET_ID=...    # leave / public holidays / shows
 SMARTSHEET_PEOPLE_SHEET_ID=...    # the team
 SMARTSHEET_SESSIONS_SHEET_ID=...  # the workshop programme
 SMARTSHEET_SIGNUPS_SHEET_ID=...   # one row per person per session
+SMARTSHEET_ACCESS_SHEET_ID=...    # who may sign in, and their rights
 ```
 
 Column titles are mapped in one place — the `COLUMNS` object at the top of
@@ -94,12 +112,74 @@ loose matching (`normaliseStatus`, `normaliseEventType`), so "In Progress",
 Sheet reads are cached for 60s (`CachedDataSource`) to keep page loads quick
 without going stale while someone is looking at a corrected date.
 
-## Sign-in
+## Sign-in and access
 
-Not wired up yet. For the POC there is a **Viewing as** switcher in the sidebar
-so you can see the Hub as any forecaster, and `?as=ao` works as a URL. The real
-version should read the signed-in user from Google SSO and show the switcher
-only to commissioning managers.
+The Hub reads the signed-in account and filters itself accordingly — a
+forecaster opens it and sees their own work, a commissioning manager sees the
+team.
+
+**In production** (`AUTH_MODE=proxy`): put SSO in front — Google via IAP, or
+Okta — and it passes the verified address on a header. The app never handles a
+password or a token. Set `AUTH_EMAIL_HEADER` to whatever the proxy uses
+(`x-goog-authenticated-user-email`, `x-forwarded-email`,
+`x-auth-request-email`). `AUTH_MODE=dev` refuses to start in production.
+
+**In dev** (`AUTH_MODE=dev`, the default): an account switcher in the sidebar
+picks who you are, so the Hub runs with no identity provider.
+
+Rights come from the **access sheet** (`SMARTSHEET_ACCESS_SHEET_ID`):
+
+| Email | Name | Role | Verticals | Active |
+| --- | --- | --- | --- | --- |
+| graham.krag@wgsn.com | Graham Krag | admin | All | yes |
+| elena.roux@wgsn.com | Elena Roux | commissioning-manager | Beauty, Kidswear | yes |
+
+Only exceptions need a row. Anyone on the team sheet who is absent from it gets
+an ordinary forecaster's view; anyone signed in who is on neither sheet sees
+nothing, which is the safe default for a leaver. `Active: no` removes access
+without deleting the row.
+
+Permissions are in `server/src/auth.ts`, one function per decision, and the
+server checks them on every write — the UI only decides what to draw.
+
+- **Notes**: the forecaster on the piece, a manager for that vertical, an admin
+- **Peer reviews**: either side of the arrangement, a manager in scope, an admin
+- **Personal entries**: only their owner, including admins
+
+## Notes, reminders and peer reviews
+
+- **Notes** on a forecast (`content_notes`), with edit and delete.
+- **AI notes** — `POST /api/content/:id/notes/draft` builds a prompt from the
+  piece's own context (type, vertical, season, dates, existing notes, what else
+  is commissioned in that vertical) and returns a draft. It is **not saved**:
+  it lands in the box for the forecaster to edit and keep, and anything kept
+  stays labelled as an AI note with the model recorded. The key lives on the
+  server only (`GEMINI_API_KEY`, `GEMINI_MODEL`); with no key the button
+  returns a clear "not switched on" message. The house brief for the drafts is
+  one string at the top of `server/src/ai.ts`.
+- **Personal entries** (`personal_entries`) — reminders, focus time,
+  milestones. Private to the person, and they ride along in the calendar feed.
+- **Peer reviews** (`peer_reviews`) — one reviewer and a date per piece. It
+  appears in both people's calendars and **either of them can move or remove
+  it**, as can a manager for that vertical. A piece cannot review itself and a
+  review after publication is refused.
+
+## Google Calendar
+
+Each forecaster gets a private feed URL (`Add to your calendar` in the Hub) and
+subscribes to it once in Google Calendar (`Other calendars → From URL`),
+Outlook, or on their phone. It carries their submission and publication dates,
+peer reviews either side of, sessions they signed up to, their own reminders,
+and the holidays for their region.
+
+It is one-way, and Google decides how often to re-read a subscribed feed —
+usually hours. Good for deadlines that move occasionally; wrong for anything
+that must appear instantly. Two-way sync would need the Calendar API and
+per-user OAuth, which is a much larger piece of work and a bigger ask of IT.
+
+The token in the URL is the credential, so the feed is readable by anyone who
+has the link — as subscribable feeds are everywhere. It is rotatable from the
+same page.
 
 ## The shareable demo
 

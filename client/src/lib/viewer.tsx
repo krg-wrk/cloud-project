@@ -1,69 +1,46 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
-import type { Person } from "../types";
+import { createContext, useContext, type ReactNode } from "react";
+import type { Me, Person } from "../types";
 
 /**
- * Who is looking at the Hub. For the POC this is a switcher in the header so
- * you can see the app as any forecaster; the real version reads it from Google
- * SSO and drops the switcher for everyone but commissioning managers.
+ * Who is signed in, straight from the server.
+ *
+ * Every page reads this to decide what to show by default — a forecaster's
+ * views open filtered to their own work without them touching a control, and
+ * a commissioning manager's open across the team. The server checks
+ * permissions again on every write; this only decides what to draw.
  */
-interface Viewer {
-  person?: Person;
+interface ViewerContextValue {
+  me: Me;
   people: Person[];
-  setViewerId(id: string): void;
+  /** The person record for the signed-in account, when they are on the team. */
+  person?: Person;
   isManager: boolean;
+  isAdmin: boolean;
 }
 
-const ViewerContext = createContext<Viewer>({
-  people: [],
-  setViewerId: () => {},
-  isManager: false,
-});
-
-const STORAGE_KEY = "forecasters-hub.viewer";
-
-function storedViewerId(): string | null {
-  try {
-    return localStorage.getItem(STORAGE_KEY);
-  } catch {
-    return null;
-  }
-}
+const ViewerContext = createContext<ViewerContextValue | null>(null);
 
 export function ViewerProvider({
+  me,
   people,
   children,
 }: {
+  me: Me;
   people: Person[];
   children: ReactNode;
 }) {
-  const initial =
-    new URLSearchParams(window.location.search).get("as") ??
-    storedViewerId() ??
-    people.find((p) => p.role === "forecaster")?.id ??
-    people[0]?.id ??
-    "";
-  const [viewerId, setViewerId] = useState(initial);
-
-  const value = useMemo<Viewer>(() => {
-    const person = people.find((p) => p.id === viewerId) ?? people[0];
-    return {
-      person,
-      people,
-      isManager: person?.role === "commissioning-manager",
-      setViewerId: (id: string) => {
-        setViewerId(id);
-        try {
-          localStorage.setItem(STORAGE_KEY, id);
-        } catch {
-          // Private browsing or blocked storage — the choice just won't persist.
-        }
-      },
-    };
-  }, [people, viewerId]);
-
+  const value: ViewerContextValue = {
+    me,
+    people,
+    person: me.person,
+    isManager: me.seesWholeTeam,
+    isAdmin: me.role === "admin",
+  };
   return <ViewerContext.Provider value={value}>{children}</ViewerContext.Provider>;
 }
 
-export function useViewer(): Viewer {
-  return useContext(ViewerContext);
+export function useViewer(): ViewerContextValue {
+  const value = useContext(ViewerContext);
+  if (!value) throw new Error("useViewer used outside the provider");
+  return value;
 }

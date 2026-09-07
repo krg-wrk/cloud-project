@@ -1,5 +1,9 @@
 /** Domain model for the Forecasters Hub. Mirrors the columns held in Smartsheet. */
 
+import type { AccessRow } from "./auth.js";
+
+export type { AccessRow };
+
 export type Status =
   | "not-started"
   | "in-progress"
@@ -130,6 +134,8 @@ export interface DataSource {
   listContent(): Promise<ContentItem[]>;
   listEvents(): Promise<CalendarEvent[]>;
   listSessions(): Promise<KnowledgeSession[]>;
-  /** Sign-ups keyed by session id. */
+  /** Sign-ups keyed by session id. Seeds the store on first run only. */
   listSignUps(): Promise<Record<string, SessionSignUps>>;
+  /** Who may sign in, and what rights they have. */
+  listAccess(): Promise<AccessRow[]>;
 }

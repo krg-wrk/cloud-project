@@ -1,7 +1,38 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+
+/**
+ * In production the signed-in account arrives on a header from the SSO proxy
+ * and the browser sends nothing. In dev mode the account switcher picks an
+ * address, which rides along on x-dev-viewer so URLs stay clean.
+ */
+const DEV_VIEWER_KEY = "forecasters-hub.account";
+
+export function devViewer(): string | null {
+  try {
+    return localStorage.getItem(DEV_VIEWER_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export function setDevViewer(email: string): void {
+  try {
+    localStorage.setItem(DEV_VIEWER_KEY, email);
+  } catch {
+    // Blocked storage — the choice lasts for this page load only.
+  }
+}
+
+function headers(extra?: HeadersInit): HeadersInit {
+  const email = devViewer();
+  return {
+    ...(extra ?? {}),
+    ...(email ? { "x-dev-viewer": email } : {}),
+  };
+}
 
 async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
-  const res = await fetch(`/api${path}`, { signal });
+  const res = await fetch(`/api${path}`, { signal, headers: headers() });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: string } | null;
     throw new Error(body?.error ?? `Request failed: ${res.status}`);
@@ -15,13 +46,14 @@ export interface Async<T> {
   loading: boolean;
 }
 
-/** Small fetch-on-mount hook. Enough for the Hub's read-only pages. */
-export function useApi<T>(path: string): Async<T> {
+/** Fetch-on-mount, with a reload for pages that change what they read. */
+export function useApi<T>(path: string): Async<T> & { reload: () => void } {
   const [state, setState] = useState<Async<T>>({ loading: true });
+  const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
-    setState({ loading: true });
+    setState((s) => ({ ...s, loading: true }));
     getJson<T>(path, controller.signal)
       .then((data) => setState({ data, loading: false }))
       .catch((err: Error) => {
@@ -29,22 +61,24 @@ export function useApi<T>(path: string): Async<T> {
         setState({ error: err.message, loading: false });
       });
     return () => controller.abort();
-  }, [path]);
+  }, [path, nonce]);
 
-  return state;
+  const reload = useCallback(() => setNonce((n) => n + 1), []);
+  return { ...state, reload };
 }
 
 /** Sends a write and returns the parsed body, throwing the server's message. */
 export async function send<T>(
   path: string,
-  method: "POST" | "DELETE",
+  method: "POST" | "PATCH" | "PUT" | "DELETE",
   body?: unknown,
 ): Promise<T> {
   const res = await fetch(`/api${path}`, {
     method,
-    headers: { "Content-Type": "application/json" },
+    headers: headers({ "Content-Type": "application/json" }),
     body: body === undefined ? undefined : JSON.stringify(body),
   });
+  if (res.status === 204) return undefined as T;
   const parsed = (await res.json().catch(() => null)) as (T & { error?: string }) | null;
   if (!res.ok) throw new Error(parsed?.error ?? `Request failed: ${res.status}`);
   return parsed as T;

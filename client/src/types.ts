@@ -40,6 +40,9 @@ export interface ContentItem {
   publicationDate: string;
   status: Status;
   notes?: string;
+  /** Added by the API: how many notes the piece has, and its peer review. */
+  noteCount?: number;
+  peerReview?: PeerReview | null;
 }
 
 export interface CalendarEvent {
@@ -88,8 +91,65 @@ export interface SessionWithSignUps extends KnowledgeSession {
   full: boolean;
 }
 
+export type Role = "forecaster" | "commissioning-manager" | "admin";
+
+/** The signed-in account, as /api/me returns it. */
+export interface Me {
+  email: string;
+  name: string;
+  personId: string | null;
+  role: Role;
+  verticals: string[] | "all";
+  active: boolean;
+  person?: Person;
+  seesWholeTeam: boolean;
+  aiNotes: boolean;
+  calendarFeed: string | null;
+}
+
+export interface ContentNote {
+  id: string;
+  contentId: string;
+  authorId: string;
+  body: string;
+  source: "human" | "ai";
+  model?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type EntryKind = "reminder" | "focus-time" | "personal" | "milestone";
+
+export interface PersonalEntry {
+  id: string;
+  personId: string;
+  title: string;
+  kind: EntryKind;
+  date: string;
+  endDate: string;
+  note?: string;
+  contentId?: string;
+}
+
+export interface PeerReview {
+  contentId: string;
+  reviewerId: string;
+  reviewDate: string;
+  arrangedBy: string;
+  note?: string;
+}
+
+/** A peer review with the piece it belongs to, and which side you are on. */
+export interface MyPeerReview extends PeerReview {
+  item: ContentItem | null;
+  iAmReviewer: boolean;
+}
+
 export interface Schedule {
   people: Person[];
   content: ContentItem[];
   events: CalendarEvent[];
+  /** The signed-in person's own reminders — never a colleague's. */
+  entries: PersonalEntry[];
+  peerReviews: MyPeerReview[];
 }

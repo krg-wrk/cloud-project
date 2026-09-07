@@ -6,6 +6,7 @@ import CalendarView from "./routes/CalendarView";
 import ContentDetail from "./routes/ContentDetail";
 import Deadlines from "./routes/Deadlines";
 import SessionDetail from "./routes/SessionDetail";
+import Subscribe from "./routes/Subscribe";
 import { TeamList, TeamMember } from "./routes/Team";
 import Today from "./routes/Today";
 import WhatsOn from "./routes/WhatsOn";
@@ -32,6 +33,7 @@ const router = createBrowserRouter([
       { path: "workshops", element: <Workshops /> },
       { path: "workshops/:id", element: <SessionDetail /> },
       { path: "whats-on", element: <WhatsOn /> },
+      { path: "subscribe", element: <Subscribe /> },
       { path: "*", element: <Navigate to="/" replace /> },
     ],
   },

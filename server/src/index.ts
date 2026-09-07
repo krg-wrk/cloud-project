@@ -1,20 +1,40 @@
 import path from "node:path";
 import cors from "cors";
 import express from "express";
-import { createApiRouter } from "./api.js";
+import { createNoteDrafter } from "./ai.js";
+import { createApiRouter, createFeedRouter } from "./api.js";
+import { readAuthConfig, viewerMiddleware } from "./auth.js";
 import { CachedDataSource, createDataSource } from "./data/index.js";
-import { SignUpStore } from "./signUps.js";
+import { SignUps } from "./signUps.js";
+import { HubStore } from "./store.js";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 
+// Read-only schedule from the sheets; everything the team writes goes in the store.
 const data = new CachedDataSource(createDataSource());
-// Sign-ups are the one thing the Hub writes, so they get their own store.
-const signUps = new SignUpStore(await data.listSignUps());
+const store = new HubStore();
+const signUps = new SignUps(store);
+const drafter = createNoteDrafter();
+const auth = readAuthConfig();
+
+store.seedSignUpsIfEmpty(await data.listSignUps());
 
 app.use(cors());
 app.use(express.json());
-app.use("/api", createApiRouter(data, signUps));
+
+// The feed is fetched by Google, not by a signed-in browser, so it is mounted
+// before the identity middleware and authenticates on its URL token instead.
+app.use("/api", createFeedRouter(data, store, signUps));
+
+app.use(
+  "/api",
+  viewerMiddleware(auth, async () => ({
+    access: await data.listAccess(),
+    people: await data.listPeople(),
+  })),
+  createApiRouter(data, store, signUps, drafter),
+);
 
 // In production the built client is served from the same origin, and every
 // unknown path falls through to index.html so deep links like
@@ -40,5 +60,10 @@ app.use(
 );
 
 app.listen(PORT, () => {
-  console.log(`Forecasters Hub API on http://localhost:${PORT} (data source: ${data.name})`);
+  console.log(
+    `Forecasters Hub API on http://localhost:${PORT}\n` +
+      `  schedule:  ${data.name}\n` +
+      `  auth:      ${auth.mode}${auth.mode === "proxy" ? ` (${auth.emailHeader})` : " — switcher enabled"}\n` +
+      `  AI notes:  ${drafter.model === "none" ? "off (no GEMINI_API_KEY)" : drafter.model}`,
+  );
 });

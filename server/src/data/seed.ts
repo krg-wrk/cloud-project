@@ -1,3 +1,4 @@
+import type { AccessRow } from "../auth.js";
 import type {
   CalendarEvent,
   ContentItem,
@@ -20,6 +21,25 @@ export const people: Person[] = [
   { id: "mc", name: "Mei Lin Chow", email: "meilin.chow@wgsn.com", role: "forecaster", vertical: "Food & Drink", region: "SG" },
   { id: "da", name: "Dele Adeyemi", email: "dele.adeyemi@wgsn.com", role: "forecaster", vertical: "Consumer Tech", region: "US" },
   { id: "sm", name: "Sofia Marchetti", email: "sofia.marchetti@wgsn.com", role: "forecaster", vertical: "Kidswear", region: "IT" },
+];
+
+/**
+ * The access list — the sheet the commissioning managers maintain.
+ *
+ * Anyone signing in with a WGSN address who is on the team gets a
+ * forecaster's view without appearing here. This sheet is for the exceptions:
+ * who is a manager, who is an admin, which verticals they oversee, and who
+ * has left.
+ */
+export const access: AccessRow[] = [
+  { email: "graham.krag@wgsn.com", name: "Graham Krag", role: "admin", verticals: "All", active: true },
+  {
+    email: "elena.roux@wgsn.com",
+    name: "Elena Roux",
+    role: "commissioning-manager",
+    verticals: "Beauty, Interiors & Lifestyle, Food & Drink, Kidswear",
+    active: true,
+  },
 ];
 
 /** [id, title, type, vertical, season, forecasterId, submissionDate, publicationDate, status, notes?] */
