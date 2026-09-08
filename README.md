@@ -332,6 +332,31 @@ vocabularies.
 
 ## The calendar
 
+### Month, week or day
+
+Three views, switched from a row under the filters — the filters decide what a
+period contains, so they read first. The view and the date are both in the
+URL, so any of them is a link:
+
+| View | URL |
+| --- | --- |
+| Month | `/calendar/2026-11` |
+| Week | `/calendar/2026-11-11?view=week` |
+| Day | `/calendar/2026-11-06?view=day` |
+
+Prev/next steps by whatever is on screen — a month, a week, a day. Switching
+view keeps you on the same date rather than jumping back to today, and
+switching from a month to its week skips the week that is mostly the month
+before, which is a jarring thing to land on.
+
+**Clicking a date opens that day on its own**, and an entry on it opens the
+piece — the same `/content/:id` page a deadline row opens, with the same
+forecast details, notes and peer review. A workshop opens the session; leave
+and holidays have no page of their own, so they open the diary filtered to
+that kind. A month cell has room for three entries and a "+n more" that opens
+the day, so nothing is ever unreachable. A week cell is five times taller, so
+it shows everything.
+
 Anything running over more than a day — leave, a holiday closure, a show, a
 multi-day reminder — is drawn **once**, as a bar across the days it covers,
 rather than repeated as an identical chip in each of them. Bars are packed
@@ -339,23 +364,15 @@ into as few lanes as will hold them, and one that runs past the edge of the
 week is clipped with a chevron rather than simply stopping as though the event
 had. The lane maths is in `client/src/lib/spans.ts`.
 
-**Clicking an entry opens the piece**, at `/content/:id` — the same page a
-deadline row opens, with the same forecast details, notes and peer review on
-it. A workshop opens the session; leave and holidays have no page of their own,
-so they open the diary filtered to that kind.
 
-A day cell has room for three single-day marks. The day number and the
-"+n more" both open a panel listing everything on that day in full, so nothing
-on the calendar is unreachable, and the entries in it go to exactly the same
-places.
 
 ### On a phone
 
-A calendar looks like a calendar at every width, so the month grid stays a
-month grid: below the point where seven columns stop being readable it
-**scrolls sideways**, with the columns holding a workable minimum width,
-rather than turning into a list. Titles truncate, as they do in any month
-view — tapping one opens the piece in full.
+A calendar looks like a calendar at every width, so the grid stays a grid:
+below the point where seven columns stop being readable it **scrolls
+sideways**, with the columns holding a workable minimum width, rather than
+turning into a list. Titles truncate, as they do in any month view — tapping
+a date gives the day view, where nothing is truncated.
 
 Navigation does change. The sidebar is replaced by a fixed bar at the bottom
 of the screen — Today, Deadlines, Calendar and Trends as tabs, with the rest

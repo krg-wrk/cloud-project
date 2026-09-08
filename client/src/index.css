@@ -701,19 +701,38 @@ table.schedule .overdue {
 
 /* --- Calendar ------------------------------------------------------------ */
 
+/*
+ * The view switch and the period stepper, on their own row under the filters:
+ * the filters decide what a period contains, so they read first.
+ */
+.cal-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 18px;
+  margin-bottom: 16px;
+}
+
+.view-switch {
+  display: flex;
+  gap: 4px;
+}
+
 .cal-nav {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.cal-month {
-  min-width: 186px;
+.cal-period {
+  min-width: 210px;
   font-family: var(--display);
   font-size: 19px;
   font-weight: 500;
   letter-spacing: -0.025em;
   text-align: center;
+  font-variant-numeric: tabular-nums;
 }
 
 /*
@@ -770,6 +789,15 @@ table.schedule .overdue {
   letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--ink-45);
+}
+
+/*
+ * One row instead of six, so a cell can hold everything on its day — but a
+ * minimum rather than a fixed height, so a quiet week does not leave a screen
+ * of empty grid.
+ */
+.week-view .cal-day {
+  min-height: 220px;
 }
 
 .cal-day {
@@ -859,23 +887,27 @@ table.schedule .overdue {
   box-shadow: inset 0 0 0 2px var(--accent);
 }
 
-/* The day number opens the day, so a cell that is full is never a dead end. */
+/* The date opens that day on its own, so a full cell is never a dead end. */
 .cal-daynum {
   align-self: flex-start;
-  padding: 0 3px;
-  border: none;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 1px 4px;
   border-radius: var(--radius-sm);
-  background: transparent;
   font-family: var(--mono);
   font-size: 11px;
   color: var(--ink-45);
   font-variant-numeric: tabular-nums;
-  cursor: pointer;
 }
 
 .cal-daynum:hover {
   background: var(--accent-wash);
   color: var(--accent);
+}
+
+.week-view .cal-daynum {
+  font-size: 13px;
 }
 
 .cal-day.today .cal-daynum {
@@ -938,74 +970,132 @@ table.schedule .overdue {
 
 /* --- One day in full ----------------------------------------------------- */
 
-.day-panel {
-  margin-bottom: 16px;
-  padding: 16px 18px;
+.day-view {
   border: 1px solid var(--rule);
-  border-left: 3px solid var(--accent);
   border-radius: var(--radius);
   background: var(--paper);
+  overflow: hidden;
 }
 
-.day-panel-head {
+.day-view-head {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 14px;
-  margin-bottom: 12px;
+  gap: 18px;
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--ink);
 }
 
-.day-panel-head h2 {
+.day-view-head h2 {
   margin: 4px 0 0;
-  font-size: 19px;
+  font-size: 23px;
+  letter-spacing: -0.025em;
 }
 
-.day-list {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 8px;
-}
-
-.day-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 11px;
-  border: 1px solid var(--rule);
-  border-left: 3px solid var(--chip-color, var(--ink-45));
-  border-radius: var(--radius-sm);
-  background: var(--paper);
-  color: var(--ink);
-  text-align: left;
-  font: inherit;
-}
-
-.day-item:hover {
-  border-color: var(--ink);
-}
-
-.day-item-icon {
-  display: inline-flex;
+.day-view-date {
   flex: none;
-  color: color-mix(in srgb, var(--chip-color) 82%, var(--ink));
+  width: 62px;
+  text-align: center;
+  padding: 8px 0 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--ground);
 }
 
-.day-item-title {
+.day-view-date b {
   display: block;
-  font-size: 13px;
+  font-size: 27px;
   font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
 }
 
-.day-item-meta {
+.day-view-date span {
   display: block;
-  margin-top: 2px;
-  font-size: 11px;
+  margin-top: 4px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
   color: var(--ink-45);
 }
 
-.day-item-button {
+.day-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.day-row {
+  display: grid;
+  grid-template-columns: 58px 20px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 22px;
+  border: none;
+  border-top: 1px solid var(--rule);
+  border-left: 3px solid var(--chip-color, var(--ink-45));
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+}
+
+.day-rows .day-row:first-child {
+  border-top: none;
+}
+
+.day-row:hover {
+  background: var(--ground);
+}
+
+.day-row-when {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--ink-45);
+  font-variant-numeric: tabular-nums;
+}
+
+.day-row-icon {
+  display: inline-flex;
+  color: color-mix(in srgb, var(--chip-color) 82%, var(--ink));
+}
+
+.day-row-title {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+.day-row-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ink-45);
+}
+
+/* Says what the row does, since every row here goes somewhere. */
+.day-row-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-45);
+}
+
+.day-row:hover .day-row-go {
+  color: var(--accent);
+}
+
+.day-row-button {
   cursor: pointer;
 }
+
+.day-row-button:hover .day-row-go {
+  color: var(--status-at-risk);
+}
+
 
 .legend {
   display: flex;
@@ -1610,8 +1700,23 @@ a.session-title:hover {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .day-list {
-    grid-template-columns: minmax(0, 1fr);
+  .cal-period {
+    min-width: 0;
+    font-size: 17px;
+  }
+
+  .day-row {
+    grid-template-columns: 46px 20px minmax(0, 1fr);
+    padding: 13px 15px;
+  }
+
+  /* The chevron is the whole row on a phone; the label would crowd it. */
+  .day-row-go {
+    display: none;
+  }
+
+  .day-view-head {
+    padding: 16px;
   }
 }
 

@@ -3,17 +3,23 @@ import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom"
 import { send, useApi, query } from "../lib/api";
 import {
   TODAY,
+  addDays,
   dayOfMonth,
   firstOfMonth,
   formatLong,
   formatMedium,
+  formatWeekday,
   isSameMonth,
   isWeekend,
   lastOfMonth,
   monthGrid,
   monthKey,
   monthLabel,
+  relativeDays,
+  startOfWeek,
   shiftMonth,
+  weekGrid,
+  weekLabel,
 } from "../lib/date";
 import {
   EVENT_LABELS,
@@ -38,8 +44,53 @@ import EntryForm from "../components/EntryForm";
 import ShareLink from "../components/ShareLink";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-/** Room for three single-day chips before a cell starts saying "+n more". */
+/**
+ * A month cell has room for three chips before it needs to say "+n more".
+ * A week cell is five times taller, so it shows everything.
+ */
 const MAX_CHIPS = 3;
+
+type View = "month" | "week" | "day";
+
+const VIEWS: { id: View; label: string }[] = [
+  { id: "month", label: "Month" },
+  { id: "week", label: "Week" },
+  { id: "day", label: "Day" },
+];
+
+/**
+ * The path segment is a month key in the month view and a full date in the
+ * others, so a link to any of them is a link to exactly what you were
+ * looking at. Either form is accepted for either view, so hand-edited and
+ * older URLs still land somewhere sensible.
+ */
+function anchorDate(segment: string | undefined): string {
+  if (segment && /^\d{4}-\d{2}-\d{2}$/.test(segment)) return segment;
+  if (segment && /^\d{4}-\d{2}$/.test(segment)) {
+    // Opening a week or a day from a month key: today if it is in that month,
+    // so "this week" is what you get, otherwise the first of it.
+    return monthKey(TODAY) === segment ? TODAY : `${segment}-01`;
+  }
+  return TODAY;
+}
+
+/** What the path segment should be for a view anchored on this date. */
+function segmentFor(view: View, date: string): string {
+  return view === "month" ? monthKey(date) : date;
+}
+
+/**
+ * Where the week view should open when you switch to it.
+ *
+ * The week containing the 1st of a month is usually mostly the month before,
+ * which is a jarring thing to land on after looking at that month — so if
+ * fewer than four of its days are in the month, step on to the next week.
+ */
+function weekAnchor(date: string): string {
+  const monday = startOfWeek(date);
+  const inMonth = weekGrid(monday).filter((d) => monthKey(d) === monthKey(date)).length;
+  return inMonth >= 4 ? date : addDays(monday, 7);
+}
 
 type Chip =
   | { kind: "submission" | "publication"; item: ContentItem }
@@ -208,7 +259,11 @@ export default function CalendarView() {
   const navigate = useNavigate();
   const { person, people, isManager } = useViewer();
 
-  const key = month && /^\d{4}-\d{2}$/.test(month) ? month : monthKey(TODAY);
+  // An unknown ?view= falls back to the month rather than rendering nothing.
+  const asked = params.get("view");
+  const view: View = VIEWS.some((v) => v.id === asked) ? (asked as View) : "month";
+  const anchor = anchorDate(month);
+  const key = monthKey(anchor);
   // Managers see the whole team by default; forecasters see their own work.
   const forecaster =
     params.get("forecaster") ?? (isManager ? "" : (person?.id ?? ""));
@@ -218,15 +273,14 @@ export default function CalendarView() {
     events: params.get("events") !== "0",
     mine: params.get("mine") !== "0",
   };
-  const openDay = params.get("day") ?? "";
 
   const grid = monthGrid(key);
+  const week = weekGrid(anchor);
+  // Fetch what the view shows: the whole month grid, the week, or the day.
+  const from = view === "month" ? grid[0][0] : view === "week" ? week[0] : anchor;
+  const to = view === "month" ? grid[5][6] : view === "week" ? week[6] : anchor;
   const { data, error, loading } = useApi<Schedule>(
-    `/schedule${query({
-      from: grid[0][0],
-      to: grid[5][6],
-      forecaster: forecaster || undefined,
-    })}`,
+    `/schedule${query({ from, to, forecaster: forecaster || undefined })}`,
   );
   // Workshops belong to the whole team, so they are not narrowed by forecaster.
   const sessions = useApi<SessionWithSignUps[]>("/sessions");
@@ -260,9 +314,34 @@ export default function CalendarView() {
     setParam(name, show[name] ? "0" : "");
   }
 
-  function goMonth(delta: number) {
-    navigate({ pathname: `/calendar/${shiftMonth(key, delta)}`, search: params.toString() });
+  /** Prev/next steps by whatever the view is showing. */
+  function step(delta: number) {
+    const next =
+      view === "month"
+        ? shiftMonth(key, delta)
+        : addDays(anchor, delta * (view === "week" ? 7 : 1));
+    navigate({ pathname: `/calendar/${next}`, search: params.toString() });
   }
+
+  /** Switching view keeps you on the same date rather than jumping to today. */
+  function setView(next: View) {
+    const search = new URLSearchParams(params);
+    if (next === "month") search.delete("view");
+    else search.set("view", next);
+    const on = next === "week" ? weekAnchor(anchor) : anchor;
+    navigate({ pathname: `/calendar/${segmentFor(next, on)}`, search: search.toString() });
+  }
+
+  /** A link to one day, in the day view — what clicking a date opens. */
+  function dayHref(date: string): string {
+    const search = new URLSearchParams(params);
+    search.set("view", "day");
+    const qs = search.toString();
+    return `/calendar/${date}${qs ? `?${qs}` : ""}`;
+  }
+
+  const periodLabel =
+    view === "month" ? monthLabel(key) : view === "week" ? weekLabel(anchor) : formatLong(anchor);
 
   if (error) return <ErrorNote message={error} />;
 
@@ -279,27 +358,21 @@ export default function CalendarView() {
       <div className="page-head">
         <div>
           <div className="eyebrow">
-            {formatMedium(firstOfMonth(key))} — {formatMedium(lastOfMonth(key))}
+            {view === "month"
+              ? `${formatMedium(firstOfMonth(key))} — ${formatMedium(lastOfMonth(key))}`
+              : view === "week"
+                ? "One week"
+                : "One day"}
           </div>
           <h1 className="page-title">Calendar</h1>
           <p className="page-sub">
             Submission deadlines, publication dates and everything in the diary
             that sits around them. Anything running over more than a day is drawn
-            once, across the days it covers. The month and the filters are in the
-            URL, so any view you are looking at can be pasted straight into Slack.
+            once, across the days it covers. Click a date for that day on its own,
+            and an entry for the piece itself. The view, the date and the filters
+            are all in the URL, so whatever you are looking at can be pasted
+            straight into Slack.
           </p>
-        </div>
-        <div className="cal-nav">
-          <button className="btn" onClick={() => goMonth(-1)} aria-label="Previous month">
-            ←
-          </button>
-          <div className="cal-month">{monthLabel(key)}</div>
-          <button className="btn" onClick={() => goMonth(1)} aria-label="Next month">
-            →
-          </button>
-          <Link to={`/calendar/${monthKey(TODAY)}`} className="btn ghost">
-            Today
-          </Link>
         </div>
       </div>
 
@@ -367,9 +440,47 @@ export default function CalendarView() {
         </div>
       </div>
 
+      {/* Below the filters, because the filters narrow what a period contains. */}
+      <div className="cal-bar">
+        <div className="view-switch" role="group" aria-label="Calendar view">
+          {VIEWS.map((v) => (
+            <button
+              key={v.id}
+              className={v.id === view ? "btn accent" : "btn"}
+              onClick={() => setView(v.id)}
+              aria-pressed={v.id === view}
+            >
+              {v.label}
+            </button>
+          ))}
+        </div>
+        <div className="cal-nav">
+          <button
+            className="btn"
+            onClick={() => step(-1)}
+            aria-label={`Previous ${view}`}
+            title={`Previous ${view}`}
+          >
+            ←
+          </button>
+          <div className="cal-period">{periodLabel}</div>
+          <button
+            className="btn"
+            onClick={() => step(1)}
+            aria-label={`Next ${view}`}
+            title={`Next ${view}`}
+          >
+            →
+          </button>
+          <Link to={`/calendar/${segmentFor(view, TODAY)}${view === "month" ? "" : `?view=${view}`}`} className="btn ghost">
+            Today
+          </Link>
+        </div>
+      </div>
+
       {adding && (
         <EntryForm
-          defaultDate={`${key}-01` > TODAY ? `${key}-01` : TODAY}
+          defaultDate={anchor > TODAY ? anchor : TODAY}
           onSaved={(entry) => {
             setExtraEntries((current) => [...current, entry]);
             setAdding(false);
@@ -382,30 +493,28 @@ export default function CalendarView() {
         <Loading what="the month" />
       ) : (
         <>
-          {openDay && (
-            <DayPanel
-              date={openDay}
-              chips={chipsForDay(openDay, feed, show, true)}
+          {view === "day" ? (
+            <DayView
+              date={anchor}
+              chips={chipsForDay(anchor, feed, show, true)}
               people={data.people}
-              onClose={() => setParam("day", "")}
               onRemoveEntry={removeEntry}
             />
-          )}
-
-          {/*
-            * Narrow screens scroll the month sideways rather than being given
-            * a different thing to look at: a calendar should look like a
-            * calendar, and a seven-column grid squeezed to 390px is not
-            * readable, so the columns keep a workable minimum width.
-            */}
+          ) : (
+          /*
+           * Narrow screens scroll the grid sideways rather than being given a
+           * different thing to look at: a calendar should look like a
+           * calendar, and seven columns squeezed to 390px are not readable,
+           * so the columns keep a workable minimum width.
+           */
           <div className="calendar-scroll">
-          <div className="calendar">
+          <div className={view === "week" ? "calendar week-view" : "calendar"}>
             <div className="cal-head">
               {WEEKDAYS.map((day) => (
                 <div key={day}>{day}</div>
               ))}
             </div>
-            {grid.map((week) => {
+            {(view === "week" ? [week] : grid).map((week) => {
               const { bars, lanes } = packWeek(week, spanItems(feed, show), spanOf);
               return (
                 <div
@@ -417,21 +526,23 @@ export default function CalendarView() {
                     {week.map((date) => {
                       const chips = chipsForDay(date, feed, show);
                       const classes = ["cal-day"];
-                      if (!isSameMonth(date, key)) classes.push("outside");
+                      if (view === "month" && !isSameMonth(date, key)) classes.push("outside");
                       if (isWeekend(date)) classes.push("weekend");
                       if (date === TODAY) classes.push("today");
-                      const hidden = chips.length - MAX_CHIPS;
+                      const cap = view === "week" ? chips.length : MAX_CHIPS;
+                      const hidden = chips.length - cap;
                       return (
                         <div className={classes.join(" ")} key={date}>
-                          <button
+                          {/* The date opens that day on its own. */}
+                          <Link
                             className="cal-daynum"
-                            onClick={() => setParam("day", date)}
-                            title={`Everything on ${formatLong(date)}`}
+                            to={dayHref(date)}
+                            title={`${formatLong(date)} on its own`}
                           >
                             {dayOfMonth(date)}
-                          </button>
+                          </Link>
                           {lanes > 0 && <div className="cal-lane-space" aria-hidden />}
-                          {chips.slice(0, MAX_CHIPS).map((chip, i) => (
+                          {chips.slice(0, cap).map((chip, i) => (
                             <ChipView
                               key={`${chip.kind}-${i}`}
                               chip={chip}
@@ -440,9 +551,9 @@ export default function CalendarView() {
                             />
                           ))}
                           {hidden > 0 && (
-                            <button className="cal-more" onClick={() => setParam("day", date)}>
+                            <Link className="cal-more" to={dayHref(date)}>
                               +{hidden} more
-                            </button>
+                            </Link>
                           )}
                         </div>
                       );
@@ -465,6 +576,7 @@ export default function CalendarView() {
             })}
           </div>
           </div>
+          )}
 
           <div className="legend">
             <span style={{ "--legend-color": "var(--ink)" } as CSSProperties}>
@@ -601,55 +713,83 @@ function ChipView({
 }
 
 /**
- * One day in full. A cell only has room for three chips, and the day number
- * and the "+n more" both open this, so nothing on the calendar is unreachable.
+ * One day in full — what clicking a date opens.
+ *
+ * Everything on the day, in the order it happens where there is a time and
+ * grouped by what it is where there is not, each row going to the same place
+ * the same entry goes to from the month grid.
  */
-function DayPanel({
+function DayView({
   date,
   chips,
   people,
-  onClose,
   onRemoveEntry,
 }: {
   date: string;
   chips: Chip[];
   people: Schedule["people"];
-  onClose: () => void;
   onRemoveEntry: (id: string) => void;
 }) {
+  // Timed things first, in time order; everything else after, in the order
+  // the chip builder produced (mine, diary, submissions, publications).
+  const timed = chips
+    .filter((c) => c.kind === "session")
+    .sort((a, b) =>
+      a.kind === "session" && b.kind === "session"
+        ? a.session.startTime.localeCompare(b.session.startTime)
+        : 0,
+    );
+  const untimed = chips.filter((c) => c.kind !== "session");
+  const ordered = [...timed, ...untimed];
+
   return (
-    <div className="day-panel">
-      <div className="day-panel-head">
-        <div>
-          <div className="eyebrow">{date === TODAY ? "Today" : "On this day"}</div>
-          <h2>{formatLong(date)}</h2>
+    <div className="day-view">
+      <div className="day-view-head">
+        <div className="day-view-date">
+          <b>{dayOfMonth(date)}</b>
+          <span>{formatWeekday(date)}</span>
         </div>
-        <button className="btn" onClick={onClose}>
-          Close
-        </button>
+        <div>
+          <div className="eyebrow">
+            {date === TODAY ? "Today" : date < TODAY ? "Past" : relativeDays(date)}
+          </div>
+          <h2>{formatLong(date)}</h2>
+          <p className="muted" style={{ margin: "4px 0 0" }}>
+            {ordered.length === 0
+              ? "Nothing in the diary, and nothing due."
+              : ordered.length === 1
+                ? "One thing on."
+                : `${ordered.length} things on.`}
+          </p>
+        </div>
       </div>
-      {chips.length === 0 ? (
-        <p className="muted">Nothing in the diary, and nothing due.</p>
-      ) : (
-        <div className="day-list">
-          {chips.map((chip, i) => {
+
+      {ordered.length > 0 && (
+        <div className="day-rows">
+          {ordered.map((chip, i) => {
             const { title, icon, colour } = chipLabel(chip, people);
             const style = { "--chip-color": colour } as CSSProperties;
+            const when = chip.kind === "session" ? chip.session.startTime : "";
             const body = (
               <>
-                <span className="day-item-icon">
+                <span className="day-row-when">{when || "\u2014"}</span>
+                <span className="day-row-icon">
                   <Icon name={icon} size={16} />
                 </span>
-                <span>
-                  <span className="day-item-title">{title}</span>
-                  <span className="day-item-meta">{chipMeaning(chip)}</span>
+                <span className="day-row-text">
+                  <span className="day-row-title">{title}</span>
+                  <span className="day-row-meta">{chipMeaning(chip)}</span>
+                </span>
+                <span className="day-row-go">
+                  {chip.kind === "entry" ? "Remove" : "Open"}
+                  {chip.kind !== "entry" && <Icon name="link" size={13} />}
                 </span>
               </>
             );
             return chip.kind === "entry" ? (
               <button
                 key={`${chip.kind}-${i}`}
-                className="day-item day-item-button"
+                className="day-row day-row-button"
                 style={style}
                 onClick={() => onRemoveEntry(chip.entry.id)}
                 title="Yours — click to remove"
@@ -657,7 +797,7 @@ function DayPanel({
                 {body}
               </button>
             ) : (
-              <Link key={`${chip.kind}-${i}`} className="day-item" style={style} to={chipHref(chip)}>
+              <Link key={`${chip.kind}-${i}`} className="day-row" style={style} to={chipHref(chip)}>
                 {body}
               </Link>
             );

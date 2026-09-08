@@ -64,6 +64,48 @@ export function monthGrid(key: string): string[][] {
   return weeks;
 }
 
+/** Shifts a date by whole days. */
+export function addDays(date: string, delta: number): string {
+  return new Date(Date.parse(`${date}T00:00:00Z`) + delta * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+/** The Monday of the week a date falls in. */
+export function startOfWeek(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  return addDays(date, -((d.getUTCDay() + 6) % 7));
+}
+
+/** The seven ISO dates of a week, Monday first. */
+export function weekGrid(date: string): string[] {
+  const monday = startOfWeek(date);
+  return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+}
+
+/**
+ * A week as a heading: "9 — 15 Nov 2026", collapsing the parts the two ends
+ * share, so a week inside one month does not repeat the month and year.
+ */
+export function weekLabel(date: string): string {
+  const from = startOfWeek(date);
+  const to = addDays(from, 6);
+  const opts: Intl.DateTimeFormatOptions = { timeZone: "UTC", day: "numeric" };
+  const end = new Date(`${to}T00:00:00Z`).toLocaleDateString("en-GB", {
+    ...opts,
+    month: "short",
+    year: "numeric",
+  });
+  const sameMonth = from.slice(0, 7) === to.slice(0, 7);
+  const start = new Date(`${from}T00:00:00Z`).toLocaleDateString(
+    "en-GB",
+    sameMonth
+      ? opts
+      : { ...opts, month: "short", ...(from.slice(0, 4) === to.slice(0, 4) ? {} : { year: "numeric" }) },
+  );
+  return `${start} — ${end}`;
+}
+
 export function dayOfMonth(date: string): number {
   return Number(date.slice(8, 10));
 }

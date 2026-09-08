@@ -850,7 +850,8 @@
   }
 
   .month-name {
-    min-width: 180px;
+    min-width: 210px;
+    font-variant-numeric: tabular-nums;
     text-align: center;
     font-size: 19px;
     font-weight: 500;
@@ -960,6 +961,15 @@
     color: var(--ink-soft);
   }
 
+  /*
+   * One row instead of six, so a cell can hold everything on its day — but a
+   * minimum rather than a fixed height, so a quiet week does not leave a
+   * screen of empty grid.
+   */
+  .week-view .cell {
+    min-height: 220px;
+  }
+
   .cell {
     min-height: 112px;
     padding: 6px 7px 8px;
@@ -1055,6 +1065,10 @@
   .daynum:hover {
     background: var(--accent-wash);
     color: var(--accent);
+  }
+
+  .week-view .daynum {
+    font-size: 13px;
   }
 
   .cell.now .daynum {
@@ -1973,41 +1987,85 @@
     color: var(--ink-soft);
   }
 
+  /* ---- The view switch and the period stepper ---------------------------- */
+
+  /*
+   * On their own row under the filters: the filters decide what a period
+   * contains, so they read first.
+   */
+  .cal-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 18px;
+    margin-bottom: 16px;
+  }
+
   /* ---- One day in full --------------------------------------------------- */
 
-  .day-panel {
-    margin-bottom: 16px;
-    padding: 16px 18px;
+  .day-view {
     border: 1px solid var(--line);
-    border-left: 3px solid var(--accent);
     background: var(--paper);
+    overflow: hidden;
   }
 
-  .day-panel-head {
+  .day-view-head {
     display: flex;
     align-items: flex-start;
-    justify-content: space-between;
-    gap: 14px;
-    margin-bottom: 12px;
+    gap: 18px;
+    padding: 20px 22px;
+    border-bottom: 1px solid var(--ink);
   }
 
-  .day-panel-head h2 {
+  .day-view-head h2 {
     margin: 4px 0 0;
-    font-size: 19px;
+    font-size: 23px;
+    letter-spacing: -0.025em;
   }
 
-  .day-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 8px;
-  }
-
-  .day-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 9px 11px;
+  .day-view-date {
+    flex: none;
+    width: 62px;
+    text-align: center;
+    padding: 8px 0 10px;
     border: 1px solid var(--line);
+    background: var(--ground);
+  }
+
+  .day-view-date b {
+    display: block;
+    font-size: 27px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .day-view-date span {
+    display: block;
+    margin-top: 4px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .day-rows {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .day-row {
+    display: grid;
+    grid-template-columns: 58px 20px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    width: 100%;
+    padding: 14px 22px;
+    border: none;
+    border-top: 1px solid var(--line);
     border-left: 3px solid var(--c, var(--ink-soft));
     background: var(--paper);
     color: var(--ink);
@@ -2015,27 +2073,55 @@
     text-align: left;
   }
 
-  .day-item:hover {
-    border-color: var(--ink);
+  .day-rows .day-row:first-child {
+    border-top: none;
   }
 
-  .day-item-icon {
+  .day-row:hover {
+    background: var(--ground);
+  }
+
+  .day-row-when {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .day-row-icon {
     display: inline-flex;
-    flex: none;
     color: color-mix(in srgb, var(--c) 82%, var(--ink));
   }
 
-  .day-item-title {
+  .day-row-title {
     display: block;
-    font-size: 13px;
+    font-size: 14.5px;
     font-weight: 500;
   }
 
-  .day-item-meta {
+  .day-row-meta {
     display: block;
     margin-top: 2px;
-    font-size: 11px;
+    font-size: 12px;
     color: var(--ink-soft);
+  }
+
+  /* Says what the row does, since every row here goes somewhere. */
+  .day-row-go {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--ink-soft);
+  }
+
+  .day-row:hover .day-row-go {
+    color: var(--accent);
+  }
+
+  .day-row-button:hover .day-row-go {
+    color: var(--late);
   }
 
   /* ---- Trends ------------------------------------------------------------ */
@@ -2385,6 +2471,25 @@
     .cal-scroll {
       margin: 0 -16px;
       padding: 0 16px;
+    }
+
+    .month-name {
+      min-width: 0;
+      font-size: 17px;
+    }
+
+    .day-row {
+      grid-template-columns: 46px 20px minmax(0, 1fr);
+      padding: 13px 15px;
+    }
+
+    /* The row itself is the target on a phone; the label would crowd it. */
+    .day-row-go {
+      display: none;
+    }
+
+    .day-view-head {
+      padding: 16px;
     }
 
     .trend-grid,
@@ -3269,6 +3374,33 @@
     go("/" + parts.join("/") + (qs ? "?" + qs : ""));
   }
 
+  const addDays = (d, n) =>
+    new Date(Date.parse(d + "T00:00:00Z") + n * 864e5).toISOString().slice(0, 10);
+
+  /** The Monday of the week a date falls in. */
+  const startOfWeek = (d) => addDays(d, -((day(d).getUTCDay() + 6) % 7));
+
+  const weekGrid = (d) => {
+    const monday = startOfWeek(d);
+    return Array.from({ length: 7 }, (_, i) => addDays(monday, i));
+  };
+
+  /**
+   * A week as a heading: "9 — 15 Nov 2026", collapsing the parts the two ends
+   * share, so a week inside one month does not repeat the month and year.
+   */
+  function weekName(d) {
+    const from = startOfWeek(d);
+    const to = addDays(from, 6);
+    const end = fmt(to, { day: "numeric", month: "short", year: "numeric" });
+    const sameMonth = from.slice(0, 7) === to.slice(0, 7);
+    const sameYear = from.slice(0, 4) === to.slice(0, 4);
+    const start = sameMonth
+      ? fmt(from, { day: "numeric" })
+      : fmt(from, { day: "numeric", month: "short", ...(sameYear ? {} : { year: "numeric" }) });
+    return `${start} — ${end}`;
+  }
+
   const monthShift = (key, n) => {
     const [y, m] = key.split("-").map(Number);
     const d = new Date(Date.UTC(y, m - 1 + n, 1));
@@ -3685,7 +3817,31 @@
       }`;
   }
 
-  function pageCalendar(key, params) {
+  const VIEWS = [
+    ["month", "Month"],
+    ["week", "Week"],
+    ["day", "Day"],
+  ];
+
+  /**
+   * Where the week view should open when you switch to it.
+   *
+   * The week containing the 1st of a month is usually mostly the month before,
+   * which is a jarring thing to land on after looking at that month — so if
+   * fewer than four of its days are in the month, step on to the next week.
+   */
+  function weekAnchor(date) {
+    const monday = startOfWeek(date);
+    const inMonth = weekGrid(monday).filter((d) => d.slice(0, 7) === date.slice(0, 7)).length;
+    return inMonth >= 4 ? date : addDays(monday, 7);
+  }
+
+  /**
+   * The path segment is a month key in the month view and a full date in the
+   * others, so a link to any of them is a link to exactly what you were
+   * looking at.
+   */
+  function pageCalendar(segment, params) {
     const me = person(viewerId);
     const manager = me.role === "commissioning-manager";
     const who = params.get("forecaster") ?? (manager ? "" : me.id);
@@ -3697,7 +3853,16 @@
     };
     const myEntries = entriesFor(me.id);
     const myReviewList = myReviews(me.id);
-    const openDay = params.get("day") ?? "";
+
+    // An unknown ?view= falls back to the month rather than rendering nothing.
+    const asked = params.get("view");
+    const view = VIEWS.some(([v]) => v === asked) ? asked : "month";
+    const anchor = /^\d{4}-\d{2}-\d{2}$/.test(segment)
+      ? segment
+      : segment.slice(0, 7) === TODAY.slice(0, 7)
+        ? TODAY
+        : segment + "-01";
+    const key = anchor.slice(0, 7);
 
     const [y, m] = key.split("-").map(Number);
     const first = new Date(Date.UTC(y, m - 1, 1));
@@ -3710,6 +3875,24 @@
       }
       weeks.push(row);
     }
+    const thisWeek = weekGrid(anchor);
+    const rows = view === "week" ? [thisWeek] : weeks;
+
+    const period =
+      view === "month" ? monthName(key) : view === "week" ? weekName(anchor) : long(anchor);
+
+    /** Prev/next steps by whatever the view is showing. */
+    const stepTo = (n) =>
+      view === "month"
+        ? monthShift(key, n)
+        : addDays(anchor, n * (view === "week" ? 7 : 1));
+
+    /** A link to one day, in the day view — what clicking a date opens. */
+    const dayLink = (date) => {
+      const q = new URLSearchParams(params);
+      q.set("view", "day");
+      return `#/calendar/${date}?${q.toString()}`;
+    };
 
     const scope = content.filter((c) => (who ? c.forecasterId === who : true));
     const scopedEvents = events.filter((e) => eventApplies(e, who ? person(who) : null));
@@ -3874,30 +4057,57 @@
              title="${esc(bar.plain)}, ${dates}">${inner}</a>`;
     };
 
-    /** One day in full — what the day number and "+n more" both open. */
-    function dayPanel(date) {
+    /**
+     * One day in full — what clicking a date opens.
+     *
+     * Everything on the day, timed things first in time order, each row going
+     * to the same place the same entry goes to from the month grid.
+     */
+    function dayView(date) {
       const marks = cellMarks(date, true);
-      return `<div class="day-panel">
-        <div class="day-panel-head">
+      const timed = marks.filter((mk) => mk.kind === "session");
+      const untimed = marks.filter((mk) => mk.kind !== "session");
+      timed.sort((a, b) => (a.kicker ?? "").localeCompare(b.kicker ?? ""));
+      const ordered = [...timed, ...untimed];
+
+      return `<div class="day-view">
+        <div class="day-view-head">
+          <div class="day-view-date"><b>${Number(date.slice(8))}</b>
+            <span>${fmt(date, { weekday: "short" })}</span></div>
           <div>
-            <div class="eyebrow">${date === TODAY ? "Today" : "On this day"}</div>
+            <div class="eyebrow">${
+              date === TODAY ? "Today" : date < TODAY ? "Past" : rel(date)
+            }</div>
             <h2>${long(date)}</h2>
+            <p class="signup-note" style="margin:4px 0 0">${
+              ordered.length === 0
+                ? "Nothing in the diary, and nothing due."
+                : ordered.length === 1
+                  ? "One thing on."
+                  : `${ordered.length} things on.`
+            }</p>
           </div>
-          <button class="toggle" data-day-close="1">Close</button>
         </div>
         ${
-          marks.length === 0
-            ? `<p class="signup-note">Nothing in the diary, and nothing due.</p>`
-            : `<div class="day-list">${marks
-                .map((m) => {
+          ordered.length === 0
+            ? ""
+            : `<div class="day-rows">${ordered
+                .map((mk) => {
                   const inner =
-                    `<span class="day-item-icon">${icon(m.iconName, 16)}</span>` +
-                    `<span><span class="day-item-title">${esc(m.title)}</span>` +
-                    `<span class="day-item-meta">${esc(m.meaning)}</span></span>`;
-                  return m.kind === "entry"
-                    ? `<button class="day-item day-item-button" style="--c:${m.colour}"
-                         data-entry-delete="${m.id}" title="Yours — click to remove">${inner}</button>`
-                    : `<a class="day-item" style="--c:${m.colour}" href="${m.href}">${inner}</a>`;
+                    `<span class="day-row-when">${
+                      mk.kind === "session" ? esc(mk.kicker) : "\u2014"
+                    }</span>` +
+                    `<span class="day-row-icon">${icon(mk.iconName, 16)}</span>` +
+                    `<span class="day-row-text"><span class="day-row-title">${esc(
+                      mk.title,
+                    )}</span><span class="day-row-meta">${esc(mk.meaning)}</span></span>` +
+                    `<span class="day-row-go">${
+                      mk.kind === "entry" ? "Remove" : "Open" + icon("link", 13)
+                    }</span>`;
+                  return mk.kind === "entry"
+                    ? `<button class="day-row day-row-button" style="--c:${mk.colour}"
+                         data-entry-delete="${mk.id}" title="Yours — click to remove">${inner}</button>`
+                    : `<a class="day-row" style="--c:${mk.colour}" href="${mk.href}">${inner}</a>`;
                 })
                 .join("")}</div>`
         }
@@ -3907,18 +4117,19 @@
     return `
       <div class="head">
         <div>
-          <div class="eyebrow">${medium(key + "-01")} — ${medium(
-            new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10),
-          )}</div>
+          <div class="eyebrow">${
+            view === "month"
+              ? `${medium(key + "-01")} — ${medium(
+                  new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10),
+                )}`
+              : view === "week"
+                ? "One week"
+                : "One day"
+          }</div>
           <h1>Calendar</h1>
-          <p class="lede">Submission deadlines, publication dates and the diary around them. The month
-            and the filters live in the address, so this exact view is a link.</p>
-        </div>
-        <div class="month-nav">
-          <button class="toggle" data-month="${monthShift(key, -1)}" aria-label="Previous month">←</button>
-          <div class="month-name">${monthName(key)}</div>
-          <button class="toggle" data-month="${monthShift(key, 1)}" aria-label="Next month">→</button>
-          <button class="toggle" data-month="${TODAY.slice(0, 7)}">Today</button>
+          <p class="lede">Submission deadlines, publication dates and the diary around them.
+            Click a date for that day on its own, and an entry for the piece itself. The view,
+            the date and the filters live in the address, so this exact view is a link.</p>
         </div>
       </div>
 
@@ -3978,20 +4189,40 @@
           : ""
       }
 
-      ${openDay ? dayPanel(openDay) : ""}
-
       <!--
         Narrow screens scroll the month sideways rather than being given a
         different thing to look at: a calendar should look like a calendar,
         and a seven-column grid squeezed to 390px is not readable, so the
         columns keep a workable minimum width.
       -->
+      <!-- Below the filters, because the filters narrow what a period contains. -->
+      <div class="cal-bar">
+        <div class="toggles" role="group" aria-label="Calendar view">
+          ${VIEWS.map(
+            ([v, label]) =>
+              `<button class="toggle${v === view ? " on" : ""}" data-view="${v}"
+                 aria-pressed="${v === view}">${label}</button>`,
+          ).join("")}
+        </div>
+        <div class="month-nav">
+          <button class="toggle" data-goto="${stepTo(-1)}" aria-label="Previous ${view}"
+            title="Previous ${view}">←</button>
+          <div class="month-name">${period}</div>
+          <button class="toggle" data-goto="${stepTo(1)}" aria-label="Next ${view}"
+            title="Next ${view}">→</button>
+          <button class="toggle" data-goto="${
+            view === "month" ? TODAY.slice(0, 7) : TODAY
+          }">Today</button>
+        </div>
+      </div>
+
+      ${view === "day" ? dayView(anchor) : `
       <div class="cal-scroll">
-      <div class="cal">
+      <div class="cal${view === "week" ? " week-view" : ""}">
         <div class="cal-head">${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
           .map((d) => `<div>${d}</div>`)
           .join("")}</div>
-        ${weeks
+        ${rows
           .map((week) => {
             const packed = packWeek(week, spans);
             return `<div class="cal-row" style="--lanes:${packed.lanes}">
@@ -4001,21 +4232,23 @@
                   const wd = day(date).getUTCDay();
                   const cls = [
                     "cell",
-                    date.slice(0, 7) === key ? "" : "pad",
+                    view === "month" && date.slice(0, 7) !== key ? "pad" : "",
                     wd === 0 || wd === 6 ? "rest" : "",
                     date === TODAY ? "now" : "",
                   ]
                     .filter(Boolean)
                     .join(" ");
-                  const hidden = marks.length - 3;
+                  // A week cell is five times taller, so it shows everything.
+                  const cap = view === "week" ? marks.length : 3;
+                  const hidden = marks.length - cap;
                   return `<div class="${cls}">
-                    <button class="daynum" data-day-open="${date}"
-                      title="Everything on ${long(date)}">${Number(date.slice(8))}</button>
+                    <a class="daynum" href="${dayLink(date)}"
+                      title="${long(date)} on its own">${Number(date.slice(8))}</a>
                     ${packed.lanes ? '<div class="lane-space"></div>' : ""}
-                    ${marks.slice(0, 3).map(markChip).join("")}
+                    ${marks.slice(0, cap).map(markChip).join("")}
                     ${
                       hidden > 0
-                        ? `<button class="more" data-day-open="${date}">+${hidden} more</button>`
+                        ? `<a class="more" href="${dayLink(date)}">+${hidden} more</a>`
                         : ""
                     }
                   </div>`;
@@ -4026,7 +4259,7 @@
           })
           .join("")}
       </div>
-      </div>
+      </div>`}
 
       <div class="key">
         <span style="--c:var(--ink)"><i></i>Submission due</span>
@@ -5720,7 +5953,10 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         html = pageDeadlines(params);
         break;
       case "calendar":
-        html = pageCalendar(/^\d{4}-\d{2}$/.test(parts[1] ?? "") ? parts[1] : TODAY.slice(0, 7), params);
+        html = pageCalendar(
+          /^\d{4}-\d{2}(-\d{2})?$/.test(parts[1] ?? "") ? parts[1] : TODAY.slice(0, 7),
+          params,
+        );
         break;
       case "content":
         html = pageContent(parts[1]);
@@ -5770,13 +6006,6 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       el.addEventListener("click", () => {
         const on = el.classList.contains("on");
         setParam(el.dataset.toggle, on ? "0" : "");
-      }),
-    );
-    view.querySelectorAll("[data-month]").forEach((el) =>
-      el.addEventListener("click", () => {
-        const { params: p } = route();
-        const qs = p.toString();
-        go(`/calendar/${el.dataset.month}` + (qs ? "?" + qs : ""));
       }),
     );
     view.querySelectorAll("[data-type]").forEach((el) =>
@@ -5937,12 +6166,32 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       }),
     );
 
-    // The calendar's day panel ---------------------------------------------
-    view.querySelectorAll("[data-day-open]").forEach((el) =>
-      el.addEventListener("click", () => setParam("day", el.dataset.dayOpen)),
+    // Calendar: stepping the period, and switching month / week / day -------
+    view.querySelectorAll("[data-goto]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const { params: p } = route();
+        const qs = p.toString();
+        go(`/calendar/${el.dataset.goto}` + (qs ? "?" + qs : ""));
+      }),
     );
-    view.querySelectorAll("[data-day-close]").forEach((el) =>
-      el.addEventListener("click", () => setParam("day", "")),
+    view.querySelectorAll("[data-view]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const next = el.dataset.view;
+        const { parts, params: p } = route();
+        const segment = parts[1] ?? TODAY.slice(0, 7);
+        const anchor = /^\d{4}-\d{2}-\d{2}$/.test(segment)
+          ? segment
+          : segment.slice(0, 7) === TODAY.slice(0, 7)
+            ? TODAY
+            : segment.slice(0, 7) + "-01";
+        if (next === "month") p.delete("view");
+        else p.set("view", next);
+        // Switching view keeps you on the same date rather than jumping to today.
+        const on =
+          next === "month" ? anchor.slice(0, 7) : next === "week" ? weekAnchor(anchor) : anchor;
+        const qs = p.toString();
+        go(`/calendar/${on}` + (qs ? "?" + qs : ""));
+      }),
     );
 
     // Trends ----------------------------------------------------------------
