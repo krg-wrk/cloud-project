@@ -26,7 +26,7 @@ credentials to set up first.
 | Page | URL | What it's for |
 | --- | --- | --- |
 | Today | `/` | The viewer's own deadlines, what publishes next, clashes |
-| Deadlines | `/deadlines` | Filterable table of every commissioned piece |
+| Deadlines | `/deadlines` | Filterable table of every commissioned forecast |
 | Calendar | `/calendar/2026-09` | Month grid of submissions, publications, sessions and the diary |
 | Forecast | `/content/ss-4013` | One forecast: dates, status, details, notes, peer review |
 | Team | `/team`, `/team/ao` | Per-forecaster pages |
@@ -149,7 +149,7 @@ without deleting the row.
 Permissions are in `server/src/auth.ts`, one function per decision, and the
 server checks them on every write — the UI only decides what to draw.
 
-- **Notes**: the forecaster on the piece, a manager for that vertical, an admin
+- **Notes**: the forecaster on the forecast, a manager for that vertical, an admin
 - **Peer reviews**: either side of the arrangement, a manager in scope, an admin
 - **Personal entries**: only their owner, including admins
 
@@ -206,7 +206,7 @@ knows when copy was *due* but not when it *arrived*.
 
 - **Notes** on a forecast (`content_notes`), with edit and delete.
 - **AI notes** — `POST /api/content/:id/notes/draft` builds a prompt from the
-  piece's own context (type, vertical, season, dates, existing notes, what else
+  forecast's own context (type, vertical, season, dates, existing notes, what else
   is commissioned in that vertical) and returns a draft. It is **not saved**:
   it lands in the box for the forecaster to edit and keep, and anything kept
   stays labelled as an AI note with the model recorded. The key lives on the
@@ -215,9 +215,9 @@ knows when copy was *due* but not when it *arrived*.
   one string at the top of `server/src/ai.ts`.
 - **Personal entries** (`personal_entries`) — reminders, focus time,
   milestones. Private to the person, and they ride along in the calendar feed.
-- **Peer reviews** (`peer_reviews`) — one reviewer and a date per piece. It
+- **Peer reviews** (`peer_reviews`) — one reviewer and a date per forecast. It
   appears in both people's calendars and **either of them can move or remove
-  it**, as can a manager for that vertical. A piece cannot review itself and a
+  it**, as can a manager for that vertical. A forecast cannot review itself and a
   review after publication is refused.
 
 ## Google Calendar
