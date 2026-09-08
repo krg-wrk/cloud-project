@@ -5,9 +5,22 @@ import { TODAY, formatLong, formatShort, monthKey, relativeDays } from "../lib/d
 import { STATUS_LABELS, clashesFor, isOverdue, personName } from "../lib/domain";
 import type { CalendarEvent, ContentItem, PeerReview, Person } from "../types";
 import { Avatar, ErrorNote, EventPill, Loading, StatusPill } from "../components/bits";
+import DetailsPanel from "../components/DetailsPanel";
 import Notes from "../components/Notes";
 import PeerReviewPanel from "../components/PeerReviewPanel";
 import ShareLink from "../components/ShareLink";
+
+/** The formats we publish. The panel offers these and accepts anything else. */
+const CONTENT_TYPES = [
+  "Big Idea",
+  "Season Forecast",
+  "Catwalk Report",
+  "Colour Forecast",
+  "Consumer Attitudes",
+  "Trend Curve",
+  "Case Study",
+  "Market Report",
+];
 
 export default function ContentDetail() {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +34,7 @@ export default function ContentDetail() {
   }, [item.data]);
 
   if (item.error) return <ErrorNote message={item.error} />;
-  if (!item.data || !people.data) return <Loading what="this piece" />;
+  if (!item.data || !people.data) return <Loading what="this forecast" />;
 
   const c = item.data;
   const forecaster = people.data.find((p) => p.id === c.forecasterId);
@@ -118,7 +131,15 @@ export default function ContentDetail() {
             </>
           )}
 
-          <section className="section" style={{ marginTop: 28 }}>
+          <div style={{ marginTop: 28 }}>
+            <DetailsPanel
+              item={c}
+              people={people.data}
+              contentTypes={CONTENT_TYPES}
+            />
+          </div>
+
+          <section className="section">
             <Notes contentId={c.id} people={people.data} />
           </section>
 

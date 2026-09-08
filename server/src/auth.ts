@@ -82,6 +82,24 @@ export function canWritePeerReview(
   return isManager(viewer) && inScope(viewer, item.vertical);
 }
 
+/**
+ * The details on a forecast — content type, years, research links, the
+ * Content Editor reference. Same people as the notes: whoever is working on it
+ * and whoever commissioned it.
+ */
+export function canWriteDetails(viewer: Viewer, item: ContentItem): boolean {
+  return canWriteNote(viewer, item);
+}
+
+/** KPIs: your own always; a manager for their verticals; an admin for anyone. */
+export function canViewKpis(viewer: Viewer, subject: Person): boolean {
+  if (!viewer.active) return false;
+  if (isAdmin(viewer)) return true;
+  if (viewer.personId === subject.id) return true;
+  if (!isManager(viewer)) return false;
+  return subject.vertical ? inScope(viewer, subject.vertical) : true;
+}
+
 /** Personal entries are private: only their owner touches them. */
 export function canWriteEntry(viewer: Viewer, ownerId: string): boolean {
   return viewer.active && viewer.personId === ownerId;

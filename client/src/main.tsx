@@ -5,6 +5,7 @@ import Layout from "./components/Layout";
 import CalendarView from "./routes/CalendarView";
 import ContentDetail from "./routes/ContentDetail";
 import Deadlines from "./routes/Deadlines";
+import Kpis from "./routes/Kpis";
 import SessionDetail from "./routes/SessionDetail";
 import Subscribe from "./routes/Subscribe";
 import { TeamList, TeamMember } from "./routes/Team";
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
       { path: "workshops", element: <Workshops /> },
       { path: "workshops/:id", element: <SessionDetail /> },
       { path: "whats-on", element: <WhatsOn /> },
+      { path: "performance", element: <Kpis /> },
       { path: "subscribe", element: <Subscribe /> },
       { path: "*", element: <Navigate to="/" replace /> },
     ],

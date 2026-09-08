@@ -88,7 +88,7 @@ export default function PeerReviewPanel({
             <span>
               <span className="person-name">{personName(people, review.reviewerId)}</span>
               <span className="person-meta" style={{ display: "block" }}>
-                {iAmReviewer ? "You are reviewing this" : "Reviewing this piece"}
+                {iAmReviewer ? "You are reviewing this" : "Reviewing this forecast"}
               </span>
             </span>
           </Link>

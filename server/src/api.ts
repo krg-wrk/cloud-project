@@ -3,6 +3,8 @@ import { aiNotesEnabled, type NoteDrafter } from "./ai.js";
 import {
   canEditNote,
   canSignUpAs,
+  canViewKpis,
+  canWriteDetails,
   canWriteEntry,
   canWriteNote,
   canWritePeerReview,
@@ -11,9 +13,16 @@ import {
   type ViewerRequest,
 } from "./auth.js";
 import { buildFeed } from "./ics.js";
+import { compareTeam, computeKpis, precedingRange, type Bucket } from "./kpis.js";
 import type { SignUps } from "./signUps.js";
 import type { EntryKind, HubStore } from "./store.js";
-import type { CalendarEvent, ContentItem, DataSource, Person } from "./types.js";
+import type {
+  CalendarEvent,
+  ContentItem,
+  DataSource,
+  Person,
+  ResearchLink,
+} from "./types.js";
 
 /** Deadlines are calendar days, so "today" is a date string, read per request. */
 const TODAY = () => new Date().toISOString().slice(0, 10);
@@ -176,6 +185,7 @@ export function createApiRouter(
         ...item,
         peerReview: store.peerReviewFor(item.id) ?? null,
         noteCount: store.notesFor(item.id).length,
+        details: store.detailsFor(item.id) ?? null,
       });
     } catch (err) {
       next(err);
@@ -213,7 +223,7 @@ export function createApiRouter(
         return;
       }
       if (!canWriteNote(req.viewer!, item)) {
-        res.status(403).json({ error: "You can only add notes to your own pieces." });
+        res.status(403).json({ error: "You can only add notes to your own forecasts." });
         return;
       }
       const body = String(req.body?.body ?? "").trim();
@@ -282,7 +292,7 @@ export function createApiRouter(
 
   /**
    * Drafts a note from the forecast's context. Returns the text rather than
-   * saving it, so nothing lands on the piece until the forecaster keeps it.
+   * saving it, so nothing lands on the forecast until the forecaster keeps it.
    */
   router.post("/content/:id/notes/draft", async (req: ViewerRequest, res, next) => {
     try {
@@ -301,7 +311,7 @@ export function createApiRouter(
         return;
       }
       if (!canWriteNote(req.viewer!, item)) {
-        res.status(403).json({ error: "You can only draft notes for your own pieces." });
+        res.status(403).json({ error: "You can only draft notes for your own forecasts." });
         return;
       }
       const steer = req.body?.steer ? String(req.body.steer).slice(0, 1000) : undefined;
@@ -316,6 +326,223 @@ export function createApiRouter(
     } catch (err) {
       // A model failure is not a server fault — report it as its own thing.
       res.status(502).json({ error: (err as Error).message });
+    }
+  });
+
+  // --- Details on a forecast --------------------------------------------
+
+  /**
+   * Only http(s) links are stored. A research link is rendered as an anchor,
+   * so anything else — javascript:, data: — is a way in.
+   */
+  function cleanLinks(raw: unknown): ResearchLink[] | { error: string } {
+    if (raw === undefined || raw === null) return [];
+    if (!Array.isArray(raw)) return { error: "Research links must be a list." };
+    if (raw.length > 25) return { error: "That is more research links than the page can show." };
+    const out: ResearchLink[] = [];
+    for (const entry of raw) {
+      const url = String((entry as ResearchLink)?.url ?? "").trim();
+      if (!url) continue;
+      let parsed: URL;
+      try {
+        parsed = new URL(url);
+      } catch {
+        return { error: `"${url.slice(0, 60)}" is not a valid web address.` };
+      }
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+        return { error: "Research links have to be http or https addresses." };
+      }
+      const label = String((entry as ResearchLink)?.label ?? "").trim();
+      out.push({ label: (label || parsed.hostname).slice(0, 120), url: parsed.toString() });
+    }
+    return out;
+  }
+
+  router.get("/content/:id/details", async (req: ViewerRequest, res, next) => {
+    try {
+      const items = await data.listContent();
+      const item = items.find((c) => c.id === req.params.id);
+      if (!item) {
+        res.status(404).json({ error: `No forecast with id "${req.params.id}"` });
+        return;
+      }
+      res.json({
+        details: store.detailsFor(item.id) ?? null,
+        canWrite: canWriteDetails(req.viewer!, item),
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.put("/content/:id/details", async (req: ViewerRequest, res, next) => {
+    try {
+      const personId = requirePerson(req, res);
+      if (!personId) return;
+      const items = await data.listContent();
+      const item = items.find((c) => c.id === req.params.id);
+      if (!item) {
+        res.status(404).json({ error: `No forecast with id "${req.params.id}"` });
+        return;
+      }
+      if (!canWriteDetails(req.viewer!, item)) {
+        res.status(403).json({
+          error: "Only the forecaster on this forecast or a commissioning manager can change it.",
+        });
+        return;
+      }
+
+      const links = cleanLinks(req.body?.researchLinks);
+      if ("error" in links) return bad(res, links.error);
+
+      const yearFrom = optionalYear(req.body?.yearFrom);
+      const yearTo = optionalYear(req.body?.yearTo);
+      if (yearFrom === "bad" || yearTo === "bad") {
+        return bad(res, "Forecast years should be four digits, somewhere between 2000 and 2100.");
+      }
+      if (yearFrom && yearTo && yearTo < yearFrom) {
+        return bad(res, "The last forecast year is before the first.");
+      }
+
+      let editorUrl: string | undefined;
+      if (req.body?.editorUrl) {
+        const raw = String(req.body.editorUrl).trim();
+        try {
+          const parsed = new URL(raw);
+          if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error();
+          editorUrl = parsed.toString();
+        } catch {
+          return bad(res, "The Content Editor link is not a valid http or https address.");
+        }
+      }
+
+      res.json(
+        store.setDetails({
+          contentId: item.id,
+          contentType: req.body?.contentType
+            ? String(req.body.contentType).trim().slice(0, 80)
+            : undefined,
+          yearFrom: yearFrom || undefined,
+          yearTo: yearTo || undefined,
+          editorId: req.body?.editorId ? String(req.body.editorId).trim().slice(0, 80) : undefined,
+          editorUrl,
+          researchLinks: links,
+          updatedBy: personId,
+        }),
+      );
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  // --- KPIs --------------------------------------------------------------
+
+  /**
+   * A forecaster's KPIs over a time range.
+   *
+   * Some are derived from the schedule the Hub already holds, so they are
+   * real now; the rest are supplied from elsewhere and say so until the feed
+   * is connected.
+   */
+  router.get("/kpis", async (req: ViewerRequest, res, next) => {
+    try {
+      const viewer = req.viewer!;
+      const [people, content, sessions, definitions, observations] = await Promise.all([
+        data.listPeople(),
+        data.listContent(),
+        data.listSessions(),
+        data.listMetrics(),
+        data.listMetricObservations(),
+      ]);
+
+      const wanted = (req.query.person as string | undefined) ?? viewer.personId ?? "";
+      const subject = people.find((p) => p.id === wanted);
+      if (!subject) {
+        res.status(404).json({ error: "No forecaster to report on." });
+        return;
+      }
+      if (!canViewKpis(viewer, subject)) {
+        res.status(403).json({ error: "You can only see your own KPIs." });
+        return;
+      }
+
+      const range = readRange(req.query as Record<string, string | undefined>);
+      if ("error" in range) return bad(res, range.error);
+
+      const results = computeKpis(definitions, {
+        personId: subject.id,
+        from: range.from,
+        to: range.to,
+        bucket: range.bucket,
+        content,
+        sessions,
+        observations,
+        attended: signUps.forPerson(subject.id),
+        store,
+      });
+
+      res.json({
+        person: subject,
+        range,
+        previous: precedingRange(range.from, range.to),
+        metrics: results,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /** One metric across the team, for a manager comparing like with like. */
+  router.get("/kpis/team", async (req: ViewerRequest, res, next) => {
+    try {
+      const viewer = req.viewer!;
+      if (!seesWholeTeam(viewer)) {
+        res.status(403).json({ error: "The team comparison is for commissioning managers." });
+        return;
+      }
+      const [people, content, sessions, definitions, observations] = await Promise.all([
+        data.listPeople(),
+        data.listContent(),
+        data.listSessions(),
+        data.listMetrics(),
+        data.listMetricObservations(),
+      ]);
+      const definition = definitions.find((m) => m.id === req.query.metric);
+      if (!definition) {
+        res.status(404).json({ error: "No metric with that id." });
+        return;
+      }
+      const range = readRange(req.query as Record<string, string | undefined>);
+      if ("error" in range) return bad(res, range.error);
+
+      const subjects = people.filter(
+        (p) => p.role === "forecaster" && canViewKpis(viewer, p),
+      );
+
+      res.json({
+        definition,
+        range,
+        rows: compareTeam(
+          definition,
+          subjects.map((p) => p.id),
+          (personId) => ({
+            personId,
+            from: range.from,
+            to: range.to,
+            bucket: range.bucket,
+            content,
+            sessions,
+            observations,
+            attended: signUps.forPerson(personId),
+            store,
+          }),
+        ).map((row) => ({
+          ...row,
+          person: subjects.find((p) => p.id === row.personId) ?? null,
+        })),
+      });
+    } catch (err) {
+      next(err);
     }
   });
 
@@ -687,6 +914,88 @@ export function createApiRouter(
   });
 
   return router;
+}
+
+/** Years are four digits; anything else is a typo worth reporting. */
+function optionalYear(raw: unknown): number | "bad" | undefined {
+  if (raw === undefined || raw === null || raw === "") return undefined;
+  const year = Number(raw);
+  if (!Number.isInteger(year) || year < 2000 || year > 2100) return "bad";
+  return year;
+}
+
+/**
+ * Time range for the KPI pages. Presets keep the common cases to one click;
+ * from/to takes over when someone wants a specific window.
+ */
+function readRange(
+  query: Record<string, string | undefined>,
+):
+  | { preset: string; from: string; to: string; bucket: Bucket; label: string }
+  | { error: string } {
+  const today = TODAY();
+  const preset = query.range ?? "last-12-months";
+
+  const startOfMonth = (offset: number) => {
+    const d = new Date(`${today}T00:00:00Z`);
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + offset, 1))
+      .toISOString()
+      .slice(0, 10);
+  };
+  const quarterStart = (offset: number) => {
+    const d = new Date(`${today}T00:00:00Z`);
+    const q = Math.floor(d.getUTCMonth() / 3) + offset;
+    return new Date(Date.UTC(d.getUTCFullYear(), q * 3, 1)).toISOString().slice(0, 10);
+  };
+  const dayBefore = (date: string) =>
+    new Date(Date.parse(`${date}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
+
+  switch (preset) {
+    case "this-quarter":
+      return { preset, from: quarterStart(0), to: today, bucket: "month", label: "This quarter" };
+    case "last-quarter": {
+      const from = quarterStart(-1);
+      return { preset, from, to: dayBefore(quarterStart(0)), bucket: "month", label: "Last quarter" };
+    }
+    case "year-to-date":
+      return {
+        preset,
+        from: `${today.slice(0, 4)}-01-01`,
+        to: today,
+        bucket: "month",
+        label: "Year to date",
+      };
+    case "last-12-months":
+      return {
+        preset,
+        from: startOfMonth(-11),
+        to: today,
+        bucket: "month",
+        label: "Last 12 months",
+      };
+    case "last-6-months":
+      return { preset, from: startOfMonth(-5), to: today, bucket: "month", label: "Last 6 months" };
+    case "custom": {
+      const { from, to } = query;
+      if (!isDate(from) || !isDate(to)) {
+        return { error: "A custom range needs a start and an end date (YYYY-MM-DD)." };
+      }
+      if (to < from) return { error: "The end of the range is before the start." };
+      // Long windows get quarters, so the bars stay readable.
+      const days = Math.round(
+        (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000,
+      );
+      return {
+        preset,
+        from,
+        to,
+        bucket: days > 550 ? "quarter" : "month",
+        label: `${from} to ${to}`,
+      };
+    }
+    default:
+      return { error: `Unknown range "${preset}".` };
+  }
 }
 
 /**

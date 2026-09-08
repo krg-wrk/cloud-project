@@ -30,6 +30,8 @@ export function createDataSource(): DataSource {
       sessionsSheetId: process.env.SMARTSHEET_SESSIONS_SHEET_ID,
       signUpsSheetId: process.env.SMARTSHEET_SIGNUPS_SHEET_ID,
       accessSheetId: process.env.SMARTSHEET_ACCESS_SHEET_ID,
+      metricsSheetId: process.env.SMARTSHEET_METRICS_SHEET_ID,
+      observationsSheetId: process.env.SMARTSHEET_KPI_SHEET_ID,
     });
   }
 
@@ -85,5 +87,13 @@ export class CachedDataSource implements DataSource {
 
   listAccess() {
     return this.through("access", () => this.inner.listAccess());
+  }
+
+  listMetrics() {
+    return this.through("metrics", () => this.inner.listMetrics());
+  }
+
+  listMetricObservations() {
+    return this.through("observations", () => this.inner.listMetricObservations());
   }
 }

@@ -41,6 +41,12 @@ export interface Person {
   region: string;
 }
 
+/**
+ * A commissioned forecast.
+ *
+ * We publish many formats now, so "forecast" and "content" are the words the
+ * team uses — not "report".
+ */
 export interface ContentItem {
   id: string;
   title: string;
@@ -57,6 +63,8 @@ export interface ContentItem {
   publicationDate: string;
   status: Status;
   notes?: string;
+  /** When the copy actually arrived, where the sheet records it. */
+  submittedOn?: string;
 }
 
 export type EventType =
@@ -78,6 +86,55 @@ export interface CalendarEvent {
   endDate: string;
   location?: string;
   notes?: string;
+}
+
+/**
+ * The details the team fills in on a forecast — the Hub owns these, unlike the
+ * schedule itself.
+ */
+export interface ForecastDetails {
+  contentId: string;
+  /** Set here when the sheet's format is wrong or missing. */
+  contentType?: string;
+  /** The years being forecast — one year, or a span like 2028-2029. */
+  yearFrom?: number;
+  yearTo?: number;
+  /** Content Editor: our internal authoring tool. */
+  editorId?: string;
+  editorUrl?: string;
+  researchLinks: ResearchLink[];
+  updatedBy: string;
+  updatedAt: string;
+}
+
+export interface ResearchLink {
+  label: string;
+  url: string;
+}
+
+/** What a KPI is, and how to read it. */
+export interface MetricDefinition {
+  id: string;
+  label: string;
+  unit: "count" | "percent" | "days";
+  /** Which direction is good, so a change can be coloured honestly. */
+  better: "higher" | "lower";
+  /**
+   * "derived" — the Hub works it out from the schedule it already holds.
+   * "supplied" — it comes from a sheet or feed maintained elsewhere.
+   */
+  source: "derived" | "supplied";
+  group: string;
+  target?: number;
+  description: string;
+}
+
+/** One supplied reading: this person, this metric, this day. */
+export interface MetricObservation {
+  metricId: string;
+  personId: string;
+  date: string;
+  value: number;
 }
 
 export type SessionKind =
@@ -138,4 +195,8 @@ export interface DataSource {
   listSignUps(): Promise<Record<string, SessionSignUps>>;
   /** Who may sign in, and what rights they have. */
   listAccess(): Promise<AccessRow[]>;
+  /** The KPIs being tracked. */
+  listMetrics(): Promise<MetricDefinition[]>;
+  /** Readings for the supplied metrics. */
+  listMetricObservations(): Promise<MetricObservation[]>;
 }

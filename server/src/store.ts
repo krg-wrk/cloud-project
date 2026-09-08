@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
+import type { ForecastDetails, ResearchLink } from "./types.js";
 
 /**
  * Everything the Hub owns rather than reads.
@@ -108,6 +109,18 @@ CREATE TABLE IF NOT EXISTS session_signups (
   state TEXT NOT NULL,
   created_at TEXT NOT NULL,
   PRIMARY KEY (session_id, person_id)
+);
+
+CREATE TABLE IF NOT EXISTS forecast_details (
+  content_id TEXT PRIMARY KEY,
+  content_type TEXT,
+  year_from INTEGER,
+  year_to INTEGER,
+  editor_id TEXT,
+  editor_url TEXT,
+  research_links TEXT NOT NULL DEFAULT '[]',
+  updated_by TEXT NOT NULL,
+  updated_at TEXT NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS calendar_tokens (
@@ -416,6 +429,72 @@ export class HubStore {
     }
   }
 
+  // --- Forecast details -------------------------------------------------
+
+  detailsFor(contentId: string): ForecastDetails | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT content_id, content_type, year_from, year_to, editor_id, editor_url,
+                research_links, updated_by, updated_at
+         FROM forecast_details WHERE content_id = ?`,
+      )
+      .get(contentId) as Record<string, unknown> | undefined;
+    return row ? toDetails(row) : undefined;
+  }
+
+  allDetails(): Record<string, ForecastDetails> {
+    const rows = this.db
+      .prepare(
+        `SELECT content_id, content_type, year_from, year_to, editor_id, editor_url,
+                research_links, updated_by, updated_at
+         FROM forecast_details`,
+      )
+      .all() as Record<string, unknown>[];
+    return Object.fromEntries(rows.map((row) => [String(row.content_id), toDetails(row)]));
+  }
+
+  /** One row per forecast, so saving again replaces what is there. */
+  setDetails(input: {
+    contentId: string;
+    contentType?: string;
+    yearFrom?: number;
+    yearTo?: number;
+    editorId?: string;
+    editorUrl?: string;
+    researchLinks: ResearchLink[];
+    updatedBy: string;
+  }): ForecastDetails {
+    const stamp = now();
+    this.db
+      .prepare(
+        `INSERT INTO forecast_details
+           (content_id, content_type, year_from, year_to, editor_id, editor_url,
+            research_links, updated_by, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (content_id) DO UPDATE SET
+           content_type = excluded.content_type,
+           year_from = excluded.year_from,
+           year_to = excluded.year_to,
+           editor_id = excluded.editor_id,
+           editor_url = excluded.editor_url,
+           research_links = excluded.research_links,
+           updated_by = excluded.updated_by,
+           updated_at = excluded.updated_at`,
+      )
+      .run(
+        input.contentId,
+        input.contentType ?? null,
+        input.yearFrom ?? null,
+        input.yearTo ?? null,
+        input.editorId ?? null,
+        input.editorUrl ?? null,
+        JSON.stringify(input.researchLinks),
+        input.updatedBy,
+        stamp,
+      );
+    return this.detailsFor(input.contentId)!;
+  }
+
   // --- Calendar feed tokens ---------------------------------------------
 
   /**
@@ -446,6 +525,27 @@ export class HubStore {
       .get(token) as { person_id: string } | undefined;
     return row?.person_id;
   }
+}
+
+function toDetails(row: Record<string, unknown>): ForecastDetails {
+  let researchLinks: ResearchLink[] = [];
+  try {
+    const parsed = JSON.parse(String(row.research_links ?? "[]"));
+    if (Array.isArray(parsed)) researchLinks = parsed;
+  } catch {
+    // A malformed row should not take the page down.
+  }
+  return {
+    contentId: String(row.content_id),
+    contentType: row.content_type ? String(row.content_type) : undefined,
+    yearFrom: row.year_from == null ? undefined : Number(row.year_from),
+    yearTo: row.year_to == null ? undefined : Number(row.year_to),
+    editorId: row.editor_id ? String(row.editor_id) : undefined,
+    editorUrl: row.editor_url ? String(row.editor_url) : undefined,
+    researchLinks,
+    updatedBy: String(row.updated_by),
+    updatedAt: String(row.updated_at),
+  };
 }
 
 function toNote(row: Record<string, unknown>): ContentNote {

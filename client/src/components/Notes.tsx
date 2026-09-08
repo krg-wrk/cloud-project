@@ -13,11 +13,11 @@ interface NotesResponse {
 }
 
 /**
- * Working notes on a forecast. Everyone on the piece can read them; the
+ * Working notes on a forecast. Everyone on the forecast can read them; the
  * forecaster and their commissioning manager can write.
  *
  * An AI draft comes back into the box for editing rather than being saved —
- * the forecaster decides what lands on the piece, and anything kept stays
+ * the forecaster decides what lands on the forecast, and anything kept stays
  * labelled as an AI note.
  */
 export default function Notes({
@@ -71,7 +71,7 @@ export default function Notes({
         "POST",
         { steer: steer.trim() || undefined },
       );
-      // Into the box, not onto the piece — it is a draft until someone keeps it.
+      // Into the box, not onto the forecast — it is a draft until someone keeps it.
       setDraft(res.draft);
       setIsAiDraft(true);
       setAiModel(res.model);
@@ -121,7 +121,7 @@ export default function Notes({
           <textarea
             className="note-input"
             rows={isAiDraft ? 10 : 3}
-            placeholder="What are you thinking about this piece? Angles, evidence to chase, anything the deadline makes tight."
+            placeholder="What are you thinking about this forecast? Angles, evidence to chase, anything the deadline makes tight."
             value={draft}
             onChange={(e) => {
               setDraft(e.target.value);
@@ -177,7 +177,7 @@ export default function Notes({
       )}
 
       {notes.length === 0 ? (
-        <div className="empty">No notes on this piece yet.</div>
+        <div className="empty">No notes on this forecast yet.</div>
       ) : (
         <div className="note-list">
           {notes.map((note) => (

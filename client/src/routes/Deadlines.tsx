@@ -55,7 +55,7 @@ export default function Deadlines() {
           <div className="eyebrow">Submission deadlines</div>
           <h1 className="page-title">Deadlines</h1>
           <p className="page-sub">
-            Every commissioned piece and the date its copy is due. Filter it,
+            Every commissioned forecast and the date its copy is due. Filter it,
             then send the link — whoever opens it sees the same list.
           </p>
         </div>
@@ -136,7 +136,7 @@ export default function Deadlines() {
         </div>
         <div className="filters-right">
           <span style={{ fontSize: 12, color: "var(--ink-45)" }}>
-            {rows.length} pieces · {upcoming.length} still to come
+            {rows.length} forecasts · {upcoming.length} still to come
           </span>
           <ShareLink label="Copy link" />
         </div>

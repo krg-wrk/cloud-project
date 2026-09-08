@@ -1,6 +1,9 @@
 import type { AccessRow, Role } from "../auth.js";
+import { metrics as seedMetrics } from "./seed.js";
 import type {
   CalendarEvent,
+  MetricDefinition,
+  MetricObservation,
   ContentItem,
   ContentType,
   DataSource,
@@ -30,6 +33,8 @@ export const COLUMNS = {
     manager: "Commissioning Manager",
     submissionDate: "Submission Date",
     publicationDate: "Publication Date",
+    /** When the copy actually landed — what the timeliness KPIs measure. */
+    submittedOn: "Actual Submission",
     status: "Status",
     notes: "Notes",
   },
@@ -83,6 +88,23 @@ export const COLUMNS = {
     verticals: "Verticals",
     active: "Active",
   },
+  /** The KPIs being tracked. One row per metric. */
+  metrics: {
+    id: "Metric ID",
+    label: "Label",
+    unit: "Unit",
+    better: "Better",
+    group: "Group",
+    target: "Target",
+    description: "Description",
+  },
+  /** Readings for the supplied metrics. One row per person per period. */
+  observations: {
+    metric: "Metric ID",
+    person: "Person",
+    date: "Date",
+    value: "Value",
+  },
 } as const;
 
 interface SmartsheetCell {
@@ -116,6 +138,8 @@ export interface SmartsheetConfig {
   /** One row per person per session: Session ID, Person, State. */
   signUpsSheetId?: string;
   accessSheetId?: string;
+  metricsSheetId?: string;
+  observationsSheetId?: string;
 }
 
 /**
@@ -193,6 +217,7 @@ export class SmartsheetSource implements DataSource {
         publicationDate: isoDate(row[c.publicationDate]),
         status: normaliseStatus(row[c.status]),
         notes: row[c.notes] || undefined,
+        submittedOn: isoDate(row[c.submittedOn]) || undefined,
       }));
   }
 
@@ -278,6 +303,56 @@ export class SmartsheetSource implements DataSource {
         active: !/^(false|no|n|0|inactive|left)$/i.test((row[c.active] ?? "").trim()),
       }));
   }
+
+  /**
+   * Metrics from the sheet are always "supplied" — a derived one needs a
+   * calculator in kpis.ts, which is code, not a row.
+   */
+  async listMetrics(): Promise<MetricDefinition[]> {
+    if (!this.config.metricsSheetId) return seedMetrics;
+    const c = COLUMNS.metrics;
+    const rows = await this.fetchRows(this.config.metricsSheetId);
+    const supplied = rows
+      .filter((row) => row[c.id] && row[c.label])
+      .map((row) => {
+        const target = Number.parseFloat(row[c.target] ?? "");
+        return {
+          id: row[c.id].trim(),
+          label: row[c.label],
+          unit: normaliseUnit(row[c.unit]),
+          better: /low/i.test(row[c.better] ?? "") ? ("lower" as const) : ("higher" as const),
+          source: "supplied" as const,
+          group: row[c.group] || "Other",
+          target: Number.isFinite(target) ? target : undefined,
+          description: row[c.description] || "",
+        };
+      });
+    // Keep the derived metrics; the sheet adds to them rather than replacing.
+    const derived = seedMetrics.filter((m) => m.source === "derived");
+    const suppliedIds = new Set(supplied.map((m) => m.id));
+    return [...derived.filter((m) => !suppliedIds.has(m.id)), ...supplied];
+  }
+
+  async listMetricObservations(): Promise<MetricObservation[]> {
+    if (!this.config.observationsSheetId) return [];
+    const c = COLUMNS.observations;
+    const rows = await this.fetchRows(this.config.observationsSheetId);
+    return rows
+      .map((row) => ({
+        metricId: (row[c.metric] ?? "").trim(),
+        personId: personId(row[c.person]),
+        date: isoDate(row[c.date]),
+        value: Number.parseFloat(row[c.value] ?? ""),
+      }))
+      .filter((o) => o.metricId && o.date && Number.isFinite(o.value));
+  }
+}
+
+function normaliseUnit(value: string | undefined): "count" | "percent" | "days" {
+  const v = (value ?? "").toLowerCase();
+  if (v.includes("percent") || v.includes("%") || v.includes("rate")) return "percent";
+  if (v.includes("day")) return "days";
+  return "count";
 }
 
 function normaliseRole(value: string | undefined): Role {

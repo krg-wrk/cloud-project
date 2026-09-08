@@ -1,8 +1,12 @@
 # Forecasters Hub
 
-A web app for the forecast team: publication and submission dates, leave,
-public holidays, workshops and shows. Smartsheet stays the backend for the
-commissioning managers — the team reads it through this.
+A web app for the forecast team: publication and submission dates, forecast
+details, notes, KPIs, leave, public holidays, workshops and shows. Smartsheet
+stays the backend for the commissioning managers — the team reads it through
+this.
+
+The team publishes many formats now, so the words used throughout are
+**forecast** and **content**, not "report".
 
 Built as an npm workspaces monorepo: React (Vite + TypeScript) client, Node
 (Express + TypeScript) server.
@@ -24,8 +28,9 @@ credentials to set up first.
 | Today | `/` | The viewer's own deadlines, what publishes next, clashes |
 | Deadlines | `/deadlines` | Filterable table of every commissioned piece |
 | Calendar | `/calendar/2026-09` | Month grid of submissions, publications, sessions and the diary |
-| Content | `/content/ss-4013` | One piece: dates, status, where it is, who owns it |
+| Forecast | `/content/ss-4013` | One forecast: dates, status, details, notes, peer review |
 | Team | `/team`, `/team/ao` | Per-forecaster pages |
+| Performance | `/performance` | KPIs per forecaster and across the team, over any time range |
 | Learning | `/workshops`, `/workshops/ws-201` | The workshop and knowledge-sharing programme, with sign-ups |
 | What's on | `/whats-on` | Leave, public holidays, shows |
 
@@ -101,6 +106,8 @@ SMARTSHEET_PEOPLE_SHEET_ID=...    # the team
 SMARTSHEET_SESSIONS_SHEET_ID=...  # the workshop programme
 SMARTSHEET_SIGNUPS_SHEET_ID=...   # one row per person per session
 SMARTSHEET_ACCESS_SHEET_ID=...    # who may sign in, and their rights
+SMARTSHEET_METRICS_SHEET_ID=...   # the KPIs being tracked
+SMARTSHEET_KPI_SHEET_ID=...       # readings: Metric ID, Person, Date, Value
 ```
 
 Column titles are mapped in one place — the `COLUMNS` object at the top of
@@ -145,6 +152,55 @@ server checks them on every write — the UI only decides what to draw.
 - **Notes**: the forecaster on the piece, a manager for that vertical, an admin
 - **Peer reviews**: either side of the arrangement, a manager in scope, an admin
 - **Personal entries**: only their owner, including admins
+
+## Forecast details
+
+The schedule comes from Smartsheet. The details the team fills in on a
+forecast are the Hub's (`forecast_details`), and either the forecaster or a
+commissioning manager for that vertical can set them:
+
+- **Content type** — the format. The sheet's value is the default; this
+  overrides it, and the field accepts a format that isn't on the list yet.
+- **Years being forecast** — one year, or a span like 2028–2029. Separate
+  from season, which is the publishing cycle.
+- **Content Editor** — the ID and/or a link into our authoring tool.
+- **Research links** — as many as needed, each with a label.
+
+Only `http(s)` links are stored, checked server-side: these render as anchors,
+so `javascript:` and `data:` are a way in and are refused with a plain message.
+
+## KPIs
+
+`/performance` reports on a forecaster over any range, and — for commissioning
+managers — compares one metric across the team.
+
+Two kinds of metric, and the split matters:
+
+- **Derived** — worked out from the schedule and store the Hub already holds,
+  so they are live now: forecasts submitted, forecasts published, submitted on
+  time, average days late, late submissions, peer reviews given, sessions
+  attended. The calculators are one function each in `server/src/kpis.ts`.
+- **Supplied** — from a sheet or feed maintained elsewhere: client meetings,
+  stats reports, and whatever else you want to track. The shape is fixed; the
+  page shows "Awaiting data" honestly until the numbers arrive.
+
+Adding a metric is a row in the metrics sheet. Adding a *derived* one is a row
+plus a function, because it needs to know how to compute itself.
+
+Ranges: this quarter, last quarter, year to date, last 6 and 12 months, or a
+custom window (which switches to quarterly buckets past ~18 months so the bars
+stay readable). Every figure is shown against the preceding window of equal
+length, and whether a change is good news depends on the metric's own
+direction, not its sign — "average days late" going up is bad.
+
+Charts are single-measure by design, so there is no categorical palette to get
+wrong: one hue throughout, with a lighter step of the same hue for
+de-emphasised bars. Both steps were checked for contrast (≥3:1 on the surface)
+and separation (15+ ΔE, including simulated colour-vision deficiency), every
+team bar carries its value as text, and a table view sits behind the charts.
+
+Timeliness needs the sheet's **Actual Submission** column — without it the Hub
+knows when copy was *due* but not when it *arrived*.
 
 ## Notes, reminders and peer reviews
 

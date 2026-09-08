@@ -85,6 +85,9 @@ function Sidebar({ content }: { content: ContentItem[] }) {
         <NavLink to={`/calendar/${monthKey(TODAY)}`} className="nav-link">
           Calendar
         </NavLink>
+        <NavLink to="/performance" className="nav-link">
+          Performance
+        </NavLink>
 
         <div className="nav-label" style={{ marginTop: 20 }}>
           The team

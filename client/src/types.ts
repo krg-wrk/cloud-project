@@ -43,6 +43,9 @@ export interface ContentItem {
   /** Added by the API: how many notes the piece has, and its peer review. */
   noteCount?: number;
   peerReview?: PeerReview | null;
+  details?: ForecastDetails | null;
+  /** When the copy actually landed, where the sheet records it. */
+  submittedOn?: string;
 }
 
 export interface CalendarEvent {
@@ -143,6 +146,63 @@ export interface PeerReview {
 export interface MyPeerReview extends PeerReview {
   item: ContentItem | null;
   iAmReviewer: boolean;
+}
+
+export interface ResearchLink {
+  label: string;
+  url: string;
+}
+
+export interface ForecastDetails {
+  contentId: string;
+  contentType?: string;
+  yearFrom?: number;
+  yearTo?: number;
+  editorId?: string;
+  editorUrl?: string;
+  researchLinks: ResearchLink[];
+  updatedBy: string;
+  updatedAt: string;
+}
+
+export interface MetricDefinition {
+  id: string;
+  label: string;
+  unit: "count" | "percent" | "days";
+  better: "higher" | "lower";
+  source: "derived" | "supplied";
+  group: string;
+  target?: number;
+  description: string;
+}
+
+export interface MetricResult {
+  definition: MetricDefinition;
+  value: number | null;
+  previous: number | null;
+  series: { period: string; label: string; value: number | null }[];
+  awaitingData: boolean;
+}
+
+export interface KpiRange {
+  preset: string;
+  from: string;
+  to: string;
+  bucket: "month" | "quarter";
+  label: string;
+}
+
+export interface KpiResponse {
+  person: Person;
+  range: KpiRange;
+  previous: { from: string; to: string };
+  metrics: MetricResult[];
+}
+
+export interface TeamKpiResponse {
+  definition: MetricDefinition;
+  range: KpiRange;
+  rows: { personId: string; value: number | null; person: Person | null }[];
 }
 
 export interface Schedule {

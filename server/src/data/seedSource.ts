@@ -4,10 +4,21 @@ import type {
   ContentItem,
   DataSource,
   KnowledgeSession,
+  MetricDefinition,
+  MetricObservation,
   Person,
   SessionSignUps,
 } from "../types.js";
-import { access, content, events, people, sessions, signUps } from "./seed.js";
+import {
+  access,
+  content,
+  events,
+  metricObservations,
+  metrics,
+  people,
+  sessions,
+  signUps,
+} from "./seed.js";
 
 /**
  * In-memory data source used for the POC and for local development, so the Hub
@@ -38,5 +49,13 @@ export class SeedSource implements DataSource {
 
   async listAccess(): Promise<AccessRow[]> {
     return access;
+  }
+
+  async listMetrics(): Promise<MetricDefinition[]> {
+    return metrics;
+  }
+
+  async listMetricObservations(): Promise<MetricObservation[]> {
+    return metricObservations;
   }
 }

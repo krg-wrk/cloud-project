@@ -1,6 +1,8 @@
 import type { AccessRow } from "../auth.js";
 import type {
   CalendarEvent,
+  MetricDefinition,
+  MetricObservation,
   ContentItem,
   ContentType,
   EventType,
@@ -89,6 +91,18 @@ const contentRows: ContentRow[] = [
   ["ss-4007", "Asia-Pacific Food Retail Update", "Market Report", "Food & Drink", "A/W 27/28", "mc", "2026-08-07", "2026-08-20", "published"],
 ];
 
+/**
+ * When the copy actually landed. Only the forecasts that have been delivered have
+ * one — that is what makes the timeliness KPIs mean something.
+ * [contentId, submittedOn]
+ */
+const submittedOn: Record<string, string> = {
+  "ss-4001": "2026-06-12", "ss-4002": "2026-06-29", "ss-4003": "2026-07-03",
+  "ss-4004": "2026-07-14", "ss-4005": "2026-07-17", "ss-4006": "2026-07-27",
+  "ss-4007": "2026-08-07", "ss-4008": "2026-08-14", "ss-4009": "2026-08-25",
+  "ss-4010": "2026-08-28", "ss-4011": "2026-09-04",
+};
+
 const managerFor: Record<string, string> = {
   ao: "gk", tb: "gk", jw: "gk", da: "gk",
   rc: "er", pr: "er", mc: "er", sm: "er",
@@ -107,7 +121,144 @@ export const content: ContentItem[] = contentRows.map(
     publicationDate,
     status,
     notes,
+    submittedOn: submittedOn[id],
   }),
+);
+
+/**
+ * The KPIs.
+ *
+ * Two kinds. "derived" ones the Hub works out from the schedule it already
+ * holds, so they are live today. "supplied" ones come from a sheet or feed
+ * maintained elsewhere — the shape is fixed, the numbers arrive later.
+ */
+export const metrics: MetricDefinition[] = [
+  {
+    id: "forecasts-submitted",
+    label: "Forecasts submitted",
+    unit: "count",
+    better: "higher",
+    source: "derived",
+    group: "Output",
+    description: "Forecasts whose copy landed with the commissioning manager in the period.",
+  },
+  {
+    id: "forecasts-published",
+    label: "Forecasts published",
+    unit: "count",
+    better: "higher",
+    source: "derived",
+    group: "Output",
+    description: "Forecasts that went live on the platform in the period.",
+  },
+  {
+    id: "on-time-rate",
+    label: "Submitted on time",
+    unit: "percent",
+    better: "higher",
+    source: "derived",
+    group: "Timeliness",
+    target: 90,
+    description: "Share of submissions that arrived on or before the agreed date.",
+  },
+  {
+    id: "days-late",
+    label: "Average days late",
+    unit: "days",
+    better: "lower",
+    source: "derived",
+    group: "Timeliness",
+    target: 1,
+    description: "Averaged across submissions in the period; on-time counts as zero.",
+  },
+  {
+    id: "late-submissions",
+    label: "Late submissions",
+    unit: "count",
+    better: "lower",
+    source: "derived",
+    group: "Timeliness",
+    description: "Submissions that arrived after the agreed date.",
+  },
+  {
+    id: "peer-reviews-given",
+    label: "Peer reviews given",
+    unit: "count",
+    better: "higher",
+    source: "derived",
+    group: "Team",
+    description: "Reviews where this forecaster was the reviewer.",
+  },
+  {
+    id: "sessions-attended",
+    label: "Sessions attended",
+    unit: "count",
+    better: "higher",
+    source: "derived",
+    group: "Team",
+    description: "Workshops and knowledge-sharing sessions they had a place on.",
+  },
+  {
+    id: "client-meetings",
+    label: "Client meetings",
+    unit: "count",
+    better: "higher",
+    source: "supplied",
+    group: "Client",
+    description: "Meetings and briefings with clients. Supplied from outside the Hub.",
+  },
+  {
+    id: "stats-reports",
+    label: "Stats reports",
+    unit: "count",
+    better: "higher",
+    source: "supplied",
+    group: "Output",
+    description: "Statistics and analytics write-ups produced. Supplied from outside the Hub.",
+  },
+];
+
+/**
+ * Sample readings for the supplied metrics, so the page has something in it
+ * before the real feed is connected. [metricId, personId, date, value]
+ */
+type ObservationRow = [string, string, string, number];
+
+const forecasterIds = ["ao", "tb", "rc", "pr", "jw", "mc", "da", "sm"];
+
+const observationRows: ObservationRow[] = [];
+// A plausible spread across the last six months, steady rather than random.
+const months = ["2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09"];
+const meetingsByPerson: Record<string, number[]> = {
+  ao: [4, 6, 5, 7, 5, 3],
+  tb: [2, 3, 4, 3, 4, 2],
+  rc: [6, 5, 7, 6, 8, 4],
+  pr: [3, 4, 3, 5, 4, 2],
+  jw: [5, 4, 6, 5, 5, 3],
+  mc: [2, 2, 3, 4, 3, 1],
+  da: [7, 8, 6, 9, 7, 4],
+  sm: [1, 2, 2, 3, 2, 1],
+};
+const statsByPerson: Record<string, number[]> = {
+  ao: [1, 1, 2, 1, 2, 1],
+  tb: [1, 0, 1, 1, 1, 0],
+  rc: [2, 1, 1, 2, 1, 1],
+  pr: [0, 1, 1, 1, 1, 0],
+  jw: [1, 1, 1, 0, 2, 1],
+  mc: [1, 1, 0, 1, 1, 1],
+  da: [2, 2, 2, 3, 2, 1],
+  sm: [0, 1, 1, 1, 0, 0],
+};
+
+for (const personId of forecasterIds) {
+  months.forEach((month, i) => {
+    observationRows.push(["client-meetings", personId, `${month}-15`, meetingsByPerson[personId][i]]);
+    observationRows.push(["stats-reports", personId, `${month}-20`, statsByPerson[personId][i]]);
+  });
+}
+
+export const metricObservations: MetricObservation[] = observationRows.map(
+  ([metricId, personId, date, value]) => ({ metricId, personId, date, value }),
 );
 
 /**

@@ -19,6 +19,9 @@
   --rule-strong: #c7c7c1;
 
   --accent: #4c5578;
+  /* A lighter step of the accent for de-emphasised bars: >=3:1 on white and
+     15+ deltaE from the accent, so both are legible and tellable apart. */
+  --accent-soft: #7a83a6;
   --accent-wash: #eceef4;
   --accent-ink: #ffffff;
 
@@ -1404,4 +1407,296 @@ a.session-title:hover {
   font-size: 12px;
   word-break: break-all;
   color: var(--ink);
+}
+
+/* --- Forecast details ---------------------------------------------------- */
+
+.details-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px 17px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.details-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.details-row input {
+  padding: 7px 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  min-width: 140px;
+}
+
+.details-legend {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-45);
+}
+
+.details-view {
+  padding: 16px 18px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.details-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 0 24px;
+  margin: 0;
+}
+
+.link-out {
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.link-out:hover {
+  text-decoration: underline;
+}
+
+.research {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.research-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.research-list li {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.research-host {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-45);
+}
+
+/* --- KPIs ---------------------------------------------------------------- */
+
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(198px, 1fr));
+  gap: 10px;
+}
+
+.kpi-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+  text-align: left;
+  cursor: pointer;
+}
+
+.kpi-tile:hover {
+  background: var(--ground);
+}
+
+.kpi-tile.on {
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+.kpi-label {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--ink-45);
+}
+
+.kpi-value {
+  font-family: var(--display);
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Targets read as their own line — "1.8 / 1" looks like a fraction. */
+.kpi-target {
+  font-size: 11px;
+  color: var(--ink-45);
+  font-variant-numeric: tabular-nums;
+}
+
+.kpi-change {
+  font-size: 11.5px;
+  color: var(--ink-45);
+}
+
+.kpi-change.good {
+  color: var(--status-published);
+}
+
+.kpi-change.bad {
+  color: var(--status-at-risk);
+}
+
+.kpi-awaiting,
+.kpi-source {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-45);
+}
+
+.kpi-awaiting {
+  color: var(--status-in-review);
+}
+
+.kpi-source {
+  margin-top: auto;
+}
+
+.spark {
+  width: 100%;
+  height: 26px;
+  margin-top: 2px;
+}
+
+/* --- Charts -------------------------------------------------------------- */
+
+.chart-wrap {
+  padding: 14px 16px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.chart {
+  width: 100%;
+  height: 190px;
+  display: block;
+}
+
+.chart-axis {
+  display: grid;
+  margin-top: 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-45);
+  text-align: center;
+}
+
+.chart-axis .on {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.chart-readout {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+  font-size: 13px;
+  color: var(--ink-70);
+}
+
+.chart-readout strong {
+  font-weight: 500;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.chart-target {
+  color: var(--ink-45);
+}
+
+.team-bars {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.team-bar {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr) 92px;
+  gap: 14px;
+  align-items: center;
+  padding: 9px 16px;
+  border-top: 1px solid var(--rule);
+  font-size: 13px;
+}
+
+.team-bar:first-child {
+  border-top: none;
+}
+
+.team-bar.mine {
+  background: var(--accent-wash);
+}
+
+.team-bar-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.team-bar-you {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.team-bar-track {
+  display: block;
+  height: 10px;
+  background: var(--ground);
+}
+
+.team-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 0 2px 2px 0;
+}
+
+.team-bar-value {
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.team-bar-none {
+  font-family: var(--ui);
+  font-size: 10.5px;
+  color: var(--ink-45);
 }
