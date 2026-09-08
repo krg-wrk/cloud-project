@@ -2459,18 +2459,181 @@
       font-size: 28px;
     }
 
-    .cell {
-      min-height: 84px;
+    /*
+     * The explanation is worth reading once, not on every visit, and on a
+     * phone it was pushing the calendar itself below the fold. Clamped, so
+     * the page starts with the thing you came for.
+     */
+    .lede {
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
     }
 
-    .mark em {
+    /* Tighter, for the same reason. */
+    .filters {
+      padding: 10px 12px;
+      gap: 8px 12px;
+    }
+
+    .filters .toggle,
+    .filters select {
+      padding: 6px 9px;
+      font-size: 12.5px;
+    }
+
+    .filters .field > span {
+      font-size: 9px;
+    }
+
+    .cal-bar {
+      margin-bottom: 12px;
+    }
+
+    /*
+     * The whole month fits on a phone, because at this width the entries stop
+     * being labels and become markers: a coloured bar per entry, in the same
+     * colours the key below uses. There is no room for a title in a 50px
+     * column, and a month you have to scroll sideways is not a month you can
+     * read — so the grid shows *when* things are, and the day view (a tap on
+     * any cell) says what they are.
+     */
+    .cal-scroll {
+      overflow-x: visible;
+    }
+
+    .cal {
+      min-width: 0;
+    }
+
+    .cal-head div {
+      padding: 7px 4px;
+      text-align: center;
+      letter-spacing: 0.06em;
+    }
+
+    .cell {
+      position: relative;
+      min-height: 62px;
+      padding: 5px 4px 6px;
+      gap: 2px;
+    }
+
+    /* The whole cell opens the day, since a 4px marker is not a tap target. */
+    .daynum {
+      align-self: center;
+      padding: 0;
+    }
+
+    .daynum::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+    }
+
+    .mark,
+    .cal-span {
+      pointer-events: none;
+    }
+
+    .mark {
+      display: block;
+      height: 4px;
+      padding: 0;
+      border-left: none;
+      border-radius: 2px;
+      background: var(--c);
+    }
+
+    .mark .icon,
+    .mark em,
+    .mark-title {
       display: none;
     }
 
-    /* The month is scrolled sideways here, so let it bleed to the edges. */
-    .cal-scroll {
-      margin: 0 -16px;
-      padding: 0 16px;
+    /* A span is still one bar across its days, just without room for a name. */
+    .cal-spans {
+      top: 22px;
+    }
+
+    .cal-span {
+      height: 4px;
+      margin: 0 1px;
+      padding: 0;
+      border-left: none;
+      border-radius: 2px;
+      background: var(--c);
+    }
+
+    .cal-span .icon,
+    .span-title,
+    .span-carry {
+      display: none;
+    }
+
+    .lane-space {
+      height: calc(var(--lanes, 0) * 6px);
+    }
+
+    .more {
+      align-self: center;
+      padding: 0;
+      font-size: 9px;
+      text-decoration: none;
+    }
+
+    /* A week has one row, so it can still afford to name things. */
+    .week-view .cell {
+      min-height: 200px;
+      padding: 6px 5px 8px;
+    }
+
+    .week-view .daynum {
+      align-self: flex-start;
+    }
+
+    .week-view .daynum::after {
+      content: none;
+    }
+
+    .week-view .mark {
+      display: flex;
+      height: auto;
+      padding: 3px 6px;
+      border-left: 3px solid var(--c);
+      border-radius: 0;
+      background: color-mix(in srgb, var(--c) 9%, transparent);
+      pointer-events: auto;
+    }
+
+    .week-view .mark .icon,
+    .week-view .mark-title {
+      display: revert;
+    }
+
+    .week-view .cal-spans {
+      top: 26px;
+    }
+
+    .week-view .cal-span {
+      height: 18px;
+      margin: 0 3px;
+      padding: 0 6px;
+      border-left: 3px solid var(--c);
+      border-radius: 0;
+      background: color-mix(in srgb, var(--c) 16%, var(--paper));
+      pointer-events: auto;
+    }
+
+    .week-view .cal-span .icon,
+    .week-view .span-title,
+    .week-view .span-carry {
+      display: revert;
+    }
+
+    .week-view .lane-space {
+      height: calc(var(--lanes, 0) * 20px);
     }
 
     .month-name {

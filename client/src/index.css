@@ -1550,18 +1550,185 @@ a.session-title:hover {
     font-size: 29px;
   }
 
-  .cal-day {
-    min-height: 84px;
+  /*
+   * The explanation is worth reading once, not on every visit, and on a phone
+   * it was pushing the calendar itself below the fold. Clamped, so the page
+   * starts with the thing you came for.
+   */
+  .page-sub {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
   }
 
-  .cal-chip .chip-kind {
+  /* Tighter, for the same reason. */
+  .filters {
+    padding: 10px 12px;
+    gap: 8px 12px;
+  }
+
+  .filters .btn {
+    padding: 6px 9px;
+    font-size: 12.5px;
+  }
+
+  .filters .field > label {
+    font-size: 9px;
+  }
+
+  .cal-bar {
+    margin-bottom: 12px;
+  }
+
+  /*
+   * The whole month fits on a phone, because at this width the entries stop
+   * being labels and become markers: a coloured bar per entry, in the same
+   * colours the legend and the wider grid use. There is no room for a title
+   * in a 50px column, and a month you have to scroll sideways is not a month
+   * you can read — so the grid shows *when* things are, and the day view
+   * (a tap on any cell) says what they are.
+   */
+  .calendar {
+    min-width: 0;
+  }
+
+  .calendar-scroll {
+    overflow-x: visible;
+  }
+
+  .cal-head div {
+    padding: 7px 4px;
+    text-align: center;
+    letter-spacing: 0.06em;
+  }
+
+  .cal-day {
+    min-height: 62px;
+    padding: 5px 4px 6px;
+    gap: 2px;
+  }
+
+  /* The whole cell opens the day, since a 4px marker is not a tap target. */
+  .cal-day {
+    position: relative;
+  }
+
+  .cal-daynum {
+    align-self: center;
+    padding: 0;
+  }
+
+  .cal-daynum::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+  }
+
+  .cal-chip,
+  .cal-span {
+    pointer-events: none;
+  }
+
+  .cal-chip {
+    display: block;
+    height: 4px;
+    min-height: 4px;
+    padding: 0;
+    border-left: none;
+    border-radius: 2px;
+    background: var(--chip-color, var(--ink-45));
+  }
+
+  .cal-chip .icon,
+  .cal-chip .chip-kind,
+  .cal-chip .chip-title {
     display: none;
   }
 
-  /* The month is scrolled sideways here, so let it bleed to the edges. */
-  .calendar-scroll {
-    margin: 0 -16px;
-    padding: 0 16px;
+  /* A span is still one bar across its days, just without room for its name. */
+  .cal-spans {
+    top: 22px;
+    gap: 2px 0;
+  }
+
+  .cal-span {
+    height: 4px;
+    margin: 0 1px;
+    padding: 0;
+    border-left: none;
+    border-radius: 2px;
+    background: var(--chip-color, var(--ink-45));
+  }
+
+  .cal-span .icon,
+  .cal-span .span-title,
+  .cal-span .span-carry {
+    display: none;
+  }
+
+  .cal-lane-space {
+    height: calc(var(--lanes, 0) * 6px);
+  }
+
+  .cal-more {
+    align-self: center;
+    padding: 0;
+    font-size: 9px;
+    text-decoration: none;
+  }
+
+  /* A week has one row, so it can still afford to name things. */
+  .week-view .cal-day {
+    min-height: 200px;
+    padding: 6px 5px 8px;
+  }
+
+  .week-view .cal-daynum {
+    align-self: flex-start;
+  }
+
+  .week-view .cal-chip {
+    display: flex;
+    height: auto;
+    min-height: 0;
+    padding: 3px 5px;
+    border-left: 3px solid var(--chip-color, var(--ink-45));
+    border-radius: var(--radius-sm);
+    background: color-mix(in srgb, var(--chip-color, var(--ink-45)) 9%, transparent);
+    pointer-events: auto;
+  }
+
+  .week-view .cal-chip .icon,
+  .week-view .cal-chip .chip-title {
+    display: revert;
+  }
+
+  .week-view .cal-daynum::after {
+    content: none;
+  }
+
+  .week-view .cal-spans {
+    top: 26px;
+  }
+
+  .week-view .cal-span {
+    height: 18px;
+    margin: 0 3px;
+    padding: 0 6px;
+    border-left: 3px solid var(--chip-color, var(--ink-45));
+    background: color-mix(in srgb, var(--chip-color, var(--ink-45)) 16%, var(--paper));
+    pointer-events: auto;
+  }
+
+  .week-view .cal-span .icon,
+  .week-view .cal-span .span-title,
+  .week-view .cal-span .span-carry {
+    display: revert;
+  }
+
+  .week-view .cal-lane-space {
+    height: calc(var(--lanes, 0) * 20px);
   }
 
   .tabbar {

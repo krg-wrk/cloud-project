@@ -368,11 +368,21 @@ had. The lane maths is in `client/src/lib/spans.ts`.
 
 ### On a phone
 
-A calendar looks like a calendar at every width, so the grid stays a grid:
-below the point where seven columns stop being readable it **scrolls
-sideways**, with the columns holding a workable minimum width, rather than
-turning into a list. Titles truncate, as they do in any month view — tapping
-a date gives the day view, where nothing is truncated.
+The **whole month fits**, all six weeks and seven columns, with nothing to
+scroll sideways for. It fits because below 860px the entries stop being labels
+and become markers: one coloured bar per entry, in the same colours the legend
+uses, and a multi-day thing still drawn as one bar across its days. There is
+no room for a title in a 50px column, and a month you have to scroll sideways
+is not a month you can read — so the grid shows *when* things are and the day
+view says what they are. Tapping anywhere in a cell opens that day, since a
+4px marker is not a tap target; the markers themselves are inert so they never
+swallow the tap.
+
+The week view keeps its labels at that width — one row instead of six means
+there is room for them.
+
+The page header and filters are tightened on a phone too, so the calendar
+itself is not pushed below the fold.
 
 Navigation does change. The sidebar is replaced by a fixed bar at the bottom
 of the screen — Today, Deadlines, Calendar and Trends as tabs, with the rest
