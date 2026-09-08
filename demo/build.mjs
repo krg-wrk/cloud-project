@@ -11,17 +11,30 @@ import { writeFileSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const here = dirname(new URL(import.meta.url).pathname);
-const { people, content, events, sessions, signUps, access } = await import(
-  join(here, "../server/dist/data/seed.js")
+const { people, content, events, sessions, signUps, access, metrics, metricObservations } =
+  await import(join(here, "../server/dist/data/seed.js"));
+const { CONTENT_TYPES, TIER_MEANINGS, ROLE_BENCHMARKS } = await import(
+  join(here, "../server/dist/taxonomy.js")
 );
 
 const html = readFileSync(join(here, "hub.template.html"), "utf8").replace(
   "__SEED__",
-  JSON.stringify({ people, content, events, sessions, signUps, access }),
+  JSON.stringify({
+    people,
+    content,
+    events,
+    sessions,
+    signUps,
+    access,
+    metrics,
+    observations: metricObservations,
+    taxonomy: { contentTypes: CONTENT_TYPES, tiers: TIER_MEANINGS, roles: ROLE_BENCHMARKS },
+  }),
 );
 
 const out = join(here, "forecasters-hub.html");
 writeFileSync(out, html);
 console.log(
-  `${out} — ${people.length} people, ${content.length} pieces, ${events.length} events, ${sessions.length} sessions`,
+  `${out} — ${people.length} people, ${content.length} forecasts, ${events.length} events, ` +
+    `${sessions.length} sessions, ${metrics.length} metrics, ${CONTENT_TYPES.length} formats`,
 );

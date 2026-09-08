@@ -79,7 +79,12 @@ function MetricTile({
       {definition.target !== undefined && (
         <span className="kpi-target">
           Target {formatValue(definition.target, definition.unit)}
-          {definition.better === "lower" ? " or under" : " or better"}
+          {/* A target that is also the ceiling has no "or better" above it. */}
+          {definition.ceiling === definition.target
+            ? ""
+            : definition.better === "lower"
+              ? " or under"
+              : " or better"}
         </span>
       )}
 

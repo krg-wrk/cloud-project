@@ -151,6 +151,11 @@ export interface MetricDefinition {
    * showing it as one would misrepresent it.
    */
   notKpi?: boolean;
+  /**
+   * The most this metric can be. 100% on a compliance measure is a ceiling
+   * rather than a stretch, so a chart should not leave room above it.
+   */
+  ceiling?: number;
 }
 
 /** One supplied reading: this person, this metric, this day. */

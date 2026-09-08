@@ -293,8 +293,9 @@ export const metrics: MetricDefinition[] = [
     better: "lower",
     source: "derived",
     group: "Timeliness",
-    target: 1,
-    description: "Averaged across submissions in the period; on time counts as zero.",
+    target: 0,
+    description:
+      "Averaged across submissions in the period; on time counts as zero. Zero delays is the target.",
   },
   {
     id: "late-submissions",
@@ -303,7 +304,19 @@ export const metrics: MetricDefinition[] = [
     better: "lower",
     source: "derived",
     group: "Timeliness",
-    description: "Submissions that reached the editor after the agreed date.",
+    target: 0,
+    description: "Submissions that reached the editor after the agreed date. Zero is the target.",
+  },
+  {
+    id: "editor-late",
+    label: "Editor late",
+    unit: "count",
+    better: "lower",
+    source: "supplied",
+    group: "Timeliness",
+    target: 0,
+    description:
+      "Delays counted against the editor's dates, as recorded in the KPI sheet. Zero delays is the target.",
   },
 
   // --- Quality and standards: supplied ------------------------------------
@@ -315,7 +328,9 @@ export const metrics: MetricDefinition[] = [
     source: "supplied",
     group: "Quality",
     target: 100,
-    description: "Quality-of-quantity assessment. Supplied from the KPI sheet.",
+    ceiling: 100,
+    description:
+      "Quality-of-quantity assessment. 100% is the ceiling — it cannot be beaten, only met.",
   },
   {
     id: "dei",
@@ -335,7 +350,8 @@ export const metrics: MetricDefinition[] = [
     better: "higher",
     source: "supplied",
     group: "Quality",
-    description: "Progress against the AI projection commitment. Supplied from the KPI sheet.",
+    ceiling: 100,
+    description: "AI projections as a share of the total content made in the period.",
   },
   {
     id: "ai-usage",
@@ -345,8 +361,9 @@ export const metrics: MetricDefinition[] = [
     source: "supplied",
     group: "Quality",
     notKpi: true,
+    ceiling: 100,
     description:
-      "Tracked for visibility, explicitly not a KPI — nobody is measured up or down on it.",
+      "Share of the total content made. Tracked for visibility, explicitly not a KPI — nobody is measured up or down on it.",
   },
 
   // --- Client and commercial: supplied ------------------------------------
@@ -450,9 +467,9 @@ const observationRows: ObservationRow[] = [];
 // A plausible spread across the last six months, steady rather than random.
 const months = ["2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09"];
 /**
- * Only two of the supplied metrics are given sample values, so the rest show
- * their real state — "awaiting data" — rather than inventing performance
- * figures for people.
+ * Sample readings for the supplied metrics. These are invented forecasters, so
+ * the figures are illustrative — enough to see every metric read the way the
+ * KPI sheet reads it, with nothing taken from the real sheet.
  */
 const vasByPerson: Record<string, number[]> = {
   ao: [1, 2, 1, 2, 1, 0],
@@ -475,6 +492,42 @@ const callsByPerson: Record<string, number[]> = {
   sm: [1, 2, 2, 3, 2, 1],
 };
 
+/** Zero delays is the target, so most months are zero and a few are not. */
+const editorLateByPerson: Record<string, number[]> = {
+  ao: [0, 1, 0, 0, 1, 0],
+  tb: [0, 0, 1, 0, 0, 0],
+  rc: [0, 0, 0, 0, 0, 0],
+  pr: [1, 0, 2, 1, 0, 1],
+  jw: [0, 0, 0, 1, 0, 0],
+  mc: [0, 1, 0, 0, 0, 0],
+  da: [0, 0, 0, 0, 1, 0],
+  sm: [0, 0, 0, 0, 0, 0],
+};
+
+/** Percentages are a monthly reading rather than something to add up. */
+const qualByPerson: Record<string, number> = {
+  ao: 100, tb: 90, rc: 100, pr: 80, jw: 100, mc: 90, da: 100, sm: 100,
+};
+const aiProjectionsByPerson: Record<string, number> = {
+  ao: 50, tb: 30, rc: 60, pr: 20, jw: 40, mc: 30, da: 70, sm: 25,
+};
+const aiUsageByPerson: Record<string, number> = {
+  ao: 35, tb: 20, rc: 45, pr: 15, jw: 30, mc: 25, da: 55, sm: 20,
+};
+const deiByPerson: Record<string, number> = {
+  ao: 1, tb: 1, rc: 2, pr: 1, jw: 1, mc: 0, da: 1, sm: 1,
+};
+const marketingByPerson: Record<string, number> = {
+  ao: 3, tb: 1, rc: 5, pr: 2, jw: 2, mc: 1, da: 4, sm: 1,
+};
+const awardsByPerson: Record<string, number> = {
+  ao: 1, tb: 0, rc: 2, pr: 0, jw: 0, mc: 0, da: 1, sm: 0,
+};
+const tfdbByPerson: Record<string, [number, number, number]> = {
+  ao: [12, 4, 3], tb: [7, 2, 2], rc: [15, 6, 4], pr: [9, 3, 2],
+  jw: [11, 4, 3], mc: [6, 2, 1], da: [14, 5, 4], sm: [5, 2, 1],
+};
+
 for (const personId of forecasterIds) {
   months.forEach((month, i) => {
     observationRows.push(["vas-salesforce", personId, `${month}-15`, vasByPerson[personId][i]]);
@@ -484,7 +537,20 @@ for (const personId of forecasterIds) {
       `${month}-20`,
       callsByPerson[personId][i],
     ]);
+    observationRows.push(["editor-late", personId, `${month}-25`, editorLateByPerson[personId][i]]);
   });
+
+  // One reading per half-year for the assessed measures and the H2 focus.
+  observationRows.push(["qual-of-quant", personId, "2026-06-30", qualByPerson[personId]]);
+  observationRows.push(["ai-projections", personId, "2026-06-30", aiProjectionsByPerson[personId]]);
+  observationRows.push(["ai-usage", personId, "2026-06-30", aiUsageByPerson[personId]]);
+  observationRows.push(["dei", personId, "2026-06-30", deiByPerson[personId]]);
+  observationRows.push(["marketing-presentations", personId, "2026-06-30", marketingByPerson[personId]]);
+  observationRows.push(["awards", personId, "2026-06-30", awardsByPerson[personId]]);
+  const [proof, trends, profiles] = tfdbByPerson[personId];
+  observationRows.push(["tfdb-proof-points", personId, "2026-08-31", proof]);
+  observationRows.push(["tfdb-trends", personId, "2026-08-31", trends]);
+  observationRows.push(["trend-profiles-owned", personId, "2026-08-31", profiles]);
 }
 
 export const metricObservations: MetricObservation[] = observationRows.map(

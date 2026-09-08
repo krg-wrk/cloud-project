@@ -180,6 +180,8 @@ export interface MetricDefinition {
   benchmark?: "halfYearAverage" | "soleOwned" | "coOwned" | "byline" | "freelanced";
   /** Tracked but explicitly not a KPI. */
   notKpi?: boolean;
+  /** The most this metric can be — 100% on a compliance measure. */
+  ceiling?: number;
 }
 
 export interface Taxonomy {

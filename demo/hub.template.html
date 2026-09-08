@@ -26,6 +26,7 @@
     --line: #e2e2de;
     --line-firm: #c7c7c1;
     --accent: #4c5578;
+    --accent-soft: #7a83a6;
     --accent-wash: #eceef4;
     --accent-ink: #ffffff;
 
@@ -65,6 +66,7 @@
       --line: #2a2a30;
       --line-firm: #3c3c44;
       --accent: #9aa3cc;
+      --accent-soft: #6b74a0;
       --accent-wash: #23253a;
       --accent-ink: #14151c;
 
@@ -97,6 +99,7 @@
     --line: #2a2a30;
     --line-firm: #3c3c44;
     --accent: #9aa3cc;
+    --accent-soft: #6b74a0;
     --accent-wash: #23253a;
     --accent-ink: #14151c;
 
@@ -1524,6 +1527,241 @@
     background: var(--ok);
   }
 
+  /* ---- Forecast details -------------------------------------------------- */
+
+  .details-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 12px;
+  }
+
+  /* Two columns of the page's own .fact rows, so the panel reads like the rest. */
+  .details-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    column-gap: 30px;
+  }
+
+  .link-out {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid var(--line-firm);
+  }
+
+  .link-out:hover {
+    border-bottom-color: var(--accent);
+  }
+
+  .research {
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line);
+  }
+
+  .research-list {
+    list-style: none;
+    margin: 6px 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 13px;
+  }
+
+  /* ---- Performance ------------------------------------------------------- */
+
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+    gap: 12px;
+  }
+
+  .kpi-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 14px 15px 13px;
+    background: var(--paper);
+    border: 1px solid var(--line);
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    transition: border-color 0.12s ease;
+  }
+
+  .kpi-tile:hover {
+    border-color: var(--line-firm);
+  }
+
+  .kpi-tile.on {
+    border-color: var(--accent);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+
+  .kpi-label {
+    font-size: 12px;
+    color: var(--ink-mid);
+    line-height: 1.35;
+  }
+
+  .kpi-value {
+    font-family: var(--mono);
+    font-size: 27px;
+    line-height: 1.1;
+    color: var(--ink);
+  }
+
+  .kpi-target,
+  .kpi-change,
+  .kpi-awaiting {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    line-height: 1.4;
+  }
+
+  .kpi-change.good {
+    color: var(--ok);
+  }
+
+  .kpi-change.bad {
+    color: var(--warn);
+  }
+
+  .kpi-at {
+    color: var(--ok);
+  }
+
+  .kpi-under {
+    color: var(--warn);
+  }
+
+  .kpi-awaiting {
+    font-style: italic;
+  }
+
+  .kpi-source {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .kpi-tile .spark {
+    width: 100%;
+    height: 26px;
+    margin-top: 4px;
+  }
+
+  .chart-wrap {
+    background: var(--paper);
+    border: 1px solid var(--line);
+    padding: 16px 16px 13px;
+  }
+
+  .chart-plot {
+    position: relative;
+    padding-left: 38px;
+  }
+
+  .chart {
+    display: block;
+    width: 100%;
+    height: 190px;
+  }
+
+  .chart-ticks {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 38px;
+    height: 100%;
+  }
+
+  .chart-ticks span {
+    position: absolute;
+    right: 8px;
+    transform: translateY(-50%);
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-soft);
+    white-space: nowrap;
+  }
+
+  .chart-axis {
+    display: grid;
+    margin-top: 6px;
+    margin-left: 38px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+
+  .chart-readout {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+
+  .team-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .team-bar {
+    display: grid;
+    grid-template-columns: minmax(120px, 200px) minmax(0, 1fr) 54px;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+  }
+
+  .team-bar-name {
+    color: var(--ink-mid);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .team-bar.mine .team-bar-name {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .team-bar-you {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .team-bar-track {
+    height: 15px;
+    background: var(--sunken);
+    overflow: hidden;
+  }
+
+  .team-bar-fill {
+    display: block;
+    height: 100%;
+  }
+
+  .team-bar-value {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--ink);
+    text-align: right;
+  }
+
   @media (max-width: 1100px) {
     .split {
       grid-template-columns: minmax(0, 1fr);
@@ -1751,6 +1989,183 @@
     return `<span class="chip" style="--c:${colour}"><i></i>${label}</span>`;
   }
 
+  /* ---- KPIs -------------------------------------------------------------- */
+
+  /**
+   * The same model the server runs, so the demo reads true: derived metrics
+   * worked out from the schedule, supplied ones from the KPI sheet, output read
+   * against the average for the person's grade, and tier taken from the format.
+   */
+  const METRICS = DATA.metrics ?? [];
+  const OBSERVATIONS = DATA.observations ?? [];
+  const TAXONOMY = DATA.taxonomy ?? { contentTypes: [], tiers: [], roles: [] };
+
+  const tierByType = new Map(
+    TAXONOMY.contentTypes.map((t) => [t.name.trim().toLowerCase(), t.tier]),
+  );
+
+  /** Tier follows from the format, so nobody tags it by hand. */
+  function tierFor(type) {
+    if (!type) return null;
+    const key = type.trim().toLowerCase();
+    if (tierByType.has(key)) return tierByType.get(key);
+    // Formats arrive with suffixes, so fall back to the longest prefix match.
+    let best = null;
+    for (const t of TAXONOMY.contentTypes) {
+      const c = t.name.trim().toLowerCase();
+      if (key.startsWith(c) && (!best || c.length > best.len)) best = { tier: t.tier, len: c.length };
+    }
+    return best ? best.tier : null;
+  }
+
+  const roleBenchmark = (role) =>
+    TAXONOMY.roles.find((r) => r.role.toLowerCase() === (role ?? "").toLowerCase());
+
+  const inRange = (date, from, to) => Boolean(date) && date >= from && date <= to;
+  const dayDiff = (a, b) =>
+    Math.round((Date.parse(b + "T00:00:00Z") - Date.parse(a + "T00:00:00Z")) / 864e5);
+
+  const creditedTo = (personId) =>
+    content.filter(
+      (c) => c.forecasterId === personId || (c.contributorIds ?? []).includes(personId),
+    );
+
+  const DERIVED = {
+    "reports-owned": (p, f, t) =>
+      creditedTo(p).filter(
+        (c) => ["sole", "co-owned"].includes(c.ownership ?? "sole") && inRange(c.publicationDate, f, t),
+      ).length,
+    "sole-owned": (p, f, t) =>
+      creditedTo(p).filter((c) => (c.ownership ?? "sole") === "sole" && inRange(c.publicationDate, f, t)).length,
+    "co-owned": (p, f, t) =>
+      creditedTo(p).filter((c) => c.ownership === "co-owned" && inRange(c.publicationDate, f, t)).length,
+    "byline-contributions": (p, f, t) =>
+      creditedTo(p).filter((c) => c.ownership === "byline" && inRange(c.publicationDate, f, t)).length,
+    freelance: (p, f, t) =>
+      creditedTo(p).filter((c) => c.ownership === "freelance" && inRange(c.publicationDate, f, t)).length,
+    "tier-1": (p, f, t) =>
+      creditedTo(p).filter((c) => inRange(c.publicationDate, f, t) && tierFor(c.type) === 1).length,
+    "tier-2": (p, f, t) =>
+      creditedTo(p).filter((c) => inRange(c.publicationDate, f, t) && tierFor(c.type) === 2).length,
+    "tier-3": (p, f, t) =>
+      creditedTo(p).filter((c) => inRange(c.publicationDate, f, t) && tierFor(c.type) === 3).length,
+    "forecasts-published": (p, f, t) =>
+      creditedTo(p).filter((c) => c.status === "published" && inRange(c.publicationDate, f, t)).length,
+    "on-time-rate": (p, f, t) => {
+      const rows = creditedTo(p).filter((c) => inRange(c.submittedOn, f, t));
+      if (!rows.length) return null;
+      return Math.round((rows.filter((c) => c.submittedOn <= c.submissionDate).length / rows.length) * 100);
+    },
+    "days-late": (p, f, t) => {
+      const rows = creditedTo(p).filter((c) => inRange(c.submittedOn, f, t));
+      if (!rows.length) return null;
+      const total = rows.reduce((sum, c) => sum + Math.max(0, dayDiff(c.submissionDate, c.submittedOn)), 0);
+      return Math.round((total / rows.length) * 10) / 10;
+    },
+    "late-submissions": (p, f, t) =>
+      creditedTo(p).filter((c) => inRange(c.submittedOn, f, t) && c.submittedOn > c.submissionDate).length,
+    "peer-reviews-given": (p, f, t) =>
+      myReviews(p).filter((r) => r.reviewerId === p && inRange(r.reviewDate, f, t)).length,
+    "sessions-attended": (p, f, t) =>
+      sessions.filter((sn) => seatsFor(sn.id).going.includes(p) && inRange(sn.date, f, t)).length,
+  };
+
+  function metricValue(definition, personId, from, to) {
+    if (definition.source === "derived") {
+      const fn = DERIVED[definition.id];
+      return fn ? fn(personId, from, to) : null;
+    }
+    const rows = OBSERVATIONS.filter(
+      (o) => o.metricId === definition.id && o.personId === personId && inRange(o.date, from, to),
+    );
+    if (!rows.length) return null;
+    // A percentage is a reading, not something to add up.
+    if (definition.unit === "percent") {
+      return Math.round(rows.reduce((sum, o) => sum + o.value, 0) / rows.length);
+    }
+    return rows.reduce((sum, o) => sum + o.value, 0);
+  }
+
+  const RANGES = [
+    ["this-quarter", "This quarter"],
+    ["last-quarter", "Last quarter"],
+    ["year-to-date", "Year to date"],
+    ["last-6-months", "Last 6 months"],
+    ["last-12-months", "Last 12 months"],
+  ];
+
+  function resolveRange(preset) {
+    const now = new Date(TODAY + "T00:00:00Z");
+    const monthStart = (offset) =>
+      new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + offset, 1)).toISOString().slice(0, 10);
+    const quarterStart = (offset) =>
+      new Date(Date.UTC(now.getUTCFullYear(), (Math.floor(now.getUTCMonth() / 3) + offset) * 3, 1))
+        .toISOString()
+        .slice(0, 10);
+    const dayBefore = (d) => new Date(Date.parse(d + "T00:00:00Z") - 864e5).toISOString().slice(0, 10);
+
+    switch (preset) {
+      case "this-quarter": return { from: quarterStart(0), to: TODAY, label: "This quarter" };
+      case "last-quarter": return { from: quarterStart(-1), to: dayBefore(quarterStart(0)), label: "Last quarter" };
+      case "year-to-date": return { from: TODAY.slice(0, 4) + "-01-01", to: TODAY, label: "Year to date" };
+      case "last-12-months": return { from: monthStart(-11), to: TODAY, label: "Last 12 months" };
+      default: return { from: monthStart(-5), to: TODAY, label: "Last 6 months" };
+    }
+  }
+
+  /** Months in the window, oldest first, clipped to the range. */
+  function monthsIn(from, to) {
+    const out = [];
+    const start = new Date(from + "T00:00:00Z");
+    const end = Date.parse(to + "T00:00:00Z");
+    let y = start.getUTCFullYear();
+    let m = start.getUTCMonth();
+    while (Date.UTC(y, m, 1) <= end) {
+      const s0 = new Date(Date.UTC(y, m, 1)).toISOString().slice(0, 10);
+      const e0 = new Date(Date.UTC(y, m + 1, 0)).toISOString().slice(0, 10);
+      out.push({
+        key: s0.slice(0, 7),
+        label: new Date(Date.UTC(y, m, 1)).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" }),
+        start: s0 < from ? from : s0,
+        end: e0 > to ? to : e0,
+      });
+      m += 1;
+      if (m > 11) { y += 1; m = 0; }
+    }
+    return out;
+  }
+
+  function computeKpis(personId, role, from, to) {
+    const buckets = monthsIn(from, to);
+    const days = dayDiff(from, to) + 1;
+    const previousTo = new Date(Date.parse(from + "T00:00:00Z") - 864e5).toISOString().slice(0, 10);
+    const previousFrom = new Date(Date.parse(previousTo + "T00:00:00Z") - (days - 1) * 864e5)
+      .toISOString()
+      .slice(0, 10);
+    const bench = roleBenchmark(role);
+
+    return METRICS.map((definition) => {
+      const series = buckets.map((b) => ({
+        label: b.label,
+        value: metricValue(definition, personId, b.start, b.end),
+      }));
+      const value = metricValue(definition, personId, from, to);
+      return {
+        definition,
+        value,
+        previous: metricValue(definition, personId, previousFrom, previousTo),
+        series,
+        awaitingData:
+          definition.source === "supplied" && value === null && series.every((x) => x.value === null),
+        // Half-year benchmarks, pro-rated to the window on screen.
+        benchmark:
+          definition.benchmark && bench
+            ? Math.round(((bench[definition.benchmark] * days) / 182) * 10) / 10
+            : null,
+      };
+    });
+  }
+
   /* ---- who is signed in ------------------------------------------------- */
 
   /**
@@ -1818,10 +2233,14 @@
     signUps.set(id, { going: [...value.going], waiting: [...value.waiting] });
   }
 
-  /** Notes by content id, reminders by person id, one review per piece. */
+  /**
+   * Notes by content id, reminders by person id, one review per piece, and one
+   * set of forecast details per piece.
+   */
   const notes = new Map();
   const entries = new Map();
   const reviews = new Map();
+  const details = new Map();
 
   let store = null;
   let shared = false;
@@ -1830,6 +2249,7 @@
   const notesFor = (contentId) => notes.get(contentId) ?? [];
   const entriesFor = (personId) => entries.get(personId) ?? [];
   const reviewFor = (contentId) => reviews.get(contentId) ?? null;
+  const detailsFor = (contentId) => details.get(contentId) ?? null;
 
   /** Reviews this person is either side of — author or reviewer. */
   function myReviews(personId) {
@@ -1890,6 +2310,11 @@
   function clearReview(contentId) {
     reviews.delete(contentId);
     if (store) store.doc(`reviews/${contentId}`).delete().catch(() => {});
+  }
+
+  function setDetails(contentId, body) {
+    details.set(contentId, body);
+    put(`details/${contentId}`, body);
   }
 
   const seatsFor = (id) => signUps.get(id) ?? { going: [], waiting: [] };
@@ -1979,6 +2404,12 @@
     watch("reviews", (id, body) => {
       if (body.reviewerId && body.reviewDate) reviews.set(id, body);
     });
+    watch("details", (id, body) =>
+      details.set(id, {
+        ...body,
+        researchLinks: Array.isArray(body.researchLinks) ? body.researchLinks : [],
+      }),
+    );
   }
 
   /* ---- routing ---------------------------------------------------------- */
@@ -2033,6 +2464,7 @@
       ["Today", "#/", "", late ? `${late} late` : ""],
       ["Deadlines", "#/deadlines", "deadlines", String(open)],
       ["Calendar", `#/calendar/${TODAY.slice(0, 7)}`, "calendar", ""],
+      ["Performance", "#/performance", "performance", ""],
       ["The team", null, null, null],
       ["Learning", "#/learning", "learning", mySessionCount(me.id) || ""],
       ["Forecasters", "#/team", "team", String(people.filter((p) => p.role === "forecaster").length)],
@@ -2631,6 +3063,8 @@
               ? `<h2 style="margin-top:24px">Commissioning note</h2><p>${esc(c.notes)}</p>`
               : ""
           }
+
+          <section class="sec" style="margin-top:28px">${detailsMarkup(c)}</section>
 
           <section class="sec" style="margin-top:28px">${notesMarkup(c)}</section>
 
@@ -3321,6 +3755,369 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       </div>`;
   }
 
+  /* ---- forecast details -------------------------------------------------- */
+
+  let detailsForm = null;
+
+  function detailsMarkup(item) {
+    const v = viewer();
+    const canWrite = canWriteNote(v, item);
+    const d = detailsFor(item.id);
+
+    if (detailsForm === item.id) {
+      return `<div class="sec-head"><h2>Forecast details</h2></div>
+        <div class="note-composer">
+          <div class="details-row">
+            <label class="field"><span>Content type</span>
+              <input id="d-type" list="formats" value="${esc(d?.contentType ?? item.type)}" /></label>
+            <label class="field"><span>Forecasting year</span>
+              <input id="d-from" type="number" min="2000" max="2100" value="${d?.yearFrom ?? ""}" /></label>
+            <label class="field"><span>Through to</span>
+              <input id="d-to" type="number" min="2000" max="2100" value="${d?.yearTo ?? ""}" /></label>
+          </div>
+          <div class="details-row">
+            <label class="field"><span>Content Editor ID</span>
+              <input id="d-eid" placeholder="CE-88214" value="${esc(d?.editorId ?? "")}" /></label>
+            <label class="field" style="flex:1"><span>Content Editor link</span>
+              <input id="d-eurl" placeholder="https://editor.wgsn.com/docs/…" style="width:100%"
+                value="${esc(d?.editorUrl ?? "")}" /></label>
+          </div>
+          <div class="details-row">
+            <label class="field" style="flex:1"><span>Research link</span>
+              <input id="d-rlabel" placeholder="What it is" value="" /></label>
+            <label class="field" style="flex:2"><span>Address</span>
+              <input id="d-rurl" placeholder="https://…" style="width:100%" value="" /></label>
+          </div>
+          <div class="composer-row">
+            <button class="toggle solid" data-details-save="${item.id}">Save details</button>
+            <button class="toggle" data-details-cancel="1">Cancel</button>
+          </div>
+          <p class="signup-note">Only http and https addresses are kept — a research link is
+            rendered as a link, so anything else is a way in.</p>
+        </div>
+        <datalist id="formats">${TAXONOMY.contentTypes
+          .map((t) => `<option value="${esc(t.name)}"></option>`)
+          .join("")}</datalist>`;
+    }
+
+    const years = d?.yearFrom
+      ? d.yearTo && d.yearTo !== d.yearFrom
+        ? `${d.yearFrom}–${d.yearTo}`
+        : String(d.yearFrom)
+      : null;
+    const anything = d && (d.contentType || years || d.editorId || d.editorUrl || (d.researchLinks ?? []).length);
+    const tier = tierFor(d?.contentType ?? item.type);
+
+    return `<div class="sec-head"><h2>Forecast details</h2>
+        ${canWrite ? `<button class="toggle" data-details-open="${item.id}">${
+          anything ? "Edit" : "Fill these in"
+        }</button>` : ""}</div>
+      ${
+        anything
+          ? `<div class="panel">
+              <dl class="details-facts">
+                <div class="fact"><dt>Content type</dt><dd>${esc(d.contentType ?? item.type)}</dd></div>
+                ${tier ? `<div class="fact"><dt>Tier</dt><dd>Tier ${tier} — ${
+                  TAXONOMY.tiers.find((t) => t.tier === tier)?.name ?? ""
+                }</dd></div>` : ""}
+                ${years ? `<div class="fact"><dt>Forecasting</dt><dd>${years}</dd></div>` : ""}
+                <div class="fact"><dt>Season</dt><dd>${esc(item.season)}</dd></div>
+                ${
+                  d.editorId || d.editorUrl
+                    ? `<div class="fact"><dt>Content Editor</dt><dd>${
+                        d.editorUrl
+                          ? `<a class="link-out" href="${esc(d.editorUrl)}" target="_blank" rel="noreferrer noopener">${esc(
+                              d.editorId || "Open",
+                            )}</a>`
+                          : esc(d.editorId)
+                      }</dd></div>`
+                    : ""
+                }
+              </dl>
+              ${
+                (d.researchLinks ?? []).length
+                  ? `<div class="research"><div class="panel-label">Research</div>
+                     <ul class="research-list">${d.researchLinks
+                       .map(
+                         (l) => `<li><a class="link-out" href="${esc(l.url)}" target="_blank"
+                           rel="noreferrer noopener">${esc(l.label)}</a></li>`,
+                       )
+                       .join("")}</ul></div>`
+                  : ""
+              }
+              <p class="signup-note" style="margin-top:10px">Last updated by ${esc(
+                nameOf(d.updatedBy),
+              )}.</p>
+            </div>`
+          : `<div class="none">${
+              canWrite
+                ? "Content type, the years being forecast, research links and the Content Editor reference all go here."
+                : "Nothing filled in yet."
+            }</div>`
+      }`;
+  }
+
+  /* ---- performance ------------------------------------------------------- */
+
+  const fmtMetric = (value, unit) =>
+    value === null || value === undefined ? "—" : unit === "percent" ? Math.round(value) + "%" : String(value);
+
+  function sparkline(series) {
+    const values = series.map((p) => p.value ?? 0);
+    if (values.every((v) => v === 0)) return "";
+    const max = Math.max(...values, 1);
+    const w = 100, h = 26, gap = 2;
+    const bw = Math.max(2, (w - gap * (series.length - 1)) / series.length);
+    return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${series
+      .map((p, i) => {
+        const v = p.value ?? 0;
+        const zero = v === 0;
+        const bh = zero ? 1 : Math.max(1.5, (v / max) * h);
+        return `<rect x="${i * (bw + gap)}" y="${h - bh}" width="${bw}" height="${bh}"
+          rx="${zero ? 0 : 1}" fill="${zero ? "var(--line)" : "var(--accent-soft)"}"></rect>`;
+      })
+      .join("")}</svg>`;
+  }
+
+  function changeLine(m) {
+    if (m.value === null || m.previous === null) return "";
+    const delta = m.value - m.previous;
+    if (delta === 0) return `<span class="kpi-change">level with the period before</span>`;
+    const better = (m.definition.better === "higher") === delta > 0;
+    const unit = m.definition.unit === "percent" ? " points" : "";
+    return `<span class="kpi-change ${better ? "good" : "bad"}">${
+      delta > 0 ? "up" : "down"
+    } ${Math.round(Math.abs(delta) * 10) / 10}${unit} on the period before</span>`;
+  }
+
+  function metricTile(m, selectedId) {
+    const de = m.definition;
+    const on = de.id === selectedId;
+    return `<button class="kpi-tile${on ? " on" : ""}" data-metric="${de.id}">
+      <span class="kpi-label">${esc(de.label)}</span>
+      <span class="kpi-value">${fmtMetric(m.value, de.unit)}</span>
+      ${
+        m.benchmark !== null && m.benchmark !== undefined
+          ? `<span class="kpi-target">Role average ${m.benchmark}${
+              m.value !== null
+                ? `<span class="${m.value >= m.benchmark ? "kpi-at" : "kpi-under"}"> · ${
+                    m.value >= m.benchmark ? "at or above" : "below"
+                  }</span>`
+                : ""
+            }</span>`
+          : ""
+      }
+      ${
+        de.target !== undefined && de.target !== null
+          ? `<span class="kpi-target">Target ${fmtMetric(de.target, de.unit)}${
+              de.ceiling === de.target ? "" : de.better === "lower" ? " or under" : " or better"
+            }</span>`
+          : ""
+      }
+      ${m.awaitingData ? `<span class="kpi-awaiting">Awaiting data</span>` : changeLine(m) + sparkline(m.series)}
+      <span class="kpi-source">${
+        de.notKpi ? "Tracked, not a KPI" : de.source === "supplied" ? "Supplied" : ""
+      }</span>
+    </button>`;
+  }
+
+  function periodChart(m) {
+    const de = m.definition;
+    const series = m.series;
+    const max = de.ceiling ?? Math.max(...series.map((p) => p.value ?? 0), de.target ?? 0, 1);
+
+    // A tick is only worth drawing where it lands on a value you can act on:
+    // "7 client calls" in four steps gives 1.8, 3.5, 5.3, which nobody counts
+    // in. Counts and days step in whole units and the top of the scale rounds
+    // up to meet one, so the gridlines stay readable. A ceiling is the top
+    // exactly as given — 100% is not rounded up to anything.
+    const niceStep = (limit) => {
+      for (const candidate of [1, 2, 5, 10, 20, 25, 50, 100, 200, 500, 1000]) {
+        if (limit / candidate <= 5) return candidate;
+      }
+      return Math.ceil(limit / 5);
+    };
+    const step = de.ceiling ? null : niceStep(max);
+    const top = step ? Math.ceil(max / step) * step : max;
+    const ticks = step
+      ? Array.from({ length: Math.round(top / step) + 1 }, (_, i) => i * step)
+      : [0, 0.25, 0.5, 0.75, 1].map((f) => f * top);
+    const tickLabel = (v) =>
+      de.unit === "percent" ? Math.round(v) + "%" : String(Math.round(v * 10) / 10);
+
+    const h = 190, padTop = 14, padBottom = 26;
+    const plot = h - padTop - padBottom;
+    const slot = 100 / series.length;
+    const y = (v) => padTop + plot - (v / top) * plot;
+    return `<div class="chart-wrap">
+      <div class="chart-plot">
+        <div class="chart-ticks">${ticks
+          .map(
+            (t) => `<span style="top:${y(t)}px">${tickLabel(t)}</span>`,
+          )
+          .join("")}</div>
+      <svg class="chart" viewBox="0 0 100 ${h}" preserveAspectRatio="none">
+        ${ticks
+          .slice(1)
+          .map(
+            (t) => `<line x1="0" x2="100" y1="${y(t)}" y2="${y(t)}"
+              stroke="var(--line)" stroke-width="0.5" vector-effect="non-scaling-stroke"></line>`,
+          )
+          .join("")}
+        ${
+          de.target !== undefined && de.target !== null && de.target <= top
+            ? `<line x1="0" x2="100" y1="${y(de.target)}" y2="${y(de.target)}"
+                 stroke="var(--ink-soft)" stroke-width="1" stroke-dasharray="3 3"
+                 vector-effect="non-scaling-stroke"></line>`
+            : ""
+        }
+        ${series
+          .map((p, i) => {
+            const v = p.value ?? 0;
+            const barTop = y(v);
+            // The viewBox is stretched to the panel width, so a bar is sized
+            // as a share of its slot rather than in absolute units.
+            return `<rect x="${i * slot + slot * 0.2}" y="${barTop}" width="${slot * 0.6}"
+              height="${Math.max(p.value === null ? 0 : 1, padTop + plot - barTop)}"
+              fill="var(--accent)"><title>${esc(p.label)}: ${fmtMetric(p.value, de.unit)}</title></rect>`;
+          })
+          .join("")}
+        <line x1="0" x2="100" y1="${padTop + plot}" y2="${padTop + plot}"
+          stroke="var(--line-firm)" stroke-width="1" vector-effect="non-scaling-stroke"></line>
+      </svg>
+      </div>
+      <div class="chart-axis" style="grid-template-columns:repeat(${series.length},1fr)">${series
+        .map((p) => `<span>${esc(p.label)}</span>`)
+        .join("")}</div>
+      <div class="chart-readout">Hover a bar for the exact figure${
+        de.target !== undefined && de.target !== null
+          ? ` · the dashed line is the target, ${fmtMetric(de.target, de.unit)}`
+          : ""
+      }${de.ceiling ? ` · ${fmtMetric(de.ceiling, de.unit)} is the ceiling` : ""}</div>
+    </div>`;
+  }
+
+  function pagePerformance(params) {
+    const v = viewer();
+    const preset = params.get("range") ?? "last-6-months";
+    // A commissioning manager has no output of their own to read, so their
+    // page opens on a forecaster in their scope rather than on themselves.
+    const roster = people.filter((p) => p.role === "forecaster" && inScope(v, p.vertical));
+    const who = v.isManager
+      ? (params.get("person") ?? roster[0]?.id ?? v.person.id)
+      : v.person.id;
+    const subject = person(who);
+    const range = resolveRange(preset);
+    const results = computeKpis(subject.id, subject.forecasterRole, range.from, range.to);
+    const selectedId = params.get("metric") || results[0].definition.id;
+    const selected = results.find((m) => m.definition.id === selectedId) ?? results[0];
+    const groups = [...new Set(results.map((m) => m.definition.group))];
+
+    const teamRows = v.isManager
+      ? roster
+          .map((p) => ({
+            person: p,
+            value: metricValue(selected.definition, p.id, range.from, range.to),
+          }))
+          .sort((a, b) => {
+            if (a.value === null) return 1;
+            if (b.value === null) return -1;
+            return selected.definition.better === "higher" ? b.value - a.value : a.value - b.value;
+          })
+      : [];
+    const teamMax = Math.max(...teamRows.map((r) => r.value ?? 0), 1);
+
+    return `
+      <div class="head">
+        <div>
+          <div class="eyebrow">${[subject.name, subject.forecasterRole, subject.department]
+            .filter(Boolean)
+            .map(esc)
+            .join(" · ")}</div>
+          <h1>Performance</h1>
+          <p class="lede">Output is read against the average for the person's grade rather than
+            against zero. Tier comes from the format, so nobody tags it by hand. The range and the
+            metric both live in the address.</p>
+          <p class="signup-note">The metric definitions, tiers and grade averages here are the real
+            ones. The schedule behind them is a sample of a few dozen invented pieces, so the
+            counts sit well below the grade averages &mdash; read the shape, not the scores.</p>
+        </div>
+      </div>
+
+      <div class="filters">
+        <div class="field"><span>Range</span>
+          <div class="toggles">${RANGES.map(
+            ([value, label]) =>
+              `<button class="toggle${preset === value ? " on" : ""}" data-range="${value}">${label}</button>`,
+          ).join("")}</div>
+        </div>
+        ${
+          v.isManager
+            ? `<label class="field"><span>Forecaster</span>
+                <select data-kpi-person>${roster
+                  .map(
+                    (p) => `<option value="${p.id}"${p.id === who ? " selected" : ""}>${esc(p.name)}</option>`,
+                  )
+                  .join("")}</select></label>`
+            : ""
+        }
+        <div class="filters-right">${long(range.from)} — ${long(range.to)}</div>
+      </div>
+
+      ${groups
+        .map(
+          (g) => `<section class="sec">
+            <div class="sec-head"><h2>${esc(g)}</h2></div>
+            <div class="kpi-grid">${results
+              .filter((m) => m.definition.group === g)
+              .map((m) => metricTile(m, selected.definition.id))
+              .join("")}</div>
+          </section>`,
+        )
+        .join("")}
+
+      <section class="sec">
+        <div class="sec-head"><h2>${esc(selected.definition.label)} by month</h2>
+          <span class="signup-note">${
+            selected.definition.source === "derived"
+              ? "Worked out from the schedule"
+              : "Supplied from the KPI sheet"
+          }</span></div>
+        <p class="lede" style="margin-bottom:14px">${esc(selected.definition.description)}</p>
+        ${
+          selected.awaitingData
+            ? `<div class="none">No readings for this metric yet — it comes from outside the Hub.</div>`
+            : periodChart(selected)
+        }
+      </section>
+
+      ${
+        v.isManager && !selected.awaitingData
+          ? `<section class="sec">
+              <div class="sec-head"><h2>${esc(selected.definition.label)} across the team</h2>
+                <span class="signup-note">${
+                  selected.definition.better === "higher" ? "Most first" : "Least first"
+                }</span></div>
+              <div class="team-bars">${teamRows
+                .map(
+                  (r) => `<div class="team-bar${r.person.id === who ? " mine" : ""}">
+                    <span class="team-bar-name">${esc(r.person.name)}${
+                      r.person.id === who ? `<span class="team-bar-you"> selected</span>` : ""
+                    }</span>
+                    <span class="team-bar-track"><span class="team-bar-fill" style="width:${
+                      Math.max(r.value === null ? 0 : 0.8, ((r.value ?? 0) / teamMax) * 100)
+                    }%;background:${
+                      r.person.id === who ? "var(--accent)" : "var(--accent-soft)"
+                    }"></span></span>
+                    <span class="team-bar-value">${fmtMetric(r.value, selected.definition.unit)}</span>
+                  </div>`,
+                )
+                .join("")}</div>
+            </section>`
+          : ""
+      }`;
+  }
+
   function pageSubscribe() {
     const me = person(viewerId);
     const example = `forecasters.wgsn.com/api/calendar/${uid()}${uid()}.ics`;
@@ -3485,6 +4282,9 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       case "learning":
         html = parts[1] ? pageSession(parts[1]) : pageLearning(params);
         break;
+      case "performance":
+        html = pagePerformance(params);
+        break;
       case "whats-on":
         html = pageWhatsOn(params);
         break;
@@ -3637,6 +4437,63 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         reviewForm = null;
         render();
       }),
+    );
+
+    // Forecast details ------------------------------------------------------
+    view.querySelectorAll("[data-details-open]").forEach((el) =>
+      el.addEventListener("click", () => {
+        detailsForm = el.dataset.detailsOpen;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-details-cancel]").forEach((el) =>
+      el.addEventListener("click", () => {
+        detailsForm = null;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-details-save]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const contentId = el.dataset.detailsSave;
+        const existing = detailsFor(contentId);
+        const num = (id) => {
+          const n = Number(view.querySelector(id).value);
+          return Number.isInteger(n) && n >= 2000 && n <= 2100 ? n : undefined;
+        };
+        // Research links render as links, so only http(s) is kept — the same
+        // rule the server applies, for the same reason.
+        const links = [...(existing?.researchLinks ?? [])];
+        const label = view.querySelector("#d-rlabel").value.trim();
+        const url = view.querySelector("#d-rurl").value.trim();
+        if (url && /^https?:\/\//i.test(url)) links.push({ label: label || url, url });
+        const editorUrl = view.querySelector("#d-eurl").value.trim();
+        const from = num("#d-from");
+        const to = num("#d-to");
+        setDetails(contentId, {
+          contentId,
+          contentType: view.querySelector("#d-type").value.trim() || undefined,
+          yearFrom: from,
+          yearTo: to && from && to >= from ? to : undefined,
+          editorId: view.querySelector("#d-eid").value.trim() || undefined,
+          editorUrl: /^https?:\/\//i.test(editorUrl) ? editorUrl : undefined,
+          researchLinks: links,
+          updatedBy: viewerId,
+          updatedAt: new Date().toISOString(),
+        });
+        detailsForm = null;
+        render();
+      }),
+    );
+
+    // Performance -----------------------------------------------------------
+    view.querySelectorAll("[data-metric]").forEach((el) =>
+      el.addEventListener("click", () => setParam("metric", el.dataset.metric)),
+    );
+    view.querySelectorAll("[data-range]").forEach((el) =>
+      el.addEventListener("click", () => setParam("range", el.dataset.range)),
+    );
+    view.querySelectorAll("[data-kpi-person]").forEach((el) =>
+      el.addEventListener("change", () => setParam("person", el.value)),
     );
 
     // Personal entries ------------------------------------------------------

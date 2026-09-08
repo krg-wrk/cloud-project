@@ -83,8 +83,29 @@ export function SparkBars({
 }
 
 /**
+ * A tick is only worth drawing where it lands on a value you can act on:
+ * "7 client calls" in quarter steps gives 1.8, 3.5, 5.3, which nobody counts
+ * in. So the scale steps in whole units and its top rounds up to meet one. A
+ * ceiling is the top exactly as given — 100% is not rounded up to anything.
+ */
+function niceScale(
+  max: number,
+  ceiling?: number,
+): { top: number; ticks: number[] } {
+  if (ceiling) return { top: ceiling, ticks: [0, 0.25, 0.5, 0.75, 1].map((f) => f * ceiling) };
+  const step =
+    [1, 2, 5, 10, 20, 25, 50, 100, 200, 500, 1000].find((c) => max / c <= 5) ??
+    Math.ceil(max / 5);
+  const top = Math.ceil(max / step) * step;
+  return {
+    top,
+    ticks: Array.from({ length: Math.round(top / step) + 1 }, (_, i) => i * step),
+  };
+}
+
+/**
  * The selected metric by period. Bars anchored to the baseline, a recessive
- * grid, the last value labelled, and a hover tooltip on every bar — an SVG
+ * grid, a labelled value axis, and a hover tooltip on every bar — an SVG
  * chart in a browser should answer "what is that one" without a click.
  */
 export function PeriodBars({ result }: { result: MetricResult }) {
@@ -92,33 +113,47 @@ export function PeriodBars({ result }: { result: MetricResult }) {
   const { series, definition } = result;
 
   const values = series.map((p) => p.value ?? 0);
-  const max = Math.max(...values, definition.target ?? 0, 1);
+  const { top: max, ticks } = niceScale(
+    Math.max(...values, definition.target ?? 0, 1),
+    definition.ceiling,
+  );
   const height = 190;
   const padTop = 14;
   const padBottom = 26;
   const plot = height - padTop - padBottom;
-  const gap = 6;
   const slot = 100 / series.length;
 
   const y = (value: number) => padTop + plot - (value / max) * plot;
 
+  // The newest bucket is usually part-way through and may hold no reading yet,
+  // so the resting readout quotes the latest month that actually has one.
+  const latest = [...series].reverse().find((p) => p.value !== null);
+
   return (
     <div className="chart-wrap">
-      <svg
-        className="chart"
-        viewBox={`0 0 100 ${height}`}
-        preserveAspectRatio="none"
-        role="img"
-        aria-label={`${definition.label} by period`}
-      >
-        {/* Grid at quarter steps, behind the marks and deliberately faint. */}
-        {[0.25, 0.5, 0.75, 1].map((step) => (
+      <div className="chart-plot">
+        {/* Value labels sit outside the SVG, which is stretched horizontally. */}
+        <div className="chart-ticks" aria-hidden="true">
+          {ticks.map((tick) => (
+            <span key={tick} style={{ top: `${y(tick)}px` }}>
+              {formatValue(tick, definition.unit)}
+            </span>
+          ))}
+        </div>
+        <svg
+          className="chart"
+          viewBox={`0 0 100 ${height}`}
+          preserveAspectRatio="none"
+          role="img"
+          aria-label={`${definition.label} by period`}
+        >
+        {ticks.slice(1).map((tick) => (
           <line
-            key={step}
+            key={tick}
             x1={0}
             x2={100}
-            y1={y(max * step)}
-            y2={y(max * step)}
+            y1={y(tick)}
+            y2={y(tick)}
             stroke="var(--rule)"
             strokeWidth={0.5}
             vectorEffect="non-scaling-stroke"
@@ -140,17 +175,18 @@ export function PeriodBars({ result }: { result: MetricResult }) {
 
         {series.map((point, i) => {
           const value = point.value ?? 0;
-          const top = y(value);
-          const barHeight = Math.max(point.value === null ? 0 : 1, padTop + plot - top);
+          const barTop = y(value);
+          const barHeight = Math.max(point.value === null ? 0 : 1, padTop + plot - barTop);
           return (
             <g key={point.period}>
+              {/* The viewBox stretches to the panel, so a bar is sized as a
+                  share of its slot rather than in absolute units. */}
               <rect
-                x={i * slot + gap / 2}
-                y={top}
-                width={slot - gap}
+                x={i * slot + slot * 0.2}
+                y={barTop}
+                width={slot * 0.6}
                 height={barHeight}
-                rx={1.5}
-                fill={hover === i ? ACCENT : ACCENT}
+                fill={ACCENT}
                 opacity={hover === null || hover === i ? 1 : 0.55}
               />
               {/* Hit target spans the full slot, so hovering is forgiving. */}
@@ -176,7 +212,8 @@ export function PeriodBars({ result }: { result: MetricResult }) {
           strokeWidth={1}
           vectorEffect="non-scaling-stroke"
         />
-      </svg>
+        </svg>
+      </div>
 
       {/* Period labels sit outside the SVG so they never stretch with it. */}
       <div className="chart-axis" style={{ gridTemplateColumns: `repeat(${series.length}, 1fr)` }}>
@@ -190,8 +227,13 @@ export function PeriodBars({ result }: { result: MetricResult }) {
       <div className="chart-readout" aria-live="polite">
         {hover === null ? (
           <>
-            <strong>{formatValue(series[series.length - 1]?.value ?? null, definition.unit)}</strong>{" "}
-            in {series[series.length - 1]?.label}
+            {latest ? (
+              <>
+                <strong>{formatValue(latest.value, definition.unit)}</strong> in {latest.label}
+              </>
+            ) : (
+              "No readings in this range"
+            )}
             {definition.target !== undefined && (
               <span className="chart-target">
                 {" · target "}

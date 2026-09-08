@@ -187,10 +187,10 @@ they are live now:
 - *Team*: peer reviews given, sessions attended
 
 **Supplied** — from a sheet or feed maintained elsewhere. The shape is fixed
-and the page says "Awaiting data" until the numbers arrive: qual of quant,
-DEI commitments, AI projections, AI usage, VAS (Salesforce), additional client
-calls, marketing/internal talks, awards, and the H2 TFDB metrics (proof points,
-trends, trend profiles owned).
+and the page says "Awaiting data" until the numbers arrive: editor late, qual
+of quant, DEI commitments, AI projections, AI usage, VAS (Salesforce),
+additional client calls, marketing/internal talks, awards, and the H2 TFDB
+metrics (proof points, trends, trend profiles owned).
 
 Adding a supplied metric is a row in the metrics sheet. Adding a *derived* one
 is a row plus a function in `server/src/kpis.ts`, because it has to know how to
@@ -215,6 +215,27 @@ up. A format not yet in the taxonomy returns no tier rather than a wrong one.
 The taxonomy is also what the format filter and the details panel offer, via
 `GET /api/taxonomy` — one list, one place to update.
 
+### Which way is good, and where the scale stops
+
+Every metric carries its own direction, and some carry a ceiling as well as a
+target:
+
+- **Delays: zero is the target.** Average days late, late submissions and
+  editor late all target `0`. They are counted as delays, not as lateness
+  against a grace period, so there is no number of days that counts as fine.
+- **100% is a ceiling, not a stretch.** Qual of quant targets 100% and is
+  capped at 100%, so the tile reads "Target 100%" with no "or better" after it
+  and the chart leaves no room above the line. DEI, AI projections and AI usage
+  are capped the same way.
+- **AI projections are a share of the total content made** in the period, not
+  of a subset.
+
+`ceiling` on a metric definition is what carries this: it caps the chart scale
+and drops the "or better" wording. Chart scales otherwise step in whole units
+and round up to meet one, so a maximum of 7 gives gridlines at 0, 2, 4, 6, 8
+rather than 1.8, 3.5, 5.3 — a tick is only worth drawing where it lands on a
+figure someone counts in.
+
 ### One metric is explicitly not a KPI
 
 The sheet marks "% of AI used in reports" as *not a KPI*. That is carried
@@ -234,7 +255,9 @@ and separation (15+ ΔE, including simulated colour-vision deficiency), every
 team bar carries its value as text, and a table view sits behind the charts.
 
 Timeliness needs the sheet's **Actual Submission** column — without it the Hub
-knows when copy was *due* but not when it *arrived*.
+knows when copy was *due* but not when it *arrived*. The derived timeliness
+metrics read the seed's `submittedOn` today; `editor-late` is supplied,
+because it is counted against the editor's dates rather than the Hub's.
 
 ### What is not in this repo
 
