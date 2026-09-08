@@ -339,20 +339,25 @@ into as few lanes as will hold them, and one that runs past the edge of the
 week is clipped with a chevron rather than simply stopping as though the event
 had. The lane maths is in `client/src/lib/spans.ts`.
 
+**Clicking an entry opens the piece**, at `/content/:id` — the same page a
+deadline row opens, with the same forecast details, notes and peer review on
+it. A workshop opens the session; leave and holidays have no page of their own,
+so they open the diary filtered to that kind.
+
 A day cell has room for three single-day marks. The day number and the
 "+n more" both open a panel listing everything on that day in full, so nothing
-on the calendar is unreachable — and every content item there goes to the same
-`/content/:id` page a deadline row does, so the piece looks the same whichever
-way you arrive at it.
+on the calendar is unreachable, and the entries in it go to exactly the same
+places.
 
 ### On a phone
 
-A seven-column month grid at 390px gives each day about fifty pixels, which is
-one letter of a title. So below 860px the month becomes an **agenda**: days in
-order, each item with its icon and what it is, and multi-day things shown once
-on the day they start with the date they run to.
+A calendar looks like a calendar at every width, so the month grid stays a
+month grid: below the point where seven columns stop being readable it
+**scrolls sideways**, with the columns holding a workable minimum width,
+rather than turning into a list. Titles truncate, as they do in any month
+view — tapping one opens the piece in full.
 
-Navigation switches too. The sidebar is replaced by a fixed bar at the bottom
+Navigation does change. The sidebar is replaced by a fixed bar at the bottom
 of the screen — Today, Deadlines, Calendar and Trends as tabs, with the rest
 behind **More** — so every section is at most two taps away and within reach of
 a thumb. Badges become dots.

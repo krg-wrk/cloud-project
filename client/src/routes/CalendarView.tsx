@@ -7,7 +7,6 @@ import {
   firstOfMonth,
   formatLong,
   formatMedium,
-  formatWeekday,
   isSameMonth,
   isWeekend,
   lastOfMonth,
@@ -24,7 +23,6 @@ import {
   personName,
 } from "../lib/domain";
 import { Icon } from "../lib/icons";
-import { NARROW, useMedia } from "../lib/media";
 import { isMultiDay, packWeek, type Bar } from "../lib/spans";
 import { useViewer } from "../lib/viewer";
 import type {
@@ -204,128 +202,6 @@ function chipLabel(chip: Chip, people: Schedule["people"]): { kicker: string; ti
   }
 }
 
-/**
- * The month as a list, for a phone.
- *
- * A seven-column grid at 390px gives each day about fifty pixels, which is
- * one letter of a title — so on a narrow screen the month becomes an agenda
- * instead. A multi-day thing still appears once, on the day it starts, with
- * the dates it covers, for the same reason it is one bar on the grid.
- */
-function Agenda({
-  month,
-  feed,
-  show,
-  people,
-  onRemoveEntry,
-}: {
-  month: string;
-  feed: Feed;
-  show: Show;
-  people: Schedule["people"];
-  onRemoveEntry: (id: string) => void;
-}) {
-  const first = `${month}-01`;
-  const last = lastOfMonth(month);
-
-  // Single-day things on their day; multi-day things on the day they start,
-  // or on the first of the month when they began before it.
-  const byDay = new Map<string, { chip: Chip; through?: string }[]>();
-  const add = (date: string, chip: Chip, through?: string) => {
-    if (date < first || date > last) return;
-    const list = byDay.get(date) ?? [];
-    list.push({ chip, through });
-    byDay.set(date, list);
-  };
-
-  for (const item of feed.content) {
-    if (show.submissions) add(item.submissionDate, { kind: "submission", item });
-    if (show.publications) add(item.publicationDate, { kind: "publication", item });
-  }
-  if (show.events) {
-    for (const event of feed.events) {
-      const multi = isMultiDay({ from: event.startDate, to: event.endDate });
-      const start = event.startDate < first ? first : event.startDate;
-      if (event.endDate < first || event.startDate > last) continue;
-      add(start, { kind: "event", event }, multi ? event.endDate : undefined);
-    }
-    for (const session of feed.sessions) add(session.date, { kind: "session", session });
-  }
-  if (show.mine) {
-    for (const entry of feed.entries) {
-      const multi = isMultiDay({ from: entry.date, to: entry.endDate });
-      const start = entry.date < first ? first : entry.date;
-      if (entry.endDate < first || entry.date > last) continue;
-      add(start, { kind: "entry", entry }, multi ? entry.endDate : undefined);
-    }
-    for (const review of feed.reviews) add(review.reviewDate, { kind: "review", review });
-  }
-
-  const days = [...byDay.keys()].sort();
-  if (days.length === 0) {
-    return (
-      <div className="empty">
-        <Icon name="calendar" size={22} />
-        <p>Nothing in this month, with those filters.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="agenda">
-      {days.map((date) => (
-        <section className="agenda-day" key={date}>
-          <h2 className={date === TODAY ? "agenda-date today" : "agenda-date"}>
-            <b>{dayOfMonth(date)}</b>
-            <span>{formatWeekday(date)}</span>
-            {date === TODAY && <em>Today</em>}
-          </h2>
-          <div className="agenda-items">
-            {byDay.get(date)!.map(({ chip, through }, i) => {
-              const { title, icon, colour } = chipLabel(chip, people);
-              const style = { "--chip-color": colour } as CSSProperties;
-              const body = (
-                <>
-                  <span className="day-item-icon">
-                    <Icon name={icon} size={16} />
-                  </span>
-                  <span>
-                    <span className="day-item-title">{title}</span>
-                    <span className="day-item-meta">
-                      {chipMeaning(chip)}
-                      {through && ` · until ${formatMedium(through)}`}
-                    </span>
-                  </span>
-                </>
-              );
-              return chip.kind === "entry" ? (
-                <button
-                  key={`${chip.kind}-${i}`}
-                  className="day-item day-item-button"
-                  style={style}
-                  onClick={() => onRemoveEntry(chip.entry.id)}
-                  title="Yours — tap to remove"
-                >
-                  {body}
-                </button>
-              ) : (
-                <Link
-                  key={`${chip.kind}-${i}`}
-                  className="day-item"
-                  style={style}
-                  to={chipHref(chip)}
-                >
-                  {body}
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      ))}
-    </div>
-  );
-}
-
 export default function CalendarView() {
   const { month } = useParams<{ month: string }>();
   const [params, setParams] = useSearchParams();
@@ -343,7 +219,6 @@ export default function CalendarView() {
     mine: params.get("mine") !== "0",
   };
   const openDay = params.get("day") ?? "";
-  const narrow = useMedia(NARROW);
 
   const grid = monthGrid(key);
   const { data, error, loading } = useApi<Schedule>(
@@ -507,7 +382,7 @@ export default function CalendarView() {
         <Loading what="the month" />
       ) : (
         <>
-          {openDay && !narrow && (
+          {openDay && (
             <DayPanel
               date={openDay}
               chips={chipsForDay(openDay, feed, show, true)}
@@ -517,15 +392,13 @@ export default function CalendarView() {
             />
           )}
 
-          {narrow ? (
-            <Agenda
-              month={key}
-              feed={feed}
-              show={show}
-              people={data.people}
-              onRemoveEntry={removeEntry}
-            />
-          ) : (
+          {/*
+            * Narrow screens scroll the month sideways rather than being given
+            * a different thing to look at: a calendar should look like a
+            * calendar, and a seven-column grid squeezed to 390px is not
+            * readable, so the columns keep a workable minimum width.
+            */}
+          <div className="calendar-scroll">
           <div className="calendar">
             <div className="cal-head">
               {WEEKDAYS.map((day) => (
@@ -591,7 +464,7 @@ export default function CalendarView() {
               );
             })}
           </div>
-          )}
+          </div>
 
           <div className="legend">
             <span style={{ "--legend-color": "var(--ink)" } as CSSProperties}>

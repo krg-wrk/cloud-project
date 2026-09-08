@@ -716,7 +716,18 @@ table.schedule .overdue {
   text-align: center;
 }
 
+/*
+ * A calendar looks like a calendar at every width. Below the point where
+ * seven columns stop being readable the month scrolls sideways rather than
+ * becoming a different thing, and the columns keep a workable minimum width.
+ */
+.calendar-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+}
+
 .calendar {
+  min-width: 660px;
   border: 1px solid var(--rule);
   border-radius: var(--radius);
   overflow: hidden;
@@ -1450,11 +1461,17 @@ a.session-title:hover {
   }
 
   .cal-day {
-    min-height: 76px;
+    min-height: 84px;
   }
 
   .cal-chip .chip-kind {
     display: none;
+  }
+
+  /* The month is scrolled sideways here, so let it bleed to the edges. */
+  .calendar-scroll {
+    margin: 0 -16px;
+    padding: 0 16px;
   }
 
   .tabbar {
@@ -2424,66 +2441,6 @@ a.session-title:hover {
   font-size: 12px;
 }
 
-/* --- The month as an agenda, on a phone ---------------------------------- */
-
-.agenda {
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-
-.agenda-day {
-  display: grid;
-  grid-template-columns: 52px minmax(0, 1fr);
-  gap: 12px;
-}
-
-.agenda-date {
-  margin: 0;
-  padding-top: 2px;
-  text-align: right;
-  font-weight: 400;
-}
-
-.agenda-date b {
-  display: block;
-  font-size: 22px;
-  font-weight: 500;
-  line-height: 1;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-}
-
-.agenda-date span {
-  display: block;
-  margin-top: 3px;
-  font-family: var(--mono);
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-45);
-}
-
-.agenda-date em {
-  display: block;
-  margin-top: 4px;
-  font-style: normal;
-  font-size: 9.5px;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--accent);
-}
-
-.agenda-date.today b {
-  color: var(--accent);
-}
-
-.agenda-items {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
 
 /* --- Trend profile extras ------------------------------------------------ */
 
