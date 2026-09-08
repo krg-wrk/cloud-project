@@ -8,6 +8,7 @@ import type {
   MetricObservation,
   Person,
   SessionSignUps,
+  TrendProfile,
 } from "../types.js";
 import {
   access,
@@ -18,6 +19,7 @@ import {
   people,
   sessions,
   signUps,
+  trends,
 } from "./seed.js";
 
 /**
@@ -57,5 +59,9 @@ export class SeedSource implements DataSource {
 
   async listMetricObservations(): Promise<MetricObservation[]> {
     return metricObservations;
+  }
+
+  async listTrends(): Promise<TrendProfile[]> {
+    return trends;
   }
 }

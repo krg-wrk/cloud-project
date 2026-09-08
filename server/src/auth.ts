@@ -91,6 +91,33 @@ export function canWriteDetails(viewer: Viewer, item: ContentItem): boolean {
   return canWriteNote(viewer, item);
 }
 
+/**
+ * A trend profile belongs to one forecaster, and may credit others. They own
+ * what the Hub holds against it — the note, the links, the cover image — as
+ * does an admin, and a manager whose verticals overlap the industries the
+ * profile is tagged to.
+ */
+export function canWriteTrend(
+  viewer: Viewer,
+  trend: { ownerId: string; authorIds?: string[]; industries?: string[] },
+): boolean {
+  if (!viewer.active) return false;
+  if (isAdmin(viewer)) return true;
+  if (viewer.personId === trend.ownerId) return true;
+  if (trend.authorIds?.includes(viewer.personId ?? "")) return true;
+  if (!isManager(viewer)) return false;
+  if (viewer.verticals === "all") return true;
+  // An industry on a profile is broader than a vertical, so match on either
+  // containing the other: "Fashion" covers "Womenswear", and vice versa.
+  return (trend.industries ?? []).some((industry) =>
+    (viewer.verticals as string[]).some(
+      (v) =>
+        v.toLowerCase().includes(industry.toLowerCase()) ||
+        industry.toLowerCase().includes(v.split(" ")[0].toLowerCase()),
+    ),
+  );
+}
+
 /** KPIs: your own always; a manager for their verticals; an admin for anyone. */
 export function canViewKpis(viewer: Viewer, subject: Person): boolean {
   if (!viewer.active) return false;

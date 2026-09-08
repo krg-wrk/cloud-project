@@ -8,8 +8,10 @@ import {
   canWriteEntry,
   canWriteNote,
   canWritePeerReview,
+  canWriteTrend,
   requirePerson,
   seesWholeTeam,
+  type Viewer,
   type ViewerRequest,
 } from "./auth.js";
 import { buildFeed } from "./ics.js";
@@ -23,6 +25,7 @@ import type {
   DataSource,
   Person,
   ResearchLink,
+  TrendProfile,
 } from "./types.js";
 
 /** Deadlines are calendar days, so "today" is a date string, read per request. */
@@ -362,6 +365,142 @@ export function createApiRouter(
       out.push({ label: (label || parsed.hostname).slice(0, 120), url: parsed.toString() });
     }
     return out;
+  }
+
+  /**
+   * A trend profile as the page needs it: the sheet's row plus whatever the
+   * owner has added on top. The Hub's cover image wins where both have one,
+   * because the owner set it more recently than the sync.
+   */
+  function trendView(trend: TrendProfile, viewer: Viewer) {
+    const extras = store.trendExtrasFor(trend.id);
+    return {
+      ...trend,
+      coverImageUrl: extras?.coverImageUrl ?? trend.coverImageUrl,
+      /** True when the image is the owner's rather than the sheet's. */
+      coverFromHub: Boolean(extras?.coverImageUrl),
+      links: extras?.links ?? [],
+      note: extras?.note,
+      updatedBy: extras?.updatedBy,
+      updatedAt: extras?.updatedAt,
+      canWrite: canWriteTrend(viewer, trend),
+    };
+  }
+
+  /**
+   * Trend profiles. A forecaster's own by default — "which trends do I own"
+   * is the question the page answers — with ?owner= to widen it. The whole
+   * database is readable by the team; it is their shared record.
+   */
+  router.get("/trends", async (req: ViewerRequest, res, next) => {
+    try {
+      const viewer = req.viewer!;
+      const all = await data.listTrends();
+      const owner = typeof req.query.owner === "string" ? req.query.owner : undefined;
+      const type = typeof req.query.type === "string" ? req.query.type : undefined;
+      const call = typeof req.query.call === "string" ? req.query.call : undefined;
+      const industry = typeof req.query.industry === "string" ? req.query.industry : undefined;
+      const needsScore = req.query.needsScore === "1";
+
+      let rows = all;
+      if (owner === "mine" || (!owner && !seesWholeTeam(viewer) && viewer.personId)) {
+        rows = rows.filter(
+          (t) => t.ownerId === viewer.personId || t.authorIds.includes(viewer.personId ?? ""),
+        );
+      } else if (owner && owner !== "all") {
+        rows = rows.filter((t) => t.ownerId === owner || t.authorIds.includes(owner));
+      }
+      if (type) rows = rows.filter((t) => t.types.includes(type));
+      if (call) rows = rows.filter((t) => t.call === call);
+      if (industry) rows = rows.filter((t) => t.industries.includes(industry));
+      if (needsScore) rows = rows.filter((t) => t.missingScore.length > 0);
+
+      const extras = store.allTrendExtras();
+      res.json(
+        rows
+          .map((t) => ({
+            ...t,
+            coverImageUrl: extras[t.id]?.coverImageUrl ?? t.coverImageUrl,
+            linkCount: extras[t.id]?.links.length ?? 0,
+            hasNote: Boolean(extras[t.id]?.note),
+            canWrite: canWriteTrend(viewer, t),
+          }))
+          .sort((a, b) => a.title.localeCompare(b.title)),
+      );
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.get("/trends/:id", async (req: ViewerRequest, res, next) => {
+    try {
+      const trend = (await data.listTrends()).find((t) => t.id === req.params.id);
+      if (!trend) {
+        res.status(404).json({ error: `No trend profile with id "${req.params.id}"` });
+        return;
+      }
+      res.json(trendView(trend, req.viewer!));
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /**
+   * What the owner adds to a profile: a working note, supporting material,
+   * and a cover image for when the sheet has none. The image is rendered as
+   * an <img> and the links as anchors, so both go through the same
+   * http(s)-only check as a research link.
+   */
+  router.put("/trends/:id", async (req: ViewerRequest, res, next) => {
+    try {
+      const personId = requirePerson(req, res);
+      if (!personId) return;
+      const trend = (await data.listTrends()).find((t) => t.id === req.params.id);
+      if (!trend) {
+        res.status(404).json({ error: `No trend profile with id "${req.params.id}"` });
+        return;
+      }
+      if (!canWriteTrend(req.viewer!, trend)) {
+        res.status(403).json({
+          error: "Only the profile's owner, a credited author or a commissioning manager can change it.",
+        });
+        return;
+      }
+
+      const links = cleanLinks(req.body?.links);
+      if ("error" in links) return bad(res, links.error);
+
+      const coverImageUrl = webAddress(req.body?.coverImageUrl);
+      if (coverImageUrl === "bad") {
+        return bad(res, "The image address has to be an http or https address.");
+      }
+
+      store.setTrendExtras({
+        trendId: trend.id,
+        coverImageUrl,
+        links,
+        note: req.body?.note ? String(req.body.note).trim().slice(0, 4000) : undefined,
+        updatedBy: personId,
+      });
+      res.json(trendView(trend, req.viewer!));
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /**
+   * "bad" rather than undefined for a value that was given and is not usable,
+   * so a typo is reported instead of silently dropped.
+   */
+  function webAddress(raw: unknown): string | undefined | "bad" {
+    if (raw === undefined || raw === null || String(raw).trim() === "") return undefined;
+    try {
+      const parsed = new URL(String(raw).trim());
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return "bad";
+      return parsed.toString();
+    } catch {
+      return "bad";
+    }
   }
 
   router.get("/content/:id/details", async (req: ViewerRequest, res, next) => {

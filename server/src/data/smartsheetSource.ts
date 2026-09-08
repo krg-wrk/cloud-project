@@ -1,19 +1,25 @@
 import type { AccessRow, Role } from "../auth.js";
-import { metrics as seedMetrics } from "./seed.js";
+import {
+  TREND_CALLS,
+  TREND_INDUSTRIES,
+  TREND_TYPES,
+  metrics as seedMetrics,
+} from "./seed.js";
 import type {
   CalendarEvent,
-  MetricDefinition,
-  MetricObservation,
-  Ownership,
   ContentItem,
   ContentType,
   DataSource,
   EventType,
   KnowledgeSession,
+  MetricDefinition,
+  MetricObservation,
+  Ownership,
   Person,
   SessionKind,
   SessionSignUps,
   Status,
+  TrendProfile,
   Vertical,
 } from "../types.js";
 
@@ -107,6 +113,55 @@ export const COLUMNS = {
     target: "Target",
     description: "Description",
   },
+  /**
+   * The TFDB trend profile sheet — Snowflake-linked, so the column names are
+   * the warehouse's own. Only the ones the Hub shows are listed.
+   */
+  trends: {
+    profileId: "ID",
+    editorLink: "LINK",
+    title: "TITLE",
+    id: "TREND_ID",
+    slug: "TREND_URL_SLUG",
+    published: "Published",
+    publishedLink: "PUBLISHED LINK",
+    publishedOn: "Publish Date",
+    authors: "AUTHORS",
+    owner: "Owner",
+    hashtags: "HASHTAGS",
+    types: "TREND_TYPES",
+    activeFrom: "START_DATE",
+    activeTo: "END_DATE",
+    industries: "TAGGED_PRODUCTS",
+    call: "MORE_LABELS",
+    coverImage: "MAIN_COVER_IMAGE_URL",
+    description: "Trend Description",
+    needToKnow: "NEED_TO_KNOW",
+    opportunity: "MAIN_OPPORTUNITY",
+    strategies: "NUMBER_OF_STRATEGIES",
+    proofPoints: "NUMBER_OF_PROOF_POINTS",
+    scored: "Industries Scored",
+    missingScore: "Industries Missing Score",
+    lastSynced: "Last Synced",
+  },
+  /**
+   * The label columns, by the group they belong to. Each cell is a run of
+   * label names separated by spaces, so they are matched against the known
+   * vocabulary rather than split naively.
+   */
+  trendLabels: {
+    Generations: "GENERATION_LABELS",
+    Markets: "MARKET_LABELS",
+    Regions: "REGION_LABELS",
+    "Age Ranges": "AGE_RANGES_LABELS",
+    Personas: "PERSONAS_LABELS",
+    Emotions: "EMOTIONS_LABELS",
+    CMF: "CMF_LABELS",
+    "Design & Aesthetics": "DESIGN_AESTHETICS_LABELS",
+    Packaging: "PACKAGING_LABELS",
+    Sustainability: "SUSTAINABILITY_LABELS",
+    "Ingredients & Formulation": "INGREDIENTS_FORMULATION_LABELS",
+  },
   /** Readings for the supplied metrics. One row per person per period. */
   observations: {
     metric: "Metric ID",
@@ -149,6 +204,7 @@ export interface SmartsheetConfig {
   accessSheetId?: string;
   metricsSheetId?: string;
   observationsSheetId?: string;
+  trendsSheetId?: string;
 }
 
 /**
@@ -349,6 +405,66 @@ export class SmartsheetSource implements DataSource {
     return [...derived.filter((m) => !suppliedIds.has(m.id)), ...supplied];
   }
 
+  /**
+   * The trend database.
+   *
+   * Several columns hold a run of label names with nothing between them but
+   * spaces ("Gen Z Millennials Boomers"), so they are read against the known
+   * vocabulary rather than split on whitespace — otherwise "Gen Z" becomes
+   * two labels. The cover image and both links are rendered, so anything that
+   * is not http(s) is dropped rather than trusted.
+   */
+  async listTrends(): Promise<TrendProfile[]> {
+    if (!this.config.trendsSheetId) return [];
+    const c = COLUMNS.trends;
+    const rows = await this.fetchRows(this.config.trendsSheetId);
+    return rows
+      .filter((row) => row[c.id] && row[c.title])
+      .map((row) => {
+        const industries = splitKnown(row[c.industries], TREND_INDUSTRIES);
+        const scored = splitKnown(row[c.scored], TREND_INDUSTRIES);
+        const labels: Record<string, string[]> = {};
+        for (const [group, column] of Object.entries(COLUMNS.trendLabels)) {
+          const value = (row[column] ?? "").trim();
+          if (value) labels[group] = [value];
+        }
+        return {
+          id: String(row[c.id]).trim(),
+          profileId: (row[c.profileId] ?? "").trim(),
+          title: row[c.title].trim(),
+          slug: (row[c.slug] ?? "").trim(),
+          ownerId: personId(row[c.owner]),
+          authorIds: [
+            ...new Set(
+              (row[c.authors] ?? "")
+                .split(/\s*,\s*/)
+                .filter(Boolean)
+                .map((name) => personId(name)),
+            ),
+          ],
+          types: splitKnown(row[c.types], TREND_TYPES),
+          call: TREND_CALLS.find((k) => (row[c.call] ?? "").includes(k)),
+          publishedOn: isoDate(row[c.publishedOn]),
+          activeFrom: isoDate(row[c.activeFrom]),
+          activeTo: isoDate(row[c.activeTo]),
+          editorUrl: webUrl(row[c.editorLink]) ?? "",
+          publishedUrl: webUrl(row[c.publishedLink]) ?? "",
+          coverImageUrl: webUrl(row[c.coverImage]),
+          description: row[c.description] ?? "",
+          needToKnow: row[c.needToKnow] ?? "",
+          opportunity: row[c.opportunity] ?? "",
+          strategies: countOf(row[c.strategies]),
+          proofPoints: countOf(row[c.proofPoints]),
+          industries,
+          scored,
+          missingScore: splitKnown(row[c.missingScore], TREND_INDUSTRIES),
+          hashtags: (row[c.hashtags] ?? "").split(/\s+/).filter((h) => h.startsWith("#")),
+          labels,
+          lastSynced: isoDate(row[c.lastSynced]) || undefined,
+        };
+      });
+  }
+
   async listMetricObservations(): Promise<MetricObservation[]> {
     if (!this.config.observationsSheetId) return [];
     const c = COLUMNS.observations;
@@ -370,6 +486,33 @@ function normaliseOwnership(value: string | undefined): Ownership {
   if (v.includes("byline") || v.includes("contribut")) return "byline";
   if (v.includes("freelance")) return "freelance";
   return "sole";
+}
+
+/**
+ * Pulls known names out of a cell that runs them together with spaces. Longest
+ * first, so "Fashion Design" is not read as "Fashion" plus a stray word.
+ */
+function splitKnown(value: string | undefined, vocabulary: string[]): string[] {
+  const v = (value ?? "").trim();
+  if (!v) return [];
+  return [...vocabulary]
+    .sort((a, b) => b.length - a.length)
+    .filter((name) => v.includes(name))
+    .sort((a, b) => vocabulary.indexOf(a) - vocabulary.indexOf(b));
+}
+
+function countOf(value: string | undefined): number {
+  const n = Number.parseInt((value ?? "").trim(), 10);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * A sheet cell that is going to be rendered as a link or an image. Only
+ * http(s) survives, because anything else is a way in.
+ */
+function webUrl(value: string | undefined): string | undefined {
+  const v = (value ?? "").trim();
+  return /^https?:\/\//i.test(v) ? v : undefined;
 }
 
 function normaliseUnit(value: string | undefined): "count" | "percent" | "days" {

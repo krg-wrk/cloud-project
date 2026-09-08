@@ -48,6 +48,14 @@
   --mine: #8e3b74;
   --review: #c2571a;
 
+  /* The strategic call on a trend is ordered by how much commitment it asks
+     for, so it takes one hue in four steps rather than four unrelated
+     colours. Each clears 3:1 on paper, and the pill carries the word too. */
+  --call-protect: #8d94ac;
+  --call-test: #6b74a0;
+  --call-expand: #4c5578;
+  --call-invest: #2e3450;
+
   --display: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --ui: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
@@ -184,6 +192,15 @@ button {
   color: var(--ink);
   box-shadow: inset 2px 0 0 var(--accent);
   padding-left: 10px;
+}
+
+.nav-link .icon {
+  color: var(--ink-45);
+}
+
+.nav-link:hover .icon,
+.nav-link.active .icon {
+  color: var(--accent);
 }
 
 .nav-link .count {
@@ -451,6 +468,10 @@ button {
   background: var(--pill-color);
 }
 
+.pill .icon {
+  color: var(--pill-color);
+}
+
 .tag {
   display: inline-flex;
   padding: 3px 7px;
@@ -543,7 +564,20 @@ button {
   gap: 12px;
 }
 
+/*
+ * An icon takes the colour and the weight of the text beside it, so it needs
+ * no theme of its own. It never shrinks, and it sits on the text baseline
+ * rather than hanging below it.
+ */
+.icon {
+  flex: none;
+  vertical-align: -0.15em;
+}
+
 .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   padding: 7px 12px;
   border: 1px solid var(--rule-strong);
   border-radius: var(--radius-sm);
@@ -551,6 +585,16 @@ button {
   font-size: 13px;
   font-weight: 500;
   white-space: nowrap;
+}
+
+.btn .icon {
+  color: var(--ink-45);
+}
+
+.btn.accent .icon,
+.btn.solid .icon {
+  color: currentColor;
+  opacity: 0.8;
 }
 
 .btn:hover {
@@ -680,9 +724,30 @@ table.schedule .overdue {
 }
 
 .cal-head,
-.cal-week {
+.cal-days,
+.cal-spans {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+/*
+ * A week is a stack: the day cells underneath, and the multi-day bars laid
+ * over them in their own grid. The cells reserve exactly the height the bars
+ * need (--lanes, set per week), so the single-day chips below still line up
+ * across the row.
+ */
+.cal-week {
+  position: relative;
+}
+
+.cal-spans {
+  position: absolute;
+  top: 26px;
+  left: 0;
+  right: 0;
+  gap: 2px 0;
+  /* The bars are clickable; the gaps between them are not. */
+  pointer-events: none;
 }
 
 .cal-head div {
@@ -714,6 +779,62 @@ table.schedule .overdue {
   border-top: none;
 }
 
+/* Holds the space the week's bars occupy, so the chips start below them. */
+.cal-lane-space {
+  height: calc(var(--lanes, 0) * 20px);
+  flex: none;
+}
+
+.cal-span {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 18px;
+  margin: 0 3px;
+  padding: 0 6px;
+  border-radius: var(--radius-sm);
+  border-left: 3px solid var(--chip-color, var(--ink-45));
+  background: color-mix(in srgb, var(--chip-color, var(--ink-45)) 16%, var(--paper));
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1;
+  overflow: hidden;
+  text-align: left;
+}
+
+.cal-span:hover {
+  background: color-mix(in srgb, var(--chip-color, var(--ink-45)) 30%, var(--paper));
+}
+
+.cal-span .icon {
+  flex: none;
+  color: color-mix(in srgb, var(--chip-color) 82%, var(--ink));
+}
+
+.span-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The bar runs past the edge of the week rather than ending there. */
+.span-carry {
+  flex: none;
+  font-size: 13px;
+  line-height: 1;
+  color: color-mix(in srgb, var(--chip-color) 82%, var(--ink));
+}
+
+.cal-span-button {
+  border-top: none;
+  border-right: none;
+  border-bottom: none;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
 .cal-day.outside {
   background: var(--sunken);
   color: var(--ink-45);
@@ -727,11 +848,23 @@ table.schedule .overdue {
   box-shadow: inset 0 0 0 2px var(--accent);
 }
 
+/* The day number opens the day, so a cell that is full is never a dead end. */
 .cal-daynum {
+  align-self: flex-start;
+  padding: 0 3px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
   font-family: var(--mono);
   font-size: 11px;
   color: var(--ink-45);
   font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.cal-daynum:hover {
+  background: var(--accent-wash);
+  color: var(--accent);
 }
 
 .cal-day.today .cal-daynum {
@@ -740,7 +873,9 @@ table.schedule .overdue {
 }
 
 .cal-chip {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   padding: 3px 6px;
   border-radius: var(--radius-sm);
   font-size: 11px;
@@ -757,8 +892,19 @@ table.schedule .overdue {
   background: color-mix(in srgb, var(--chip-color, var(--ink-45)) 20%, transparent);
 }
 
+.cal-chip .icon {
+  flex: none;
+  color: color-mix(in srgb, var(--chip-color) 82%, var(--ink));
+}
+
+.cal-chip .chip-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .cal-chip .chip-kind {
-  margin-right: 5px;
+  flex: none;
   font-size: 9px;
   font-weight: 500;
   letter-spacing: 0.1em;
@@ -767,9 +913,87 @@ table.schedule .overdue {
 }
 
 .cal-more {
+  align-self: flex-start;
+  border: none;
+  background: transparent;
+  font: inherit;
   font-size: 10px;
+  color: var(--accent);
+  padding: 1px 6px;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* --- One day in full ----------------------------------------------------- */
+
+.day-panel {
+  margin-bottom: 16px;
+  padding: 16px 18px;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.day-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.day-panel-head h2 {
+  margin: 4px 0 0;
+  font-size: 19px;
+}
+
+.day-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 8px;
+}
+
+.day-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--chip-color, var(--ink-45));
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+}
+
+.day-item:hover {
+  border-color: var(--ink);
+}
+
+.day-item-icon {
+  display: inline-flex;
+  flex: none;
+  color: color-mix(in srgb, var(--chip-color) 82%, var(--ink));
+}
+
+.day-item-title {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.day-item-meta {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
   color: var(--ink-45);
-  padding-left: 6px;
+}
+
+.day-item-button {
+  cursor: pointer;
 }
 
 .legend {
@@ -1194,35 +1418,31 @@ a.session-title:hover {
   }
 }
 
+/* --- Navigation on a phone ---------------------------------------------- */
+
+/*
+ * Off-screen on a desktop. Below the breakpoint the sidebar goes away and
+ * this takes over: four sections as tabs at the bottom of the screen, where a
+ * thumb reaches, and the rest behind More.
+ */
+.tabbar,
+.nav-sheet,
+.sheet-scrim {
+  display: none;
+}
+
 @media (max-width: 860px) {
   .shell {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .sidebar {
-    position: static;
-    height: auto;
-    border-right: none;
-    border-bottom: 1px solid var(--rule);
-  }
-
-  .nav {
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 0 16px;
-  }
-
-  .nav-link {
-    border-bottom: none;
-  }
-
-  .nav-label,
-  .sidebar-foot {
     display: none;
   }
 
   .main {
-    padding: 22px 16px 60px;
+    /* Room for the tab bar, plus the home indicator on a phone. */
+    padding: 20px 16px calc(78px + env(safe-area-inset-bottom, 0px));
   }
 
   .page-title {
@@ -1235,6 +1455,146 @@ a.session-title:hover {
 
   .cal-chip .chip-kind {
     display: none;
+  }
+
+  .tabbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    border-top: 1px solid var(--rule);
+    background: var(--paper);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .tab {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 9px 2px 8px;
+    border: none;
+    background: transparent;
+    font: inherit;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    color: var(--ink-45);
+    cursor: pointer;
+  }
+
+  .tab span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .tab.active,
+  .tab.on {
+    color: var(--accent);
+  }
+
+  /* The active tab is marked above the icon, clear of the label. */
+  .tab.active::before,
+  .tab.on::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 22%;
+    right: 22%;
+    height: 2px;
+    background: var(--accent);
+  }
+
+  .tab-dot {
+    position: absolute;
+    top: 7px;
+    left: 50%;
+    margin-left: 6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--status-at-risk);
+  }
+
+  .sheet-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    border: none;
+    background: color-mix(in srgb, var(--ink) 38%, transparent);
+  }
+
+  .nav-sheet {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+    z-index: 46;
+    padding: 16px 16px 18px;
+    border-top: 1px solid var(--rule);
+    background: var(--paper);
+    box-shadow: 0 -8px 30px color-mix(in srgb, var(--ink) 14%, transparent);
+  }
+
+  .nav-sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 12px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .nav-sheet-links {
+    display: grid;
+    gap: 2px;
+    margin-bottom: 14px;
+  }
+
+  .sheet-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 6px;
+    border-bottom: 1px solid var(--rule);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  .sheet-link:last-child {
+    border-bottom: none;
+  }
+
+  .sheet-link.active {
+    color: var(--accent);
+  }
+
+  .sheet-link .count {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-45);
+  }
+
+  /* One card per row reads better than two squeezed side by side. */
+  .trend-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .day-list {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1732,4 +2092,481 @@ a.session-title:hover {
 
 .kpi-under {
   color: var(--status-in-review);
+}
+
+/* --- Trends -------------------------------------------------------------- */
+
+.trend-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
+  gap: 16px;
+}
+
+.trend-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+  overflow: hidden;
+  color: var(--ink);
+}
+
+.trend-card:hover {
+  border-color: var(--ink);
+}
+
+/*
+ * The stand-in is the floor rather than a replacement: a cover is linked from
+ * the sheet and lives on the platform's media host, so it may be missing,
+ * still loading, or unreachable. The gradient takes a hue from the trend's own
+ * id, so a profile stays recognisable, and a linked image simply covers it.
+ */
+.trend-image {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--hue) 22% 90%),
+    hsl(calc(var(--hue) + 40) 18% 82%)
+  );
+}
+
+.trend-image img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cover-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  color: color-mix(in srgb, var(--ink) 58%, transparent);
+  font-size: 11px;
+  text-align: center;
+}
+
+.trend-image figcaption {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 3px 7px;
+  background: color-mix(in srgb, var(--paper) 82%, transparent);
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-70);
+}
+
+.trend-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px 16px;
+}
+
+.trend-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.trend-season {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-45);
+}
+
+.trend-name {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.trend-summary {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-70);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.trend-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  padding-top: 10px;
+  border-top: 1px solid var(--rule);
+  font-size: 11.5px;
+  color: var(--ink-45);
+}
+
+.trend-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* The strategic call. One hue, four steps of it. */
+.call-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--call) 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--call) 30%, transparent);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--call) 74%, var(--ink));
+  white-space: nowrap;
+}
+
+.call-pill i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--call);
+}
+
+.call-protect {
+  --call: var(--call-protect);
+}
+.call-test {
+  --call: var(--call-test);
+}
+.call-expand {
+  --call: var(--call-expand);
+}
+.call-invest {
+  --call: var(--call-invest);
+}
+
+/* No call set on the profile yet — said plainly rather than guessed at. */
+.call-none {
+  --call: var(--ink-45);
+  font-style: italic;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.call-none i {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--ink-45);
+}
+
+/* --- Shared bits the trend pages use ------------------------------------ */
+
+.head-figures {
+  display: flex;
+  gap: 1px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+}
+
+.head-figures .figure {
+  padding: 12px 16px;
+  background: var(--paper);
+}
+
+.head-figures .figure b {
+  display: block;
+  font-size: 27px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.head-figures .figure span {
+  display: block;
+  margin-top: 7px;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-45);
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.section-title .icon {
+  color: var(--ink-45);
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 20px;
+  border: 1px dashed var(--rule-strong);
+  border-radius: var(--radius);
+  color: var(--ink-45);
+  text-align: center;
+}
+
+.empty.small {
+  padding: 22px 16px;
+}
+
+.empty p {
+  margin: 0;
+  font-size: 13px;
+}
+
+.empty .icon {
+  color: var(--rule-strong);
+}
+
+.link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.link-list a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 4px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 13.5px;
+  color: var(--accent);
+}
+
+.link-list a:hover {
+  text-decoration: underline;
+}
+
+.link-edit-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.link-edit-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.link-edit-list li span {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.form-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.form-row .field.grow {
+  flex: 1;
+  min-width: 190px;
+}
+
+.form-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.btn.wide {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.muted.small {
+  font-size: 11.5px;
+}
+
+.mono {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+/* --- The month as an agenda, on a phone ---------------------------------- */
+
+.agenda {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.agenda-day {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 12px;
+}
+
+.agenda-date {
+  margin: 0;
+  padding-top: 2px;
+  text-align: right;
+  font-weight: 400;
+}
+
+.agenda-date b {
+  display: block;
+  font-size: 22px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.agenda-date span {
+  display: block;
+  margin-top: 3px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-45);
+}
+
+.agenda-date em {
+  display: block;
+  margin-top: 4px;
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.agenda-date.today b {
+  color: var(--accent);
+}
+
+.agenda-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* --- Trend profile extras ------------------------------------------------ */
+
+.trend-types {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.needs-score {
+  color: var(--status-at-risk);
+  font-weight: 500;
+}
+
+.figure.hot b {
+  color: var(--status-at-risk);
+}
+
+/* Which industries a profile has been scored for, and which are waiting. */
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px;
+}
+
+.score {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  font-size: 13px;
+}
+
+.score span {
+  min-width: 0;
+}
+
+.score em {
+  margin-left: auto;
+  white-space: nowrap;
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-45);
+}
+
+.score.done .icon {
+  color: var(--status-published);
+}
+
+.score.missing {
+  border-left: 3px solid var(--status-at-risk);
+}
+
+.score.missing .icon,
+.score.missing em {
+  color: var(--status-at-risk);
+}
+
+.label-groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px 20px;
+  margin: 0;
+}
+
+.label-groups dt {
+  margin-bottom: 6px;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-45);
+}
+
+.label-groups dd {
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
 }

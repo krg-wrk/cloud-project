@@ -1,0 +1,92 @@
+/**
+ * The icon set.
+ *
+ * One 24x24 grid, stroked in currentColor, no fills — so an icon takes the
+ * colour and weight of the text beside it and needs no per-theme variant.
+ * Every icon here earns its place by standing for one thing (a section, a
+ * status, a kind of diary entry); nothing is decorative.
+ *
+ * Kept in step with the copy in demo/hub.template.html by hand, the same way
+ * types.ts is. Worth promoting to a shared workspace package with the types
+ * once the shape settles.
+ */
+
+export const ICON_PATHS: Record<string, string> = {
+  // Sections
+  today: "M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM12 2v2.5M12 19.5V22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2 12h2.5M19.5 12H22M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8",
+  deadlines: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
+  calendar: "M3 9h18M7 3v3M17 3v3M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z",
+  performance: "M4 20V10M10 20V4M16 20v-7M22 20H2",
+  trends: "M3 17l5-6 4 3 5-7M14 7h4v4",
+  learning: "M12 4 2 9l10 5 10-5-10-5ZM6 11.5V17c0 1.7 2.7 3 6 3s6-1.3 6-3v-5.5",
+  forecasters:
+    "M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20M10 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM20 20v-1.5a3.5 3.5 0 0 0-2.6-3.4M15.5 4.7a3.5 3.5 0 0 1 0 6.6",
+  "whats-on": "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3.5 9h17M3.5 15h17M12 3c-2.5 2.4-3.8 5.4-3.8 9s1.3 6.6 3.8 9c2.5-2.4 3.8-5.4 3.8-9S14.5 5.4 12 3Z",
+  subscribe: "M3 9h18M7 3v3M17 3v3M12 13v5M9.5 15.5h5M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z",
+  more: "M5 12h.01M12 12h.01M19 12h.01",
+
+  // Statuses
+  "not-started": "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z",
+  "in-progress": "M7 3h10M7 21h10M8.5 3v3.3c0 1.3 3.5 3.4 3.5 5.7s-3.5 4.4-3.5 5.7V21M15.5 3v3.3c0 1.3-3.5 3.4-3.5 5.7s3.5 4.4 3.5 5.7V21",
+  submitted: "M12 15V3M8 7l4-4 4 4M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4",
+  "in-review": "M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Zm10 2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z",
+  published: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM8.5 12.5l2.5 2.5 4.5-5",
+  "at-risk": "M12 9v4M12 17h.01M10.3 3.9 2.4 17.4A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3.1L13.7 3.9a2 2 0 0 0-3.4 0Z",
+
+  // Diary
+  leave: "M4 8h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1ZM9 8V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3M9 12v4M15 12v4",
+  "public-holiday": "M5 21V3M5 4h11l-1.5 4L16 12H5",
+  workshop: "M4 4h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1ZM12 15v3M8 21l4-3 4 3M7.5 8.5l2 2 3.5-4",
+  training: "M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5v-15ZM4 17h15M9 7h6",
+  conference: "M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3ZM6 11v1a6 6 0 0 0 12 0v-1M12 18v3M9 21h6",
+
+  // Bits and pieces
+  link: "M14 4h6v6M20 4l-8.5 8.5M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10",
+  image: "M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm-1 12 4.5-4.5 4 4 3-3L20 15M9.5 9.5h.01",
+  note: "M14 3v5h5M6 3h8l5 5v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1ZM8.5 12h7M8.5 16h4",
+  ai: "M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3ZM18.5 15l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8Z",
+  review: "M9 11.5l2.5 2.5 5-5M7 4h10a2 2 0 0 1 2 2v14l-3.5-2.5L12 20l-3.5-2.5L5 20V6a2 2 0 0 1 2-2Z",
+  tier: "M12 3 3 8l9 5 9-5-9-5ZM3 13l9 5 9-5",
+  clock: "M12 7.5V12l3 1.8M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z",
+  plus: "M12 5v14M5 12h14",
+  edit: "M15.5 4.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L15.5 4.5ZM14 6l4 4",
+};
+
+export type IconName = keyof typeof ICON_PATHS | string;
+
+/**
+ * An icon is presentational by default: the label beside it carries the
+ * meaning. Pass `label` only where the icon stands alone.
+ */
+export function Icon({
+  name,
+  size = 16,
+  label,
+  className,
+}: {
+  name: IconName;
+  size?: number;
+  label?: string;
+  className?: string;
+}) {
+  const path = ICON_PATHS[name];
+  if (!path) return null;
+  return (
+    <svg
+      className={className ? `icon ${className}` : "icon"}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden={label ? undefined : true}
+      role={label ? "img" : undefined}
+      aria-label={label}
+    >
+      <path d={path} />
+    </svg>
+  );
+}

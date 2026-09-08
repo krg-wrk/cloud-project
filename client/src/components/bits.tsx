@@ -1,11 +1,17 @@
 import type { CSSProperties } from "react";
 import type { EventType, Status } from "../types";
 import { EVENT_LABELS, STATUS_LABELS, initials, personHue } from "../lib/domain";
+import { Icon } from "../lib/icons";
 
+/*
+ * A pill carries an icon rather than a plain dot: the status is then readable
+ * from the shape as well as the colour and the word, which matters most in the
+ * deadlines table where a column of pills is scanned rather than read.
+ */
 export function StatusPill({ status }: { status: Status }) {
   return (
     <span className="pill" style={{ "--pill-color": `var(--status-${status})` } as CSSProperties}>
-      <i className="dot" />
+      <Icon name={status} size={13} />
       {STATUS_LABELS[status]}
     </span>
   );
@@ -14,7 +20,7 @@ export function StatusPill({ status }: { status: Status }) {
 export function EventPill({ type }: { type: EventType }) {
   return (
     <span className="pill" style={{ "--pill-color": `var(--event-${type})` } as CSSProperties}>
-      <i className="dot" />
+      <Icon name={type} size={13} />
       {EVENT_LABELS[type]}
     </span>
   );

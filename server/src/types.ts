@@ -126,6 +126,72 @@ export interface ResearchLink {
   url: string;
 }
 
+/**
+ * A published trend profile, as the TFDB sheet holds it.
+ *
+ * The sheet is Snowflake-linked and read-only here: the profile itself is
+ * authored in Content Editor and scored elsewhere. What the Hub adds is in
+ * TrendExtras.
+ */
+export interface TrendProfile {
+  /** TREND_ID — the short number the team quotes. */
+  id: string;
+  /** The Content Editor document id, which is what the editor URL is built on. */
+  profileId: string;
+  title: string;
+  slug: string;
+  /** Person id of the owner. AUTHORS can list more than one person. */
+  ownerId: string;
+  authorIds: string[];
+  /** Design & Aesthetic / Lifestyle / Product / Item / Systemic — more than one. */
+  types: string[];
+  /** The strategic call: Invest, Test, Expand or Protect. Often not set yet. */
+  call?: TrendCall;
+  publishedOn: string;
+  /** The window the trend is called for — START_DATE to END_DATE. */
+  activeFrom: string;
+  activeTo: string;
+  editorUrl: string;
+  publishedUrl: string;
+  /** MAIN_COVER_IMAGE_URL, on the platform's media host. */
+  coverImageUrl?: string;
+  description: string;
+  needToKnow: string;
+  opportunity: string;
+  strategies: number;
+  proofPoints: number;
+  /** Industries the profile is tagged to, and where its scores stand. */
+  industries: string[];
+  scored: string[];
+  missingScore: string[];
+  hashtags: string[];
+  /** The label groups: generations, personas, emotions, CMF and so on. */
+  labels: Record<string, string[]>;
+  lastSynced?: string;
+}
+
+/**
+ * What the sheet calls MORE_LABELS: what a client should do about the trend.
+ * Ordered by how much commitment each asks for.
+ */
+export type TrendCall = "Protect" | "Test" | "Expand" | "Invest";
+
+/**
+ * What the Hub adds to a trend profile. The sheet owns the profile; this is
+ * the owner's own working note and any supporting material they gather, plus
+ * a cover image override for when the sheet's is wrong or missing.
+ */
+export interface TrendExtras {
+  trendId: string;
+  coverImageUrl?: string;
+  /** Supporting material: research, boards, decks. */
+  links: ResearchLink[];
+  /** The owner's own note — what would move this on, what to chase. */
+  note?: string;
+  updatedBy: string;
+  updatedAt: string;
+}
+
 /** What a KPI is, and how to read it. */
 export interface MetricDefinition {
   id: string;
@@ -228,4 +294,6 @@ export interface DataSource {
   listMetrics(): Promise<MetricDefinition[]>;
   /** Readings for the supplied metrics. */
   listMetricObservations(): Promise<MetricObservation[]>;
+  /** Trend profiles, owned one apiece. */
+  listTrends(): Promise<TrendProfile[]>;
 }

@@ -48,6 +48,20 @@
     --mine: #8e3b74;
     --review: #c2571a;
 
+    /* The strategic call on a trend is ordered by how much commitment it
+       asks for, so it takes one hue in four steps rather than four
+       unrelated colours. Each clears 3:1 on paper. */
+    --call-protect: #8d94ac;
+    --call-test: #6b74a0;
+    --call-expand: #4c5578;
+    --call-invest: #2e3450;
+
+    /* The cover stand-in: its hue is per trend, its tone per theme. */
+    --cover-s1: 20%;
+    --cover-l1: 89%;
+    --cover-s2: 16%;
+    --cover-l2: 80%;
+
     --sans: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
     --mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
@@ -85,6 +99,14 @@
       --kind-training: #7aa8dd;
       --mine: #e08cc4;
       --review: #eb9a5c;
+      --call-protect: #6f7590;
+      --call-test: #8b93b4;
+      --call-expand: #a9b1d4;
+      --call-invest: #c9cfe8;
+      --cover-s1: 18%;
+      --cover-l1: 24%;
+      --cover-s2: 14%;
+      --cover-l2: 17%;
       color-scheme: dark;
     }
   }
@@ -118,11 +140,28 @@
     --kind-training: #7aa8dd;
     --mine: #e08cc4;
     --review: #eb9a5c;
+    --call-protect: #6f7590;
+    --call-test: #8b93b4;
+    --call-expand: #a9b1d4;
+    --call-invest: #c9cfe8;
+    --cover-s1: 18%;
+    --cover-l1: 24%;
+    --cover-s2: 14%;
+    --cover-l2: 17%;
     color-scheme: dark;
   }
 
   * {
     box-sizing: border-box;
+  }
+
+  /*
+   * Published as an Artifact this comes from the host's reset; opened as a
+   * file it does not, and without it a media query that sets `display` beats
+   * the attribute and a hidden panel still swallows clicks.
+   */
+  [hidden] {
+    display: none !important;
   }
 
   body {
@@ -825,9 +864,77 @@
   }
 
   .cal-head,
-  .cal-row {
+  .cal-cells,
+  .cal-spans {
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
+  }
+
+  /*
+   * A week is a stack: the day cells underneath, and the multi-day bars laid
+   * over them in their own grid. The cells reserve exactly the height the
+   * bars need (--lanes, set per week), so the single-day marks below still
+   * line up across the row.
+   */
+  .cal-row {
+    position: relative;
+  }
+
+  .cal-spans {
+    position: absolute;
+    top: 26px;
+    left: 0;
+    right: 0;
+    gap: 2px 0;
+    /* The bars are clickable; the gaps between them are not. */
+    pointer-events: none;
+  }
+
+  .lane-space {
+    height: calc(var(--lanes, 0) * 20px);
+    flex: none;
+  }
+
+  .cal-span {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 18px;
+    margin: 0 3px;
+    padding: 0 6px;
+    border: none;
+    border-left: 3px solid var(--c);
+    background: color-mix(in srgb, var(--c) 16%, var(--paper));
+    color: var(--ink);
+    font: inherit;
+    font-size: 11px;
+    line-height: 1;
+    text-align: left;
+    overflow: hidden;
+  }
+
+  .cal-span:hover {
+    background: color-mix(in srgb, var(--c) 30%, var(--paper));
+  }
+
+  .cal-span .icon {
+    flex: none;
+    color: color-mix(in srgb, var(--c) 82%, var(--ink));
+  }
+
+  .span-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The bar runs past the edge of the week rather than ending there. */
+  .span-carry {
+    flex: none;
+    font-size: 13px;
+    line-height: 1;
+    color: color-mix(in srgb, var(--c) 82%, var(--ink));
   }
 
   .cal-head div {
@@ -885,15 +992,26 @@
   }
 
   .mark {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 4px;
     padding: 3px 6px;
     border-left: 3px solid var(--c);
     background: color-mix(in srgb, var(--c) 9%, transparent);
     font-size: 11px;
     line-height: 1.32;
-    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .mark .icon {
+    flex: none;
+    color: color-mix(in srgb, var(--c) 82%, var(--ink));
+  }
+
+  .mark-title {
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   a.mark:hover {
@@ -901,7 +1019,7 @@
   }
 
   .mark em {
-    margin-right: 5px;
+    flex: none;
     font-style: normal;
     font-size: 9px;
     font-weight: 500;
@@ -910,10 +1028,38 @@
     color: color-mix(in srgb, var(--c) 78%, var(--ink));
   }
 
-  .more {
-    padding-left: 6px;
-    font-size: 10px;
+  /* Both open the day, so a full cell is never a dead end. */
+  .daynum {
+    align-self: flex-start;
+    padding: 0 3px;
+    border: none;
+    background: transparent;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
     color: var(--ink-soft);
+  }
+
+  .daynum:hover {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+
+  .cell.now .daynum {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  .more {
+    align-self: flex-start;
+    padding: 1px 6px;
+    border: none;
+    background: transparent;
+    font: inherit;
+    font-size: 10px;
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
 
   .key {
@@ -1762,6 +1908,484 @@
     text-align: right;
   }
 
+  /* ---- Icons ------------------------------------------------------------- */
+
+  /*
+   * An icon takes the colour and the weight of the text beside it, so it needs
+   * no theme of its own. It never shrinks, and it sits on the text baseline
+   * rather than hanging below it.
+   */
+  .icon {
+    flex: none;
+    vertical-align: -0.15em;
+  }
+
+  .toggle,
+  .wide-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .toggle .icon {
+    color: var(--ink-soft);
+  }
+
+  .toggle.on .icon,
+  .toggle.solid .icon {
+    color: currentColor;
+    opacity: 0.85;
+  }
+
+  .nav-link .icon {
+    color: var(--ink-soft);
+  }
+
+  .nav-link:hover .icon,
+  .nav-link.on .icon {
+    color: var(--accent);
+  }
+
+  .chip .icon {
+    color: var(--c);
+  }
+
+  .sec-head h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .sec-head h2 .icon {
+    color: var(--ink-soft);
+  }
+
+  /* ---- One day in full --------------------------------------------------- */
+
+  .day-panel {
+    margin-bottom: 16px;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    background: var(--paper);
+  }
+
+  .day-panel-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 12px;
+  }
+
+  .day-panel-head h2 {
+    margin: 4px 0 0;
+    font-size: 19px;
+  }
+
+  .day-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 8px;
+  }
+
+  .day-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--c, var(--ink-soft));
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+  }
+
+  .day-item:hover {
+    border-color: var(--ink);
+  }
+
+  .day-item-icon {
+    display: inline-flex;
+    flex: none;
+    color: color-mix(in srgb, var(--c) 82%, var(--ink));
+  }
+
+  .day-item-title {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .day-item-meta {
+    display: block;
+    margin-top: 2px;
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+
+  /* ---- The month as an agenda, on a phone -------------------------------- */
+
+  .agenda {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .agenda-day {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .agenda-date {
+    margin: 0;
+    padding-top: 2px;
+    text-align: right;
+    font-weight: 400;
+  }
+
+  .agenda-date b {
+    display: block;
+    font-size: 22px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .agenda-date span {
+    display: block;
+    margin-top: 3px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .agenda-date em {
+    display: block;
+    margin-top: 4px;
+    font-style: normal;
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .agenda-date.today b {
+    color: var(--accent);
+  }
+
+  .agenda-items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  /* ---- Trends ------------------------------------------------------------ */
+
+  .figures.inline {
+    display: flex;
+    margin-bottom: 0;
+  }
+
+  .figure.hot b {
+    color: var(--late);
+  }
+
+  .trend-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(288px, 1fr));
+    gap: 16px;
+  }
+
+  .trend-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    overflow: hidden;
+  }
+
+  .trend-card:hover {
+    border-color: var(--ink);
+  }
+
+  /*
+   * The stand-in is the floor rather than a replacement. A cover is linked
+   * from the sheet and lives on the platform's media host, so it may be
+   * missing, still loading, or unreachable — as every one of them is in this
+   * offline demo. The gradient takes a hue from the trend's own id, so a
+   * profile stays recognisable, and a linked image simply covers it.
+   */
+  .cover {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    overflow: hidden;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--h) var(--cover-s1) var(--cover-l1)),
+      hsl(calc(var(--h) + 40) var(--cover-s2) var(--cover-l2))
+    );
+  }
+
+  .cover img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .cover figcaption {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    padding: 3px 7px;
+    background: color-mix(in srgb, var(--paper) 82%, transparent);
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-mid);
+  }
+
+  .cover-fallback {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 7px;
+    color: var(--ink-mid);
+    font-size: 11px;
+    text-align: center;
+  }
+
+  .trend-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 14px 16px 16px;
+  }
+
+  .trend-card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .trend-years {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+
+  .trend-name {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  .trend-summary {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ink-mid);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .trend-types {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .trend-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    padding-top: 10px;
+    border-top: 1px solid var(--line);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+
+  .trend-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .needs-score {
+    color: var(--late);
+    font-weight: 500;
+  }
+
+  /* The strategic call. One hue, four steps of it. */
+  .call-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 9px;
+    background: color-mix(in srgb, var(--call) 12%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--call) 32%, transparent);
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: color-mix(in srgb, var(--call) 76%, var(--ink));
+    white-space: nowrap;
+  }
+
+  .call-pill i {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--call);
+  }
+
+  .call-protect {
+    --call: var(--call-protect);
+  }
+  .call-test {
+    --call: var(--call-test);
+  }
+  .call-expand {
+    --call: var(--call-expand);
+  }
+  .call-invest {
+    --call: var(--call-invest);
+  }
+
+  /* No call set on the profile yet — said plainly rather than guessed at. */
+  .call-none {
+    --call: var(--ink-soft);
+    font-style: italic;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .call-none i {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px var(--ink-soft);
+  }
+
+  /* Which industries a profile has been scored for, and which are waiting. */
+  .score-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 8px;
+  }
+
+  .score {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    font-size: 13px;
+  }
+
+  .score span {
+    min-width: 0;
+  }
+
+  .score em {
+    margin-left: auto;
+    white-space: nowrap;
+    font-style: normal;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .score.done .icon {
+    color: var(--ok);
+  }
+
+  .score.missing {
+    border-left: 3px solid var(--late);
+  }
+
+  .score.missing .icon,
+  .score.missing em {
+    color: var(--late);
+  }
+
+  .label-groups {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 14px 20px;
+    margin: 0;
+  }
+
+  .label-groups dt {
+    margin-bottom: 6px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .label-groups dd {
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .wide-btn.solid {
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .wide-btn.solid:hover {
+    background: var(--accent);
+    border-color: var(--accent);
+  }
+
+  /* An empty state with an icon reads as a state rather than a gap. */
+  .none .icon {
+    display: block;
+    margin: 0 auto 8px;
+    color: var(--line-firm);
+  }
+
+  .none p {
+    margin: 0;
+  }
+
+  /* ---- Navigation on a phone -------------------------------------------- */
+
+  /*
+   * Off-screen on a desktop. Below the breakpoint the rail goes away and this
+   * takes over: four sections as tabs at the bottom of the screen, where a
+   * thumb reaches, and the rest behind More.
+   */
+  .tabbar,
+  .nav-sheet,
+  .sheet-scrim {
+    display: none;
+  }
+
   @media (max-width: 1100px) {
     .split {
       grid-template-columns: minmax(0, 1fr);
@@ -1786,28 +2410,12 @@
     }
 
     .rail {
-      position: static;
-      min-height: 0;
-      border-right: none;
-      border-bottom: 1px solid var(--line);
-    }
-
-    nav {
-      flex-direction: row;
-      flex-wrap: wrap;
-      gap: 0 16px;
-    }
-
-    .nav-link {
-      border-bottom: none;
-    }
-
-    .nav-group {
       display: none;
     }
 
     main {
-      padding: 22px 16px 70px;
+      /* Room for the tab bar, plus the home indicator on a phone. */
+      padding: 20px 16px calc(78px + env(safe-area-inset-bottom, 0px));
     }
 
     h1 {
@@ -1820,6 +2428,138 @@
 
     .mark em {
       display: none;
+    }
+
+    .trend-grid,
+    .day-list {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .tabbar {
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 40;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      border-top: 1px solid var(--line);
+      background: var(--paper);
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    .tab {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 3px;
+      padding: 9px 2px 8px;
+      border: none;
+      background: transparent;
+      font: inherit;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--ink-soft);
+    }
+
+    .tab span {
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tab.on {
+      color: var(--accent);
+    }
+
+    /* The active tab is marked above the icon, clear of the label. */
+    .tab.on::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 22%;
+      right: 22%;
+      height: 2px;
+      background: var(--accent);
+    }
+
+    .tab-dot {
+      position: absolute;
+      top: 7px;
+      left: 50%;
+      margin-left: 6px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--late);
+    }
+
+    .sheet-scrim {
+      display: block;
+      position: fixed;
+      inset: 0;
+      z-index: 45;
+      border: none;
+      background: color-mix(in srgb, var(--ink) 38%, transparent);
+    }
+
+    .nav-sheet {
+      display: block;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: calc(62px + env(safe-area-inset-bottom, 0px));
+      z-index: 46;
+      padding: 16px 16px 18px;
+      border-top: 1px solid var(--line);
+      background: var(--paper);
+      box-shadow: 0 -8px 30px color-mix(in srgb, var(--ink) 16%, transparent);
+    }
+
+    .nav-sheet-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 12px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--line);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    .nav-sheet-links {
+      display: grid;
+      gap: 2px;
+    }
+
+    .sheet-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 6px;
+      border-bottom: 1px solid var(--line);
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--ink);
+    }
+
+    .sheet-link:last-child {
+      border-bottom: none;
+    }
+
+    .sheet-link.on {
+      color: var(--accent);
+    }
+
+    .sheet-link b {
+      margin-left: auto;
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 400;
+      color: var(--ink-soft);
     }
   }
 
@@ -1870,6 +2610,10 @@
   <main id="view"></main>
 </div>
 
+<button class="sheet-scrim" id="scrim" hidden aria-label="Close menu"></button>
+<div class="nav-sheet" id="sheet" role="dialog" aria-label="More sections" hidden></div>
+<nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
+
 <script id="seed" type="application/json">
   __SEED__
 </script>
@@ -1908,6 +2652,55 @@
   const TYPES = [...new Set(content.map((c) => c.type))].sort();
 
   /* ---- helpers ---------------------------------------------------------- */
+  /**
+   * The icon set — the same paths as client/src/lib/icons.tsx, kept in step by
+   * hand. One 24x24 grid, stroked in currentColor and no fills, so an icon
+   * takes the colour and weight of the text beside it in either theme.
+   */
+  const ICONS = {
+    today: "M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM12 2v2.5M12 19.5V22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2 12h2.5M19.5 12H22M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8",
+    deadlines: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
+    calendar: "M3 9h18M7 3v3M17 3v3M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z",
+    performance: "M4 20V10M10 20V4M16 20v-7M22 20H2",
+    trends: "M3 17l5-6 4 3 5-7M14 7h4v4",
+    learning: "M12 4 2 9l10 5 10-5-10-5ZM6 11.5V17c0 1.7 2.7 3 6 3s6-1.3 6-3v-5.5",
+    forecasters: "M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20M10 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM20 20v-1.5a3.5 3.5 0 0 0-2.6-3.4M15.5 4.7a3.5 3.5 0 0 1 0 6.6",
+    "whats-on": "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3.5 9h17M3.5 15h17M12 3c-2.5 2.4-3.8 5.4-3.8 9s1.3 6.6 3.8 9c2.5-2.4 3.8-5.4 3.8-9S14.5 5.4 12 3Z",
+    subscribe: "M3 9h18M7 3v3M17 3v3M12 13v5M9.5 15.5h5M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z",
+    more: "M5 12h.01M12 12h.01M19 12h.01",
+    "not-started": "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z",
+    "in-progress": "M7 3h10M7 21h10M8.5 3v3.3c0 1.3 3.5 3.4 3.5 5.7s-3.5 4.4-3.5 5.7V21M15.5 3v3.3c0 1.3-3.5 3.4-3.5 5.7s3.5 4.4 3.5 5.7V21",
+    submitted: "M12 15V3M8 7l4-4 4 4M4 15v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4",
+    "in-review": "M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6-10-6-10-6Zm10 2.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z",
+    published: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM8.5 12.5l2.5 2.5 4.5-5",
+    "at-risk": "M12 9v4M12 17h.01M10.3 3.9 2.4 17.4A2 2 0 0 0 4.1 20.5h15.8a2 2 0 0 0 1.7-3.1L13.7 3.9a2 2 0 0 0-3.4 0Z",
+    leave: "M4 8h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1ZM9 8V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3M9 12v4M15 12v4",
+    "public-holiday": "M5 21V3M5 4h11l-1.5 4L16 12H5",
+    workshop: "M4 4h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1ZM12 15v3M8 21l4-3 4 3M7.5 8.5l2 2 3.5-4",
+    training: "M4 4.5A1.5 1.5 0 0 1 5.5 3H19v18H5.5A1.5 1.5 0 0 1 4 19.5v-15ZM4 17h15M9 7h6",
+    conference: "M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3ZM6 11v1a6 6 0 0 0 12 0v-1M12 18v3M9 21h6",
+    link: "M14 4h6v6M20 4l-8.5 8.5M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10",
+    image: "M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1Zm-1 12 4.5-4.5 4 4 3-3L20 15M9.5 9.5h.01",
+    note: "M14 3v5h5M6 3h8l5 5v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1ZM8.5 12h7M8.5 16h4",
+    ai: "M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6L12 3ZM18.5 15l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8Z",
+    review: "M9 11.5l2.5 2.5 5-5M7 4h10a2 2 0 0 1 2 2v14l-3.5-2.5L12 20l-3.5-2.5L5 20V6a2 2 0 0 1 2-2Z",
+    tier: "M12 3 3 8l9 5 9-5-9-5ZM3 13l9 5 9-5",
+    clock: "M12 7.5V12l3 1.8M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z",
+    plus: "M12 5v14M5 12h14",
+    edit: "M15.5 4.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L15.5 4.5ZM14 6l4 4",
+  };
+
+  /** Presentational by default: the label beside it carries the meaning. */
+  function icon(name, size = 16) {
+    const d = ICONS[name];
+    if (!d) return "";
+    return (
+      `<svg class="icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" ` +
+      `stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" ` +
+      `aria-hidden="true"><path d="${d}"/></svg>`
+    );
+  }
+
 
   const esc = (s) =>
     String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -1960,6 +2753,48 @@
 
   const covers = (e, d) => e.startDate <= d && e.endDate >= d;
 
+  /**
+   * Laying multi-day things out across a week.
+   *
+   * A week of leave used to appear as five identical marks, one per day, which
+   * reads as five events rather than one. Anything covering more than a day
+   * becomes a single bar across the columns it covers, clipped at the week
+   * boundary with a chevron to say it carries on. Same logic as
+   * client/src/lib/spans.ts.
+   */
+  const isMultiDay = (from, to) => Boolean(from && to && to > from);
+
+  function packWeek(week, items) {
+    const first = week[0];
+    const last = week[6];
+    const clamp = (d) => (d < first ? first : d > last ? last : d);
+
+    const bars = items
+      .filter((it) => it.from <= last && it.to >= first)
+      .map((it) => ({
+        ...it,
+        startCol: Math.max(0, week.indexOf(clamp(it.from))),
+        endCol: Math.max(0, week.indexOf(clamp(it.to))),
+        continuesBefore: it.from < first,
+        continuesAfter: it.to > last,
+        lane: 0,
+      }))
+      // Longest first from the left, so the bars crossing the week sit on top
+      // and the short ones fill in underneath.
+      .sort((a, b) => a.startCol - b.startCol || b.endCol - b.startCol - (a.endCol - a.startCol));
+
+    // occupied[lane] is the last column already taken on that lane.
+    const occupied = [];
+    for (const bar of bars) {
+      let lane = 0;
+      while (occupied[lane] !== undefined && occupied[lane] >= bar.startCol) lane++;
+      occupied[lane] = bar.endCol;
+      bar.lane = lane;
+    }
+    return { bars, lanes: occupied.length };
+  }
+
+
   /** Region-aware: a Singapore holiday is not a clash for a forecaster in London. */
   function clashes(item) {
     const region = person(item.forecasterId)?.region;
@@ -1979,14 +2814,16 @@
     return true;
   }
 
+  /* A chip carries an icon rather than a plain dot, so the status is readable
+     from the shape as well as the colour and the word. */
   function statusChip(s) {
     const [label, colour] = STATUS[s];
-    return `<span class="chip" style="--c:${colour}"><i></i>${label}</span>`;
+    return `<span class="chip" style="--c:${colour}">${icon(s, 13)}${label}</span>`;
   }
 
   function eventChip(t) {
     const [label, , colour] = EVENTS[t];
-    return `<span class="chip" style="--c:${colour}"><i></i>${label}</span>`;
+    return `<span class="chip" style="--c:${colour}">${icon(t, 13)}${label}</span>`;
   }
 
   /* ---- KPIs -------------------------------------------------------------- */
@@ -2241,6 +3078,8 @@
   const entries = new Map();
   const reviews = new Map();
   const details = new Map();
+  /** What the Hub adds to a trend profile: a note, links, a cover image. */
+  const trendExtras = new Map();
 
   let store = null;
   let shared = false;
@@ -2250,6 +3089,37 @@
   const entriesFor = (personId) => entries.get(personId) ?? [];
   const reviewFor = (contentId) => reviews.get(contentId) ?? null;
   const detailsFor = (contentId) => details.get(contentId) ?? null;
+  const extrasFor = (trendId) => trendExtras.get(trendId) ?? null;
+
+  /** The sheet's row plus the Hub's, with the Hub's cover image winning. */
+  function trendView(t) {
+    const x = extrasFor(t.id);
+    return {
+      ...t,
+      coverImageUrl: x?.coverImageUrl ?? t.coverImageUrl,
+      coverFromHub: Boolean(x?.coverImageUrl),
+      links: x?.links ?? [],
+      note: x?.note,
+      updatedBy: x?.updatedBy,
+      updatedAt: x?.updatedAt,
+    };
+  }
+
+  /** The owner, anyone credited on it, a manager for the industry, an admin. */
+  function canWriteTrend(v, t) {
+    if (v.isAdmin) return true;
+    if (v.person.id === t.ownerId) return true;
+    if (t.authorIds.includes(v.person.id)) return true;
+    if (!v.isManager) return false;
+    if (v.verticals === "all") return true;
+    return t.industries.some((industry) =>
+      v.verticals.some(
+        (vert) =>
+          vert.toLowerCase().includes(industry.toLowerCase()) ||
+          industry.toLowerCase().includes(vert.split(" ")[0].toLowerCase()),
+      ),
+    );
+  }
 
   /** Reviews this person is either side of — author or reviewer. */
   function myReviews(personId) {
@@ -2315,6 +3185,11 @@
   function setDetails(contentId, body) {
     details.set(contentId, body);
     put(`details/${contentId}`, body);
+  }
+
+  function setTrendExtras(trendId, body) {
+    trendExtras.set(trendId, body);
+    put(`trends/${trendId}`, body);
   }
 
   const seatsFor = (id) => signUps.get(id) ?? { going: [], waiting: [] };
@@ -2410,7 +3285,22 @@
         researchLinks: Array.isArray(body.researchLinks) ? body.researchLinks : [],
       }),
     );
+    watch("trends", (id, body) =>
+      trendExtras.set(id, { ...body, links: Array.isArray(body.links) ? body.links : [] }),
+    );
   }
+
+  /**
+   * The breakpoint the phone layout uses, watched rather than guessed, so the
+   * calendar can render an agenda instead of a squeezed seven-column grid.
+   * Has to match the media query in the stylesheet.
+   */
+  const NARROW = window.matchMedia("(max-width: 820px)");
+  let narrow = NARROW.matches;
+  NARROW.addEventListener("change", () => {
+    narrow = NARROW.matches;
+    render();
+  });
 
   /* ---- routing ---------------------------------------------------------- */
 
@@ -2459,27 +3349,32 @@
     const scope = me.role === "forecaster" ? content.filter((c) => c.forecasterId === me.id) : content;
     const open = scope.filter(isOpen).length;
     const late = scope.filter(isLate).length;
+    // One list of sections, so the rail and the phone bar cannot drift apart.
+    // [label, href, key, badge, iconName, primary]
     const links = [
-      ["Your work", null, null, null],
-      ["Today", "#/", "", late ? `${late} late` : ""],
-      ["Deadlines", "#/deadlines", "deadlines", String(open)],
-      ["Calendar", `#/calendar/${TODAY.slice(0, 7)}`, "calendar", ""],
-      ["Performance", "#/performance", "performance", ""],
-      ["The team", null, null, null],
-      ["Learning", "#/learning", "learning", mySessionCount(me.id) || ""],
-      ["Forecasters", "#/team", "team", String(people.filter((p) => p.role === "forecaster").length)],
-      ["What’s on", "#/whats-on", "whats-on", ""],
-      ["Add to your calendar", "#/subscribe", "subscribe", ""],
+      ["Your work", null, null, null, null, false],
+      ["Today", "#/", "", late ? `${late} late` : "", "today", true],
+      ["Deadlines", "#/deadlines", "deadlines", String(open), "deadlines", true],
+      ["Calendar", `#/calendar/${TODAY.slice(0, 7)}`, "calendar", "", "calendar", true],
+      ["Trends", "#/trends", "trends", "", "trends", true],
+      ["Performance", "#/performance", "performance", "", "performance", false],
+      ["The team", null, null, null, null, false],
+      ["Learning", "#/learning", "learning", mySessionCount(me.id) || "", "learning", false],
+      ["Forecasters", "#/team", "team", String(people.filter((p) => p.role === "forecaster").length), "forecasters", false],
+      ["What’s on", "#/whats-on", "whats-on", "", "whats-on", false],
+      ["Add to your calendar", "#/subscribe", "subscribe", "", "subscribe", false],
     ];
     document.getElementById("nav").innerHTML = links
-      .map(([label, href, key, badge]) =>
+      .map(([label, href, key, badge, iconName]) =>
         href === null
           ? `<div class="nav-group">${label}</div>`
-          : `<a class="nav-link${key === here ? " on" : ""}" href="${href}">${label}${
-              badge ? `<b>${badge}</b>` : ""
-            }</a>`,
+          : `<a class="nav-link${key === here ? " on" : ""}" href="${href}">${icon(
+              iconName,
+            )}${label}${badge ? `<b>${badge}</b>` : ""}</a>`,
       )
       .join("");
+
+    renderTabs(links, here);
 
     const sel = document.getElementById("as");
     if (!sel.options.length) {
@@ -2504,6 +3399,60 @@
       `<span class="who">${face(v.person.id)}<span>${esc(v.person.name)}<br />${
         ROLE_LABELS[v.role]
       }${v.role !== "forecaster" && v.verticals !== "all" ? ` · ${v.verticals.length} verticals` : ""}</span></span>`;
+  }
+
+  /**
+   * Navigation on a phone.
+   *
+   * A wrapped row of text links was unusable at this width and hid the group
+   * headings entirely. This is a fixed bar at the bottom of the screen — four
+   * sections as icon-and-label tabs, and More for the rest — so the whole app
+   * is reachable with a thumb.
+   */
+  let sheetOpen = false;
+
+  function renderTabs(links, here) {
+    const items = links.filter(([, href]) => href !== null);
+    const primary = items.filter((l) => l[5]);
+    const rest = items.filter((l) => !l[5]);
+    const restBadge = rest.some((l) => l[3] && l[3] !== "0");
+    const onRest = rest.some((l) => l[2] === here);
+
+    document.getElementById("tabbar").innerHTML =
+      primary
+        .map(
+          ([label, href, key, badge, iconName]) =>
+            `<a class="tab${key === here ? " on" : ""}" href="${href}">${icon(iconName, 20)}
+               <span>${label}</span>${badge && badge !== "0" ? `<i class="tab-dot"></i>` : ""}</a>`,
+        )
+        .join("") +
+      `<button class="tab${onRest ? " on" : ""}" data-sheet="${sheetOpen ? "" : "1"}"
+         aria-expanded="${sheetOpen}">${icon("more", 20)}<span>More</span>${
+        restBadge ? `<i class="tab-dot"></i>` : ""
+      }</button>`;
+
+    const sheet = document.getElementById("sheet");
+    sheet.hidden = !sheetOpen;
+    document.getElementById("scrim").hidden = !sheetOpen;
+    if (sheetOpen) {
+      const v = viewer();
+      sheet.innerHTML = `
+        <div class="nav-sheet-head">
+          <span class="who">${face(v.person.id)}<span>${esc(v.person.name)}<br />${
+            ROLE_LABELS[v.role]
+          }</span></span>
+          <button class="toggle" data-sheet="">Close</button>
+        </div>
+        <div class="nav-sheet-links">${rest
+          .map(
+            ([label, href, key, badge, iconName]) =>
+              `<a class="sheet-link${key === here ? " on" : ""}" href="${href}"
+                 data-sheet-go="1">${icon(iconName, 18)}${label}${
+                badge && badge !== "0" ? `<b>${badge}</b>` : ""
+              }</a>`,
+          )
+          .join("")}</div>`;
+    }
   }
 
   function renderUrl() {
@@ -2803,6 +3752,7 @@
     };
     const myEntries = entriesFor(me.id);
     const myReviewList = myReviews(me.id);
+    const openDay = params.get("day") ?? "";
 
     const [y, m] = key.split("-").map(Number);
     const first = new Date(Date.UTC(y, m - 1, 1));
@@ -2819,72 +3769,265 @@
     const scope = content.filter((c) => (who ? c.forecasterId === who : true));
     const scopedEvents = events.filter((e) => eventApplies(e, who ? person(who) : null));
 
-    const cellMarks = (date) => {
+    /**
+     * Everything on one day.
+     *
+     * Multi-day events and reminders are left out: they are drawn once as a
+     * bar across the week rather than repeated in every day they touch. Pass
+     * `all` to get them anyway, which the day panel wants.
+     */
+    const cellMarks = (date, all = false) => {
       const out = [];
+      const wanted = (from, to) => all || !isMultiDay(from, to);
+
       if (show.mine) {
         for (const entry of myEntries) {
-          if (entry.date <= date && entry.endDate >= date) {
-            out.push(
-              `<button class="mark mark-button" style="--c:var(--mine)"
-                 data-entry-delete="${entry.id}"
-                 title="${esc(entry.title)}${entry.note ? ` — ${esc(entry.note)}` : ""} (yours — click to remove)">
-                 <em>Mine</em>${esc(entry.title)}</button>`,
-            );
-          }
+          if (entry.date > date || entry.endDate < date) continue;
+          if (!wanted(entry.date, entry.endDate)) continue;
+          out.push({
+            kind: "entry",
+            id: entry.id,
+            title: entry.title,
+            colour: "var(--mine)",
+            iconName: "note",
+            meaning: "Your own reminder",
+          });
         }
         for (const review of myReviewList) {
           if (review.reviewDate !== date) continue;
-          out.push(
-            `<a class="mark" style="--c:var(--review)" href="#/content/${review.contentId}"
-               title="Peer review: ${esc(review.item.title)}"><em>${
-              review.iAmReviewer ? "Review" : "Reviewed"
-            }</em>${esc(review.item.title)}</a>`,
-          );
+          out.push({
+            kind: "review",
+            href: `#/content/${review.contentId}`,
+            title: review.item.title,
+            kicker: review.iAmReviewer ? "Review" : "Reviewed",
+            colour: "var(--review)",
+            iconName: "review",
+            meaning: review.iAmReviewer
+              ? "Peer review — you are reviewing"
+              : "Peer review of your piece",
+          });
         }
       }
       if (show.events) {
         for (const e of scopedEvents) {
           if (!covers(e, date)) continue;
-          const [, brief, colour] = EVENTS[e.type];
-          out.push(
-            `<a class="mark" style="--c:${colour}" href="#/whats-on?type=${e.type}" title="${esc(
-              e.title,
-            )}"><em>${esc(e.personId ? nameOf(e.personId).split(" ")[0] : brief)}</em>${esc(e.title)}</a>`,
-          );
+          if (!wanted(e.startDate, e.endDate)) continue;
+          const [label, brief, colour] = EVENTS[e.type];
+          out.push({
+            kind: "event",
+            href: `#/whats-on?type=${e.type}`,
+            title: e.title,
+            kicker: e.personId ? nameOf(e.personId).split(" ")[0] : brief,
+            colour,
+            iconName: e.type,
+            meaning: label,
+          });
         }
         // Workshops belong to the whole team, so they show whoever is filtered in.
-        for (const s of sessions) {
-          if (s.date !== date) continue;
-          out.push(
-            `<a class="mark" style="--c:${KINDS[s.kind][1]}" href="#/learning/${s.id}"
-               title="${esc(KINDS[s.kind][0])}: ${esc(s.title)}"><em>${s.startTime}</em>${esc(
-              s.title,
-            )}</a>`,
-          );
+        for (const ss of sessions) {
+          if (ss.date !== date) continue;
+          out.push({
+            kind: "session",
+            href: `#/learning/${ss.id}`,
+            title: ss.title,
+            kicker: ss.startTime,
+            colour: KINDS[ss.kind][1],
+            iconName: ss.kind === "training" ? "training" : "workshop",
+            meaning: `${KINDS[ss.kind][0]}, ${ss.startTime}–${ss.endTime}`,
+          });
         }
       }
+      // No kicker on these two: the icon and the colour say which it is, and
+      // the title is what people scan for. The day panel spells it out.
       if (show.submissions) {
         for (const c of scope) {
-          if (c.submissionDate === date)
-            out.push(
-              `<a class="mark" style="--c:var(--ink)" href="#/content/${c.id}" title="Due: ${esc(
-                c.title,
-              )}"><em>Due</em>${esc(c.title)}</a>`,
-            );
+          if (c.submissionDate !== date) continue;
+          out.push({
+            kind: "submission",
+            href: `#/content/${c.id}`,
+            title: c.title,
+            colour: "var(--ink)",
+            iconName: "deadlines",
+            meaning: "Copy due with the commissioning manager",
+          });
         }
       }
       if (show.publications) {
         for (const c of scope) {
-          if (c.publicationDate === date)
-            out.push(
-              `<a class="mark" style="--c:var(--ok)" href="#/content/${c.id}" title="Publishes: ${esc(
-                c.title,
-              )}"><em>Publishes</em>${esc(c.title)}</a>`,
-            );
+          if (c.publicationDate !== date) continue;
+          out.push({
+            kind: "publication",
+            href: `#/content/${c.id}`,
+            title: c.title,
+            colour: "var(--ok)",
+            iconName: "published",
+            meaning: "Publishes on the platform",
+          });
         }
       }
       return out;
     };
+
+    /** The multi-day things in view — the ones that become bars. */
+    const spans = [];
+    if (show.events) {
+      for (const e of scopedEvents) {
+        if (!isMultiDay(e.startDate, e.endDate)) continue;
+        const [label, , colour] = EVENTS[e.type];
+        spans.push({
+          from: e.startDate,
+          to: e.endDate,
+          href: `#/whats-on?type=${e.type}`,
+          title: e.personId ? `${nameOf(e.personId).split(" ")[0]} — ${e.title}` : e.title,
+          plain: e.title,
+          colour,
+          iconName: e.type,
+          meaning: label,
+        });
+      }
+    }
+    if (show.mine) {
+      for (const entry of myEntries) {
+        if (!isMultiDay(entry.date, entry.endDate)) continue;
+        spans.push({
+          from: entry.date,
+          to: entry.endDate,
+          entryId: entry.id,
+          title: entry.title,
+          plain: entry.title,
+          colour: "var(--mine)",
+          iconName: "note",
+          meaning: "Your own reminder",
+        });
+      }
+    }
+
+    const markChip = (m) => {
+      const inner =
+        `${icon(m.iconName, 12)}${m.kicker ? `<em>${esc(m.kicker)}</em>` : ""}` +
+        `<span class="mark-title">${esc(m.title)}</span>`;
+      const tip = `${esc(m.title)} — ${esc(m.meaning)}`;
+      return m.kind === "entry"
+        ? `<button class="mark mark-button" style="--c:${m.colour}" data-entry-delete="${m.id}"
+             title="${tip} (yours — click to remove)">${inner}</button>`
+        : `<a class="mark" style="--c:${m.colour}" href="${m.href}" title="${tip}">${inner}</a>`;
+    };
+
+    /** One bar, drawn across the columns it covers. */
+    const spanBar = (bar) => {
+      const inner =
+        `${bar.continuesBefore ? '<span class="span-carry">\u2039</span>' : ""}` +
+        `${icon(bar.iconName, 13)}<span class="span-title">${esc(bar.title)}</span>` +
+        `${bar.continuesAfter ? '<span class="span-carry">\u203a</span>' : ""}`;
+      const style =
+        `grid-column:${bar.startCol + 1}/${bar.endCol + 2};grid-row:${bar.lane + 1};--c:${bar.colour}`;
+      const dates = `${medium(bar.from)} to ${medium(bar.to)}`;
+      return bar.entryId
+        ? `<button class="cal-span cal-span-button" style="${style}" data-entry-delete="${bar.entryId}"
+             title="${esc(bar.plain)}, ${dates} (yours — click to remove)">${inner}</button>`
+        : `<a class="cal-span" style="${style}" href="${bar.href}"
+             title="${esc(bar.plain)}, ${dates}">${inner}</a>`;
+    };
+
+    /** One day in full — what the day number and "+n more" both open. */
+    function dayPanel(date) {
+      const marks = cellMarks(date, true);
+      return `<div class="day-panel">
+        <div class="day-panel-head">
+          <div>
+            <div class="eyebrow">${date === TODAY ? "Today" : "On this day"}</div>
+            <h2>${long(date)}</h2>
+          </div>
+          <button class="toggle" data-day-close="1">Close</button>
+        </div>
+        ${
+          marks.length === 0
+            ? `<p class="signup-note">Nothing in the diary, and nothing due.</p>`
+            : `<div class="day-list">${marks
+                .map((m) => {
+                  const inner =
+                    `<span class="day-item-icon">${icon(m.iconName, 16)}</span>` +
+                    `<span><span class="day-item-title">${esc(m.title)}</span>` +
+                    `<span class="day-item-meta">${esc(m.meaning)}</span></span>`;
+                  return m.kind === "entry"
+                    ? `<button class="day-item day-item-button" style="--c:${m.colour}"
+                         data-entry-delete="${m.id}" title="Yours — click to remove">${inner}</button>`
+                    : `<a class="day-item" style="--c:${m.colour}" href="${m.href}">${inner}</a>`;
+                })
+                .join("")}</div>`
+        }
+      </div>`;
+    }
+
+    /**
+     * The month as a list, for a phone. A seven-column grid at 390px gives
+     * each day about fifty pixels, which is one letter of a title — so on a
+     * narrow screen the month becomes an agenda instead. A multi-day thing
+     * still appears once, on the day it starts.
+     */
+    function agenda() {
+      const first = key + "-01";
+      const last = new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10);
+      const byDay = new Map();
+      const add = (date, m2, through) => {
+        if (date < first || date > last) return;
+        if (!byDay.has(date)) byDay.set(date, []);
+        byDay.get(date).push({ ...m2, through });
+      };
+
+      // Single-day things on their day; spans on the day they start, or on the
+      // first of the month when they began before it.
+      for (const date of [...byDay.keys()]) byDay.delete(date);
+      let cursor = first;
+      while (cursor <= last) {
+        for (const m2 of cellMarks(cursor)) add(cursor, m2);
+        cursor = new Date(Date.parse(cursor + "T00:00:00Z") + 864e5).toISOString().slice(0, 10);
+      }
+      for (const bar of spans) {
+        if (bar.to < first || bar.from > last) continue;
+        add(bar.from < first ? first : bar.from, {
+          kind: bar.entryId ? "entry" : "event",
+          id: bar.entryId,
+          href: bar.href,
+          title: bar.title,
+          colour: bar.colour,
+          iconName: bar.iconName,
+          meaning: bar.meaning,
+        }, bar.to);
+      }
+
+      const days = [...byDay.keys()].sort();
+      if (days.length === 0) {
+        return `<div class="none">${icon("calendar", 20)}<p>Nothing in this month, with those
+          filters.</p></div>`;
+      }
+      return `<div class="agenda">${days
+        .map(
+          (date) => `<section class="agenda-day">
+            <h2 class="agenda-date${date === TODAY ? " today" : ""}">
+              <b>${Number(date.slice(8))}</b>
+              <span>${fmt(date, { weekday: "short" })}</span>
+              ${date === TODAY ? "<em>Today</em>" : ""}
+            </h2>
+            <div class="agenda-items">${byDay
+              .get(date)
+              .map((m2) => {
+                const inner =
+                  `<span class="day-item-icon">${icon(m2.iconName, 16)}</span>` +
+                  `<span><span class="day-item-title">${esc(m2.title)}</span>` +
+                  `<span class="day-item-meta">${esc(m2.meaning)}${
+                    m2.through ? ` · until ${medium(m2.through)}` : ""
+                  }</span></span>`;
+                return m2.kind === "entry" && m2.id
+                  ? `<button class="day-item day-item-button" style="--c:${m2.colour}"
+                       data-entry-delete="${m2.id}" title="Yours — tap to remove">${inner}</button>`
+                  : `<a class="day-item" style="--c:${m2.colour}" href="${m2.href}">${inner}</a>`;
+              })
+              .join("")}</div>
+          </section>`,
+        )
+        .join("")}</div>`;
+    }
 
     return `
       <div class="head">
@@ -2960,14 +4103,16 @@
           : ""
       }
 
+      ${narrow ? agenda() : `${openDay ? dayPanel(openDay) : ""}
       <div class="cal">
         <div class="cal-head">${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
           .map((d) => `<div>${d}</div>`)
           .join("")}</div>
         ${weeks
-          .map(
-            (week) =>
-              `<div class="cal-row">${week
+          .map((week) => {
+            const packed = packWeek(week, spans);
+            return `<div class="cal-row" style="--lanes:${packed.lanes}">
+              <div class="cal-cells">${week
                 .map((date) => {
                   const marks = cellMarks(date);
                   const wd = day(date).getUTCDay();
@@ -2979,16 +4124,25 @@
                   ]
                     .filter(Boolean)
                     .join(" ");
-                  return `<div class="${cls}"><b>${Number(date.slice(8))}</b>${marks
-                    .slice(0, 3)
-                    .join("")}${
-                    marks.length > 3 ? `<span class="more">+${marks.length - 3} more</span>` : ""
-                  }</div>`;
+                  const hidden = marks.length - 3;
+                  return `<div class="${cls}">
+                    <button class="daynum" data-day-open="${date}"
+                      title="Everything on ${long(date)}">${Number(date.slice(8))}</button>
+                    ${packed.lanes ? '<div class="lane-space"></div>' : ""}
+                    ${marks.slice(0, 3).map(markChip).join("")}
+                    ${
+                      hidden > 0
+                        ? `<button class="more" data-day-open="${date}">+${hidden} more</button>`
+                        : ""
+                    }
+                  </div>`;
                 })
-                .join("")}</div>`,
-          )
+                .join("")}</div>
+              <div class="cal-spans">${packed.bars.map(spanBar).join("")}</div>
+            </div>`;
+          })
           .join("")}
-      </div>
+      </div>`}
 
       <div class="key">
         <span style="--c:var(--ink)"><i></i>Submission due</span>
@@ -4118,6 +5272,417 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       }`;
   }
 
+  /* ---- trends ------------------------------------------------------------ */
+
+  const TRENDS = DATA.trends ?? [];
+  const TREND_TYPES_LIST = ["Design & Aesthetic", "Lifestyle", "Product / Item", "Systemic"];
+  const INDUSTRIES = [
+    "Beauty",
+    "Consumer Tech",
+    "Fashion",
+    "Food & Drink",
+    "Interiors",
+    "Sports & Outdoor",
+    "Overall",
+  ];
+
+  /**
+   * The strategic call, ordered by how much commitment it asks for. The sheet
+   * calls this column MORE_LABELS, and it is often not set yet — which the
+   * page says rather than guessing.
+   */
+  const CALLS = [
+    ["Protect", "Defend the position you already have"],
+    ["Test", "Worth a trial, not yet a commitment"],
+    ["Expand", "Working — widen it"],
+    ["Invest", "Back it properly"],
+  ];
+
+  const trendById = (id) => TRENDS.find((t) => t.id === id);
+
+  function callPill(call) {
+    if (!call) {
+      return `<span class="call-pill call-none" title="No strategic call on the profile yet"><i></i>No call yet</span>`;
+    }
+    const blurb = (CALLS.find(([c]) => c === call) ?? [])[1] ?? "";
+    return `<span class="call-pill call-${call.toLowerCase()}" title="${esc(
+      blurb,
+    )}"><i></i>${call}</span>`;
+  }
+
+  /**
+   * A profile's cover image.
+   *
+   * The image is linked from the sheet and sits on the platform's media host,
+   * so in this offline demo it will not load — which is exactly what the
+   * stand-in is for. It takes a hue from the trend's own id, so a profile
+   * stays recognisable, and says which case it is.
+   */
+  function coverImage(t, ratio = "16 / 10") {
+    const style = `aspect-ratio:${ratio};--h:${hue(t.id)}`;
+    const fallback =
+      `<span class="cover-fallback">${icon("image", 20)}<span>${
+        t.coverImageUrl ? "Cover image did not load" : "No image linked"
+      }</span></span>`;
+    if (t.coverImageUrl) {
+      return `<figure class="cover" style="${style}">
+        ${fallback}
+        <img src="${esc(t.coverImageUrl)}" alt="${esc(t.title)}" onerror="this.remove()" />
+        ${t.coverFromHub ? `<figcaption>Linked in the Hub</figcaption>` : ""}
+      </figure>`;
+    }
+    return `<div class="cover" style="${style}">${fallback}</div>`;
+  }
+
+  function pageTrends(params) {
+    const v = viewer();
+    const owner = params.get("owner") ?? (v.isManager ? "all" : "mine");
+    const type = params.get("type") ?? "";
+    const call = params.get("call") ?? "";
+    const industry = params.get("industry") ?? "";
+    const needsScore = params.get("needsScore") === "1";
+
+    let rows = TRENDS.map(trendView);
+    if (owner === "mine") {
+      rows = rows.filter((t) => t.ownerId === v.person.id || t.authorIds.includes(v.person.id));
+    } else if (owner !== "all") {
+      rows = rows.filter((t) => t.ownerId === owner || t.authorIds.includes(owner));
+    }
+    if (type) rows = rows.filter((t) => t.types.includes(type));
+    if (call) rows = rows.filter((t) => t.call === call);
+    if (industry) rows = rows.filter((t) => t.industries.includes(industry));
+    if (needsScore) rows = rows.filter((t) => t.missingScore.length > 0);
+    rows.sort((a, b) => a.title.localeCompare(b.title));
+
+    const mine = rows.filter(
+      (t) => t.ownerId === v.person.id || t.authorIds.includes(v.person.id),
+    ).length;
+    const awaiting = rows.filter((t) => t.missingScore.length > 0).length;
+
+    return `
+      <div class="head">
+        <div>
+          <div class="eyebrow">${
+            owner === "mine" ? "Profiles you own or are credited on" : "The trend database"
+          }</div>
+          <h1>Trends</h1>
+          <p class="lede">Published trend profiles from TFDB. Which are yours, what the call is
+            on each, which industries are still waiting for a score, and the way straight
+            through to the profile in Content Editor or on the live site.</p>
+        </div>
+        <div class="figures inline">
+          <div class="figure"><b>${rows.length}</b><span>${
+            owner === "mine" ? "Yours" : "Profiles"
+          }</span></div>
+          ${owner !== "mine" ? `<div class="figure"><b>${mine}</b><span>Yours</span></div>` : ""}
+          <div class="figure${awaiting ? " hot" : ""}"><b>${awaiting}</b><span>Awaiting a score</span></div>
+        </div>
+      </div>
+
+      <div class="filters">
+        <label class="field"><span>Owner</span>
+          <select data-filter="owner">
+            <option value="mine"${owner === "mine" ? " selected" : ""}>Mine</option>
+            <option value="all"${owner === "all" ? " selected" : ""}>Everyone</option>
+            ${
+              v.isManager
+                ? people
+                    .filter((p) => p.role === "forecaster")
+                    .map(
+                      (p) =>
+                        `<option value="${p.id}"${p.id === owner ? " selected" : ""}>${esc(
+                          p.name,
+                        )}</option>`,
+                    )
+                    .join("")
+                : ""
+            }
+          </select></label>
+        <label class="field"><span>Trend type</span>
+          <select data-filter="type"><option value="">All types</option>${TREND_TYPES_LIST.map(
+            (t) => `<option value="${esc(t)}"${t === type ? " selected" : ""}>${esc(t)}</option>`,
+          ).join("")}</select></label>
+        <label class="field"><span>Industry</span>
+          <select data-filter="industry"><option value="">All industries</option>${INDUSTRIES.map(
+            (i) =>
+              `<option value="${esc(i)}"${i === industry ? " selected" : ""}>${esc(i)}</option>`,
+          ).join("")}</select></label>
+        <div class="field"><span>Call</span>
+          <div class="toggles">
+            <button class="toggle${call ? "" : " on"}" data-call="">Any</button>
+            ${CALLS.map(
+              ([c, blurb]) =>
+                `<button class="toggle${c === call ? " on" : ""}" data-call="${c}"
+                   title="${esc(blurb)}">${c}</button>`,
+            ).join("")}
+          </div>
+        </div>
+        <div class="field"><span>Scores</span>
+          <div class="toggles">
+            <button class="toggle${needsScore ? " on" : ""}" data-needs-score="${
+              needsScore ? "" : "1"
+            }" title="Profiles with an industry that has not been scored">${icon(
+              "at-risk",
+              14,
+            )}Needs a score</button>
+          </div>
+        </div>
+      </div>
+
+      ${
+        rows.length === 0
+          ? `<div class="none">${icon("trends", 20)}<p>${
+              owner === "mine"
+                ? "No trend profiles are owned by you, or credit you as an author."
+                : "No profiles match those filters."
+            }</p></div>`
+          : `<div class="trend-grid">${rows
+              .map(
+                (t) => `<a class="trend-card" href="#/trends/${t.id}">
+                  ${coverImage(t)}
+                  <div class="trend-card-body">
+                    <div class="trend-card-top">${callPill(t.call)}
+                      <span class="trend-years">${t.activeFrom.slice(0, 4)}–${t.activeTo.slice(
+                        0,
+                        4,
+                      )}</span></div>
+                    <h2 class="trend-name">${esc(t.title)}</h2>
+                    <p class="trend-summary">${esc(t.description)}</p>
+                    <div class="trend-types">${t.types
+                      .map((x) => `<span class="tag">${esc(x)}</span>`)
+                      .join("")}</div>
+                    <div class="trend-meta">
+                      <span title="Owner">${icon("forecasters", 13)}${esc(
+                        nameOf(t.ownerId),
+                      )}</span>
+                      <span title="Proof points logged">${icon("tier", 13)}${t.proofPoints}</span>
+                      <span title="Strategies">${icon("deadlines", 13)}${t.strategies}</span>
+                      ${
+                        t.missingScore.length
+                          ? `<span class="needs-score" title="No score yet for ${esc(
+                              t.missingScore.join(", "),
+                            )}">${icon("at-risk", 13)}${t.missingScore.length} to score</span>`
+                          : ""
+                      }
+                      ${
+                        t.links.length
+                          ? `<span title="Supporting material added in the Hub">${icon(
+                              "link",
+                              13,
+                            )}${t.links.length}</span>`
+                          : ""
+                      }
+                      ${t.note ? `<span title="The owner has left a note">${icon("note", 13)}</span>` : ""}
+                    </div>
+                  </div>
+                </a>`,
+              )
+              .join("")}</div>`
+      }`;
+  }
+
+  /** Draft state for the trend note form, so typing survives a re-render. */
+  let trendForm = null;
+
+  function pageTrend(id) {
+    const raw = trendById(id);
+    if (!raw) return `<div class="none">No trend profile with that reference.</div>`;
+    const t = trendView(raw);
+    const v = viewer();
+    const canWrite = canWriteTrend(v, t);
+    const others = t.authorIds.filter((a) => a !== t.ownerId);
+    const callBlurb = (CALLS.find(([c]) => c === t.call) ?? [])[1];
+
+    return `
+      <div class="crumb"><a href="#/trends">Trends</a><span>/</span>
+        <span>${esc(t.industries[0] ?? "TFDB")}</span><span>/</span><span>${esc(t.id)}</span></div>
+
+      <div class="head">
+        <div>
+          <div class="eyebrow">${t.types.map(esc).join(" · ")} · called for ${t.activeFrom.slice(
+            0,
+            4,
+          )}–${t.activeTo.slice(0, 4)}</div>
+          <h1>${esc(t.title)}</h1>
+          <p class="lede">${esc(t.description)}</p>
+        </div>
+        <div>${callPill(t.call)}</div>
+      </div>
+
+      <div class="split">
+        <div class="prose">
+          ${coverImage(t, "16 / 7")}
+
+          ${
+            t.missingScore.length
+              ? `<div class="flag warn" style="margin-top:16px"><strong>${
+                  t.missingScore.length === 1
+                    ? "One industry has no score yet."
+                    : `${t.missingScore.length} industries have no score yet.`
+                }</strong> ${esc(
+                  t.missingScore.join(", "),
+                )} — tagged on the profile but not scored.</div>`
+              : ""
+          }
+
+          ${
+            trendForm === t.id
+              ? `<section class="sec" style="margin-top:22px">
+                  <div class="sec-head"><h2>${icon("edit")} What the Hub holds</h2></div>
+                  <div class="note-composer">
+                    <p class="signup-note" style="margin:0 0 10px">The profile itself is authored
+                      in Content Editor and comes here from the sheet. These are the parts the
+                      Hub keeps for you.</p>
+                    <textarea class="note-input" id="t-note" rows="4"
+                      placeholder="What would move the call on? What is still to chase?"
+                      >${esc(t.note ?? "")}</textarea>
+                    <div class="details-row" style="margin-top:12px">
+                      <label class="field" style="flex:1"><span>Cover image address (overrides the sheet)</span>
+                        <input id="t-cover" placeholder="https://media.wgsn.com/…" style="width:100%"
+                          value="${esc(t.coverFromHub ? t.coverImageUrl : "")}" /></label>
+                    </div>
+                    <div class="details-row">
+                      <label class="field" style="flex:1"><span>Add supporting material</span>
+                        <input id="t-label" placeholder="What it is" /></label>
+                      <label class="field" style="flex:2"><span>Address</span>
+                        <input id="t-url" placeholder="https://…" style="width:100%" /></label>
+                    </div>
+                    <div class="composer-row">
+                      <button class="toggle solid" data-trend-save="${t.id}">Save</button>
+                      <button class="toggle" data-trend-cancel="1">Cancel</button>
+                    </div>
+                    <p class="signup-note">Only http and https addresses are kept — the image is
+                      rendered and the links are links, so anything else is a way in.</p>
+                  </div>
+                </section>`
+              : `
+          <section class="sec" style="margin-top:22px">
+            <div class="sec-head"><h2>${icon("ai")} Need to know</h2></div>
+            <p>${esc(t.needToKnow)}</p>
+          </section>
+
+          ${
+            t.note
+              ? `<section class="sec">
+                  <div class="sec-head"><h2>${icon("note")} Owner’s note</h2></div>
+                  <div class="panel"><div class="note-body">${esc(t.note)}</div></div>
+                </section>`
+              : ""
+          }
+
+          <section class="sec">
+            <div class="sec-head"><h2>${icon("published")} Industry scores</h2></div>
+            <div class="score-grid">${t.industries
+              .map((industry) => {
+                const done = t.scored.includes(industry);
+                return `<div class="score ${done ? "done" : "missing"}">${icon(
+                  done ? "published" : "at-risk",
+                  15,
+                )}<span>${esc(industry)}</span><em>${done ? "Scored" : "No score"}</em></div>`;
+              })
+              .join("")}</div>
+          </section>
+
+          <section class="sec">
+            <div class="sec-head"><h2>${icon("link")} Supporting material</h2></div>
+            ${
+              t.links.length
+                ? `<ul class="research-list">${t.links
+                    .map(
+                      (l) => `<li><a class="link-out" href="${esc(l.url)}" target="_blank"
+                        rel="noreferrer noopener">${esc(l.label)}</a></li>`,
+                    )
+                    .join("")}</ul>`
+                : `<div class="none">${
+                    canWrite
+                      ? "Nothing linked yet — research, boards and decks go here."
+                      : "Nothing linked yet."
+                  }</div>`
+            }
+          </section>
+
+          ${
+            Object.keys(t.labels ?? {}).length
+              ? `<section class="sec">
+                  <div class="sec-head"><h2>${icon("tier")} Labels</h2></div>
+                  <dl class="label-groups">${Object.entries(t.labels)
+                    .map(
+                      ([group, values]) => `<div><dt>${esc(group)}</dt><dd>${values
+                        .map((x) => `<span class="tag">${esc(x)}</span>`)
+                        .join("")}</dd></div>`,
+                    )
+                    .join("")}</dl>
+                </section>`
+              : ""
+          }`
+          }
+        </div>
+
+        <aside>
+          <div class="panel">
+            <div class="panel-label">This profile</div>
+            <dl>
+              <div class="fact"><dt>Owner</dt><dd><span class="who">${face(t.ownerId)}${esc(
+                nameOf(t.ownerId),
+              )}</span></dd></div>
+              ${
+                others.length
+                  ? `<div class="fact"><dt>Also credited</dt><dd>${others
+                      .map((a) => esc(nameOf(a)))
+                      .join(", ")}</dd></div>`
+                  : ""
+              }
+              ${callBlurb ? `<div class="fact"><dt>The call</dt><dd>${esc(callBlurb)}</dd></div>` : ""}
+              <div class="fact"><dt>Published</dt><dd>${long(t.publishedOn)}</dd></div>
+              <div class="fact"><dt>Called for</dt><dd>${t.activeFrom.slice(
+                0,
+                4,
+              )}–${t.activeTo.slice(0, 4)}</dd></div>
+              <div class="fact"><dt>Proof points</dt><dd>${t.proofPoints}</dd></div>
+              <div class="fact"><dt>Strategies</dt><dd>${t.strategies}</dd></div>
+              <div class="fact"><dt>Trend ID</dt><dd><span class="mono-tag">${esc(
+                t.id,
+              )}</span></dd></div>
+              ${
+                t.lastSynced
+                  ? `<div class="fact"><dt>Synced</dt><dd>${long(t.lastSynced)}</dd></div>`
+                  : ""
+              }
+            </dl>
+            <a class="wide-btn solid" href="${esc(t.editorUrl)}" target="_blank"
+              rel="noreferrer noopener">${icon("edit")}Open in Content Editor</a>
+            <a class="wide-btn" href="${esc(t.publishedUrl)}" target="_blank"
+              rel="noreferrer noopener">${icon("link")}View the published profile</a>
+            ${
+              canWrite && trendForm !== t.id
+                ? `<button class="wide-btn" data-trend-open="${t.id}">${icon("note")}${
+                    t.note || t.links.length ? "Edit your note and links" : "Add a note or links"
+                  }</button>`
+                : ""
+            }
+          </div>
+
+          ${
+            t.hashtags.length
+              ? `<div class="panel"><div class="panel-label">Hashtags</div>
+                 <div class="trend-types">${t.hashtags
+                   .map((h) => `<span class="tag mono-tag">${esc(h)}</span>`)
+                   .join("")}</div></div>`
+              : ""
+          }
+
+          ${
+            t.updatedBy
+              ? `<div class="panel"><div class="panel-label">Last change here</div>
+                 <p class="signup-note" style="margin:0">${esc(nameOf(t.updatedBy))} on ${long(
+                   (t.updatedAt ?? "").slice(0, 10),
+                 )}</p></div>`
+              : ""
+          }
+        </aside>
+      </div>`;
+  }
+
   function pageSubscribe() {
     const me = person(viewerId);
     const example = `forecasters.wgsn.com/api/calendar/${uid()}${uid()}.ics`;
@@ -4284,6 +5849,9 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         break;
       case "performance":
         html = pagePerformance(params);
+        break;
+      case "trends":
+        html = parts[1] ? pageTrend(parts[1]) : pageTrends(params);
         break;
       case "whats-on":
         html = pageWhatsOn(params);
@@ -4485,6 +6053,57 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       }),
     );
 
+    // The calendar's day panel ---------------------------------------------
+    view.querySelectorAll("[data-day-open]").forEach((el) =>
+      el.addEventListener("click", () => setParam("day", el.dataset.dayOpen)),
+    );
+    view.querySelectorAll("[data-day-close]").forEach((el) =>
+      el.addEventListener("click", () => setParam("day", "")),
+    );
+
+    // Trends ----------------------------------------------------------------
+    view.querySelectorAll("[data-call]").forEach((el) =>
+      el.addEventListener("click", () => setParam("call", el.dataset.call)),
+    );
+    view.querySelectorAll("[data-needs-score]").forEach((el) =>
+      el.addEventListener("click", () => setParam("needsScore", el.dataset.needsScore)),
+    );
+    view.querySelectorAll("[data-trend-open]").forEach((el) =>
+      el.addEventListener("click", () => {
+        trendForm = el.dataset.trendOpen;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-trend-cancel]").forEach((el) =>
+      el.addEventListener("click", () => {
+        trendForm = null;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-trend-save]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const trendId = el.dataset.trendSave;
+        const existing = extrasFor(trendId);
+        // The image is rendered and the links are links, so only http(s) is
+        // kept — the same rule the server applies, for the same reason.
+        const links = [...(existing?.links ?? [])];
+        const label = view.querySelector("#t-label").value.trim();
+        const url = view.querySelector("#t-url").value.trim();
+        if (url && /^https?:\/\//i.test(url)) links.push({ label: label || url, url });
+        const cover = view.querySelector("#t-cover").value.trim();
+        setTrendExtras(trendId, {
+          trendId,
+          coverImageUrl: /^https?:\/\//i.test(cover) ? cover : undefined,
+          links,
+          note: view.querySelector("#t-note").value.trim() || undefined,
+          updatedBy: viewerId,
+          updatedAt: new Date().toISOString(),
+        });
+        trendForm = null;
+        render();
+      }),
+    );
+
     // Performance -----------------------------------------------------------
     view.querySelectorAll("[data-metric]").forEach((el) =>
       el.addEventListener("click", () => setParam("metric", el.dataset.metric)),
@@ -4537,6 +6156,21 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     );
     if (!focusId) window.scrollTo({ top: 0 });
   }
+
+  // The bar and the sheet live outside the view, so they are wired once here
+  // rather than on every render.
+  document.addEventListener("click", (e) => {
+    const toggle = e.target.closest("[data-sheet]");
+    if (toggle) {
+      sheetOpen = toggle.dataset.sheet === "1";
+      renderNav();
+      return;
+    }
+    if (e.target.closest("[data-sheet-go]") || e.target.closest("#scrim")) {
+      sheetOpen = false;
+      renderNav();
+    }
+  });
 
   window.addEventListener("hashchange", render);
   render();

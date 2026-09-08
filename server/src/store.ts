@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import type { ForecastDetails, ResearchLink } from "./types.js";
+import type { ForecastDetails, ResearchLink, TrendExtras } from "./types.js";
 
 /**
  * Everything the Hub owns rather than reads.
@@ -119,6 +119,15 @@ CREATE TABLE IF NOT EXISTS forecast_details (
   editor_id TEXT,
   editor_url TEXT,
   research_links TEXT NOT NULL DEFAULT '[]',
+  updated_by TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS trend_extras (
+  trend_id TEXT PRIMARY KEY,
+  cover_image_url TEXT,
+  links TEXT NOT NULL DEFAULT '[]',
+  note TEXT,
   updated_by TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
@@ -495,6 +504,63 @@ export class HubStore {
     return this.detailsFor(input.contentId)!;
   }
 
+  // --- Trend profiles ---------------------------------------------------
+
+  /**
+   * What the Hub holds on top of the trends sheet. Only the fields the owner
+   * filled in are stored, so an empty override never blanks a sheet value.
+   */
+  trendExtrasFor(trendId: string): TrendExtras | undefined {
+    const row = this.db
+      .prepare(
+        `SELECT trend_id, cover_image_url, links, note, updated_by, updated_at
+         FROM trend_extras WHERE trend_id = ?`,
+      )
+      .get(trendId) as Record<string, unknown> | undefined;
+    return row ? toTrendExtras(row) : undefined;
+  }
+
+  allTrendExtras(): Record<string, TrendExtras> {
+    const rows = this.db
+      .prepare(
+        `SELECT trend_id, cover_image_url, links, note, updated_by, updated_at
+         FROM trend_extras`,
+      )
+      .all() as Record<string, unknown>[];
+    return Object.fromEntries(rows.map((row) => [String(row.trend_id), toTrendExtras(row)]));
+  }
+
+  setTrendExtras(input: {
+    trendId: string;
+    coverImageUrl?: string;
+    links: ResearchLink[];
+    note?: string;
+    updatedBy: string;
+  }): TrendExtras {
+    const stamp = now();
+    this.db
+      .prepare(
+        `INSERT INTO trend_extras
+           (trend_id, cover_image_url, links, note, updated_by, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT (trend_id) DO UPDATE SET
+           cover_image_url = excluded.cover_image_url,
+           links = excluded.links,
+           note = excluded.note,
+           updated_by = excluded.updated_by,
+           updated_at = excluded.updated_at`,
+      )
+      .run(
+        input.trendId,
+        input.coverImageUrl ?? null,
+        JSON.stringify(input.links),
+        input.note ?? null,
+        input.updatedBy,
+        stamp,
+      );
+    return this.trendExtrasFor(input.trendId)!;
+  }
+
   // --- Calendar feed tokens ---------------------------------------------
 
   /**
@@ -525,6 +591,24 @@ export class HubStore {
       .get(token) as { person_id: string } | undefined;
     return row?.person_id;
   }
+}
+
+function toTrendExtras(row: Record<string, unknown>): TrendExtras {
+  let links: ResearchLink[] = [];
+  try {
+    const parsed = JSON.parse(String(row.links ?? "[]"));
+    if (Array.isArray(parsed)) links = parsed;
+  } catch {
+    // A malformed row should not take the page down.
+  }
+  return {
+    trendId: String(row.trend_id),
+    coverImageUrl: row.cover_image_url ? String(row.cover_image_url) : undefined,
+    links,
+    note: row.note ? String(row.note) : undefined,
+    updatedBy: String(row.updated_by),
+    updatedAt: String(row.updated_at),
+  };
 }
 
 function toDetails(row: Record<string, unknown>): ForecastDetails {

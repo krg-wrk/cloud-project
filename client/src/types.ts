@@ -168,6 +168,54 @@ export interface ForecastDetails {
   updatedAt: string;
 }
 
+export type TrendCall = "Protect" | "Test" | "Expand" | "Invest";
+
+/** A published trend profile, as the TFDB sheet holds it. */
+export interface TrendProfile {
+  id: string;
+  profileId: string;
+  title: string;
+  slug: string;
+  ownerId: string;
+  authorIds: string[];
+  types: string[];
+  call?: TrendCall;
+  publishedOn: string;
+  activeFrom: string;
+  activeTo: string;
+  editorUrl: string;
+  publishedUrl: string;
+  coverImageUrl?: string;
+  description: string;
+  needToKnow: string;
+  opportunity: string;
+  strategies: number;
+  proofPoints: number;
+  industries: string[];
+  scored: string[];
+  missingScore: string[];
+  hashtags: string[];
+  labels: Record<string, string[]>;
+  lastSynced?: string;
+}
+
+/** A profile in the list, with what this viewer may do with it. */
+export interface TrendRow extends TrendProfile {
+  linkCount: number;
+  hasNote: boolean;
+  canWrite: boolean;
+}
+
+/** One profile in full, with what the Hub holds against it. */
+export interface TrendDetail extends TrendProfile {
+  coverFromHub: boolean;
+  links: ResearchLink[];
+  note?: string;
+  updatedBy?: string;
+  updatedAt?: string;
+  canWrite: boolean;
+}
+
 export interface MetricDefinition {
   id: string;
   label: string;

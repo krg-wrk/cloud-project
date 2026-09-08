@@ -1,7 +1,9 @@
-import { NavLink, Outlet } from "react-router-dom";
+import { useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { devViewer, setDevViewer, useApi } from "../lib/api";
 import { TODAY, monthKey } from "../lib/date";
 import { isOutstanding, isOverdue } from "../lib/domain";
+import { Icon } from "../lib/icons";
 import { ViewerProvider, useViewer } from "../lib/viewer";
 import type { ContentItem, Me, Person, SessionWithSignUps } from "../types";
 import { Avatar, ErrorNote, Loading } from "./bits";
@@ -53,16 +55,92 @@ function AccountSwitch({ people }: { people: Person[] }) {
   );
 }
 
-function Sidebar({ content }: { content: ContentItem[] }) {
-  const { me, person, people, isManager } = useViewer();
-  const scope = isManager ? content : content.filter((c) => c.forecasterId === person?.id);
-  const outstanding = scope.filter(isOutstanding).length;
-  const overdue = scope.filter((c) => isOverdue(c)).length;
+interface Section {
+  to: string;
+  label: string;
+  icon: string;
+  /** Short enough for a tab under an icon. */
+  short?: string;
+  badge?: string;
+  end?: boolean;
+  group: "work" | "team";
+  /** Shown as a tab on a phone; the rest go behind "More". */
+  primary?: boolean;
+}
 
+/**
+ * The sections, in one place. The sidebar renders them grouped; the bar at
+ * the bottom of a phone screen renders the primary four and puts the rest
+ * behind More, so every section is two taps away at most.
+ */
+function sections({
+  overdue,
+  outstanding,
+  mySessions,
+  forecasters,
+}: {
+  overdue: number;
+  outstanding: number;
+  mySessions: number;
+  forecasters: number;
+}): Section[] {
+  return [
+    {
+      to: "/",
+      label: "Today",
+      icon: "today",
+      end: true,
+      group: "work",
+      primary: true,
+      badge: overdue > 0 ? `${overdue} late` : undefined,
+    },
+    {
+      to: "/deadlines",
+      label: "Deadlines",
+      icon: "deadlines",
+      group: "work",
+      primary: true,
+      badge: String(outstanding),
+    },
+    { to: `/calendar/${monthKey(TODAY)}`, label: "Calendar", icon: "calendar", group: "work", primary: true },
+    { to: "/trends", label: "Trends", icon: "trends", group: "work", primary: true },
+    { to: "/performance", label: "Performance", icon: "performance", group: "work" },
+    {
+      to: "/workshops",
+      label: "Learning",
+      icon: "learning",
+      group: "team",
+      badge: mySessions > 0 ? String(mySessions) : undefined,
+    },
+    {
+      to: "/team",
+      label: "Forecasters",
+      icon: "forecasters",
+      group: "team",
+      badge: String(forecasters),
+    },
+    { to: "/whats-on", label: "What\u2019s on", icon: "whats-on", group: "team" },
+    { to: "/subscribe", label: "Add to your calendar", short: "Calendar feed", icon: "subscribe", group: "team" },
+  ];
+}
+
+function useSections(content: ContentItem[]): Section[] {
+  const { person, isManager } = useViewer();
+  const scope = isManager ? content : content.filter((c) => c.forecasterId === person?.id);
   const sessions = useApi<SessionWithSignUps[]>(
     person ? `/sessions?when=upcoming&person=${person.id}` : "/sessions?when=upcoming",
   );
-  const mySessions = person ? (sessions.data?.length ?? 0) : 0;
+  return sections({
+    overdue: scope.filter((c) => isOverdue(c)).length,
+    outstanding: scope.filter(isOutstanding).length,
+    mySessions: person ? (sessions.data?.length ?? 0) : 0,
+    forecasters: new Set(content.map((c) => c.forecasterId)).size,
+  });
+}
+
+function Sidebar({ content }: { content: ContentItem[] }) {
+  const { me, person, people } = useViewer();
+  const items = useSections(content);
 
   return (
     <aside className="sidebar">
@@ -74,38 +152,28 @@ function Sidebar({ content }: { content: ContentItem[] }) {
 
       <nav className="nav">
         <div className="nav-label">Your work</div>
-        <NavLink to="/" end className="nav-link">
-          Today
-          {overdue > 0 && <span className="count">{overdue} late</span>}
-        </NavLink>
-        <NavLink to="/deadlines" className="nav-link">
-          Deadlines
-          <span className="count">{outstanding}</span>
-        </NavLink>
-        <NavLink to={`/calendar/${monthKey(TODAY)}`} className="nav-link">
-          Calendar
-        </NavLink>
-        <NavLink to="/performance" className="nav-link">
-          Performance
-        </NavLink>
+        {items
+          .filter((s) => s.group === "work")
+          .map((s) => (
+            <NavLink key={s.to} to={s.to} end={s.end} className="nav-link">
+              <Icon name={s.icon} />
+              {s.label}
+              {s.badge && <span className="count">{s.badge}</span>}
+            </NavLink>
+          ))}
 
         <div className="nav-label" style={{ marginTop: 20 }}>
           The team
         </div>
-        <NavLink to="/workshops" className="nav-link">
-          Learning
-          {mySessions > 0 && <span className="count">{mySessions}</span>}
-        </NavLink>
-        <NavLink to="/team" className="nav-link">
-          Forecasters
-          <span className="count">{new Set(content.map((c) => c.forecasterId)).size}</span>
-        </NavLink>
-        <NavLink to="/whats-on" className="nav-link">
-          What&rsquo;s on
-        </NavLink>
-        <NavLink to="/subscribe" className="nav-link">
-          Add to your calendar
-        </NavLink>
+        {items
+          .filter((s) => s.group === "team")
+          .map((s) => (
+            <NavLink key={s.to} to={s.to} className="nav-link">
+              <Icon name={s.icon} />
+              {s.label}
+              {s.badge && <span className="count">{s.badge}</span>}
+            </NavLink>
+          ))}
       </nav>
 
       <div className="sidebar-foot">
@@ -125,6 +193,86 @@ function Sidebar({ content }: { content: ContentItem[] }) {
         </div>
       </div>
     </aside>
+  );
+}
+
+/**
+ * Navigation on a phone.
+ *
+ * A wrapped row of text links was unusable at this width and hid the section
+ * groups entirely. This is a fixed bar at the bottom of the screen — four
+ * sections as icon-and-label tabs, and More for the rest — so the whole app
+ * is reachable with a thumb.
+ */
+function MobileNav({ content }: { content: ContentItem[] }) {
+  const [sheet, setSheet] = useState(false);
+  const { me, person, people } = useViewer();
+  const items = useSections(content);
+  const location = useLocation();
+  const rest = items.filter((s) => !s.primary);
+  // "More" carries the dot when something behind it wants attention.
+  const restBadge = rest.some((s) => s.badge && s.badge !== "0");
+  const onRest = rest.some((s) => location.pathname.startsWith(s.to) && s.to !== "/");
+
+  return (
+    <>
+      {sheet && (
+        <>
+          <button className="sheet-scrim" onClick={() => setSheet(false)} aria-label="Close menu" />
+          <div className="nav-sheet" role="dialog" aria-label="More sections">
+            <div className="nav-sheet-head">
+              <span className="who">
+                {person && <Avatar id={person.id} name={person.name} />}
+                <span>
+                  {me.name}
+                  <br />
+                  {ROLE_LABELS[me.role]}
+                </span>
+              </span>
+              <button className="btn" onClick={() => setSheet(false)}>
+                Close
+              </button>
+            </div>
+            <div className="nav-sheet-links">
+              {rest.map((s) => (
+                <NavLink
+                  key={s.to}
+                  to={s.to}
+                  className="sheet-link"
+                  onClick={() => setSheet(false)}
+                >
+                  <Icon name={s.icon} size={18} />
+                  {s.label}
+                  {s.badge && <span className="count">{s.badge}</span>}
+                </NavLink>
+              ))}
+            </div>
+            <AccountSwitch people={people} />
+          </div>
+        </>
+      )}
+
+      <nav className="tabbar" aria-label="Sections">
+        {items
+          .filter((s) => s.primary)
+          .map((s) => (
+            <NavLink key={s.to} to={s.to} end={s.end} className="tab">
+              <Icon name={s.icon} size={20} />
+              <span>{s.short ?? s.label}</span>
+              {s.badge && s.badge !== "0" && <i className="tab-dot" />}
+            </NavLink>
+          ))}
+        <button
+          className={onRest ? "tab on" : "tab"}
+          onClick={() => setSheet((v) => !v)}
+          aria-expanded={sheet}
+        >
+          <Icon name="more" size={20} />
+          <span>More</span>
+          {restBadge && <i className="tab-dot" />}
+        </button>
+      </nav>
+    </>
   );
 }
 
@@ -207,6 +355,7 @@ export default function Layout() {
         <main className="main">
           <Outlet />
         </main>
+        <MobileNav content={content.data} />
       </div>
     </ViewerProvider>
   );

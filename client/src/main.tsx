@@ -10,6 +10,8 @@ import SessionDetail from "./routes/SessionDetail";
 import Subscribe from "./routes/Subscribe";
 import { TeamList, TeamMember } from "./routes/Team";
 import Today from "./routes/Today";
+import TrendDetail from "./routes/TrendDetail";
+import Trends from "./routes/Trends";
 import WhatsOn from "./routes/WhatsOn";
 import Workshops from "./routes/Workshops";
 import { TODAY, monthKey } from "./lib/date";
@@ -35,6 +37,8 @@ const router = createBrowserRouter([
       { path: "workshops/:id", element: <SessionDetail /> },
       { path: "whats-on", element: <WhatsOn /> },
       { path: "performance", element: <Kpis /> },
+      { path: "trends", element: <Trends /> },
+      { path: "trends/:id", element: <TrendDetail /> },
       { path: "subscribe", element: <Subscribe /> },
       { path: "*", element: <Navigate to="/" replace /> },
     ],

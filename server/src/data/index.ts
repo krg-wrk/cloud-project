@@ -32,6 +32,7 @@ export function createDataSource(): DataSource {
       accessSheetId: process.env.SMARTSHEET_ACCESS_SHEET_ID,
       metricsSheetId: process.env.SMARTSHEET_METRICS_SHEET_ID,
       observationsSheetId: process.env.SMARTSHEET_KPI_SHEET_ID,
+      trendsSheetId: process.env.SMARTSHEET_TRENDS_SHEET_ID,
     });
   }
 
@@ -91,6 +92,10 @@ export class CachedDataSource implements DataSource {
 
   listMetrics() {
     return this.through("metrics", () => this.inner.listMetrics());
+  }
+
+  listTrends() {
+    return this.through("trends", () => this.inner.listTrends());
   }
 
   listMetricObservations() {

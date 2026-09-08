@@ -31,6 +31,7 @@ credentials to set up first.
 | Forecast | `/content/ss-4013` | One forecast: dates, status, details, notes, peer review |
 | Team | `/team`, `/team/ao` | Per-forecaster pages |
 | Performance | `/performance` | KPIs per forecaster and across the team, over any time range |
+| Trends | `/trends`, `/trends/:id` | Published trend profiles from TFDB: which are yours, the call on each, which industries still need a score |
 | Learning | `/workshops`, `/workshops/ws-201` | The workshop and knowledge-sharing programme, with sign-ups |
 | What's on | `/whats-on` | Leave, public holidays, shows |
 
@@ -106,6 +107,7 @@ SMARTSHEET_PEOPLE_SHEET_ID=...    # the team
 SMARTSHEET_SESSIONS_SHEET_ID=...  # the workshop programme
 SMARTSHEET_SIGNUPS_SHEET_ID=...   # one row per person per session
 SMARTSHEET_ACCESS_SHEET_ID=...    # who may sign in, and their rights
+SMARTSHEET_TRENDS_SHEET_ID=...    # TFDB published trend profiles
 SMARTSHEET_METRICS_SHEET_ID=...   # the KPIs being tracked
 SMARTSHEET_KPI_SHEET_ID=...       # readings: Metric ID, Person, Date, Value
 ```
@@ -168,6 +170,63 @@ commissioning manager for that vertical can set them:
 
 Only `http(s)` links are stored, checked server-side: these render as anchors,
 so `javascript:` and `data:` are a way in and are refused with a plain message.
+
+## Trends
+
+`/trends` is the trend database as a forecaster needs it: the profiles they own
+or are credited on, what the strategic call is on each, and which industries
+are still waiting for a score. `/trends/:id` is one profile.
+
+The columns are the **TFDB - Published Trend Profiles** sheet's own, which is
+Snowflake-linked, so the Hub reads it and never writes to it:
+
+- **Identity** — `TREND_ID` (the short number the team quotes), `ID` (the
+  Content Editor document id), `TITLE`, `TREND_URL_SLUG`.
+- **Two links, both direct.** `LINK` opens the profile in Content Editor;
+  `PUBLISHED LINK` opens it on the live site. Both are on the page as buttons,
+  which is the "straight through to the editor" the team asked for.
+- **`MAIN_COVER_IMAGE_URL`** — the lead image, on the platform's media host.
+  It is embedded on the card and at the top of the profile.
+- **`TREND_TYPES`** — Design & Aesthetic, Lifestyle, Product / Item, Systemic.
+  A profile can carry several, so these are read against the known vocabulary
+  rather than split on whitespace: "Design & Aesthetic Systemic" is two types,
+  not four words.
+- **`MORE_LABELS`** — the strategic call: Protect, Test, Expand, Invest. Often
+  not set yet, and the page says "No call yet" rather than guessing one.
+- **`START_DATE` / `END_DATE`** — the window the trend is called for.
+- **`NUMBER_OF_STRATEGIES`, `NUMBER_OF_PROOF_POINTS`** — the counts the KPI
+  sheet also tracks.
+- **`TAGGED_PRODUCTS`, `Industries Scored`, `Industries Missing Score`** — what
+  the profile is tagged to and where its scores stand. An unscored industry is
+  the most actionable thing on the page, so it is flagged on the card, counted
+  in the header, filterable on its own, and called out on the profile.
+- **The label groups** — generations, markets, regions, age ranges, personas,
+  emotions, CMF, design aesthetics, packaging, sustainability, ingredients.
+
+### What the Hub adds
+
+The profile is authored in Content Editor and scored elsewhere. What the Hub
+owns is small and clearly separated (`trend_extras`): the owner's working
+note, supporting material they gather, and a cover image for when the sheet
+has none. The Hub's cover image wins over the sheet's, because the owner set
+it more recently than the sync.
+
+Writing is limited to the profile's owner, anyone credited as an author, a
+commissioning manager whose verticals overlap the profile's industries, and an
+admin — checked server-side on the write, not just hidden in the UI.
+
+### Cover images
+
+A cover lives on the platform's media host, so it needs the network. The
+stand-in is therefore the floor rather than a replacement: every cover sits on
+a gradient keyed to the trend's own id, and a linked image simply covers it.
+A missing image and one that failed to load say which they are. In the
+published demo none of them load, which is exactly the case the stand-in is
+for.
+
+An image address is rendered in an `<img>` and a link in an anchor, so both go
+through the same http(s)-only check as a research link — a `javascript:` or
+`data:` address is refused with a message rather than dropped silently.
 
 ## KPIs
 
@@ -262,11 +321,50 @@ because it is counted against the editor's dates rather than the Hub's.
 ### What is not in this repo
 
 The KPI sheet holds real staff names, addresses, grades, individual ratings and
-client names. **None of that is copied into this repository or the demo.** The
-seed data uses invented forecasters, and the Hub reads the real team, grades
-and departments from the sheet at run time. What has been taken from the sheet
-is structure only: the metric definitions, the tier taxonomy and the role
-benchmark figures.
+client names. The TFDB sheet holds real profile authors, owners and comments.
+**None of that is copied into this repository or the demo.** The seed data uses
+invented forecasters and invented trend profiles, and the Hub reads the real
+team, grades, departments and profiles from the sheets at run time. What has
+been taken from the sheets is structure only: the column names, the metric
+definitions, the tier taxonomy, the role benchmark figures, the trend types,
+the Invest/Test/Expand/Protect calls, the industry list and the label
+vocabularies.
+
+## The calendar
+
+Anything running over more than a day — leave, a holiday closure, a show, a
+multi-day reminder — is drawn **once**, as a bar across the days it covers,
+rather than repeated as an identical chip in each of them. Bars are packed
+into as few lanes as will hold them, and one that runs past the edge of the
+week is clipped with a chevron rather than simply stopping as though the event
+had. The lane maths is in `client/src/lib/spans.ts`.
+
+A day cell has room for three single-day marks. The day number and the
+"+n more" both open a panel listing everything on that day in full, so nothing
+on the calendar is unreachable — and every content item there goes to the same
+`/content/:id` page a deadline row does, so the piece looks the same whichever
+way you arrive at it.
+
+### On a phone
+
+A seven-column month grid at 390px gives each day about fifty pixels, which is
+one letter of a title. So below 860px the month becomes an **agenda**: days in
+order, each item with its icon and what it is, and multi-day things shown once
+on the day they start with the date they run to.
+
+Navigation switches too. The sidebar is replaced by a fixed bar at the bottom
+of the screen — Today, Deadlines, Calendar and Trends as tabs, with the rest
+behind **More** — so every section is at most two taps away and within reach of
+a thumb. Badges become dots.
+
+## Icons
+
+One set, in `client/src/lib/icons.tsx`, mirrored by hand into the demo. A
+24×24 grid, stroked in `currentColor` with no fills, so an icon takes the
+colour and weight of the text beside it and needs no per-theme variant. Every
+icon stands for one thing — a section, a status, a kind of diary entry — and
+is presentational: the label beside it carries the meaning, and `label` is
+passed only where an icon stands alone.
 
 ## Notes, reminders and peer reviews
 
