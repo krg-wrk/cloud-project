@@ -4,6 +4,7 @@ import type {
   CalendarEvent,
   MetricDefinition,
   MetricObservation,
+  Ownership,
   ContentItem,
   ContentType,
   DataSource,
@@ -37,6 +38,10 @@ export const COLUMNS = {
     submittedOn: "Actual Submission",
     status: "Status",
     notes: "Notes",
+    /** Sole / Co-owned / Byline / Freelance. */
+    ownership: "Ownership",
+    /** Everyone credited, so co-owned work counts for both people. */
+    contributors: "Contributors",
   },
   events: {
     type: "Event Type",
@@ -51,9 +56,13 @@ export const COLUMNS = {
   people: {
     name: "Name",
     email: "Email",
+    /** Director / Head Of / Senior / Strategist — what the benchmarks key on. */
     role: "Role",
+    team: "Team",
+    department: "Department",
     vertical: "Vertical",
     region: "Region",
+    managerEmail: "Manager Email",
   },
   sessions: {
     id: "Session ID",
@@ -195,7 +204,9 @@ export class SmartsheetSource implements DataSource {
         role: row[c.role]?.toLowerCase().includes("commission")
           ? ("commissioning-manager" as const)
           : ("forecaster" as const),
-        vertical: (row[c.vertical] || undefined) as Vertical | undefined,
+        forecasterRole: row[c.role] || undefined,
+        vertical: (row[c.vertical] || row[c.team] || undefined) as Vertical | undefined,
+        department: row[c.department] || undefined,
         region: row[c.region] || "UK",
       }));
   }
@@ -218,6 +229,11 @@ export class SmartsheetSource implements DataSource {
         status: normaliseStatus(row[c.status]),
         notes: row[c.notes] || undefined,
         submittedOn: isoDate(row[c.submittedOn]) || undefined,
+        ownership: normaliseOwnership(row[c.ownership]),
+        contributorIds: (row[c.contributors] || "")
+          .split(/\s*,\s*/)
+          .filter(Boolean)
+          .map(personId),
       }));
   }
 
@@ -346,6 +362,14 @@ export class SmartsheetSource implements DataSource {
       }))
       .filter((o) => o.metricId && o.date && Number.isFinite(o.value));
   }
+}
+
+function normaliseOwnership(value: string | undefined): Ownership {
+  const v = (value ?? "").toLowerCase();
+  if (v.includes("co-own") || v.includes("co own") || v.includes("joint")) return "co-owned";
+  if (v.includes("byline") || v.includes("contribut")) return "byline";
+  if (v.includes("freelance")) return "freelance";
+  return "sole";
 }
 
 function normaliseUnit(value: string | undefined): "count" | "percent" | "days" {

@@ -7,22 +7,31 @@ import type {
   ContentType,
   EventType,
   KnowledgeSession,
+  Ownership,
   Person,
   Status,
   Vertical,
 } from "../types.js";
 
+/**
+ * Invented people, deliberately. The real team list, grades and departments
+ * live in the KPI sheet; none of that is copied in here, and the Hub reads it
+ * from the sheet in a deployed environment.
+ *
+ * `forecasterRole` is the grade the KPI benchmarks key on (Director, Head Of,
+ * Senior, Strategist) and is separate from `role`, which is about rights.
+ */
 export const people: Person[] = [
-  { id: "gk", name: "Graham Krag", email: "graham.krag@wgsn.com", role: "commissioning-manager", region: "UK" },
-  { id: "er", name: "Elena Roux", email: "elena.roux@wgsn.com", role: "commissioning-manager", region: "FR" },
-  { id: "ao", name: "Amara Okafor", email: "amara.okafor@wgsn.com", role: "forecaster", vertical: "Womenswear", region: "UK" },
-  { id: "tb", name: "Tomas Belka", email: "tomas.belka@wgsn.com", role: "forecaster", vertical: "Menswear", region: "CZ" },
-  { id: "rc", name: "Rina Castellano", email: "rina.castellano@wgsn.com", role: "forecaster", vertical: "Beauty", region: "IT" },
-  { id: "pr", name: "Priya Raman", email: "priya.raman@wgsn.com", role: "forecaster", vertical: "Interiors & Lifestyle", region: "IN" },
-  { id: "jw", name: "Joss Whitaker", email: "joss.whitaker@wgsn.com", role: "forecaster", vertical: "Footwear & Accessories", region: "UK" },
-  { id: "mc", name: "Mei Lin Chow", email: "meilin.chow@wgsn.com", role: "forecaster", vertical: "Food & Drink", region: "SG" },
-  { id: "da", name: "Dele Adeyemi", email: "dele.adeyemi@wgsn.com", role: "forecaster", vertical: "Consumer Tech", region: "US" },
-  { id: "sm", name: "Sofia Marchetti", email: "sofia.marchetti@wgsn.com", role: "forecaster", vertical: "Kidswear", region: "IT" },
+  { id: "gk", name: "Graham Krag", email: "graham.krag@wgsn.com", role: "commissioning-manager", forecasterRole: "Director", department: "Content", region: "UK" },
+  { id: "er", name: "Elena Roux", email: "elena.roux@wgsn.com", role: "commissioning-manager", forecasterRole: "Director", department: "Content", region: "FR" },
+  { id: "ao", name: "Amara Okafor", email: "amara.okafor@wgsn.com", role: "forecaster", forecasterRole: "Head Of", vertical: "Womenswear", department: "Fashion Design", region: "UK" },
+  { id: "tb", name: "Tomas Belka", email: "tomas.belka@wgsn.com", role: "forecaster", forecasterRole: "Senior", vertical: "Menswear", department: "Fashion Design", region: "CZ" },
+  { id: "rc", name: "Rina Castellano", email: "rina.castellano@wgsn.com", role: "forecaster", forecasterRole: "Head Of", vertical: "Beauty", department: "Beauty", region: "IT" },
+  { id: "pr", name: "Priya Raman", email: "priya.raman@wgsn.com", role: "forecaster", forecasterRole: "Senior", vertical: "Interiors & Lifestyle", department: "Interiors", region: "IN" },
+  { id: "jw", name: "Joss Whitaker", email: "joss.whitaker@wgsn.com", role: "forecaster", forecasterRole: "Strategist", vertical: "Footwear & Accessories", department: "Fashion Design", region: "UK" },
+  { id: "mc", name: "Mei Lin Chow", email: "meilin.chow@wgsn.com", role: "forecaster", forecasterRole: "Strategist", vertical: "Food & Drink", department: "Food & Drink", region: "SG" },
+  { id: "da", name: "Dele Adeyemi", email: "dele.adeyemi@wgsn.com", role: "forecaster", forecasterRole: "Senior", vertical: "Consumer Tech", department: "Consumer Tech", region: "US" },
+  { id: "sm", name: "Sofia Marchetti", email: "sofia.marchetti@wgsn.com", role: "forecaster", forecasterRole: "Strategist", vertical: "Kidswear", department: "Fashion Design", region: "IT" },
 ];
 
 /**
@@ -50,46 +59,85 @@ type ContentRow = [
 ];
 
 const contentRows: ContentRow[] = [
-  ["ss-4008", "Big Idea 2028: The Repair Economy", "Big Idea", "Womenswear", "A/W 27/28", "ao", "2026-08-14", "2026-09-01", "published"],
-  ["ss-4009", "Colour Forecast S/S 28: Saturated Calm", "Colour Forecast", "Womenswear", "S/S 28", "ao", "2026-08-21", "2026-09-08", "in-review", "Colour chips with the studio, swatch sign-off outstanding."],
-  ["ss-4010", "Catwalk Report: Milan Menswear", "Catwalk Report", "Menswear", "S/S 28", "tb", "2026-08-28", "2026-09-10", "submitted"],
-  ["ss-4011", "Skinimalism, Phase Three", "Trend Curve", "Beauty", "S/S 28", "rc", "2026-09-04", "2026-09-15", "in-review"],
-  ["ss-4012", "Season Forecast S/S 28: Womenswear Key Items", "Season Forecast", "Womenswear", "S/S 28", "ao", "2026-09-11", "2026-09-25", "in-progress"],
-  ["ss-4013", "Quiet Kitchens: Interiors Materials Update", "Market Report", "Interiors & Lifestyle", "S/S 28", "pr", "2026-09-09", "2026-09-22", "at-risk", "Photography still to be commissioned — flagged with the picture desk."],
-  ["ss-4014", "Sneaker Silhouettes: The Low Profile Shift", "Trend Curve", "Footwear & Accessories", "S/S 28", "jw", "2026-09-15", "2026-09-29", "in-progress"],
-  ["ss-4015", "Fermentation Goes Mainstream", "Consumer Attitudes", "Food & Drink", "S/S 28", "mc", "2026-09-16", "2026-09-30", "in-progress"],
-  ["ss-4016", "Wearables After the Watch", "Market Report", "Consumer Tech", "S/S 28", "da", "2026-09-18", "2026-10-02", "not-started"],
-  ["ss-4017", "Kidswear Colour Forecast S/S 28", "Colour Forecast", "Kidswear", "S/S 28", "sm", "2026-09-22", "2026-10-06", "in-progress"],
-  ["ss-4018", "Catwalk Report: Paris Womenswear", "Catwalk Report", "Womenswear", "S/S 28", "ao", "2026-09-25", "2026-10-08", "not-started", "Shows run 28 Sep – 6 Oct, tight turnaround agreed."],
+  ["ss-4008", "Big Idea 2028: The Repair Economy", "Big Ideas", "Womenswear", "A/W 27/28", "ao", "2026-08-14", "2026-09-01", "published"],
+  ["ss-4009", "Colour Forecast S/S 28: Saturated Calm", "CMF Seasonal Forecast", "Womenswear", "S/S 28", "ao", "2026-08-21", "2026-09-08", "in-review", "Colour chips with the studio, swatch sign-off outstanding."],
+  ["ss-4010", "Catwalk Report: Milan Menswear", "Catwalks", "Menswear", "S/S 28", "tb", "2026-08-28", "2026-09-10", "submitted"],
+  ["ss-4011", "Skinimalism, Phase Three", "TrendCurve", "Beauty", "S/S 28", "rc", "2026-09-04", "2026-09-15", "in-review"],
+  ["ss-4012", "The Vision S/S 28: Womenswear Key Items", "The Vision", "Womenswear", "S/S 28", "ao", "2026-09-11", "2026-09-25", "in-progress"],
+  ["ss-4013", "Quiet Kitchens: Interiors Materials Update", "Retail Analysis", "Interiors & Lifestyle", "S/S 28", "pr", "2026-09-09", "2026-09-22", "at-risk", "Photography still to be commissioned — flagged with the picture desk."],
+  ["ss-4014", "Sneaker Silhouettes: The Low Profile Shift", "TrendCurve", "Footwear & Accessories", "S/S 28", "jw", "2026-09-15", "2026-09-29", "in-progress"],
+  ["ss-4015", "Fermentation Goes Mainstream", "Consumer Priorities", "Food & Drink", "S/S 28", "mc", "2026-09-16", "2026-09-30", "in-progress"],
+  ["ss-4016", "Wearables After the Watch", "Retail Analysis", "Consumer Tech", "S/S 28", "da", "2026-09-18", "2026-10-02", "not-started"],
+  ["ss-4017", "Kidswear Colour Forecast S/S 28", "CMF Seasonal Forecast", "Kidswear", "S/S 28", "sm", "2026-09-22", "2026-10-06", "in-progress"],
+  ["ss-4018", "Catwalk Report: Paris Womenswear", "Catwalks", "Womenswear", "S/S 28", "ao", "2026-09-25", "2026-10-08", "not-started", "Shows run 28 Sep – 6 Oct, tight turnaround agreed."],
   ["ss-4019", "Case Study: A Resale Programme That Paid", "Case Study", "Womenswear", "A/W 27/28", "ao", "2026-09-30", "2026-10-14", "not-started"],
-  ["ss-4020", "Menswear Key Items A/W 28/29", "Season Forecast", "Menswear", "A/W 28/29", "tb", "2026-10-02", "2026-10-16", "not-started"],
-  ["ss-4021", "The New Fragrance Consumer", "Consumer Attitudes", "Beauty", "S/S 28", "rc", "2026-10-06", "2026-10-20", "not-started"],
-  ["ss-4022", "Big Idea 2028: Slow Tech", "Big Idea", "Consumer Tech", "A/W 28/29", "da", "2026-10-09", "2026-10-23", "not-started"],
-  ["ss-4023", "Outdoor Living, Year Round", "Trend Curve", "Interiors & Lifestyle", "A/W 28/29", "pr", "2026-10-13", "2026-10-27", "not-started"],
-  ["ss-4024", "Bag Shapes: The Structured Return", "Season Forecast", "Footwear & Accessories", "A/W 28/29", "jw", "2026-10-16", "2026-10-30", "not-started"],
-  ["ss-4025", "Low-Alcohol, High-Design", "Market Report", "Food & Drink", "A/W 28/29", "mc", "2026-10-20", "2026-11-03", "not-started"],
-  ["ss-4026", "Kidswear Key Items A/W 28/29", "Season Forecast", "Kidswear", "A/W 28/29", "sm", "2026-10-23", "2026-11-06", "not-started"],
-  ["ss-4027", "Colour Forecast A/W 28/29: Deep Earths", "Colour Forecast", "Womenswear", "A/W 28/29", "ao", "2026-10-28", "2026-11-11", "not-started"],
-  ["ss-4028", "Beauty Devices: Clinic at Home", "Market Report", "Beauty", "A/W 28/29", "rc", "2026-11-03", "2026-11-17", "not-started"],
-  ["ss-4029", "Catwalk Report: Copenhagen", "Catwalk Report", "Womenswear", "A/W 28/29", "ao", "2026-11-06", "2026-11-19", "not-started"],
-  ["ss-4030", "Menswear Tailoring Softens Again", "Trend Curve", "Menswear", "A/W 28/29", "tb", "2026-11-10", "2026-11-24", "not-started"],
+  ["ss-4020", "Menswear Key Items A/W 28/29", "Category Seasonal Forecast", "Menswear", "A/W 28/29", "tb", "2026-10-02", "2026-10-16", "not-started"],
+  ["ss-4021", "The New Fragrance Consumer", "Consumer Priorities", "Beauty", "S/S 28", "rc", "2026-10-06", "2026-10-20", "not-started"],
+  ["ss-4022", "Big Idea 2028: Slow Tech", "Big Ideas", "Consumer Tech", "A/W 28/29", "da", "2026-10-09", "2026-10-23", "not-started"],
+  ["ss-4023", "Outdoor Living, Year Round", "TrendCurve", "Interiors & Lifestyle", "A/W 28/29", "pr", "2026-10-13", "2026-10-27", "not-started"],
+  ["ss-4024", "Bag Shapes: The Structured Return", "Category Seasonal Forecast", "Footwear & Accessories", "A/W 28/29", "jw", "2026-10-16", "2026-10-30", "not-started"],
+  ["ss-4025", "Low-Alcohol, High-Design", "Retail Analysis", "Food & Drink", "A/W 28/29", "mc", "2026-10-20", "2026-11-03", "not-started"],
+  ["ss-4026", "Kidswear Key Items A/W 28/29", "Category Seasonal Forecast", "Kidswear", "A/W 28/29", "sm", "2026-10-23", "2026-11-06", "not-started"],
+  ["ss-4027", "Colour Forecast A/W 28/29: Deep Earths", "CMF Seasonal Forecast", "Womenswear", "A/W 28/29", "ao", "2026-10-28", "2026-11-11", "not-started"],
+  ["ss-4028", "Beauty Devices: Clinic at Home", "Retail Analysis", "Beauty", "A/W 28/29", "rc", "2026-11-03", "2026-11-17", "not-started"],
+  ["ss-4029", "Catwalk Report: Copenhagen", "Catwalks", "Womenswear", "A/W 28/29", "ao", "2026-11-06", "2026-11-19", "not-started"],
+  ["ss-4030", "Menswear Tailoring Softens Again", "TrendCurve", "Menswear", "A/W 28/29", "tb", "2026-11-10", "2026-11-24", "not-started"],
   ["ss-4031", "Case Study: Modular Furniture at Scale", "Case Study", "Interiors & Lifestyle", "A/W 28/29", "pr", "2026-11-13", "2026-11-27", "not-started"],
-  ["ss-4032", "The Quiet Commute", "Consumer Attitudes", "Consumer Tech", "A/W 28/29", "da", "2026-11-17", "2026-12-01", "not-started"],
-  ["ss-4033", "Footwear Materials: Post-Leather", "Market Report", "Footwear & Accessories", "A/W 28/29", "jw", "2026-11-20", "2026-12-04", "not-started"],
-  ["ss-4034", "Snacking as a Meal Occasion", "Trend Curve", "Food & Drink", "A/W 28/29", "mc", "2026-11-24", "2026-12-08", "not-started"],
-  ["ss-4035", "Big Idea 2029: Proof of Origin", "Big Idea", "Womenswear", "S/S 29", "ao", "2026-12-01", "2026-12-15", "not-started"],
-  ["ss-4036", "Kidswear Consumer: The Handed-Down Wardrobe", "Consumer Attitudes", "Kidswear", "S/S 29", "sm", "2026-12-04", "2026-12-18", "not-started"],
-  ["ss-4037", "Beauty Colour Forecast S/S 29", "Colour Forecast", "Beauty", "S/S 29", "rc", "2026-12-08", "2027-01-05", "not-started"],
-  ["ss-4038", "Interiors Season Forecast S/S 29", "Season Forecast", "Interiors & Lifestyle", "S/S 29", "pr", "2026-12-11", "2027-01-08", "not-started"],
-  ["ss-4039", "Menswear Catwalk Preview S/S 29", "Catwalk Report", "Menswear", "S/S 29", "tb", "2027-01-08", "2027-01-21", "not-started"],
-  ["ss-4001", "Season Forecast A/W 27/28: Womenswear Key Items", "Season Forecast", "Womenswear", "A/W 27/28", "ao", "2026-06-12", "2026-06-26", "published"],
-  ["ss-4002", "Catwalk Report: New York A/W 27/28", "Catwalk Report", "Womenswear", "A/W 27/28", "ao", "2026-06-26", "2026-07-09", "published"],
-  ["ss-4003", "Beauty Big Idea: The Barrier Obsession", "Big Idea", "Beauty", "A/W 27/28", "rc", "2026-07-03", "2026-07-16", "published"],
-  ["ss-4004", "Interiors Colour Forecast A/W 27/28", "Colour Forecast", "Interiors & Lifestyle", "A/W 27/28", "pr", "2026-07-10", "2026-07-23", "published"],
-  ["ss-4005", "Trainers as Formalwear", "Trend Curve", "Footwear & Accessories", "A/W 27/28", "jw", "2026-07-17", "2026-07-30", "published"],
-  ["ss-4006", "Menswear Consumer: Value Over Volume", "Consumer Attitudes", "Menswear", "A/W 27/28", "tb", "2026-07-24", "2026-08-06", "published"],
-  ["ss-4007", "Asia-Pacific Food Retail Update", "Market Report", "Food & Drink", "A/W 27/28", "mc", "2026-08-07", "2026-08-20", "published"],
+  ["ss-4032", "The Quiet Commute", "Consumer Priorities", "Consumer Tech", "A/W 28/29", "da", "2026-11-17", "2026-12-01", "not-started"],
+  ["ss-4033", "Footwear Materials: Post-Leather", "Retail Analysis", "Footwear & Accessories", "A/W 28/29", "jw", "2026-11-20", "2026-12-04", "not-started"],
+  ["ss-4034", "Snacking as a Meal Occasion", "TrendCurve", "Food & Drink", "A/W 28/29", "mc", "2026-11-24", "2026-12-08", "not-started"],
+  ["ss-4035", "Big Idea 2029: Proof of Origin", "Big Ideas", "Womenswear", "S/S 29", "ao", "2026-12-01", "2026-12-15", "not-started"],
+  ["ss-4036", "Kidswear Consumer: The Handed-Down Wardrobe", "Consumer Priorities", "Kidswear", "S/S 29", "sm", "2026-12-04", "2026-12-18", "not-started"],
+  ["ss-4037", "Beauty Colour Forecast S/S 29", "CMF Seasonal Forecast", "Beauty", "S/S 29", "rc", "2026-12-08", "2027-01-05", "not-started"],
+  ["ss-4038", "Interiors Season Forecast S/S 29", "Category Seasonal Forecast", "Interiors & Lifestyle", "S/S 29", "pr", "2026-12-11", "2027-01-08", "not-started"],
+  ["ss-4039", "Menswear Catwalk Preview S/S 29", "Catwalks", "Menswear", "S/S 29", "tb", "2027-01-08", "2027-01-21", "not-started"],
+  ["ss-4001", "Future Consumer A/W 27/28: Womenswear", "Future Consumer", "Womenswear", "A/W 27/28", "ao", "2026-06-12", "2026-06-26", "published"],
+  ["ss-4002", "Catwalk Report: New York A/W 27/28", "Catwalks", "Womenswear", "A/W 27/28", "ao", "2026-06-26", "2026-07-09", "published"],
+  ["ss-4003", "Beauty Big Idea: The Barrier Obsession", "Big Ideas", "Beauty", "A/W 27/28", "rc", "2026-07-03", "2026-07-16", "published"],
+  ["ss-4004", "Interiors Colour Forecast A/W 27/28", "CMF Seasonal Forecast", "Interiors & Lifestyle", "A/W 27/28", "pr", "2026-07-10", "2026-07-23", "published"],
+  ["ss-4005", "Trainers as Formalwear", "TrendCurve", "Footwear & Accessories", "A/W 27/28", "jw", "2026-07-17", "2026-07-30", "published"],
+  ["ss-4006", "Menswear Consumer: Value Over Volume", "Consumer Priorities", "Menswear", "A/W 27/28", "tb", "2026-07-24", "2026-08-06", "published"],
+  ["ss-4007", "Asia-Pacific Food Retail Update", "Retail Analysis", "Food & Drink", "A/W 27/28", "mc", "2026-08-07", "2026-08-20", "published"],
 ];
+
+/**
+ * How each forecast is credited: sole owner, co-owned, a byline contribution,
+ * or commissioned out to a freelancer. "Forecasts owned" is sole plus
+ * co-owned; the other two are counted separately.
+ * [contentId, ownership, extra contributor ids]
+ */
+const credit: Record<string, { ownership: Ownership; with?: string[] }> = {
+  "ss-4001": { ownership: "sole" },
+  "ss-4002": { ownership: "co-owned", with: ["tb"] },
+  "ss-4003": { ownership: "sole" },
+  "ss-4004": { ownership: "co-owned", with: ["sm"] },
+  "ss-4005": { ownership: "sole" },
+  "ss-4006": { ownership: "byline" },
+  "ss-4007": { ownership: "sole" },
+  "ss-4008": { ownership: "sole" },
+  "ss-4009": { ownership: "co-owned", with: ["sm"] },
+  "ss-4010": { ownership: "sole" },
+  "ss-4011": { ownership: "sole" },
+  "ss-4012": { ownership: "sole" },
+  "ss-4013": { ownership: "freelance" },
+  "ss-4014": { ownership: "sole" },
+  "ss-4015": { ownership: "byline" },
+  "ss-4016": { ownership: "sole" },
+  "ss-4017": { ownership: "co-owned", with: ["ao"] },
+  "ss-4018": { ownership: "sole" },
+  "ss-4019": { ownership: "byline" },
+  "ss-4020": { ownership: "sole" },
+  "ss-4021": { ownership: "sole" },
+  "ss-4022": { ownership: "co-owned", with: ["mc"] },
+  "ss-4023": { ownership: "sole" },
+  "ss-4024": { ownership: "sole" },
+  "ss-4025": { ownership: "freelance" },
+  "ss-4026": { ownership: "sole" },
+  "ss-4027": { ownership: "sole" },
+  "ss-4028": { ownership: "co-owned", with: ["pr"] },
+  "ss-4029": { ownership: "byline" },
+  "ss-4030": { ownership: "sole" },
+};
 
 /**
  * When the copy actually landed. Only the forecasts that have been delivered have
@@ -122,6 +170,8 @@ export const content: ContentItem[] = contentRows.map(
     status,
     notes,
     submittedOn: submittedOn[id],
+    ownership: credit[id]?.ownership ?? "sole",
+    contributorIds: credit[id]?.with,
   }),
 );
 
@@ -133,24 +183,98 @@ export const content: ContentItem[] = contentRows.map(
  * maintained elsewhere — the shape is fixed, the numbers arrive later.
  */
 export const metrics: MetricDefinition[] = [
+  // --- Output, read against the average for the person's role -------------
   {
-    id: "forecasts-submitted",
-    label: "Forecasts submitted",
+    id: "reports-owned",
+    label: "Forecasts owned",
     unit: "count",
     better: "higher",
     source: "derived",
     group: "Output",
-    description: "Forecasts whose copy landed with the commissioning manager in the period.",
+    benchmark: "halfYearAverage",
+    description:
+      "Sole plus co-owned — what the sheet calls total reports owned. Byline and freelance are counted separately.",
+  },
+  {
+    id: "sole-owned",
+    label: "Solely owned",
+    unit: "count",
+    better: "higher",
+    source: "derived",
+    group: "Output",
+    benchmark: "soleOwned",
+    description: "Forecasts where this forecaster is the only person tagged as owner.",
+  },
+  {
+    id: "co-owned",
+    label: "Co-owned",
+    unit: "count",
+    better: "higher",
+    source: "derived",
+    group: "Output",
+    benchmark: "coOwned",
+    description: "Forecasts owned jointly, counted for everyone credited.",
+  },
+  {
+    id: "byline-contributions",
+    label: "Byline contributions",
+    unit: "count",
+    better: "higher",
+    source: "derived",
+    group: "Output",
+    benchmark: "byline",
+    description: "Forecasts contributed to with a byline rather than owned.",
+  },
+  {
+    id: "freelance",
+    label: "Freelance commissioned",
+    unit: "count",
+    better: "higher",
+    source: "derived",
+    group: "Output",
+    benchmark: "freelanced",
+    description: "Forecasts written by a freelancer under this forecaster.",
   },
   {
     id: "forecasts-published",
-    label: "Forecasts published",
+    label: "Published",
     unit: "count",
     better: "higher",
     source: "derived",
     group: "Output",
     description: "Forecasts that went live on the platform in the period.",
   },
+
+  // --- Tier mix: the taxonomy gives this away for free --------------------
+  {
+    id: "tier-1",
+    label: "Tier 1 — Decide",
+    unit: "count",
+    better: "higher",
+    source: "derived",
+    group: "Tier mix",
+    description: "Decision-defining forecasts. Scarce by design.",
+  },
+  {
+    id: "tier-2",
+    label: "Tier 2 — Understand",
+    unit: "count",
+    better: "higher",
+    source: "derived",
+    group: "Tier mix",
+    description: "Depth, evidence and application. Regular and reliable.",
+  },
+  {
+    id: "tier-3",
+    label: "Tier 3 — Track",
+    unit: "count",
+    better: "higher",
+    source: "derived",
+    group: "Tier mix",
+    description: "Awareness and early signals. High frequency, built for scanning.",
+  },
+
+  // --- Timeliness --------------------------------------------------------
   {
     id: "on-time-rate",
     label: "Submitted on time",
@@ -159,7 +283,8 @@ export const metrics: MetricDefinition[] = [
     source: "derived",
     group: "Timeliness",
     target: 90,
-    description: "Share of submissions that arrived on or before the agreed date.",
+    description:
+      "Share of submissions that reached the editor on or before the agreed date.",
   },
   {
     id: "days-late",
@@ -169,7 +294,7 @@ export const metrics: MetricDefinition[] = [
     source: "derived",
     group: "Timeliness",
     target: 1,
-    description: "Averaged across submissions in the period; on-time counts as zero.",
+    description: "Averaged across submissions in the period; on time counts as zero.",
   },
   {
     id: "late-submissions",
@@ -178,8 +303,121 @@ export const metrics: MetricDefinition[] = [
     better: "lower",
     source: "derived",
     group: "Timeliness",
-    description: "Submissions that arrived after the agreed date.",
+    description: "Submissions that reached the editor after the agreed date.",
   },
+
+  // --- Quality and standards: supplied ------------------------------------
+  {
+    id: "qual-of-quant",
+    label: "Qual of quant",
+    unit: "percent",
+    better: "higher",
+    source: "supplied",
+    group: "Quality",
+    target: 100,
+    description: "Quality-of-quantity assessment. Supplied from the KPI sheet.",
+  },
+  {
+    id: "dei",
+    label: "DEI commitments met",
+    unit: "count",
+    better: "higher",
+    source: "supplied",
+    group: "Quality",
+    target: 1,
+    description:
+      "Against the required number, with anything extra on top. Supplied from the KPI sheet.",
+  },
+  {
+    id: "ai-projections",
+    label: "AI projections",
+    unit: "percent",
+    better: "higher",
+    source: "supplied",
+    group: "Quality",
+    description: "Progress against the AI projection commitment. Supplied from the KPI sheet.",
+  },
+  {
+    id: "ai-usage",
+    label: "AI used in forecasts",
+    unit: "percent",
+    better: "higher",
+    source: "supplied",
+    group: "Quality",
+    notKpi: true,
+    description:
+      "Tracked for visibility, explicitly not a KPI — nobody is measured up or down on it.",
+  },
+
+  // --- Client and commercial: supplied ------------------------------------
+  {
+    id: "vas-salesforce",
+    label: "VAS (Salesforce)",
+    unit: "count",
+    better: "higher",
+    source: "supplied",
+    group: "Client",
+    description: "Value Added Services delivered, as logged in Salesforce.",
+  },
+  {
+    id: "additional-client-calls",
+    label: "Additional client calls",
+    unit: "count",
+    better: "higher",
+    source: "supplied",
+    group: "Client",
+    description:
+      "Enterprise sessions, client calls, analyst calls and presentations beyond the VAS count.",
+  },
+  {
+    id: "marketing-presentations",
+    label: "Marketing / internal talks",
+    unit: "count",
+    better: "higher",
+    source: "supplied",
+    group: "Client",
+    description: "Marketing and internal presentations given.",
+  },
+  {
+    id: "awards",
+    label: "Awards",
+    unit: "count",
+    better: "higher",
+    source: "supplied",
+    group: "Client",
+    description: "Award wins and shortlistings.",
+  },
+
+  // --- H2 TFDB focus: supplied -------------------------------------------
+  {
+    id: "tfdb-proof-points",
+    label: "Proof points to TFDB",
+    unit: "count",
+    better: "higher",
+    source: "supplied",
+    group: "TFDB",
+    description: "Proof points contributed to the Trend Forecasting Database.",
+  },
+  {
+    id: "tfdb-trends",
+    label: "Trends in TFDB",
+    unit: "count",
+    better: "higher",
+    source: "supplied",
+    group: "TFDB",
+    description: "Trends entered into the Trend Forecasting Database.",
+  },
+  {
+    id: "trend-profiles-owned",
+    label: "Trend profiles owned",
+    unit: "count",
+    better: "higher",
+    source: "supplied",
+    group: "TFDB",
+    description: "Trend profiles this forecaster owns.",
+  },
+
+  // --- Team --------------------------------------------------------------
   {
     id: "peer-reviews-given",
     label: "Peer reviews given",
@@ -198,24 +436,6 @@ export const metrics: MetricDefinition[] = [
     group: "Team",
     description: "Workshops and knowledge-sharing sessions they had a place on.",
   },
-  {
-    id: "client-meetings",
-    label: "Client meetings",
-    unit: "count",
-    better: "higher",
-    source: "supplied",
-    group: "Client",
-    description: "Meetings and briefings with clients. Supplied from outside the Hub.",
-  },
-  {
-    id: "stats-reports",
-    label: "Stats reports",
-    unit: "count",
-    better: "higher",
-    source: "supplied",
-    group: "Output",
-    description: "Statistics and analytics write-ups produced. Supplied from outside the Hub.",
-  },
 ];
 
 /**
@@ -229,7 +449,22 @@ const forecasterIds = ["ao", "tb", "rc", "pr", "jw", "mc", "da", "sm"];
 const observationRows: ObservationRow[] = [];
 // A plausible spread across the last six months, steady rather than random.
 const months = ["2026-04", "2026-05", "2026-06", "2026-07", "2026-08", "2026-09"];
-const meetingsByPerson: Record<string, number[]> = {
+/**
+ * Only two of the supplied metrics are given sample values, so the rest show
+ * their real state — "awaiting data" — rather than inventing performance
+ * figures for people.
+ */
+const vasByPerson: Record<string, number[]> = {
+  ao: [1, 2, 1, 2, 1, 0],
+  tb: [0, 1, 1, 0, 1, 0],
+  rc: [2, 1, 2, 2, 3, 1],
+  pr: [1, 1, 0, 1, 1, 0],
+  jw: [1, 0, 2, 1, 1, 1],
+  mc: [0, 1, 1, 1, 0, 0],
+  da: [2, 2, 1, 3, 2, 1],
+  sm: [0, 0, 1, 1, 0, 0],
+};
+const callsByPerson: Record<string, number[]> = {
   ao: [4, 6, 5, 7, 5, 3],
   tb: [2, 3, 4, 3, 4, 2],
   rc: [6, 5, 7, 6, 8, 4],
@@ -239,21 +474,16 @@ const meetingsByPerson: Record<string, number[]> = {
   da: [7, 8, 6, 9, 7, 4],
   sm: [1, 2, 2, 3, 2, 1],
 };
-const statsByPerson: Record<string, number[]> = {
-  ao: [1, 1, 2, 1, 2, 1],
-  tb: [1, 0, 1, 1, 1, 0],
-  rc: [2, 1, 1, 2, 1, 1],
-  pr: [0, 1, 1, 1, 1, 0],
-  jw: [1, 1, 1, 0, 2, 1],
-  mc: [1, 1, 0, 1, 1, 1],
-  da: [2, 2, 2, 3, 2, 1],
-  sm: [0, 1, 1, 1, 0, 0],
-};
 
 for (const personId of forecasterIds) {
   months.forEach((month, i) => {
-    observationRows.push(["client-meetings", personId, `${month}-15`, meetingsByPerson[personId][i]]);
-    observationRows.push(["stats-reports", personId, `${month}-20`, statsByPerson[personId][i]]);
+    observationRows.push(["vas-salesforce", personId, `${month}-15`, vasByPerson[personId][i]]);
+    observationRows.push([
+      "additional-client-calls",
+      personId,
+      `${month}-20`,
+      callsByPerson[personId][i],
+    ]);
   });
 }
 
@@ -426,7 +656,7 @@ export const sessions: KnowledgeSession[] = [
     signUpsOpen: true,
     summary:
       "How a trend gets placed on the curve, what evidence moves it a stage, and how to defend the call when a client disagrees.",
-    topics: ["Method", "Trend Curve"],
+    topics: ["Method", "TrendCurve"],
   },
   {
     id: "ws-211",

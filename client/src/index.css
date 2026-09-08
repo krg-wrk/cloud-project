@@ -1700,3 +1700,11 @@ a.session-title:hover {
   font-size: 10.5px;
   color: var(--ink-45);
 }
+
+.kpi-at {
+  color: var(--status-published);
+}
+
+.kpi-under {
+  color: var(--status-in-review);
+}

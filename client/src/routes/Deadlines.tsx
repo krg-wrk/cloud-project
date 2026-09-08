@@ -3,7 +3,7 @@ import { query, useApi } from "../lib/api";
 import { TODAY, formatShort, relativeDays } from "../lib/date";
 import { STATUS_LABELS, STATUS_ORDER, isOverdue, personName } from "../lib/domain";
 import { useViewer } from "../lib/viewer";
-import type { ContentItem, Person } from "../types";
+import type { ContentItem, Person, Taxonomy } from "../types";
 import { ErrorNote, Loading, StatusPill, Who } from "../components/bits";
 import ShareLink from "../components/ShareLink";
 
@@ -12,15 +12,12 @@ const VERTICALS = [
   "Footwear & Accessories", "Food & Drink", "Consumer Tech", "Kidswear",
 ];
 
-const TYPES = [
-  "Big Idea", "Season Forecast", "Catwalk Report", "Colour Forecast",
-  "Consumer Attitudes", "Trend Curve", "Case Study", "Market Report",
-];
-
 export default function Deadlines() {
   const [params, setParams] = useSearchParams();
   const { person, isManager } = useViewer();
   const people = useApi<Person[]>("/people");
+  // The formats we publish, and their tiers, come from the taxonomy.
+  const taxonomy = useApi<Taxonomy>("/taxonomy");
 
   // A forecaster's default view is their own list; the filter can widen it.
   const forecaster =
@@ -95,16 +92,16 @@ export default function Deadlines() {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="f-type">Type</label>
+          <label htmlFor="f-type">Format</label>
           <select
             id="f-type"
             value={params.get("type") ?? ""}
             onChange={(e) => setParam("type", e.target.value)}
           >
-            <option value="">All types</option>
-            {TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
+            <option value="">All formats</option>
+            {(taxonomy.data?.contentTypes ?? []).map((t) => (
+              <option key={t.name} value={t.name}>
+                {t.name} — Tier {t.tier}
               </option>
             ))}
           </select>
@@ -153,7 +150,7 @@ export default function Deadlines() {
               <tr>
                 <th>Due</th>
                 <th>Title</th>
-                <th>Type</th>
+                <th>Format</th>
                 <th>Vertical</th>
                 <th>Season</th>
                 <th>Forecaster</th>

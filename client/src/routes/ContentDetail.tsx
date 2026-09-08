@@ -3,30 +3,19 @@ import { Link, useParams } from "react-router-dom";
 import { useApi } from "../lib/api";
 import { TODAY, formatLong, formatShort, monthKey, relativeDays } from "../lib/date";
 import { STATUS_LABELS, clashesFor, isOverdue, personName } from "../lib/domain";
-import type { CalendarEvent, ContentItem, PeerReview, Person } from "../types";
+import type { CalendarEvent, ContentItem, PeerReview, Person, Taxonomy } from "../types";
 import { Avatar, ErrorNote, EventPill, Loading, StatusPill } from "../components/bits";
 import DetailsPanel from "../components/DetailsPanel";
 import Notes from "../components/Notes";
 import PeerReviewPanel from "../components/PeerReviewPanel";
 import ShareLink from "../components/ShareLink";
 
-/** The formats we publish. The panel offers these and accepts anything else. */
-const CONTENT_TYPES = [
-  "Big Idea",
-  "Season Forecast",
-  "Catwalk Report",
-  "Colour Forecast",
-  "Consumer Attitudes",
-  "Trend Curve",
-  "Case Study",
-  "Market Report",
-];
-
 export default function ContentDetail() {
   const { id } = useParams<{ id: string }>();
   const item = useApi<ContentItem>(`/content/${id}`);
   const people = useApi<Person[]>("/people");
   const events = useApi<CalendarEvent[]>("/events");
+  const taxonomy = useApi<Taxonomy>("/taxonomy");
 
   const [review, setReview] = useState<PeerReview | null>(null);
   useEffect(() => {
@@ -135,7 +124,7 @@ export default function ContentDetail() {
             <DetailsPanel
               item={c}
               people={people.data}
-              contentTypes={CONTENT_TYPES}
+              contentTypes={(taxonomy.data?.contentTypes ?? []).map((t) => t.name)}
             />
           </div>
 

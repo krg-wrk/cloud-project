@@ -12,15 +12,13 @@ export type Status =
   | "published"
   | "at-risk";
 
-export type ContentType =
-  | "Big Idea"
-  | "Season Forecast"
-  | "Catwalk Report"
-  | "Colour Forecast"
-  | "Consumer Attitudes"
-  | "Trend Curve"
-  | "Case Study"
-  | "Market Report";
+/**
+ * A publishing format — "Big Ideas", "Catwalks", "CMF Seasonal Forecast" and
+ * so on. The taxonomy in taxonomy.ts is the source of truth for which formats
+ * exist and which tier each sits in; there are over seventy, and new ones get
+ * added, so a hand-kept union here would only go stale and reject real rows.
+ */
+export type ContentType = string;
 
 export type Vertical =
   | "Womenswear"
@@ -37,7 +35,14 @@ export interface Person {
   name: string;
   email: string;
   role: "forecaster" | "commissioning-manager";
+  /**
+   * Director / Head Of / Senior / Strategist. Separate from `role`, which is
+   * about rights in the Hub — this is the grade the KPI benchmarks key on.
+   */
+  forecasterRole?: string;
   vertical?: Vertical;
+  /** The department the KPI sheet groups them under. */
+  department?: string;
   region: string;
 }
 
@@ -65,7 +70,16 @@ export interface ContentItem {
   notes?: string;
   /** When the copy actually arrived, where the sheet records it. */
   submittedOn?: string;
+  /**
+   * How this forecaster is credited. "Total reports owned" in the KPI sheet
+   * means sole plus co-owned; byline and freelance are counted separately.
+   */
+  ownership?: Ownership;
+  /** Everyone credited, so co-owned work counts for both people. */
+  contributorIds?: string[];
 }
+
+export type Ownership = "sole" | "co-owned" | "byline" | "freelance";
 
 export type EventType =
   | "leave"
@@ -127,6 +141,16 @@ export interface MetricDefinition {
   group: string;
   target?: number;
   description: string;
+  /**
+   * Which role-benchmark figure this metric is read against. Output is judged
+   * against the average for the person's role, not against zero.
+   */
+  benchmark?: "halfYearAverage" | "soleOwned" | "coOwned" | "byline" | "freelanced";
+  /**
+   * Tracked but explicitly not a KPI — the sheet marks AI usage this way, and
+   * showing it as one would misrepresent it.
+   */
+  notKpi?: boolean;
 }
 
 /** One supplied reading: this person, this metric, this day. */

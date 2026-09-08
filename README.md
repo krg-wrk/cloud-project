@@ -174,18 +174,52 @@ so `javascript:` and `data:` are a way in and are refused with a plain message.
 `/performance` reports on a forecaster over any range, and — for commissioning
 managers — compares one metric across the team.
 
-Two kinds of metric, and the split matters:
+The metric set follows the Content KPIs sheet. Two kinds, and the split
+matters:
 
-- **Derived** — worked out from the schedule and store the Hub already holds,
-  so they are live now: forecasts submitted, forecasts published, submitted on
-  time, average days late, late submissions, peer reviews given, sessions
-  attended. The calculators are one function each in `server/src/kpis.ts`.
-- **Supplied** — from a sheet or feed maintained elsewhere: client meetings,
-  stats reports, and whatever else you want to track. The shape is fixed; the
-  page shows "Awaiting data" honestly until the numbers arrive.
+**Derived** — worked out from the schedule and store the Hub already holds, so
+they are live now:
 
-Adding a metric is a row in the metrics sheet. Adding a *derived* one is a row
-plus a function, because it needs to know how to compute itself.
+- *Output*: forecasts owned (sole + co-owned), solely owned, co-owned, byline
+  contributions, freelance commissioned, published
+- *Tier mix*: Tier 1 / 2 / 3 counts, read from the format via the taxonomy
+- *Timeliness*: submitted on time, average days late, late submissions
+- *Team*: peer reviews given, sessions attended
+
+**Supplied** — from a sheet or feed maintained elsewhere. The shape is fixed
+and the page says "Awaiting data" until the numbers arrive: qual of quant,
+DEI commitments, AI projections, AI usage, VAS (Salesforce), additional client
+calls, marketing/internal talks, awards, and the H2 TFDB metrics (proof points,
+trends, trend profiles owned).
+
+Adding a supplied metric is a row in the metrics sheet. Adding a *derived* one
+is a row plus a function in `server/src/kpis.ts`, because it has to know how to
+compute itself.
+
+### Read against the role, not against zero
+
+Output metrics carry the average for the person's grade — Director, Head Of,
+Senior, Strategist — from `ROLE_BENCHMARKS` in `server/src/taxonomy.ts`. The
+figures are half-year averages, so they are pro-rated to the window on screen:
+a Head Of benchmark of 12 over half a year shows as 10.6 over 161 days. A count
+on its own says very little, which is why the sheet keeps a role average column
+at all.
+
+### Tiers come from the format
+
+`server/src/taxonomy.ts` holds the full content taxonomy — 72 formats across
+Tier 1 (Decide), Tier 2 (Understand) and Tier 3 (Track). A forecast's tier
+follows from its format, so **nobody tags a tier by hand**; the Hub looks it
+up. A format not yet in the taxonomy returns no tier rather than a wrong one.
+
+The taxonomy is also what the format filter and the details panel offer, via
+`GET /api/taxonomy` — one list, one place to update.
+
+### One metric is explicitly not a KPI
+
+The sheet marks "% of AI used in reports" as *not a KPI*. That is carried
+through: `notKpi: true` on the definition, and the tile says "Tracked, not a
+KPI" so nobody reads it as a target.
 
 Ranges: this quarter, last quarter, year to date, last 6 and 12 months, or a
 custom window (which switches to quarterly buckets past ~18 months so the bars
@@ -201,6 +235,15 @@ team bar carries its value as text, and a table view sits behind the charts.
 
 Timeliness needs the sheet's **Actual Submission** column — without it the Hub
 knows when copy was *due* but not when it *arrived*.
+
+### What is not in this repo
+
+The KPI sheet holds real staff names, addresses, grades, individual ratings and
+client names. **None of that is copied into this repository or the demo.** The
+seed data uses invented forecasters, and the Hub reads the real team, grades
+and departments from the sheet at run time. What has been taken from the sheet
+is structure only: the metric definitions, the tier taxonomy and the role
+benchmark figures.
 
 ## Notes, reminders and peer reviews
 

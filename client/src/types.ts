@@ -24,7 +24,10 @@ export interface Person {
   name: string;
   email: string;
   role: "forecaster" | "commissioning-manager";
+  /** Director / Head Of / Senior / Strategist — what the KPI benchmarks use. */
+  forecasterRole?: string;
   vertical?: string;
+  department?: string;
   region: string;
 }
 
@@ -174,6 +177,24 @@ export interface MetricDefinition {
   group: string;
   target?: number;
   description: string;
+  benchmark?: "halfYearAverage" | "soleOwned" | "coOwned" | "byline" | "freelanced";
+  /** Tracked but explicitly not a KPI. */
+  notKpi?: boolean;
+}
+
+export interface Taxonomy {
+  contentTypes: { name: string; tier: 1 | 2 | 3 }[];
+  tiers: { tier: 1 | 2 | 3; name: string; job: string; cadence: string }[];
+  roles: {
+    role: string;
+    annualAverage: number;
+    halfYearAverage: number;
+    soleOwned: number;
+    coOwned: number;
+    byline: number;
+    freelanced: number;
+    trueMidYearAverage: number;
+  }[];
 }
 
 export interface MetricResult {
@@ -182,6 +203,8 @@ export interface MetricResult {
   previous: number | null;
   series: { period: string; label: string; value: number | null }[];
   awaitingData: boolean;
+  /** The average for this person's role over a window this long. */
+  benchmark?: number;
 }
 
 export interface KpiRange {

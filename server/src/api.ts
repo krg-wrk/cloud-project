@@ -14,6 +14,7 @@ import {
 } from "./auth.js";
 import { buildFeed } from "./ics.js";
 import { compareTeam, computeKpis, precedingRange, type Bucket } from "./kpis.js";
+import { CONTENT_TYPES, ROLE_BENCHMARKS, TIER_MEANINGS } from "./taxonomy.js";
 import type { SignUps } from "./signUps.js";
 import type { EntryKind, HubStore } from "./store.js";
 import type {
@@ -117,6 +118,11 @@ export function createApiRouter(
     } catch (err) {
       next(err);
     }
+  });
+
+  /** The content taxonomy: every format we publish, and its tier. */
+  router.get("/taxonomy", (_req, res) => {
+    res.json({ contentTypes: CONTENT_TYPES, tiers: TIER_MEANINGS, roles: ROLE_BENCHMARKS });
   });
 
   router.get("/people", async (_req, res, next) => {
@@ -471,6 +477,7 @@ export function createApiRouter(
 
       const results = computeKpis(definitions, {
         personId: subject.id,
+        role: subject.forecasterRole,
         from: range.from,
         to: range.to,
         bucket: range.bucket,
@@ -527,6 +534,7 @@ export function createApiRouter(
           subjects.map((p) => p.id),
           (personId) => ({
             personId,
+            role: people.find((p) => p.id === personId)?.forecasterRole,
             from: range.from,
             to: range.to,
             bucket: range.bucket,

@@ -1,9 +1,11 @@
 import type { HubStore } from "./store.js";
+import { benchmarkFor, scaleBenchmark, tierFor, type Tier } from "./taxonomy.js";
 import type {
   ContentItem,
   KnowledgeSession,
   MetricDefinition,
   MetricObservation,
+  Ownership,
 } from "./types.js";
 
 /**
@@ -37,10 +39,18 @@ export interface MetricResult {
   series: { period: string; label: string; value: number | null }[];
   /** True when this metric has no data at all yet — an honest empty state. */
   awaitingData: boolean;
+  /**
+   * The average for this person's role over a window this long, where the
+   * metric has one. A count on its own says little; a count against the role
+   * average is the way the mid-year review reads it.
+   */
+  benchmark?: number;
 }
 
 export interface KpiInput {
   personId: string;
+  /** Director, Head Of, Senior or Strategist — sets the benchmark. */
+  role?: string;
   from: string;
   to: string;
   bucket: Bucket;
@@ -58,10 +68,39 @@ const inRange = (date: string | undefined, from: string, to: string): boolean =>
 const daysBetween = (from: string, to: string): number =>
   Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
 
+/** Every forecast this person is credited on, however they are credited. */
+function credited(input: KpiInput): ContentItem[] {
+  return input.content.filter(
+    (c) =>
+      c.forecasterId === input.personId ||
+      (c.contributorIds ?? []).includes(input.personId),
+  );
+}
+
 /** Submissions that actually landed in the window, for this person. */
 function submissions(input: KpiInput, from: string, to: string): ContentItem[] {
-  return input.content.filter(
-    (c) => c.forecasterId === input.personId && inRange(c.submittedOn, from, to),
+  return credited(input).filter((c) => inRange(c.submittedOn, from, to));
+}
+
+/**
+ * Forecasts credited in the window, by how they are credited. Counted on the
+ * publication date so a forecast lands in the period it appeared in.
+ */
+function byOwnership(
+  input: KpiInput,
+  from: string,
+  to: string,
+  kinds: Ownership[],
+): ContentItem[] {
+  return credited(input).filter(
+    (c) => kinds.includes(c.ownership ?? "sole") && inRange(c.publicationDate, from, to),
+  );
+}
+
+/** Forecasts in the window whose format puts them in this tier. */
+function byTier(input: KpiInput, from: string, to: string, tier: Tier): ContentItem[] {
+  return credited(input).filter(
+    (c) => inRange(c.publicationDate, from, to) && tierFor(c.type) === tier,
   );
 }
 
@@ -73,14 +112,26 @@ const mean = (values: number[]): number | null =>
  * person between these two dates". The bucketing calls them once per period.
  */
 const DERIVED: Record<string, (input: KpiInput, from: string, to: string) => number | null> = {
-  "forecasts-submitted": (input, from, to) => submissions(input, from, to).length,
+  // "Total reports owned" in the sheet: sole plus co-owned, nothing else.
+  "reports-owned": (input, from, to) =>
+    byOwnership(input, from, to, ["sole", "co-owned"]).length,
+
+  "sole-owned": (input, from, to) => byOwnership(input, from, to, ["sole"]).length,
+
+  "co-owned": (input, from, to) => byOwnership(input, from, to, ["co-owned"]).length,
+
+  "byline-contributions": (input, from, to) =>
+    byOwnership(input, from, to, ["byline"]).length,
+
+  freelance: (input, from, to) => byOwnership(input, from, to, ["freelance"]).length,
+
+  "tier-1": (input, from, to) => byTier(input, from, to, 1).length,
+  "tier-2": (input, from, to) => byTier(input, from, to, 2).length,
+  "tier-3": (input, from, to) => byTier(input, from, to, 3).length,
 
   "forecasts-published": (input, from, to) =>
-    input.content.filter(
-      (c) =>
-        c.forecasterId === input.personId &&
-        c.status === "published" &&
-        inRange(c.publicationDate, from, to),
+    credited(input).filter(
+      (c) => c.status === "published" && inRange(c.publicationDate, from, to),
     ).length,
 
   "on-time-rate": (input, from, to) => {
@@ -197,6 +248,8 @@ export function computeKpis(
 ): MetricResult[] {
   const buckets = periods(input.from, input.to, input.bucket);
   const previous = precedingRange(input.from, input.to);
+  const roleBenchmark = benchmarkFor(input.role);
+  const rangeDays = daysBetween(input.from, input.to) + 1;
 
   return definitions.map((definition) => {
     const series = buckets.map((period) => ({
@@ -214,6 +267,10 @@ export function computeKpis(
         definition.source === "supplied" &&
         value === null &&
         series.every((point) => point.value === null),
+      benchmark:
+        definition.benchmark && roleBenchmark
+          ? scaleBenchmark(roleBenchmark[definition.benchmark], rangeDays)
+          : undefined,
     };
   });
 }

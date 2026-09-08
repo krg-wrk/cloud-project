@@ -16,6 +16,12 @@ const RANGES: { value: string; label: string }[] = [
   { value: "last-12-months", label: "Last 12 months" },
 ];
 
+/** Against the role average — stated in words, with colour only reinforcing. */
+function againstBenchmark(result: MetricResult): string {
+  if (result.value === null || result.benchmark === undefined) return "";
+  return result.value >= result.benchmark ? "kpi-at" : "kpi-under";
+}
+
 /** Whether a change is good news depends on the metric, not its sign. */
 function changeTone(result: MetricResult): "good" | "bad" | "flat" {
   if (result.value === null || result.previous === null) return "flat";
@@ -56,6 +62,20 @@ function MetricTile({
     >
       <span className="kpi-label">{definition.label}</span>
       <span className="kpi-value">{formatValue(result.value, definition.unit)}</span>
+
+      {/* Output is read against the average for the person's grade, not zero. */}
+      {result.benchmark !== undefined && (
+        <span className="kpi-target">
+          Role average {result.benchmark}
+          {result.value !== null && (
+            <span className={againstBenchmark(result)}>
+              {" · "}
+              {result.value >= result.benchmark ? "at or above" : "below"}
+            </span>
+          )}
+        </span>
+      )}
+
       {definition.target !== undefined && (
         <span className="kpi-target">
           Target {formatValue(definition.target, definition.unit)}
@@ -73,7 +93,9 @@ function MetricTile({
         </>
       )}
 
-      {definition.source === "supplied" && <span className="kpi-source">Supplied</span>}
+      <span className="kpi-source">
+        {definition.notKpi ? "Tracked, not a KPI" : definition.source === "supplied" ? "Supplied" : ""}
+      </span>
     </button>
   );
 }
@@ -129,13 +151,17 @@ export default function Kpis() {
       <div className="page-head">
         <div>
           <div className="eyebrow">
-            {subject ? `${subject.name} · ${subject.vertical ?? "Commissioning"}` : "KPIs"}
+            {subject
+              ? [subject.name, subject.forecasterRole, subject.department]
+                  .filter(Boolean)
+                  .join(" · ")
+              : "KPIs"}
           </div>
           <h1 className="page-title">Performance</h1>
           <p className="page-sub">
             {isManager
-              ? "How the work is going, per forecaster and across the team. Pick a range, pick a metric, and the URL holds both."
-              : "How your year is going. Pick a range and a metric — the URL holds both, so a view is a link."}
+              ? "How the work is going, per forecaster and across the team. Output is read against the average for the person's grade, and the range and metric both live in the URL."
+              : "How your year is going. Output is read against the average for your grade rather than against zero, and the range and metric both live in the URL."}
           </p>
         </div>
         <ShareLink label="Copy link" />
@@ -233,6 +259,14 @@ export default function Kpis() {
               </div>
             </section>
           ))}
+
+          {groups.includes("Tier mix") && (
+            <p className="page-sub" style={{ marginTop: -18, marginBottom: 26, fontSize: 12.5 }}>
+              Tiers are a hierarchy of importance and intent — Tier 1 to decide, Tier 2 to
+              understand, Tier 3 to track. The Hub reads the tier from the format, so nobody
+              tags it by hand.
+            </p>
+          )}
 
           {selected && (
             <section className="section">
