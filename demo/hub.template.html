@@ -2482,6 +2482,624 @@
     margin: 0;
   }
 
+  /* -------------------------------------------------------------------------
+     The studio, and the views it builds
+
+     The studio is a workbench: dense, plain, readable at a glance, because an
+     admin is comparing five things at once rather than reading one. The views
+     it produces get the same furniture as the hand-written pages — that is
+     the point of having one renderer.
+     ------------------------------------------------------------------------- */
+
+  .toggle.danger {
+    color: var(--late);
+  }
+
+  .toggle.danger:hover {
+    border-color: var(--late);
+    color: var(--late);
+  }
+
+  .toggle.danger .icon {
+    color: currentColor;
+  }
+
+  /* The three steps, in the order you do them. */
+  .studio-tabs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 1px;
+    margin-bottom: 22px;
+    background: var(--line);
+    border: 1px solid var(--line);
+  }
+
+  .studio-tab {
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 13px 15px;
+    background: var(--paper);
+    color: var(--ink-mid);
+  }
+
+  .studio-tab .icon {
+    margin-top: 2px;
+    color: var(--ink-soft);
+  }
+
+  .studio-tab b {
+    display: block;
+    font-weight: 500;
+    font-size: 13.5px;
+  }
+
+  .studio-tab em {
+    display: block;
+    margin-top: 2px;
+    font-style: normal;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+
+  .studio-tab:hover {
+    color: var(--ink);
+  }
+
+  .studio-tab.on {
+    color: var(--ink);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+
+  .studio-tab.on .icon {
+    color: var(--accent);
+  }
+
+  .studio-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+
+  .studio-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .studio-item {
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+  }
+
+  .studio-item.editing {
+    border-left: 3px solid var(--accent);
+    margin-bottom: 12px;
+  }
+
+  .studio-item-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .studio-item h2 {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+  }
+
+  .studio-item-head p {
+    margin: 3px 0 0;
+  }
+
+  .studio-item-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  /* Two columns of the page's own .fact rows, so it reads like the rest. */
+  .studio-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    column-gap: 26px;
+    margin: 12px 0 0;
+  }
+
+  .studio-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 12px 0 0;
+    padding: 10px 12px;
+    border-left: 3px solid var(--line-firm);
+    background: var(--ground);
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+
+  .studio-note .icon {
+    margin-top: 1px;
+    flex: none;
+  }
+
+  .studio-note.ok {
+    border-left-color: var(--ok);
+  }
+
+  .studio-note.ok .icon {
+    color: var(--ok);
+  }
+
+  .studio-note.bad {
+    border-left-color: var(--warn);
+  }
+
+  .studio-note.bad .icon {
+    color: var(--warn-ink);
+  }
+
+  .studio-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px 16px;
+    margin: 12px 0;
+  }
+
+  .studio-form .field.wide {
+    grid-column: 1 / -1;
+  }
+
+  .studio-form .field input,
+  .studio-form .field select,
+  .builder .field input,
+  .builder .field select {
+    width: 100%;
+    min-width: 0;
+    padding: 7px 9px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+  }
+
+  /* ---- The builder ------------------------------------------------------ */
+
+  /*
+   * Controls on the left, the view itself on the right. The preview is the
+   * wide half because it is the thing being judged.
+   */
+  .builder {
+    display: grid;
+    grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+
+  .builder-step {
+    padding: 15px 17px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+  }
+
+  .builder-step + .builder-step {
+    margin-top: 10px;
+  }
+
+  .builder-step .sec-head {
+    margin-top: 0;
+  }
+
+  .slug-field,
+  .icon-field {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  /* The field label above is uppercased; the address prefix must not be. */
+  .slug-field > span {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--ink-soft);
+    flex: none;
+  }
+
+  .icon-field .icon {
+    flex: none;
+    color: var(--ink-mid);
+  }
+
+  /* The five shapes, as shapes. */
+  .layout-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+    gap: 6px;
+    margin-bottom: 10px;
+  }
+
+  .layout-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 11px 6px 9px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--ink-mid);
+  }
+
+  .layout-option .icon {
+    color: var(--ink-soft);
+  }
+
+  .layout-option:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+
+  .layout-option.on {
+    border-color: var(--accent);
+    background: var(--accent-wash);
+    color: var(--ink);
+  }
+
+  .layout-option.on .icon {
+    color: var(--accent);
+  }
+
+  /*
+   * Multi-select as a row of toggles: the columns of a table, the roles of an
+   * audience. Cheaper to scan than a multiple select, and it works on a phone.
+   */
+  .chip-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+  }
+
+  .chip-picker .chip {
+    padding: 4px 9px;
+    border: 1px solid var(--line);
+    background: var(--ground);
+    font: inherit;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--ink-mid);
+    white-space: nowrap;
+    box-shadow: none;
+    text-transform: none;
+    letter-spacing: 0;
+  }
+
+  .chip-picker .chip:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+
+  .chip-picker .chip.on {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .filter-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1.2fr) auto;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+
+  .filter-row select,
+  .filter-row input {
+    min-width: 0;
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-size: 12.5px;
+  }
+
+  .builder-save {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    padding: 14px 17px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+  }
+
+  .builder-save .field {
+    flex: 1;
+    min-width: 190px;
+  }
+
+  .builder-preview {
+    position: sticky;
+    top: 76px;
+    padding: 16px 18px 18px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+  }
+
+  .preview-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .preview-head h2 {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .preview-head h2 .icon {
+    color: var(--ink-soft);
+  }
+
+  /* The preview is a window on a page, not the page: it scrolls in place. */
+  .preview-body {
+    max-height: 70vh;
+    overflow: auto;
+    margin-top: 14px;
+  }
+
+  /* ---- A built view ---------------------------------------------------- */
+
+  /* Where the rows came from, said on the page rather than only in the studio. */
+  .view-source {
+    display: flex;
+    align-items: center;
+    gap: 7px 16px;
+    flex-wrap: wrap;
+    padding: 9px 14px;
+    margin-bottom: 16px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    font-size: 12px;
+  }
+
+  .view-source > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .view-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+    gap: 14px;
+  }
+
+  .view-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    overflow: hidden;
+    color: inherit;
+  }
+
+  a.view-card:hover {
+    border-color: var(--ink);
+  }
+
+  /*
+   * The same stand-in the trend cards use: a hue from the row, always
+   * painted, with the image laid over it. A picture column on a sheet points
+   * at a host that may be slow, private or gone.
+   */
+  .view-cover {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 16 / 10;
+    margin: 0;
+    overflow: hidden;
+    background: linear-gradient(
+      135deg,
+      hsl(var(--h) var(--cover-s1) var(--cover-l1)),
+      hsl(calc(var(--h) + 40) var(--cover-s2) var(--cover-l2))
+    );
+  }
+
+  .view-cover img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .view-card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 7px;
+    padding: 13px 15px 15px;
+  }
+
+  .view-card-title {
+    margin: 0;
+    font-size: 15.5px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  .view-card-sub {
+    margin: 0;
+    font-size: 12.5px;
+    color: var(--ink-mid);
+  }
+
+  .view-card-text {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--ink-mid);
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .view-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px 12px;
+    width: 100%;
+    padding-top: 9px;
+    border-top: 1px solid var(--line);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+
+  .view-rows {
+    border: 1px solid var(--line);
+    background: var(--paper);
+    overflow: hidden;
+  }
+
+  .view-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 14px;
+    align-items: center;
+    padding: 11px 16px;
+    border-top: 1px solid var(--line);
+    color: inherit;
+  }
+
+  .view-rows .view-row:first-child {
+    border-top: none;
+  }
+
+  a.view-row:hover {
+    background: var(--ground);
+  }
+
+  .view-row-when {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-mid);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .view-row-main {
+    min-width: 0;
+  }
+
+  .view-row-meta {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ---- Board ----------------------------------------------------------- */
+
+  .board {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 8px;
+    align-items: flex-start;
+  }
+
+  .board-column {
+    flex: none;
+    width: 250px;
+    border: 1px solid var(--line);
+    background: var(--ground);
+  }
+
+  .board-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .board-head b {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 400;
+    color: var(--ink-soft);
+  }
+
+  .board-card {
+    margin: 8px;
+    padding: 10px 11px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+  }
+
+  .board-card-title {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .board-card-sub {
+    margin-top: 3px;
+    font-size: 11.5px;
+    color: var(--ink-mid);
+  }
+
+  .board-card-when {
+    margin-top: 5px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+
+  /*
+   * On a narrow screen the builder stacks and the preview stops sticking — a
+   * sticky panel taller than the viewport cannot be scrolled past.
+   */
+  @media (max-width: 1180px) {
+    .builder {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .builder-preview {
+      position: static;
+    }
+  }
+
   /* ---- Navigation on a phone -------------------------------------------- */
 
   /*
@@ -2985,6 +3603,21 @@
     clock: "M12 7.5V12l3 1.8M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z",
     plus: "M12 5v14M5 12h14",
     edit: "M15.5 4.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L15.5 4.5ZM14 6l4 4",
+
+    // The studio. The five layouts double as the layout picker's own icons,
+    // so the choice reads as a shape rather than a word.
+    studio: "M4 7h7M15 7h5M4 17h5M13 17h7M13 4.5v5M9 14.5v5",
+    source:
+      "M12 8.5c4.4 0 8-1.2 8-2.75S16.4 3 12 3 4 4.2 4 5.75 7.6 8.5 12 8.5ZM4 5.75v12.5C4 19.8 7.6 21 12 21s8-1.2 8-2.75V5.75M4 12c0 1.55 3.6 2.75 8 2.75s8-1.2 8-2.75",
+    table: "M3 5h18v14H3zM3 10h18M3 15h18M9 5v14M15 5v14",
+    cards: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
+    list: "M4 6h16M4 12h16M4 18h10",
+    board: "M4 4h5v16H4zM10.5 4h5v10h-5zM17 4h3v13h-3z",
+    refresh: "M20 11a8 8 0 1 0-2.3 6.3M20 5v6h-6",
+    trash: "M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13M10.5 11v5M13.5 11v5",
+    eye: "M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12S18 18.5 12 18.5 2.5 12 2.5 12Zm9.5 2.6a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2Z",
+    lock: "M7 10.5V7.5a5 5 0 0 1 10 0v3M5.5 10.5h13a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z",
+    people: "M17 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-7A3.5 3.5 0 0 0 3 18.5V20M10 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM21 20v-2a3.5 3.5 0 0 0-2.2-3.2",
   };
 
   /** Presentational by default: the label beside it carries the meaning. */
@@ -3392,6 +4025,12 @@
   let shared = false;
   let ai = null;
 
+  // The studio's configuration. Kept in the same shared store as the notes and
+  // sign-ups, so a view someone builds is a view everyone on this page has.
+  const connections = new Map();
+  const datasets = new Map();
+  const views = new Map();
+
   const notesFor = (contentId) => notes.get(contentId) ?? [];
   const entriesFor = (personId) => entries.get(personId) ?? [];
   const reviewFor = (contentId) => reviews.get(contentId) ?? null;
@@ -3559,6 +4198,89 @@
     }
   }
 
+  /** A form field's current value, so a handler reads what is on screen. */
+  const valueOf = (id, fallback = "") => document.getElementById(id)?.value ?? fallback;
+
+  /**
+   * Save a studio record.
+   *
+   * Local map first so the page is immediate, then the shared store so
+   * everyone else looking at this page gets it too. A failed write is not
+   * fatal: the next snapshot puts this page back in step.
+   */
+  function saveStudio(collection, map, id, body) {
+    map.set(id, body);
+    if (!store) return;
+    store
+      .collection(collection)
+      .doc(id)
+      .set(body)
+      .catch(() => {});
+  }
+
+  function dropStudio(collection, map, id) {
+    map.delete(id);
+    if (!store) return;
+    store
+      .collection(collection)
+      .doc(id)
+      .delete()
+      .catch(() => {});
+  }
+
+  /**
+   * Test a connection.
+   *
+   * "This Hub's own tables" counts its rows, which is a real answer. The rest
+   * report what they would need and that this page cannot provide it — the
+   * running Hub makes the call from the server.
+   */
+  function testConnection(id) {
+    const connection = connections.get(id);
+    if (!connection) return;
+    const state = KIND_STATE[connection.kind] ?? { live: false, note: "Unknown system." };
+    const note = state.live
+      ? `Reading this page's own tables — ${HUB_TABLES.map(
+          (t) => `${t.rows().length} ${t.ref}`,
+        ).join(", ")}.`
+      : state.note;
+    saveStudio("studioConnections", connections, id, {
+      ...connection,
+      checkOk: state.live,
+      checkNote: note,
+      checkedAt: new Date().toISOString(),
+    });
+    render();
+  }
+
+  /** Read a dataset's columns, which is what makes the builder usable. */
+  function readColumns(id) {
+    const dataset = datasets.get(id);
+    if (!dataset) return;
+    const source = datasetRows(dataset);
+    if (source.error) {
+      saveStudio("studioDatasets", datasets, id, { ...dataset, fields: [], rowCount: 0 });
+      window.alert(source.error);
+      render();
+      return;
+    }
+    saveStudio("studioDatasets", datasets, id, {
+      ...dataset,
+      fields: describeRows(source.rows),
+      rowCount: source.rows.length,
+    });
+    dsOpen = id;
+    render();
+  }
+
+  /** A view on a removed dataset cannot render, so it goes too. */
+  function removeDataset(id) {
+    for (const v of [...views.values()].filter((x) => x.datasetId === id)) {
+      dropStudio("studioViews", views, v.id);
+    }
+    dropStudio("studioDatasets", datasets, id);
+  }
+
   async function connectStore() {
     if (!window.claude) return;
 
@@ -3608,6 +4330,22 @@
     watch("trends", (id, body) =>
       trendExtras.set(id, { ...body, links: Array.isArray(body.links) ? body.links : [] }),
     );
+
+    // The studio's own configuration, shared like everything else — so a view
+    // built here is a view everyone on this page has.
+    watch("studioConnections", (id, body) => connections.set(id, { ...body, id }));
+    watch("studioDatasets", (id, body) =>
+      datasets.set(id, { ...body, id, fields: Array.isArray(body.fields) ? body.fields : [] }),
+    );
+    watch("studioViews", (id, body) => {
+      if (!body.slug || !body.spec) return;
+      views.set(id, {
+        ...body,
+        id,
+        spec: { filters: [], fields: {}, pageSize: 100, layout: "table", ...body.spec },
+        audience: { roles: "all", verticals: "all", emails: [], ...(body.audience ?? {}) },
+      });
+    });
   }
 
   /* ---- routing ---------------------------------------------------------- */
@@ -3659,6 +4397,26 @@
     return `${start} — ${end}`;
   }
 
+  /** The six-week grid for a month, Monday first. */
+  function monthWeeks(key) {
+    const [y, m] = key.split("-").map(Number);
+    const offset = (new Date(Date.UTC(y, m - 1, 1)).getUTCDay() + 6) % 7;
+    const weeks = [];
+    for (let w = 0; w < 6; w++) {
+      const row = [];
+      for (let d = 0; d < 7; d++) {
+        row.push(new Date(Date.UTC(y, m - 1, 1 - offset + w * 7 + d)).toISOString().slice(0, 10));
+      }
+      weeks.push(row);
+    }
+    return weeks;
+  }
+
+  const isRestDay = (date) => {
+    const wd = day(date).getUTCDay();
+    return wd === 0 || wd === 6;
+  };
+
   const monthShift = (key, n) => {
     const [y, m] = key.split("-").map(Number);
     const d = new Date(Date.UTC(y, m - 1 + n, 1));
@@ -3679,7 +4437,9 @@
 
   function renderNav() {
     const { parts } = route();
-    const here = parts[0] ?? "";
+    // A custom view lives at /v/<slug>, so "here" has to carry both segments
+    // or every one of them would highlight at once.
+    const here = parts[0] === "v" ? `v/${parts[1] ?? ""}` : (parts[0] ?? "");
     const me = person(viewerId);
     const scope = me.role === "forecaster" ? content.filter((c) => c.forecasterId === me.id) : content;
     const open = scope.filter(isOpen).length;
@@ -3699,6 +4459,34 @@
       ["What’s on", "#/whats-on", "whats-on", "", "whats-on", false],
       ["Add to your calendar", "#/subscribe", "subscribe", "", "subscribe", false],
     ];
+
+    // Views built in the studio land in the group they were given, beside the
+    // hand-written pages — because to the person a view was built for there is
+    // no difference between the two.
+    const mine = [...views.values()]
+      .filter(canSeeView)
+      .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
+    for (const group of ["Your work", "The team"]) {
+      const at = links.findIndex(([label, href]) => href === null && label === group);
+      const upTo = links.findIndex(
+        ([, href], i) => href === null && i > at,
+      );
+      const insertAt = upTo === -1 ? links.length : upTo;
+      const rows = mine
+        .filter((v) => (v.section === "The team" ? group === "The team" : group === "Your work"))
+        .map((v) => [
+          v.label,
+          `#/v/${v.slug}`,
+          `v/${v.slug}`,
+          v.state === "draft" ? "Draft" : "",
+          v.icon,
+          false,
+        ]);
+      links.splice(insertAt, 0, ...rows);
+    }
+    if (viewer().isAdmin) {
+      links.push(["Studio", "#/studio/connections", "studio", "", "studio", false]);
+    }
     document.getElementById("nav").innerHTML = links
       .map(([label, href, key, badge, iconName]) =>
         href === null
@@ -6174,6 +6962,1271 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       </div>`;
   }
 
+  /* ---- the studio -------------------------------------------------------
+   *
+   * The same three steps as the running Hub: connect to a source, name the
+   * table you want out of it, build a view of it for a group of people.
+   *
+   * Two differences, both of them honest about what a single page can do.
+   * There is no server here, so a Smartsheet token has nowhere safe to live
+   * and no way to make the call — a Smartsheet connection in this demo says
+   * so rather than pretending. And "This Hub's own tables" reads the data
+   * inlined in this page, which is the same shape the real reader returns.
+   *
+   * What is real: a view you build is saved, shared with everyone else
+   * looking at this page, and has an address you can send to someone.
+   * ----------------------------------------------------------------------- */
+
+  const KIND_LABELS = {
+    hub: "This Hub's own tables",
+    smartsheet: "Smartsheet",
+    "google-sheets": "Google Sheets",
+    mongodb: "MongoDB",
+    snowflake: "Snowflake",
+  };
+
+  const KIND_BLURBS = {
+    hub: "The schedule, the team, the events and the 446 trend profiles this page already holds. No credential needed.",
+    smartsheet: "Any sheet, by its id. Needs an API token, and the sheet shared with that token's account.",
+    "google-sheets": "A spreadsheet and a tab, via a service account.",
+    mongodb: "A collection, read-only.",
+    snowflake: "A table or view, through a read-only role.",
+  };
+
+  /** What each system needs, and whether it reads in the running Hub. */
+  const KIND_STATE = {
+    hub: { live: true, note: "" },
+    smartsheet: {
+      live: false,
+      note:
+        "Smartsheet reads live in the deployed Hub, where a token sits on the server. " +
+        "This page has no server, so it cannot hold one or make the call.",
+    },
+    "google-sheets": { live: false, note: "Not wired up yet. The model is here; the reader is not." },
+    mongodb: { live: false, note: "Not wired up yet. The model is here; the reader is not." },
+    snowflake: {
+      live: false,
+      note: "Not wired up yet. TFDB already reaches the Hub through the Smartsheet sheet it feeds.",
+    },
+  };
+
+  const LAYOUT_LABELS = {
+    table: "Table",
+    cards: "Cards",
+    list: "List",
+    calendar: "Calendar",
+    board: "Board",
+  };
+
+  const LAYOUT_BLURBS = {
+    table: "Every column, dense. Best for a working list you scan.",
+    cards: "A tile each, with a picture if the sheet has one.",
+    list: "One line each, with a date down the side.",
+    calendar: "A month grid, laid out by a date column.",
+    board: "Columns grouped by a value — a status, an owner, a stage.",
+  };
+
+  /** Which roles a layout reads. Showing a picker it ignores is confusing. */
+  const ROLES_FOR = {
+    table: ["columns", "link"],
+    cards: ["title", "subtitle", "body", "status", "image", "link", "meta"],
+    list: ["title", "subtitle", "date", "status", "link", "meta"],
+    calendar: ["date", "title"],
+    board: ["group", "title", "subtitle", "date"],
+  };
+
+  const ROLE_FIELD_LABELS = {
+    title: "Title",
+    subtitle: "Under the title",
+    body: "Description",
+    date: "Date",
+    status: "Badge",
+    group: "Group into columns by",
+    image: "Picture",
+    link: "Opens",
+    columns: "Columns to show",
+    meta: "Small facts",
+  };
+
+  const OP_LABELS = {
+    is: "is",
+    "is-not": "is not",
+    contains: "contains",
+    empty: "is empty",
+    "not-empty": "is not empty",
+    before: "is before",
+    after: "is after",
+    gt: "is more than",
+    lt: "is less than",
+    mine: "is me",
+  };
+
+  const AUDIENCE_ROLES = ["forecaster", "commissioning-manager", "admin"];
+  const ROLE_WORDS = {
+    forecaster: "forecasters",
+    "commissioning-manager": "commissioning managers",
+    admin: "admins",
+  };
+
+  /** The tables this page can offer, and how to get their rows. */
+  const HUB_TABLES = [
+    { ref: "content", label: "Commissioning schedule", rows: () => content },
+    { ref: "people", label: "The team", rows: () => people },
+    { ref: "events", label: "Leave, holidays and shows", rows: () => events },
+    { ref: "sessions", label: "Workshops and sessions", rows: () => sessions },
+    { ref: "trends", label: "TFDB trend profiles", rows: () => TRENDS },
+    { ref: "metrics", label: "KPI definitions", rows: () => METRICS },
+    { ref: "observations", label: "KPI readings", rows: () => OBSERVATIONS },
+  ];
+
+  /** One level of nesting, so a row is the flat string map a view expects. */
+  function flatten(row, index) {
+    const out = {};
+    for (const [key, value] of Object.entries(row ?? {})) {
+      if (value == null) out[key] = "";
+      else if (Array.isArray(value)) out[key] = value.map(String).join(", ");
+      else if (typeof value === "object") {
+        for (const [k2, v2] of Object.entries(value)) out[`${key}.${k2}`] = v2 == null ? "" : String(v2);
+      } else out[key] = String(value);
+    }
+    out._row = String(row?.id ?? index);
+    return out;
+  }
+
+  function readTable(ref) {
+    const table = HUB_TABLES.find((t) => t.ref === ref);
+    if (!table) return [];
+    return table.rows().map(flatten);
+  }
+
+  const ISO_DATE = /^\d{4}-\d{2}-\d{2}/;
+
+  /** What a column holds, decided by what is in it. */
+  function inferType(values) {
+    if (!values.length) return "text";
+    const all = (t) => values.every(t);
+    if (all((v) => ISO_DATE.test(v))) return "date";
+    if (all((v) => /^-?[\d,]+(\.\d+)?%?$/.test(v))) return "number";
+    if (all((v) => /^https?:\/\//i.test(v))) return "url";
+    if (all((v) => /^(true|false|yes|no)$/i.test(v))) return "boolean";
+    if (values.some((v) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v))) return "person";
+    return "text";
+  }
+
+  /**
+   * A dataset's columns.
+   *
+   * A column with few enough distinct values carries them, which is what
+   * turns a filter into a picker rather than a box to type into from memory.
+   */
+  function describeRows(rows) {
+    const names = new Set();
+    for (const row of rows) for (const key of Object.keys(row)) if (key !== "_row") names.add(key);
+    return [...names].map((name) => {
+      const values = rows.map((r) => r[name]).filter((v) => v !== "" && v != null);
+      const type = inferType(values);
+      const field = { name, type };
+      const distinct = [...new Set(values)];
+      if (type !== "date" && type !== "url" && distinct.length && distinct.length <= 40) {
+        field.options = distinct.sort((a, b) => String(a).localeCompare(String(b), "en", { numeric: true }));
+      }
+      return field;
+    });
+  }
+
+  const numOf = (value) => {
+    const n = Number(String(value).replace(/[,%\s]/g, ""));
+    return Number.isFinite(n) ? n : NaN;
+  };
+
+  /** Who the viewer is, as the "is me" filter needs them. */
+  function myIdentities() {
+    const v = viewer();
+    return [v.person.email, v.person.id, v.person.name].filter(Boolean).map((s) => s.toLowerCase());
+  }
+
+  function filterMatches(row, filter, me) {
+    const cellValue = String(row[filter.field] ?? "").trim();
+    const want = String(filter.value ?? "").trim();
+    switch (filter.op) {
+      case "empty":
+        return cellValue === "";
+      case "not-empty":
+        return cellValue !== "";
+      case "is":
+        return cellValue.toLowerCase() === want.toLowerCase();
+      case "is-not":
+        return cellValue.toLowerCase() !== want.toLowerCase();
+      case "contains":
+        return cellValue.toLowerCase().includes(want.toLowerCase());
+      case "mine":
+        return cellValue
+          .split(/[,;]+/)
+          .map((p) => p.trim().toLowerCase())
+          .some((p) => p !== "" && me.includes(p));
+      case "before":
+      case "after": {
+        if (ISO_DATE.test(cellValue) && ISO_DATE.test(want)) {
+          return filter.op === "before" ? cellValue < want : cellValue > want;
+        }
+        const a = numOf(cellValue);
+        const b = numOf(want);
+        if (Number.isNaN(a) || Number.isNaN(b)) return false;
+        return filter.op === "before" ? a < b : a > b;
+      }
+      case "gt":
+      case "lt": {
+        const a = numOf(cellValue);
+        const b = numOf(want);
+        if (Number.isNaN(a) || Number.isNaN(b)) return false;
+        return filter.op === "gt" ? a > b : a < b;
+      }
+      default:
+        return true;
+    }
+  }
+
+  /** Filter, sort and page a dataset's rows against a spec. */
+  function applySpec(rows, spec, fields) {
+    const me = myIdentities();
+    let out = rows.filter((row) => (spec.filters ?? []).every((f) => filterMatches(row, f, me)));
+
+    const sort = spec.sort;
+    if (sort?.field) {
+      const type = fields.find((f) => f.name === sort.field)?.type;
+      const dir = sort.direction === "desc" ? -1 : 1;
+      out = [...out].sort((a, b) => {
+        const x = String(a[sort.field] ?? "").trim();
+        const y = String(b[sort.field] ?? "").trim();
+        // Blanks last whichever way it runs: an unset date is unknown, not
+        // earliest.
+        if (x === "" && y === "") return 0;
+        if (x === "") return 1;
+        if (y === "") return -1;
+        if (type === "number") {
+          const d = numOf(x) - numOf(y);
+          if (!Number.isNaN(d) && d !== 0) return d * dir;
+        }
+        return x.localeCompare(y, "en", { numeric: true }) * dir;
+      });
+    }
+
+    const total = out.length;
+    if (spec.pageSize > 0) out = out.slice(0, spec.pageSize);
+    return { total, rows: out };
+  }
+
+  /** Whether this viewer may open this view. Admins see drafts; nobody else. */
+  function canSeeView(view) {
+    const v = viewer();
+    if (v.isAdmin) return true;
+    if (view.state !== "live") return false;
+    const audience = view.audience ?? {};
+    const emails = audience.emails ?? [];
+    if (emails.some((e) => e.toLowerCase() === (v.person.email ?? "").toLowerCase())) return true;
+    const roles = audience.roles ?? "all";
+    if (roles !== "all" && !roles.includes(v.role)) return false;
+    const verticals = audience.verticals ?? "all";
+    if (verticals === "all" || v.verticals === "all") return true;
+    return verticals.some((x) => v.verticals.includes(x));
+  }
+
+  function describeAudience(view) {
+    const a = view.audience ?? {};
+    const roles = a.roles ?? "all";
+    const parts = [roles === "all" ? "everyone" : roles.map((r) => ROLE_WORDS[r] ?? r).join(" and ")];
+    if ((a.verticals ?? "all") !== "all" && a.verticals.length) parts.push(`in ${a.verticals.join(", ")}`);
+    if ((a.emails ?? []).length) {
+      parts.push(`plus ${a.emails.length} named ${a.emails.length === 1 ? "person" : "people"}`);
+    }
+    return parts.join(" ");
+  }
+
+  const slugify = (label) =>
+    String(label)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 60);
+
+  const RESERVED_SLUGS = new Set(["new", "admin", "studio", "api"]);
+
+  const blankSpec = () => ({
+    layout: "table",
+    fields: { columns: [], meta: [] },
+    filters: [],
+    pageSize: 100,
+  });
+
+  /** A dataset's rows and columns, read on demand from the inlined tables. */
+  function datasetRows(dataset) {
+    const connection = connections.get(dataset.connectionId);
+    if (!connection) return { rows: [], error: "That dataset's connection has been removed." };
+    if (connection.kind !== "hub") {
+      return { rows: [], error: KIND_STATE[connection.kind]?.note ?? "This source does not read here." };
+    }
+    return { rows: readTable(dataset.ref) };
+  }
+
+  /* ---- studio pages ------------------------------------------------------ */
+
+  function studioTabs(here) {
+    const tab = (key, n, label, blurb, iconName) =>
+      `<a class="studio-tab${here === key ? " on" : ""}" href="#/studio/${key}">${icon(
+        iconName,
+        15,
+      )}<span><b>${n}. ${label}</b><em>${blurb}</em></span></a>`;
+    return `<nav class="studio-tabs">
+      ${tab("connections", 1, "Connections", "Where data comes from", "source")}
+      ${tab("datasets", 2, "Datasets", "Which table, and its columns", "table")}
+      ${tab("views", 3, "Views", "What people see", "eye")}
+    </nav>`;
+  }
+
+  function pageStudio(tab, params) {
+    const v = viewer();
+    if (!v.isAdmin) {
+      return `<div class="none">${icon("lock", 20)}<p>The studio is open to Hub admins only.
+        Switch to Graham Krag at the bottom left to see it.</p></div>`;
+    }
+
+    const body =
+      tab === "datasets"
+        ? studioDatasets()
+        : tab === "views"
+          ? params.get("build")
+            ? studioBuilder(params.get("build"))
+            : studioViews()
+          : studioConnections();
+
+    return `
+      <div class="head">
+        <div>
+          <div class="eyebrow">Admin</div>
+          <h1>${icon("studio", 26)} Studio</h1>
+          <p class="lede">Point the Hub at a data source, then build views of it for whoever
+            needs them — without a deploy. Every view gets a real address, so a link to one is
+            a link anyone it is meant for can open.</p>
+        </div>
+      </div>
+      ${studioTabs(tab)}
+      ${body}`;
+  }
+
+  function studioConnections() {
+    const rows = [...connections.values()].sort((a, b) => a.label.localeCompare(b.label));
+    return `
+      <div class="studio-bar">
+        <p class="signup-note" style="margin:0">${
+          rows.length ? `${rows.length} connection${rows.length === 1 ? "" : "s"}.` : "Nothing connected yet."
+        } In the running Hub a credential is held on the server and never sent back to the
+        browser; this page has no server, so it never asks for one.</p>
+        <button class="toggle solid" data-conn-new="1">${icon("plus", 14)}Add a connection</button>
+      </div>
+
+      ${
+        connForm
+          ? connectionForm()
+          : rows.length === 0
+            ? `<div class="none">${icon("source", 20)}<p>Add a connection to start.
+               <strong>This Hub&rsquo;s own tables</strong> needs no credential and is the
+               quickest way to see what the studio does.</p></div>`
+            : ""
+      }
+
+      <div class="studio-list">${rows
+        .map((c) => {
+          const state = KIND_STATE[c.kind] ?? { live: false, note: "" };
+          const used = [...datasets.values()].filter((d) => d.connectionId === c.id).length;
+          return `<div class="studio-item">
+            <div class="studio-item-head">
+              <div>
+                <h2>${esc(c.label)}${
+                  state.live ? "" : ` <span class="tag state-draft">Not available here</span>`
+                }</h2>
+                <p class="signup-note">${esc(KIND_LABELS[c.kind] ?? c.kind)} · ${used} dataset${
+                  used === 1 ? "" : "s"
+                }</p>
+              </div>
+              <div class="studio-item-actions">
+                <button class="toggle" data-conn-test="${c.id}">${icon("refresh", 14)}Test</button>
+                <button class="toggle danger" data-conn-del="${c.id}">${icon("trash", 14)}</button>
+              </div>
+            </div>
+            <dl class="studio-facts">
+              <div class="fact"><dt>Credential</dt><dd>${
+                c.kind === "hub" ? `<span class="soft">None needed</span>` : `<span class="soft">Held on the server</span>`
+              }</dd></div>
+              <div class="fact"><dt>Reads here</dt><dd>${state.live ? "Yes" : "No"}</dd></div>
+            </dl>
+            ${
+              c.checkNote
+                ? `<p class="studio-note ${c.checkOk ? "ok" : "bad"}">${icon(
+                    c.checkOk ? "published" : "at-risk",
+                    14,
+                  )}${esc(c.checkNote)}</p>`
+                : state.note
+                  ? `<p class="studio-note bad">${icon("at-risk", 14)}${esc(state.note)}</p>`
+                  : ""
+            }
+          </div>`;
+        })
+        .join("")}</div>`;
+  }
+
+  /** Draft state for the connection form, so a keystroke survives a render. */
+  let connForm = null;
+
+  function connectionForm() {
+    const kind = connForm.kind ?? "hub";
+    const state = KIND_STATE[kind];
+    return `<div class="studio-item editing">
+      <h2>New connection</h2>
+      <div class="studio-form">
+        <label class="field"><span>Name it</span>
+          <input id="conn-label" value="${esc(connForm.label ?? "")}"
+            placeholder="Commissioning sheets" /></label>
+        <label class="field"><span>System</span>
+          <select id="conn-kind" data-conn-kind="1">${Object.keys(KIND_LABELS)
+            .map(
+              (k) =>
+                `<option value="${k}"${k === kind ? " selected" : ""}>${esc(KIND_LABELS[k])}${
+                  KIND_STATE[k].live ? "" : " — not available here"
+                }</option>`,
+            )
+            .join("")}</select></label>
+      </div>
+      <p class="signup-note">${esc(KIND_BLURBS[kind])}</p>
+      ${state.live ? "" : `<p class="studio-note bad">${icon("at-risk", 14)}${esc(state.note)}</p>`}
+      <div class="composer-row">
+        <button class="toggle solid" data-conn-save="1">Add it</button>
+        <button class="toggle" data-conn-cancel="1">Cancel</button>
+      </div>
+    </div>`;
+  }
+
+  function studioDatasets() {
+    const rows = [...datasets.values()].sort((a, b) => a.label.localeCompare(b.label));
+    if (connections.size === 0) {
+      return `<div class="none">${icon("source", 20)}<p>A dataset comes out of a connection,
+        and there are none yet. <a class="link-out" href="#/studio/connections">Add one
+        first.</a></p></div>`;
+    }
+    return `
+      <div class="studio-bar">
+        <p class="signup-note" style="margin:0">${
+          rows.length ? `${rows.length} dataset${rows.length === 1 ? "" : "s"}.` : "No datasets yet."
+        } Read a dataset&rsquo;s columns and the view builder can offer them by name.</p>
+        <button class="toggle solid" data-ds-new="1">${icon("plus", 14)}Add a dataset</button>
+      </div>
+
+      ${dsForm ? datasetForm() : ""}
+
+      <div class="studio-list">${rows
+        .map((d) => {
+          const connection = connections.get(d.connectionId);
+          const usedBy = [...views.values()].filter((v) => v.datasetId === d.id);
+          return `<div class="studio-item">
+            <div class="studio-item-head">
+              <div>
+                <h2>${esc(d.label)}</h2>
+                <p class="signup-note">${esc(connection?.label ?? "connection removed")} ·
+                  <span class="mono-tag">${esc(d.ref)}</span></p>
+              </div>
+              <div class="studio-item-actions">
+                <button class="toggle" data-ds-read="${d.id}">${icon("refresh", 14)}${
+                  (d.fields ?? []).length ? "Re-read columns" : "Read columns"
+                }</button>
+                <button class="toggle danger" data-ds-del="${d.id}">${icon("trash", 14)}</button>
+              </div>
+            </div>
+            <dl class="studio-facts">
+              <div class="fact"><dt>Rows</dt><dd>${
+                d.rowCount ?? `<span class="soft">not read yet</span>`
+              }</dd></div>
+              <div class="fact"><dt>Columns</dt><dd>${
+                (d.fields ?? []).length || `<span class="soft">not read yet</span>`
+              }</dd></div>
+              <div class="fact"><dt>Used by</dt><dd>${
+                usedBy.length ? usedBy.map((v) => esc(v.label)).join(", ") : `<span class="soft">no views yet</span>`
+              }</dd></div>
+            </dl>
+            ${
+              (d.fields ?? []).length
+                ? `<button class="toggle" data-ds-cols="${d.id}">${
+                    dsOpen === d.id ? "Hide" : "Show"
+                  } the ${d.fields.length} columns</button>
+                   ${dsOpen === d.id ? fieldTable(d.fields) : ""}`
+                : `<p class="studio-note bad">${icon("at-risk", 14)}Read the columns before
+                   building a view on this — otherwise there is nothing to map.</p>`
+            }
+          </div>`;
+        })
+        .join("")}</div>`;
+  }
+
+  const TYPE_LABELS = {
+    text: "Text",
+    number: "Number",
+    date: "Date",
+    boolean: "Yes / no",
+    person: "Person",
+    url: "Web address",
+    list: "List",
+  };
+
+  function fieldTable(fields) {
+    return `<div class="table-scroll" style="margin-top:12px"><table>
+      <thead><tr><th>Column</th><th>Reads as</th><th>Values</th></tr></thead>
+      <tbody>${fields
+        .map(
+          (f) => `<tr><td>${esc(f.name)}</td><td>${TYPE_LABELS[f.type] ?? f.type}</td><td>${
+            f.options
+              ? f.options
+                  .slice(0, 6)
+                  .map((o) => `<span class="tag">${esc(o)}</span>`)
+                  .join(" ") +
+                (f.options.length > 6 ? ` <span class="signup-note">+${f.options.length - 6} more</span>` : "")
+              : `<span class="signup-note">free text</span>`
+          }</td></tr>`,
+        )
+        .join("")}</tbody></table></div>`;
+  }
+
+  let dsForm = null;
+  let dsOpen = null;
+
+  function datasetForm() {
+    const conns = [...connections.values()];
+    const connectionId = dsForm.connectionId ?? conns[0]?.id ?? "";
+    const connection = connections.get(connectionId);
+    const tables = connection?.kind === "hub" ? HUB_TABLES : [];
+    return `<div class="studio-item editing">
+      <h2>New dataset</h2>
+      <div class="studio-form">
+        <label class="field"><span>Out of</span>
+          <select id="ds-conn" data-ds-conn="1">${conns
+            .map(
+              (c) =>
+                `<option value="${c.id}"${c.id === connectionId ? " selected" : ""}>${esc(
+                  c.label,
+                )} — ${esc(KIND_LABELS[c.kind])}</option>`,
+            )
+            .join("")}</select></label>
+        ${
+          tables.length
+            ? `<label class="field"><span>Table</span>
+                <select id="ds-ref" data-ds-ref="1"><option value="">Choose one…</option>${tables
+                  .map(
+                    (t) =>
+                      `<option value="${t.ref}"${t.ref === dsForm.ref ? " selected" : ""}>${esc(
+                        t.label,
+                      )}</option>`,
+                  )
+                  .join("")}</select></label>`
+            : `<label class="field"><span>${
+                connection?.kind === "smartsheet" ? "Sheet id" : "Table or collection"
+              }</span><input id="ds-ref" value="${esc(dsForm.ref ?? "")}"
+                 placeholder="${connection?.kind === "smartsheet" ? "6141831453742468" : ""}" /></label>`
+        }
+        <label class="field"><span>Call it</span>
+          <input id="ds-label" value="${esc(dsForm.label ?? "")}"
+            placeholder="Commissioning schedule" /></label>
+      </div>
+      ${
+        connection && KIND_STATE[connection.kind] && !KIND_STATE[connection.kind].live
+          ? `<p class="studio-note bad">${icon("at-risk", 14)}${esc(
+              KIND_STATE[connection.kind].note,
+            )}</p>`
+          : ""
+      }
+      <div class="composer-row">
+        <button class="toggle solid" data-ds-save="1">Add and read its columns</button>
+        <button class="toggle" data-ds-cancel="1">Cancel</button>
+      </div>
+    </div>`;
+  }
+
+  function studioViews() {
+    const rows = [...views.values()].sort(
+      (a, b) => a.section.localeCompare(b.section) || a.order - b.order || a.label.localeCompare(b.label),
+    );
+    const ready = [...datasets.values()].filter((d) => (d.fields ?? []).length);
+    if (!ready.length) {
+      return `<div class="none">${icon("table", 20)}<p>A view is built on a dataset whose
+        columns have been read, and there are none yet.
+        <a class="link-out" href="#/studio/datasets">Set one up first.</a></p></div>`;
+    }
+    return `
+      <div class="studio-bar">
+        <p class="signup-note" style="margin:0">${
+          rows.length
+            ? `${rows.length} view${rows.length === 1 ? "" : "s"}, ${
+                rows.filter((v) => v.state === "live").length
+              } live.`
+            : "No views yet."
+        } A draft is visible to admins only, so you can build one in the open.</p>
+        <button class="toggle solid" data-view-new="1">${icon("plus", 14)}Build a view</button>
+      </div>
+
+      ${
+        rows.length === 0
+          ? `<div class="none">${icon("eye", 20)}<p>Build a view and it appears in the sidebar
+             for whoever it is aimed at.</p></div>`
+          : `<div class="studio-list">${rows
+              .map((v) => {
+                const dataset = datasets.get(v.datasetId);
+                return `<div class="studio-item">
+                  <div class="studio-item-head">
+                    <div>
+                      <h2>${icon(v.icon, 17)} ${esc(v.label)}
+                        <span class="tag ${v.state === "live" ? "state-live" : "state-draft"}">${
+                          v.state === "live" ? "Live" : "Draft"
+                        }</span></h2>
+                      <p class="signup-note"><a class="link-out" href="#/v/${esc(
+                        v.slug,
+                      )}">/v/${esc(v.slug)}</a> · ${LAYOUT_LABELS[v.spec.layout]} · ${esc(
+                        v.section,
+                      )} · ${esc(dataset?.label ?? "dataset removed")}</p>
+                    </div>
+                    <div class="studio-item-actions">
+                      <button class="toggle" data-view-state="${v.id}">${
+                        v.state === "live" ? "Unpublish" : "Publish"
+                      }</button>
+                      <button class="toggle" data-view-edit="${v.id}">${icon("edit", 14)}Edit</button>
+                      <button class="toggle danger" data-view-del="${v.id}">${icon("trash", 14)}</button>
+                    </div>
+                  </div>
+                  <dl class="studio-facts">
+                    <div class="fact"><dt>Who sees it</dt><dd>${esc(describeAudience(v))}</dd></div>
+                    <div class="fact"><dt>Filters</dt><dd>${
+                      (v.spec.filters ?? []).length || `<span class="soft">every row</span>`
+                    }</dd></div>
+                  </dl>
+                </div>`;
+              })
+              .join("")}</div>`
+      }`;
+  }
+
+  /**
+   * The builder's working copy.
+   *
+   * Held outside the render so typing survives it, and so the preview can be
+   * drawn from exactly what is on screen rather than from what was saved.
+   */
+  let builder = null;
+
+  function startBuilder(id) {
+    const existing = id !== "new" ? views.get(id) : null;
+    const ready = [...datasets.values()].filter((d) => (d.fields ?? []).length);
+    builder = existing
+      ? JSON.parse(JSON.stringify(existing))
+      : {
+          id: null,
+          slug: "",
+          label: "",
+          icon: "table",
+          section: "Your work",
+          order: 0,
+          description: "",
+          datasetId: ready[0]?.id ?? "",
+          spec: blankSpec(),
+          audience: { roles: "all", verticals: "all", emails: [] },
+          state: "draft",
+        };
+  }
+
+  function studioBuilder(id) {
+    if (!builder || (id !== "new" && builder.id !== id)) startBuilder(id);
+    const b = builder;
+    const ready = [...datasets.values()].filter((d) => (d.fields ?? []).length);
+    const dataset = datasets.get(b.datasetId);
+    const fields = dataset?.fields ?? [];
+
+    // The preview runs the spec on screen, through the same renderer the real
+    // page uses — so this is the view, not an impression of it.
+    const source = dataset ? datasetRows(dataset) : { rows: [], error: "No dataset chosen." };
+    const applied = applySpec(source.rows, b.spec, fields);
+
+    return `<div class="builder">
+      <div class="builder-panel">
+        <section class="builder-step">
+          <div class="sec-head"><h2>${icon("note")} What it is</h2></div>
+          <div class="studio-form">
+            <label class="field"><span>Name</span>
+              <input id="b-label" data-b="label" value="${esc(b.label)}"
+                placeholder="Beauty deadlines" /></label>
+            <label class="field"><span>Address</span>
+              <span class="slug-field"><span>/v/</span>
+                <input id="b-slug" data-b="slug" value="${esc(b.slug)}"
+                  placeholder="${esc(slugify(b.label))}" /></span></label>
+            <label class="field"><span>Sidebar group</span>
+              <select id="b-section" data-b="section">
+                <option value="Your work"${b.section === "Your work" ? " selected" : ""}>Your work</option>
+                <option value="The team"${b.section === "The team" ? " selected" : ""}>The team</option>
+              </select></label>
+            <label class="field"><span>Icon</span>
+              <span class="icon-field">${icon(b.icon, 18)}
+                <select id="b-icon" data-b="icon">${Object.keys(ICONS)
+                  .map((n) => `<option value="${n}"${n === b.icon ? " selected" : ""}>${n}</option>`)
+                  .join("")}</select></span></label>
+          </div>
+          <label class="field"><span>A line about it (optional)</span>
+            <input id="b-description" data-b="description" value="${esc(b.description ?? "")}"
+              placeholder="What this view is for, so nobody has to guess." /></label>
+        </section>
+
+        <section class="builder-step">
+          <div class="sec-head"><h2>${icon("source")} Where the rows come from</h2></div>
+          <label class="field"><span>Dataset</span>
+            <select id="b-dataset" data-b-dataset="1">${ready
+              .map(
+                (d) =>
+                  `<option value="${d.id}"${d.id === b.datasetId ? " selected" : ""}>${esc(
+                    d.label,
+                  )} — ${d.fields.length} columns, ${d.rowCount ?? "?"} rows</option>`,
+              )
+              .join("")}</select></label>
+        </section>
+
+        <section class="builder-step">
+          <div class="sec-head"><h2>${icon("cards")} Shape</h2></div>
+          <div class="layout-picker">${Object.keys(LAYOUT_LABELS)
+            .map(
+              (l) =>
+                `<button class="layout-option${b.spec.layout === l ? " on" : ""}"
+                   data-b-layout="${l}" title="${esc(LAYOUT_BLURBS[l])}">${icon(l, 20)}${
+                     LAYOUT_LABELS[l]
+                   }</button>`,
+            )
+            .join("")}</div>
+          <p class="signup-note">${esc(LAYOUT_BLURBS[b.spec.layout])}</p>
+        </section>
+
+        <section class="builder-step">
+          <div class="sec-head"><h2>${icon("table")} Which column carries what</h2></div>
+          ${
+            fields.length === 0
+              ? `<p class="studio-note bad">${icon("at-risk", 14)}This dataset&rsquo;s columns
+                 have not been read yet.</p>`
+              : `<div class="studio-form">${ROLES_FOR[b.spec.layout]
+                  .map((role) =>
+                    role === "columns" || role === "meta"
+                      ? `<div class="field wide"><span>${ROLE_FIELD_LABELS[role]}</span>
+                          <div class="chip-picker">${fields
+                            .map(
+                              (f) =>
+                                `<button class="chip${
+                                  (b.spec.fields[role] ?? []).includes(f.name) ? " on" : ""
+                                }" data-b-list="${role}" data-b-name="${esc(f.name)}">${esc(
+                                  f.name,
+                                )}</button>`,
+                            )
+                            .join("")}</div></div>`
+                      : `<label class="field"><span>${ROLE_FIELD_LABELS[role]}</span>
+                          <select data-b-role="${role}"><option value="">Not set</option>${suggestFields(
+                            fields,
+                            role,
+                          )
+                            .map(
+                              (f) =>
+                                `<option value="${esc(f.name)}"${
+                                  b.spec.fields[role] === f.name ? " selected" : ""
+                                }>${esc(f.name)}</option>`,
+                            )
+                            .join("")}</select></label>`,
+                  )
+                  .join("")}</div>`
+          }
+        </section>
+
+        <section class="builder-step">
+          <div class="sec-head"><h2>${icon("deadlines")} Which rows</h2></div>
+          ${(b.spec.filters ?? []).length === 0 ? `<p class="signup-note">No filters — every row in the dataset.</p>` : ""}
+          ${(b.spec.filters ?? [])
+            .map((f, i) => {
+              const field = fields.find((x) => x.name === f.field);
+              const needsValue = !["empty", "not-empty", "mine"].includes(f.op);
+              return `<div class="filter-row">
+                <select data-f-field="${i}">${fields
+                  .map(
+                    (x) =>
+                      `<option value="${esc(x.name)}"${x.name === f.field ? " selected" : ""}>${esc(
+                        x.name,
+                      )}</option>`,
+                  )
+                  .join("")}</select>
+                <select data-f-op="${i}">${Object.keys(OP_LABELS)
+                  .map(
+                    (op) =>
+                      `<option value="${op}"${op === f.op ? " selected" : ""}>${OP_LABELS[op]}</option>`,
+                  )
+                  .join("")}</select>
+                ${
+                  needsValue
+                    ? field?.options
+                      ? `<select data-f-value="${i}"><option value="">Choose…</option>${field.options
+                          .map(
+                            (o) =>
+                              `<option value="${esc(o)}"${o === f.value ? " selected" : ""}>${esc(
+                                o,
+                              )}</option>`,
+                          )
+                          .join("")}</select>`
+                      : `<input data-f-value="${i}" value="${esc(f.value ?? "")}"
+                          placeholder="${field?.type === "date" ? "2026-09-01" : "value"}" />`
+                    : `<span class="signup-note">${
+                        f.op === "mine" ? "matched against whoever is signed in" : ""
+                      }</span>`
+                }
+                <button class="toggle danger" data-f-del="${i}">${icon("trash", 14)}</button>
+              </div>`;
+            })
+            .join("")}
+          <button class="toggle" data-f-add="1"${fields.length ? "" : " disabled"}>${icon(
+            "plus",
+            14,
+          )}Add a filter</button>
+
+          <div class="studio-form" style="margin-top:12px">
+            <label class="field"><span>Sort by</span>
+              <select data-b-sort="1"><option value="">Source order</option>${fields
+                .map(
+                  (f) =>
+                    `<option value="${esc(f.name)}"${
+                      b.spec.sort?.field === f.name ? " selected" : ""
+                    }>${esc(f.name)}</option>`,
+                )
+                .join("")}</select></label>
+            ${
+              b.spec.sort
+                ? `<label class="field"><span>Direction</span>
+                    <select data-b-dir="1">
+                      <option value="asc"${b.spec.sort.direction === "asc" ? " selected" : ""}>A to Z, earliest first</option>
+                      <option value="desc"${b.spec.sort.direction === "desc" ? " selected" : ""}>Z to A, latest first</option>
+                    </select></label>`
+                : ""
+            }
+            <label class="field"><span>Rows to show</span>
+              <input id="b-page" data-b-page="1" type="number" min="0" max="2000"
+                value="${b.spec.pageSize}" /></label>
+          </div>
+          <p class="signup-note">0 shows every matching row.</p>
+        </section>
+
+        <section class="builder-step">
+          <div class="sec-head"><h2>${icon("people")} Who sees it</h2></div>
+          <div class="field"><span>Roles</span>
+            <div class="chip-picker">
+              <button class="chip${b.audience.roles === "all" ? " on" : ""}" data-b-role-all="1">Everyone</button>
+              ${AUDIENCE_ROLES.map((r) => {
+                const on = b.audience.roles !== "all" && b.audience.roles.includes(r);
+                return `<button class="chip${on ? " on" : ""}" data-b-audience="${r}">${
+                  r === "commissioning-manager" ? "Commissioning managers" : ROLE_WORDS[r]
+                }</button>`;
+              }).join("")}
+            </div>
+          </div>
+          <label class="field"><span>And these people, whatever their role</span>
+            <input id="b-emails" data-b-emails="1" value="${esc((b.audience.emails ?? []).join(", "))}"
+              placeholder="someone@wgsn.com, someone.else@wgsn.com" /></label>
+          <p class="signup-note">Admins always see every view, including drafts. In the running
+            Hub the rule is applied on the server, so a link to a view is no way round it.</p>
+        </section>
+
+        <div class="builder-save">
+          <label class="field"><span>State</span>
+            <select id="b-state" data-b="state">
+              <option value="draft"${b.state === "draft" ? " selected" : ""}>Draft — admins only</option>
+              <option value="live"${b.state === "live" ? " selected" : ""}>Live — in the sidebar for its audience</option>
+            </select></label>
+          <button class="toggle solid" data-b-save="1"${b.label && b.datasetId ? "" : " disabled"}>${
+            b.id ? "Save changes" : "Create the view"
+          }</button>
+          <button class="toggle" data-b-cancel="1">Cancel</button>
+        </div>
+      </div>
+
+      <div class="builder-preview">
+        <div class="preview-head">
+          <h2>${icon("eye")} Preview</h2>
+          <span class="signup-note">${applied.total} of ${source.rows.length} rows match</span>
+        </div>
+        <div class="preview-body">${
+          source.error
+            ? `<p class="studio-note bad">${icon("at-risk", 14)}${esc(source.error)}</p>`
+            : applied.rows.length === 0
+              ? `<div class="none">${icon("eye", 20)}<p>No rows match.${
+                  (b.spec.filters ?? []).some((f) => f.op === "mine")
+                    ? " An “is me” filter previews against you, not against whoever the view is for."
+                    : ""
+                }</p></div>`
+              : renderViewBody(b.spec, fields, applied.rows)
+        }</div>
+      </div>
+    </div>`;
+  }
+
+  /** The columns worth offering for a role, most likely first. */
+  function suggestFields(fields, role) {
+    const wants = {
+      date: ["date"],
+      image: ["url"],
+      link: ["url"],
+      status: ["text", "list"],
+      group: ["text", "list", "person"],
+    }[role];
+    if (!wants) return fields;
+    return [...fields.filter((f) => wants.includes(f.type)), ...fields.filter((f) => !wants.includes(f.type))];
+  }
+
+  /* ---- rendering a built view ------------------------------------------- */
+
+  const SOURCE_LABELS = {
+    hub: "the Hub's own tables",
+    smartsheet: "Smartsheet",
+    "google-sheets": "Google Sheets",
+    mongodb: "MongoDB",
+    snowflake: "Snowflake",
+  };
+
+  function pageCustomView(slug) {
+    const view = [...views.values()].find((v) => v.slug === slug);
+    if (!view) return `<div class="none">${icon("eye", 20)}<p>No view at that address.</p></div>`;
+    if (!canSeeView(view)) {
+      return `<div class="none">${icon("lock", 20)}<p>No view at that address, or it is not
+        yours to see.</p></div>`;
+    }
+
+    const dataset = datasets.get(view.datasetId);
+    const connection = dataset ? connections.get(dataset.connectionId) : null;
+    const fields = dataset?.fields ?? [];
+    const source = dataset ? datasetRows(dataset) : { rows: [], error: "This view's dataset has been removed." };
+    const applied = applySpec(source.rows, view.spec, fields);
+
+    return `
+      <div class="head">
+        <div>
+          <div class="eyebrow">${
+            view.state === "draft" ? "Draft — only admins can see this" : esc(view.section)
+          }</div>
+          <h1>${icon(view.icon, 26)} ${esc(view.label)}</h1>
+          ${view.description ? `<p class="lede">${esc(view.description)}</p>` : ""}
+        </div>
+        <div class="figures inline">
+          <div class="figure"><b>${applied.total}</b><span>${
+            applied.total === 1 ? "Row" : "Rows"
+          }</span></div>
+        </div>
+      </div>
+
+      <div class="view-source">
+        <span>${icon("source", 13)} ${esc(dataset?.label ?? "—")}</span>
+        <span class="soft">via ${esc(connection?.label ?? "—")} · ${
+          SOURCE_LABELS[connection?.kind] ?? "—"
+        }</span>
+        ${
+          (view.spec.filters ?? []).length
+            ? `<span class="soft">${view.spec.filters.length} filter${
+                view.spec.filters.length === 1 ? "" : "s"
+              } applied</span>`
+            : ""
+        }
+        ${
+          applied.total > applied.rows.length
+            ? `<span class="soft">showing the first ${applied.rows.length} of ${applied.total}</span>`
+            : ""
+        }
+      </div>
+
+      ${
+        source.error
+          ? `<p class="studio-note bad">${icon("at-risk", 14)}${esc(source.error)}</p>`
+          : applied.rows.length === 0
+            ? `<div class="none">${icon(view.icon, 20)}<p>Nothing matches this view yet.${
+                (view.spec.filters ?? []).length
+                  ? " Its filters may be narrower than the data."
+                  : ""
+              }</p></div>`
+            : renderViewBody(view.spec, fields, applied.rows)
+      }`;
+  }
+
+  const viewCell = (row, field) => (field ? String(row[field] ?? "") : "");
+  const viewKey = (row, i) => row._row || String(i);
+
+  /** A date as a person reads it, or the cell as it stands. */
+  function viewWhen(value) {
+    if (!value) return "—";
+    return ISO_DATE.test(value) ? medium(value.slice(0, 10)) : value;
+  }
+
+  /** Only ever http or https: the address came from a sheet. */
+  const webOnly = (url) => (/^https?:\/\//i.test(url) ? url : "");
+
+  function renderViewBody(spec, fields, rows) {
+    switch (spec.layout) {
+      case "cards":
+        return viewCards(spec, fields, rows);
+      case "list":
+        return viewList(spec, rows);
+      case "calendar":
+        return viewCalendar(spec, rows);
+      case "board":
+        return viewBoard(spec, rows);
+      default:
+        return viewTable(spec, fields, rows);
+    }
+  }
+
+  function viewTable(spec, fields, rows) {
+    const columns = (spec.fields.columns ?? []).length ? spec.fields.columns : fields.map((f) => f.name);
+    const typeOf = (name) => fields.find((f) => f.name === name)?.type;
+    const link = spec.fields.link;
+    return `<div class="table-scroll"><table>
+      <thead><tr>${columns
+        .map((c) => `<th${typeOf(c) === "number" ? ' class="num"' : ""}>${esc(c)}</th>`)
+        .join("")}</tr></thead>
+      <tbody>${rows
+        .map(
+          (row, i) =>
+            `<tr>${columns
+              .map((c, j) => {
+                const value = viewCell(row, c);
+                const url = j === 0 && link ? webOnly(viewCell(row, link)) : typeOf(c) === "url" ? webOnly(value) : "";
+                const text = typeOf(c) === "url" ? value.replace(/^https?:\/\//, "") : value;
+                return `<td${typeOf(c) === "number" ? ' class="num"' : ""}>${
+                  url
+                    ? `<a class="link-out" href="${esc(url)}" target="_blank" rel="noreferrer noopener">${esc(
+                        text,
+                      )}</a>`
+                    : esc(text)
+                }</td>`;
+              })
+              .join("")}</tr>`,
+        )
+        .join("")}</tbody></table></div>`;
+  }
+
+  function viewCards(spec, fields, rows) {
+    const f = spec.fields;
+    const typeOf = (name) => fields.find((x) => x.name === name)?.type;
+    return `<div class="view-cards">${rows
+      .map((row, i) => {
+        const url = webOnly(viewCell(row, f.link));
+        const inner = `
+          ${
+            f.image
+              ? `<figure class="view-cover" style="--h:${hue(viewKey(row, i))}">
+                  <span class="cover-fallback">${icon("image", 18)}</span>
+                  ${
+                    viewCell(row, f.image)
+                      ? `<img src="${esc(viewCell(row, f.image))}" alt="" loading="lazy"
+                          onerror="this.remove()" />`
+                      : ""
+                  }
+                </figure>`
+              : ""
+          }
+          <div class="view-card-body">
+            ${f.status && viewCell(row, f.status) ? `<span class="tag">${esc(viewCell(row, f.status))}</span>` : ""}
+            <h2 class="view-card-title">${esc(viewCell(row, f.title) || "Untitled")}</h2>
+            ${f.subtitle && viewCell(row, f.subtitle) ? `<p class="view-card-sub">${esc(viewCell(row, f.subtitle))}</p>` : ""}
+            ${f.body && viewCell(row, f.body) ? `<p class="view-card-text">${esc(viewCell(row, f.body))}</p>` : ""}
+            ${
+              (f.meta ?? []).some((m) => viewCell(row, m))
+                ? `<div class="view-card-meta">${(f.meta ?? [])
+                    .filter((m) => viewCell(row, m))
+                    .map((m) =>
+                      typeOf(m) === "url"
+                        ? `<a class="link-out" href="${esc(webOnly(viewCell(row, m)))}"
+                             target="_blank" rel="noreferrer noopener">${icon("link", 13)}</a>`
+                        : `<span title="${esc(m)}">${esc(viewCell(row, m))}</span>`,
+                    )
+                    .join("")}</div>`
+                : ""
+            }
+          </div>`;
+        return url
+          ? `<a class="view-card" href="${esc(url)}" target="_blank" rel="noreferrer noopener">${inner}</a>`
+          : `<div class="view-card">${inner}</div>`;
+      })
+      .join("")}</div>`;
+  }
+
+  function viewList(spec, rows) {
+    const f = spec.fields;
+    return `<div class="view-rows">${rows
+      .map((row, i) => {
+        const url = webOnly(viewCell(row, f.link));
+        const meta = [f.subtitle, ...(f.meta ?? [])]
+          .filter(Boolean)
+          .map((m) => viewCell(row, m))
+          .filter(Boolean)
+          .join(" · ");
+        const inner = `
+          ${f.date ? `<div class="view-row-when">${esc(viewWhen(viewCell(row, f.date)))}</div>` : ""}
+          <div class="view-row-main">
+            <div class="row-title">${esc(viewCell(row, f.title) || "Untitled")}</div>
+            <div class="view-row-meta">${esc(meta)}</div>
+          </div>
+          ${f.status && viewCell(row, f.status) ? `<span class="tag">${esc(viewCell(row, f.status))}</span>` : ""}`;
+        return url
+          ? `<a class="view-row" href="${esc(url)}" target="_blank" rel="noreferrer noopener">${inner}</a>`
+          : `<div class="view-row">${inner}</div>`;
+      })
+      .join("")}</div>`;
+  }
+
+  /** Which month a calendar view opens on, per view so stepping sticks. */
+  const viewMonths = new Map();
+
+  function viewCalendar(spec, rows) {
+    const dateField = spec.fields.date;
+    if (!dateField) {
+      return `<div class="none">${icon("calendar", 20)}<p>This view has no date column chosen
+        yet, so there is nothing to lay out.</p></div>`;
+    }
+
+    const dated = rows
+      .map((row, i) => ({ row, i, date: viewCell(row, dateField).slice(0, 10) }))
+      .filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x.date));
+
+    const slug = spec._slug ?? "preview";
+    // This month if anything is in it, else the nearest month that has rows —
+    // forwards for preference. An empty grid is the one thing it must not
+    // open on.
+    if (!viewMonths.has(slug)) {
+      const here = TODAY.slice(0, 7);
+      const months = [...new Set(dated.map((x) => x.date.slice(0, 7)))].sort();
+      viewMonths.set(
+        slug,
+        months.includes(here) ? here : (months.find((m) => m > here) ?? months[months.length - 1] ?? here),
+      );
+    }
+    const key = viewMonths.get(slug);
+
+    const byDate = new Map();
+    for (const item of dated) {
+      const list = byDate.get(item.date) ?? [];
+      list.push(item);
+      byDate.set(item.date, list);
+    }
+
+    const earlier = dated.filter((x) => x.date.slice(0, 7) < key).length;
+    const later = dated.filter((x) => x.date.slice(0, 7) > key).length;
+    const undated = rows.length - dated.length;
+
+    return `
+      <div class="cal-bar">
+        <div class="month-nav">
+          <button class="toggle" data-v-month="${monthShift(key, -1)}" data-v-slug="${esc(slug)}"
+            aria-label="The month before">&larr;</button>
+          <span class="month-name">${monthName(key)}</span>
+          <button class="toggle" data-v-month="${monthShift(key, 1)}" data-v-slug="${esc(slug)}"
+            aria-label="The month after">&rarr;</button>
+          ${
+            key !== TODAY.slice(0, 7)
+              ? `<button class="toggle" data-v-month="${TODAY.slice(0, 7)}" data-v-slug="${esc(
+                  slug,
+                )}">This month</button>`
+              : ""
+          }
+        </div>
+        <span class="signup-note">${earlier} ${
+          earlier === 1 ? "row" : "rows"
+        } before this month · ${later} after</span>
+      </div>
+
+      <div class="cal-scroll"><div class="cal">
+        <div class="cal-head">${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+          .map((d) => `<div>${d}</div>`)
+          .join("")}</div>
+        ${monthWeeks(key)
+          .map(
+            (week) => `<div class="cal-row"><div class="cal-cells">${week
+              .map((date) => {
+                const items = byDate.get(date) ?? [];
+                const classes = ["cell"];
+                if (date.slice(0, 7) !== key) classes.push("pad");
+                if (isRestDay(date)) classes.push("rest");
+                if (date === TODAY) classes.push("now");
+                return `<div class="${classes.join(" ")}">
+                  <b>${Number(date.slice(8, 10))}</b>
+                  ${items
+                    .slice(0, 4)
+                    .map(
+                      ({ row, i }) =>
+                        `<span class="mark" style="--c:var(--accent)" title="${esc(
+                          viewCell(row, spec.fields.title),
+                        )}"><span class="mark-title">${esc(
+                          viewCell(row, spec.fields.title) || "Untitled",
+                        )}</span></span>`,
+                    )
+                    .join("")}
+                  ${items.length > 4 ? `<span class="more">+${items.length - 4}</span>` : ""}
+                </div>`;
+              })
+              .join("")}</div></div>`,
+          )
+          .join("")}
+      </div></div>
+      ${
+        undated
+          ? `<p class="signup-note" style="margin-top:12px">${undated} ${
+              undated === 1 ? "row has" : "rows have"
+            } no usable date and are not on the grid.</p>`
+          : ""
+      }`;
+  }
+
+  function viewBoard(spec, rows) {
+    const group = spec.fields.group ?? spec.fields.status;
+    if (!group) {
+      return `<div class="none">${icon("board", 20)}<p>This view has no column to group by yet,
+        so there are no columns to draw.</p></div>`;
+    }
+    const columns = new Map();
+    for (const row of rows) {
+      const value = viewCell(row, group).trim() || "—";
+      const list = columns.get(value) ?? [];
+      list.push(row);
+      columns.set(value, list);
+    }
+    // A blank value gets its own column at the end: on a real sheet an unset
+    // status is usually the one you most want to see.
+    const ordered = [...columns].sort((a, b) =>
+      a[0] === "—" ? 1 : b[0] === "—" ? -1 : a[0].localeCompare(b[0]),
+    );
+    return `<div class="board">${ordered
+      .map(
+        ([value, items]) => `<div class="board-column">
+          <div class="board-head"><span>${esc(value === "—" ? "Not set" : value)}</span><b>${
+            items.length
+          }</b></div>
+          ${items
+            .map(
+              (row, i) => `<div class="board-card">
+                <div class="board-card-title">${esc(viewCell(row, spec.fields.title) || "Untitled")}</div>
+                ${
+                  spec.fields.subtitle && viewCell(row, spec.fields.subtitle)
+                    ? `<div class="board-card-sub">${esc(viewCell(row, spec.fields.subtitle))}</div>`
+                    : ""
+                }
+                ${
+                  spec.fields.date && viewCell(row, spec.fields.date)
+                    ? `<div class="board-card-when">${esc(viewWhen(viewCell(row, spec.fields.date)))}</div>`
+                    : ""
+                }
+              </div>`,
+            )
+            .join("")}
+        </div>`,
+      )
+      .join("")}</div>`;
+  }
+
   function pageSubscribe() {
     const me = person(viewerId);
     const example = `forecasters.wgsn.com/api/calendar/${uid()}${uid()}.ics`;
@@ -6352,6 +8405,12 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         break;
       case "subscribe":
         html = pageSubscribe();
+        break;
+      case "studio":
+        html = pageStudio(parts[1] ?? "connections", params);
+        break;
+      case "v":
+        html = pageCustomView(parts[1] ?? "");
         break;
       default:
         html = pageToday();
@@ -6661,6 +8720,326 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         render();
       }),
     );
+
+    // Studio ---------------------------------------------------------------
+
+    /**
+     * The studio's writes.
+     *
+     * Every one goes through saveStudio, which puts the record in the shared
+     * store as well as the local map — so a connection or a view someone
+     * builds is there for everyone else looking at this page, not just them.
+     */
+    view.querySelectorAll("[data-conn-new]").forEach((el) =>
+      el.addEventListener("click", () => {
+        connForm = { label: "", kind: "hub" };
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-conn-kind]").forEach((el) =>
+      el.addEventListener("change", () => {
+        connForm = { ...connForm, label: valueOf("conn-label", connForm.label), kind: el.value };
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-conn-cancel]").forEach((el) =>
+      el.addEventListener("click", () => {
+        connForm = null;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-conn-save]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const label = valueOf("conn-label", "").trim();
+        const kind = valueOf("conn-kind", "hub");
+        if (!label) return;
+        const id = uid() + uid();
+        saveStudio("studioConnections", connections, id, {
+          id,
+          label,
+          kind,
+          updatedBy: viewerId,
+          updatedAt: new Date().toISOString(),
+        });
+        connForm = null;
+        testConnection(id);
+      }),
+    );
+    view.querySelectorAll("[data-conn-test]").forEach((el) =>
+      el.addEventListener("click", () => testConnection(el.dataset.connTest)),
+    );
+    view.querySelectorAll("[data-conn-del]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const id = el.dataset.connDel;
+        // A dataset without its connection is dead, and so is a view on it.
+        for (const d of [...datasets.values()].filter((x) => x.connectionId === id)) {
+          removeDataset(d.id);
+        }
+        dropStudio("studioConnections", connections, id);
+        render();
+      }),
+    );
+
+    view.querySelectorAll("[data-ds-new]").forEach((el) =>
+      el.addEventListener("click", () => {
+        dsForm = { connectionId: [...connections.keys()][0] ?? "", label: "", ref: "" };
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-ds-conn]").forEach((el) =>
+      el.addEventListener("change", () => {
+        dsForm = { ...dsForm, connectionId: el.value, ref: "" };
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-ds-ref]").forEach((el) =>
+      el.addEventListener("change", () => {
+        const label = valueOf("ds-label", dsForm.label);
+        dsForm = {
+          ...dsForm,
+          ref: el.value,
+          // A blank name takes the table's own, which is nearly always right.
+          label: label || (HUB_TABLES.find((t) => t.ref === el.value)?.label ?? ""),
+        };
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-ds-cancel]").forEach((el) =>
+      el.addEventListener("click", () => {
+        dsForm = null;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-ds-save]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const label = valueOf("ds-label", "").trim();
+        const ref = valueOf("ds-ref", "").trim();
+        const connectionId = valueOf("ds-conn", dsForm?.connectionId ?? "");
+        if (!label || !ref || !connectionId) return;
+        const id = uid() + uid();
+        saveStudio("studioDatasets", datasets, id, {
+          id,
+          connectionId,
+          label,
+          ref,
+          fields: [],
+          updatedBy: viewerId,
+          updatedAt: new Date().toISOString(),
+        });
+        dsForm = null;
+        readColumns(id);
+      }),
+    );
+    view.querySelectorAll("[data-ds-read]").forEach((el) =>
+      el.addEventListener("click", () => readColumns(el.dataset.dsRead)),
+    );
+    view.querySelectorAll("[data-ds-cols]").forEach((el) =>
+      el.addEventListener("click", () => {
+        dsOpen = dsOpen === el.dataset.dsCols ? null : el.dataset.dsCols;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-ds-del]").forEach((el) =>
+      el.addEventListener("click", () => {
+        removeDataset(el.dataset.dsDel);
+        render();
+      }),
+    );
+
+    view.querySelectorAll("[data-view-new]").forEach((el) =>
+      el.addEventListener("click", () => {
+        startBuilder("new");
+        go("/studio/views?build=new");
+      }),
+    );
+    view.querySelectorAll("[data-view-edit]").forEach((el) =>
+      el.addEventListener("click", () => {
+        startBuilder(el.dataset.viewEdit);
+        go(`/studio/views?build=${el.dataset.viewEdit}`);
+      }),
+    );
+    view.querySelectorAll("[data-view-state]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const v = views.get(el.dataset.viewState);
+        if (!v) return;
+        saveStudio("studioViews", views, v.id, {
+          ...v,
+          state: v.state === "live" ? "draft" : "live",
+        });
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-view-del]").forEach((el) =>
+      el.addEventListener("click", () => {
+        dropStudio("studioViews", views, el.dataset.viewDel);
+        render();
+      }),
+    );
+
+    // The builder. Text boxes keep their value on the working copy as you
+    // type, so a re-render for the preview does not undo the last keystroke.
+    view.querySelectorAll("[data-b]").forEach((el) =>
+      el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+        builder[el.dataset.b] = el.value;
+        if (el.tagName === "SELECT") render();
+      }),
+    );
+    view.querySelectorAll("[data-b-dataset]").forEach((el) =>
+      el.addEventListener("change", () => {
+        // The columns are different, so a mapping against the old ones would
+        // be nonsense. The mapping restarts; the shape and size stay.
+        builder.datasetId = el.value;
+        builder.spec = { ...blankSpec(), layout: builder.spec.layout, pageSize: builder.spec.pageSize };
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-b-layout]").forEach((el) =>
+      el.addEventListener("click", () => {
+        builder.spec.layout = el.dataset.bLayout;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-b-role]").forEach((el) =>
+      el.addEventListener("change", () => {
+        builder.spec.fields[el.dataset.bRole] = el.value || undefined;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-b-list]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const role = el.dataset.bList;
+        const name = el.dataset.bName;
+        const current = builder.spec.fields[role] ?? [];
+        builder.spec.fields[role] = current.includes(name)
+          ? current.filter((x) => x !== name)
+          : [...current, name];
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-b-sort]").forEach((el) =>
+      el.addEventListener("change", () => {
+        builder.spec.sort = el.value
+          ? { field: el.value, direction: builder.spec.sort?.direction ?? "asc" }
+          : undefined;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-b-dir]").forEach((el) =>
+      el.addEventListener("change", () => {
+        if (builder.spec.sort) builder.spec.sort.direction = el.value;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-b-page]").forEach((el) =>
+      el.addEventListener("change", () => {
+        builder.spec.pageSize = Math.max(0, Math.min(2000, Number(el.value) || 0));
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-f-add]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const fields = datasets.get(builder.datasetId)?.fields ?? [];
+        if (!fields.length) return;
+        builder.spec.filters = [
+          ...(builder.spec.filters ?? []),
+          { field: fields[0].name, op: "is", value: "" },
+        ];
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-f-field]").forEach((el) =>
+      el.addEventListener("change", () => {
+        builder.spec.filters[Number(el.dataset.fField)].field = el.value;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-f-op]").forEach((el) =>
+      el.addEventListener("change", () => {
+        builder.spec.filters[Number(el.dataset.fOp)].op = el.value;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-f-value]").forEach((el) =>
+      el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+        builder.spec.filters[Number(el.dataset.fValue)].value = el.value;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-f-del]").forEach((el) =>
+      el.addEventListener("click", () => {
+        builder.spec.filters.splice(Number(el.dataset.fDel), 1);
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-b-role-all]").forEach((el) =>
+      el.addEventListener("click", () => {
+        builder.audience.roles = "all";
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-b-audience]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const role = el.dataset.bAudience;
+        const current = builder.audience.roles === "all" ? [] : builder.audience.roles;
+        const next = current.includes(role)
+          ? current.filter((r) => r !== role)
+          : [...current, role];
+        // An empty list would lock out everyone including whoever just set it.
+        builder.audience.roles = next.length ? next : "all";
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-b-emails]").forEach((el) =>
+      el.addEventListener("input", () => {
+        builder.audience.emails = el.value
+          .split(/[,\s;]+/)
+          .map((e) => e.trim().toLowerCase())
+          .filter((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
+      }),
+    );
+    view.querySelectorAll("[data-b-cancel]").forEach((el) =>
+      el.addEventListener("click", () => {
+        builder = null;
+        go("/studio/views");
+      }),
+    );
+    view.querySelectorAll("[data-b-save]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const label = (builder.label ?? "").trim();
+        if (!label || !builder.datasetId) return;
+        const slug = slugify(builder.slug || label);
+        if (!slug || RESERVED_SLUGS.has(slug)) {
+          window.alert(`"${slug}" is reserved — pick another name.`);
+          return;
+        }
+        const clash = [...views.values()].find((v) => v.slug === slug && v.id !== builder.id);
+        if (clash) {
+          window.alert(`A view already lives at /v/${slug}.`);
+          return;
+        }
+        const id = builder.id ?? uid() + uid();
+        saveStudio("studioViews", views, id, {
+          ...builder,
+          id,
+          label,
+          slug,
+          order: Number(builder.order) || 0,
+          updatedBy: viewerId,
+          updatedAt: new Date().toISOString(),
+        });
+        builder = null;
+        go(`/v/${slug}`);
+      }),
+    );
+
+    // A calendar view's month, per view, so stepping through one sticks.
+    view.querySelectorAll("[data-v-month]").forEach((el) =>
+      el.addEventListener("click", () => {
+        viewMonths.set(el.dataset.vSlug, el.dataset.vMonth);
+        render();
+      }),
+    );
+
     if (!focusId) window.scrollTo({ top: 0 });
   }
 

@@ -34,6 +34,8 @@ credentials to set up first.
 | Trends | `/trends`, `/trends/:id` | All 446 TFDB trend profiles: which are yours, the call on each, which industries still need a score |
 | Learning | `/workshops`, `/workshops/ws-201` | The workshop and knowledge-sharing programme, with sign-ups |
 | What's on | `/whats-on` | Leave, public holidays, shows |
+| Studio | `/studio` | Admin: connect a data source, build views of it, choose who sees them |
+| A built view | `/v/beauty-deadlines` | Anything the studio was pointed at, in any of five layouts |
 
 Every view is addressable, and every filter lives in the query string — so
 `/deadlines?forecaster=rc&status=not-started` and
@@ -358,6 +360,102 @@ neither editorial nor needed:
 The `Governance` tab is not read at all. It is a request-and-approval pipeline
 carrying pitch notes, approval decisions and per-person workflow, none of
 which the Hub needs to show a profile.
+
+## The studio
+
+The reason the team has not left AppSheet is that a manager can point it at a
+sheet and build a view for a group of people without waiting for anyone. This
+is that, at `/studio`, admin-only, in three steps in the order you do them.
+
+**1. Connections** — where data comes from. Two of them read today:
+
+- **This Hub's own tables.** The schedule, the team, the events, the
+  workshops, the KPIs and the 446 trend profiles, already loaded, no
+  credential. It exists so the studio can be used on the first visit instead
+  of waiting for a token, and because a view over the commissioning schedule
+  is a thing people will actually want.
+- **Smartsheet.** Any sheet, by id, with an API token. Test says what came
+  back in words you can act on: a refused token, a sheet not shared with the
+  token's account, and a blocked network read differently, because they need
+  different fixes.
+
+Google Sheets, MongoDB and Snowflake are modelled with the settings each will
+need, and every one of them reports "not wired up yet" rather than failing
+quietly. Snowflake in particular is not urgent: TFDB already reaches the Hub
+through the Smartsheet sheet it feeds.
+
+**2. Datasets** name one table out of a connection and read its columns. That
+step is what makes the builder quick — once the columns and their types are
+known, every field picker downstream is a list rather than a name to
+remember, and a filter on a column with 40 or fewer distinct values offers
+those values as a picker.
+
+**3. Views** are what people see. A view is a dataset, a layout, a mapping of
+which column carries what, some filters, and an audience:
+
+| Layout | What it is |
+| --- | --- |
+| Table | Every column, dense. A working list you scan. |
+| Cards | A tile each, with a picture if the sheet has one. |
+| List | One line each, with a date down the side. |
+| Calendar | A month grid from a date column, with a month stepper. |
+| Board | Columns grouped by a value — a status, an owner, a stage. |
+
+Ten filter operators, including **`is me`**, which resolves against whoever is
+signed in — so "my deadlines" is one view rather than one per forecaster. It
+matches a name, an email or an id, and handles a cell holding several of them.
+
+The builder previews the real rows through the same component that renders the
+view for everyone else, so there is no second renderer to drift out of step. A
+`mine` filter previews against the admin, and the page says so rather than
+letting it read as a bug.
+
+A view is addressable at `/v/<slug>` and appears in the sidebar, in whichever
+group it was given, beside the hand-written pages — because to the person it
+was built for there is no difference between the two. A draft is visible to
+admins only, so one can be built in the open.
+
+### Credentials go one way
+
+The `secret` column is never in a select list that feeds a response. The
+connectors read it straight from the store, and the client is only ever told
+that a credential is set and its last four characters. Two ways to supply one:
+
+- **An environment variable, by name.** The recommended one: it keeps the
+  credential out of the database and out of any backup of it.
+- **Pasted into the studio.** For trying something out. Editing a
+  connection's label does not touch it; an empty string clears it.
+
+A Smartsheet ref is checked against `^\d{6,25}$` before it goes anywhere near
+a URL, so a stored dataset cannot make the server fetch an arbitrary address.
+Settings whose key looks like a credential (`token`, `secret`, `password`,
+`key`) are dropped rather than stored in the open.
+
+### Who sees what is decided on the server
+
+`canSeeView` runs for the sidebar listing and for the view itself, so a slug
+someone was forwarded is not a way round the audience rule. An admin sees
+everything including drafts; everyone else needs the view live and either the
+role rule, the vertical rule, or their address named on it. A forecaster
+opening a manager-only view gets a plain refusal, and it is not in their
+sidebar.
+
+### What is not verified
+
+The Smartsheet reader has not run against the live API. `api.smartsheet.com`
+is blocked by the egress policy of the environment this was built in, so
+`probe`, `catalogue`, `describe` and `read` are exercised only against their
+error paths. Everything else — the store, the query layer, the whole studio
+UI, and the Hub connector reading all seven tables — was exercised end to end.
+
+### In the demo
+
+The standalone demo carries the same studio, with two honest differences.
+There is no server, so a Smartsheet connection says it cannot hold a token or
+make the call rather than pretending; and "This Hub's own tables" reads the
+data inlined in the page, which is the same shape the real reader returns. A
+view built in the demo is saved to the artifact's shared store, so it is there
+for everyone else looking at the page, and it has an address you can send.
 
 ## The calendar
 
