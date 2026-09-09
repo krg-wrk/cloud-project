@@ -1,11 +1,19 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { query, useApi } from "../lib/api";
+import { Slot, useCustom } from "../lib/custom";
 import { TODAY, formatShort, relativeDays } from "../lib/date";
 import { STATUS_LABELS, STATUS_ORDER, isOverdue, personName } from "../lib/domain";
 import { useViewer } from "../lib/viewer";
 import type { ContentItem, Person, Taxonomy } from "../types";
+import type { ReactNode } from "react";
 import { ErrorNote, Loading, StatusPill, Who } from "../components/bits";
 import ShareLink from "../components/ShareLink";
+
+/** Columns that hold a figure or a date, so they set in the mono face. */
+const NUMERIC = new Set([
+  "deadlines.column.season",
+  "deadlines.column.publication",
+]);
 
 const VERTICALS = [
   "Womenswear", "Menswear", "Beauty", "Interiors & Lifestyle",
@@ -15,6 +23,7 @@ const VERTICALS = [
 export default function Deadlines() {
   const [params, setParams] = useSearchParams();
   const { person, isManager } = useViewer();
+  const custom = useCustom();
   const people = useApi<Person[]>("/people");
   // The formats we publish, and their tiers, come from the taxonomy.
   const taxonomy = useApi<Taxonomy>("/taxonomy");
@@ -44,23 +53,21 @@ export default function Deadlines() {
 
   const rows = data ?? [];
   const upcoming = rows.filter((r) => r.submissionDate >= TODAY);
+  const columns = custom.group("deadlines.column");
 
   return (
     <>
       <div className="page-head">
         <div>
-          <div className="eyebrow">Submission deadlines</div>
-          <h1 className="page-title">Deadlines</h1>
-          <p className="page-sub">
-            Every commissioned forecast and the date its copy is due. Filter it,
-            then send the link — whoever opens it sees the same list.
-          </p>
+          <Slot id="deadlines.eyebrow" as="div" className="eyebrow" />
+          <Slot id="deadlines.title" as="h1" className="page-title" />
+          <Slot id="deadlines.sub" as="p" className="page-sub" />
         </div>
       </div>
 
       <div className="filters">
         <div className="field">
-          <label htmlFor="f-who">Forecaster</label>
+          <Slot id="deadlines.filter.forecaster" as="label" />
           <select
             id="f-who"
             value={forecaster}
@@ -77,7 +84,7 @@ export default function Deadlines() {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="f-vertical">Vertical</label>
+          <Slot id="deadlines.filter.vertical" as="label" />
           <select
             id="f-vertical"
             value={params.get("vertical") ?? ""}
@@ -92,7 +99,7 @@ export default function Deadlines() {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="f-type">Format</label>
+          <Slot id="deadlines.filter.type" as="label" />
           <select
             id="f-type"
             value={params.get("type") ?? ""}
@@ -107,7 +114,7 @@ export default function Deadlines() {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="f-status">Status</label>
+          <Slot id="deadlines.filter.status" as="label" />
           <select
             id="f-status"
             value={params.get("status") ?? ""}
@@ -122,7 +129,7 @@ export default function Deadlines() {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="f-q">Search</label>
+          <Slot id="deadlines.filter.search" as="label" />
           <input
             id="f-q"
             type="search"
@@ -145,50 +152,72 @@ export default function Deadlines() {
         <div className="empty">Nothing matches those filters.</div>
       ) : (
         <div className="table-wrap">
+          {/*
+            The columns are the admin's: which ones, in what order, called
+            what. Each is a cell renderer keyed by its slot id, so hiding one
+            drops it from the head and the body together.
+          */}
           <table className="schedule">
             <thead>
               <tr>
-                <th>Due</th>
-                <th>Title</th>
-                <th>Format</th>
-                <th>Vertical</th>
-                <th>Season</th>
-                <th>Forecaster</th>
-                <th>Publishes</th>
-                <th>Status</th>
+                {columns.map((slot) => (
+                  <th key={slot.id} className={NUMERIC.has(slot.id) ? "num" : undefined}>
+                    <Slot id={slot.id} />
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
-              {rows.map((item) => (
-                <tr key={item.id}>
-                  <td className={isOverdue(item) ? "num overdue" : "num"}>
-                    {formatShort(item.submissionDate)}
-                    <div style={{ fontSize: 10, opacity: 0.7 }}>
-                      {relativeDays(item.submissionDate)}
-                    </div>
-                  </td>
-                  <td>
+              {rows.map((item) => {
+                const cells: Record<string, ReactNode> = {
+                  "deadlines.column.submission": (
+                    <>
+                      {formatShort(item.submissionDate)}
+                      <div style={{ fontSize: 10, opacity: 0.7 }}>
+                        {relativeDays(item.submissionDate)}
+                      </div>
+                    </>
+                  ),
+                  "deadlines.column.title": (
                     <Link to={`/content/${item.id}`} className="row-title">
                       {item.title}
                     </Link>
-                  </td>
-                  <td>{item.type}</td>
-                  <td>{item.vertical}</td>
-                  <td className="num">{item.season}</td>
-                  <td>
+                  ),
+                  "deadlines.column.type": item.type,
+                  "deadlines.column.vertical": item.vertical,
+                  "deadlines.column.season": item.season,
+                  "deadlines.column.forecaster": (
                     <Link to={`/team/${item.forecasterId}`}>
                       <Who
                         id={item.forecasterId}
                         name={personName(people.data ?? [], item.forecasterId)}
                       />
                     </Link>
-                  </td>
-                  <td className="num">{formatShort(item.publicationDate)}</td>
-                  <td>
-                    <StatusPill status={item.status} />
-                  </td>
-                </tr>
-              ))}
+                  ),
+                  "deadlines.column.publication": formatShort(item.publicationDate),
+                  "deadlines.column.status": <StatusPill status={item.status} />,
+                };
+                return (
+                  <tr key={item.id}>
+                    {columns.map((slot) => (
+                      <td
+                        key={slot.id}
+                        className={
+                          slot.id === "deadlines.column.submission"
+                            ? isOverdue(item)
+                              ? "num overdue"
+                              : "num"
+                            : NUMERIC.has(slot.id)
+                              ? "num"
+                              : undefined
+                        }
+                      >
+                        {cells[slot.id]}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

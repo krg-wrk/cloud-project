@@ -1,5 +1,6 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { useApi, query } from "../lib/api";
+import { Slot, useCustom } from "../lib/custom";
 import { Icon } from "../lib/icons";
 import { useViewer } from "../lib/viewer";
 import type { TrendCall, TrendList } from "../types";
@@ -78,6 +79,7 @@ export function StatePill({
 export default function Trends() {
   const [params, setParams] = useSearchParams();
   const { isManager } = useViewer();
+  const custom = useCustom();
 
   // A forecaster's own profiles are the point of the page; a manager opens on
   // the whole database, because that is the view they need.
@@ -117,41 +119,43 @@ export default function Trends() {
     <>
       <div className="page-head">
         <div>
-          <div className="eyebrow">
-            {owner === "mine" ? "Profiles you own or are credited on" : "The trend database"}
-          </div>
-          <h1 className="page-title">Trends</h1>
-          <p className="page-sub">
-            Trend profiles from TFDB. Which are yours, what the call is on each, which
-            industries are still waiting for a score, and the way straight through to the
-            profile in Content Editor or on the live site.
-          </p>
+          <Slot
+            id={owner === "mine" ? "trends.eyebrow.mine" : "trends.eyebrow.all"}
+            as="div"
+            className="eyebrow"
+          />
+          <Slot id="trends.title" as="h1" className="page-title" />
+          <Slot id="trends.sub" as="p" className="page-sub" />
         </div>
         <div className="head-figures">
-          <div className="figure">
-            <b>{rows.length}</b>
-            <span>{owner === "mine" ? "Yours" : "Showing"}</span>
-          </div>
-          {owner !== "mine" && (
-            <div className="figure">
-              <b>{mine}</b>
-              <span>Yours</span>
-            </div>
-          )}
-          <div className="figure">
-            <b>{live}</b>
-            <span>Live</span>
-          </div>
-          <div className={awaiting ? "figure hot" : "figure"}>
-            <b>{awaiting}</b>
-            <span>Awaiting a score</span>
-          </div>
+          {/* Which figures, in what order, called what — the admin's. */}
+          {custom.group("trends.figure").map((slot) => {
+            const figures: Record<string, { n: number; hot?: boolean; when?: boolean }> = {
+              "trends.figure.showing": { n: rows.length },
+              "trends.figure.mine": { n: mine, when: owner !== "mine" },
+              "trends.figure.live": { n: live },
+              "trends.figure.awaiting": { n: awaiting, hot: awaiting > 0 },
+            };
+            const figure = figures[slot.id];
+            if (!figure || figure.when === false) return null;
+            return (
+              <div className={figure.hot ? "figure hot" : "figure"} key={slot.id}>
+                <b>{figure.n}</b>
+                <Slot
+                  id={slot.id}
+                  fallback={
+                    slot.id === "trends.figure.showing" && owner === "mine" ? "Yours" : undefined
+                  }
+                />
+              </div>
+            );
+          })}
         </div>
       </div>
 
       <div className="filters">
         <div className="field">
-          <label htmlFor="owner">Owner</label>
+          <Slot id="trends.filter.owner" as="label" />
           <select id="owner" value={owner} onChange={(e) => setParam("owner", e.target.value)}>
             <option value="mine">Mine</option>
             <option value="all">Everyone</option>
@@ -163,7 +167,7 @@ export default function Trends() {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="type">Trend type</label>
+          <Slot id="trends.filter.type" as="label" />
           <select id="type" value={type} onChange={(e) => setParam("type", e.target.value)}>
             <option value="">All types</option>
             {TREND_TYPES.map((t) => (
@@ -174,7 +178,7 @@ export default function Trends() {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="industry">Industry</label>
+          <Slot id="trends.filter.industry" as="label" />
           <select
             id="industry"
             value={industry}
@@ -189,7 +193,7 @@ export default function Trends() {
           </select>
         </div>
         <div className="field">
-          <label htmlFor="state">State</label>
+          <Slot id="trends.filter.state" as="label" />
           <select id="state" value={state} onChange={(e) => setParam("state", e.target.value)}>
             <option value="">Any state</option>
             <option value="published">Live</option>
@@ -198,7 +202,7 @@ export default function Trends() {
           </select>
         </div>
         <div className="field">
-          <label>Call</label>
+          <Slot id="trends.filter.call" as="label" />
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             <button className={call ? "btn" : "btn accent"} onClick={() => setParam("call", "")}>
               Any
@@ -216,7 +220,7 @@ export default function Trends() {
           </div>
         </div>
         <div className="field">
-          <label>Scores</label>
+          <Slot id="trends.filter.scores" as="label" />
           <button
             className={needsScore ? "btn accent" : "btn"}
             onClick={() => setParam("needsScore", needsScore ? "" : "1")}

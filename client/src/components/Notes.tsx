@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { send, useApi } from "../lib/api";
+import { Slot } from "../lib/custom";
 import { formatLong } from "../lib/date";
 import { personName } from "../lib/domain";
 import { useViewer } from "../lib/viewer";
@@ -23,9 +24,12 @@ interface NotesResponse {
 export default function Notes({
   contentId,
   people,
+  headingSlot,
 }: {
   contentId: string;
   people: Person[];
+  /** The registry slot that names this section, so it can be renamed. */
+  headingSlot?: string;
 }) {
   const { person } = useViewer();
   const { data, error, reload } = useApi<NotesResponse>(`/content/${contentId}/notes`);
@@ -110,7 +114,12 @@ export default function Notes({
   return (
     <>
       <div className="section-head">
-        <h2 className="section-title">Notes {notes.length > 0 && `(${notes.length})`}</h2>
+        <Slot
+          id={headingSlot ?? "content.section.notes"}
+          as="h2"
+          className="section-title"
+          suffix={notes.length > 0 ? ` (${notes.length})` : undefined}
+        />
         {data && !data.canWrite && (
           <span style={{ fontSize: 12, color: "var(--ink-45)" }}>Read only</span>
         )}

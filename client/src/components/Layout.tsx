@@ -4,6 +4,7 @@ import { devViewer, setDevViewer, useApi } from "../lib/api";
 import { TODAY, monthKey } from "../lib/date";
 import { isOutstanding, isOverdue } from "../lib/domain";
 import { Icon } from "../lib/icons";
+import { CustomisationProvider, EditBar, Slot, useCustom } from "../lib/custom";
 import { ViewerProvider, useViewer } from "../lib/viewer";
 import type { ContentItem, Me, Person, SessionWithSignUps, ViewLink } from "../types";
 import { Avatar, ErrorNote, Loading } from "./bits";
@@ -69,6 +70,8 @@ interface Section {
   /** Built in the studio rather than written by hand. */
   custom?: boolean;
   order?: number;
+  /** The registry slot that names it, for the fixed sections. */
+  slot?: string;
 }
 
 /**
@@ -92,6 +95,7 @@ function sections({
       to: "/",
       label: "Today",
       icon: "today",
+      slot: "nav.item.today",
       end: true,
       group: "work",
       primary: true,
@@ -101,17 +105,32 @@ function sections({
       to: "/deadlines",
       label: "Deadlines",
       icon: "deadlines",
+      slot: "nav.item.deadlines",
       group: "work",
       primary: true,
       badge: String(outstanding),
     },
-    { to: `/calendar/${monthKey(TODAY)}`, label: "Calendar", icon: "calendar", group: "work", primary: true },
-    { to: "/trends", label: "Trends", icon: "trends", group: "work", primary: true },
-    { to: "/performance", label: "Performance", icon: "performance", group: "work" },
+    {
+      to: `/calendar/${monthKey(TODAY)}`,
+      label: "Calendar",
+      icon: "calendar",
+      group: "work",
+      primary: true,
+      slot: "nav.item.calendar",
+    },
+    { to: "/trends", label: "Trends", icon: "trends", group: "work", primary: true, slot: "nav.item.trends" },
+    {
+      to: "/performance",
+      label: "Performance",
+      icon: "performance",
+      group: "work",
+      slot: "nav.item.performance",
+    },
     {
       to: "/workshops",
       label: "Learning",
       icon: "learning",
+      slot: "nav.item.workshops",
       group: "team",
       badge: mySessions > 0 ? String(mySessions) : undefined,
     },
@@ -119,11 +138,19 @@ function sections({
       to: "/team",
       label: "Forecasters",
       icon: "forecasters",
+      slot: "nav.item.team",
       group: "team",
       badge: String(forecasters),
     },
-    { to: "/whats-on", label: "What\u2019s on", icon: "whats-on", group: "team" },
-    { to: "/subscribe", label: "Add to your calendar", short: "Calendar feed", icon: "subscribe", group: "team" },
+    { to: "/whats-on", label: "What\u2019s on", icon: "whats-on", group: "team", slot: "nav.item.whats-on" },
+    {
+      to: "/subscribe",
+      label: "Add to your calendar",
+      short: "Calendar feed",
+      icon: "subscribe",
+      group: "team",
+      slot: "nav.item.subscribe",
+    },
   ];
 }
 
@@ -146,8 +173,27 @@ function asSection(view: ViewLink): Section {
   };
 }
 
+/**
+ * The sidebar, with the admin's own wording and order.
+ *
+ * A fixed section's slot id is nav.item.<key>; a studio view's label is the
+ * view's own and is changed in the studio, so it is left alone here.
+ */
+function customise(items: Section[], custom: ReturnType<typeof useCustom>): Section[] {
+  const order = custom.group("nav.item").map((s) => s.id);
+  return items
+    .filter((s) => s.custom || custom.shown(s.slot ?? ""))
+    .map((s) => ({
+      ...s,
+      label: s.slot ? custom.text(s.slot, s.label) : s.label,
+      order: s.slot ? order.indexOf(s.slot) : (s.order ?? 999),
+    }))
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+}
+
 function useSections(content: ContentItem[]): Section[] {
   const { person, isManager, isAdmin } = useViewer();
+  const custom = useCustom();
   const scope = isManager ? content : content.filter((c) => c.forecasterId === person?.id);
   const sessions = useApi<SessionWithSignUps[]>(
     person ? `/sessions?when=upcoming&person=${person.id}` : "/sessions?when=upcoming",
@@ -163,15 +209,15 @@ function useSections(content: ContentItem[]): Section[] {
     forecasters: new Set(content.map((c) => c.forecasterId)).size,
   });
 
-  const custom = [...(views.data ?? [])]
+  const built = [...(views.data ?? [])]
     .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
     .map(asSection);
 
   const studio: Section[] = isAdmin
-    ? [{ to: "/studio", label: "Studio", icon: "studio", group: "team" }]
+    ? [{ to: "/studio", label: "Studio", icon: "studio", group: "team", order: 1000 }]
     : [];
 
-  return [...fixed, ...custom, ...studio];
+  return [...customise(fixed, custom), ...built, ...studio];
 }
 
 function Sidebar({ content }: { content: ContentItem[] }) {
@@ -187,7 +233,7 @@ function Sidebar({ content }: { content: ContentItem[] }) {
       </NavLink>
 
       <nav className="nav">
-        <div className="nav-label">Your work</div>
+        <Slot id="nav.group.work" as="div" className="nav-label" />
         {items
           .filter((s) => s.group === "work")
           .map((s) => (
@@ -199,7 +245,7 @@ function Sidebar({ content }: { content: ContentItem[] }) {
           ))}
 
         <div className="nav-label" style={{ marginTop: 20 }}>
-          The team
+          <Slot id="nav.group.team" />
         </div>
         {items
           .filter((s) => s.group === "team")
@@ -386,13 +432,20 @@ export default function Layout() {
 
   return (
     <ViewerProvider me={me.data} people={people.data}>
-      <div className="shell">
-        <Sidebar content={content.data} />
-        <main className="main">
-          <Outlet />
-        </main>
-        <MobileNav content={content.data} />
-      </div>
+      {/*
+        The wording layer wraps everything, because the sidebar is as
+        renamable as the pages are.
+      */}
+      <CustomisationProvider>
+        <div className="shell">
+          <Sidebar content={content.data} />
+          <main className="main">
+            <Outlet />
+          </main>
+          <MobileNav content={content.data} />
+        </div>
+        <EditBar />
+      </CustomisationProvider>
     </ViewerProvider>
   );
 }

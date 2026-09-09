@@ -6,6 +6,8 @@ import type {
   ConnectorKind,
   Dataset,
   Field,
+  SlotOverride,
+  SlotPatch,
   ViewDef,
   ViewSpec,
 } from "./types.js";
@@ -73,6 +75,25 @@ CREATE TABLE IF NOT EXISTS studio_views (
   updated_by TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS studio_views_by_section ON studio_views (section, sort_order);
+
+/*
+ * The built-in pages, made changeable.
+ *
+ * A "slot" is one customisable thing on a hand-written page: a heading, a
+ * field label, a column, a navigation item. The client declares which slots
+ * exist and what they say by default; this table holds only the changes an
+ * admin has made, so a slot nobody has touched has no row and the default
+ * stands. That keeps the defaults in the code, where they belong, and means
+ * a page gaining a new heading does not need a migration.
+ */
+CREATE TABLE IF NOT EXISTS studio_slots (
+  slot TEXT PRIMARY KEY,
+  label TEXT,
+  hidden INTEGER NOT NULL DEFAULT 0,
+  sort_order INTEGER,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT NOT NULL
+);
 `;
 
 const now = () => new Date().toISOString();
@@ -388,6 +409,84 @@ export class StudioStore {
   deleteView(id: string): boolean {
     const r = this.db.prepare(`DELETE FROM studio_views WHERE id = ?`).run(id);
     return Number(r.changes) > 0;
+  }
+
+  // --- Slots: the built-in pages' own wording and layout ------------------
+
+  /**
+   * Every override an admin has made, keyed by slot.
+   *
+   * Read by any signed-in viewer, because a page cannot render without it.
+   * There is nothing sensitive here — it is the wording of the app.
+   */
+  listSlots(): Record<string, SlotOverride> {
+    const rows = this.db
+      .prepare(`SELECT slot, label, hidden, sort_order FROM studio_slots`)
+      .all() as Record<string, unknown>[];
+    const out: Record<string, SlotOverride> = {};
+    for (const row of rows) {
+      const override: SlotOverride = {};
+      const label = opt(row.label);
+      if (label !== undefined) override.label = label;
+      if (Number(row.hidden ?? 0)) override.hidden = true;
+      if (row.sort_order != null) override.order = Number(row.sort_order);
+      // A row that overrides nothing is the same as no row at all.
+      if (Object.keys(override).length > 0) out[str(row.slot)] = override;
+    }
+    return out;
+  }
+
+  /**
+   * Change one slot.
+   *
+   * A field left out is left alone, so renaming something does not un-hide
+   * it and reordering does not wipe a rename. `null` clears one field;
+   * `resetSlot` drops the row and puts the default back.
+   */
+  setSlot(slot: string, patch: SlotPatch, by: string): void {
+    const existing = this.db
+      .prepare(`SELECT label, hidden, sort_order FROM studio_slots WHERE slot = ?`)
+      .get(slot) as Record<string, unknown> | undefined;
+
+    const label =
+      patch.label === undefined ? (existing ? opt(existing.label) : undefined) : (patch.label ?? undefined);
+    const hidden =
+      patch.hidden === undefined ? Boolean(Number(existing?.hidden ?? 0)) : patch.hidden;
+    const order =
+      patch.order === undefined
+        ? existing?.sort_order == null
+          ? null
+          : Number(existing.sort_order)
+        : (patch.order ?? null);
+
+    this.db
+      .prepare(
+        `INSERT INTO studio_slots (slot, label, hidden, sort_order, updated_at, updated_by)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT (slot) DO UPDATE SET
+           label = excluded.label,
+           hidden = excluded.hidden,
+           sort_order = excluded.sort_order,
+           updated_at = excluded.updated_at,
+           updated_by = excluded.updated_by`,
+      )
+      .run(slot, label ?? null, hidden ? 1 : 0, order, now(), by);
+  }
+
+  /** Put one slot back to what the code says. */
+  resetSlot(slot: string): void {
+    this.db.prepare(`DELETE FROM studio_slots WHERE slot = ?`).run(slot);
+  }
+
+  /**
+   * Put a whole page, or everything, back to the defaults. The prefix is
+   * matched on the dotted slot id, so "content." resets that page alone.
+   */
+  resetSlots(prefix?: string): number {
+    const r = prefix
+      ? this.db.prepare(`DELETE FROM studio_slots WHERE slot LIKE ? || '%'`).run(prefix)
+      : this.db.prepare(`DELETE FROM studio_slots`).run();
+    return Number(r.changes);
   }
 
   /** Whether a slug is free, ignoring the view being edited. */

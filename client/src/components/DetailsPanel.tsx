@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { send, useApi } from "../lib/api";
+import { Slot } from "../lib/custom";
 import { formatLong } from "../lib/date";
 import { personName } from "../lib/domain";
 import type { ContentItem, ForecastDetails, Person, ResearchLink } from "../types";
@@ -27,10 +28,13 @@ export default function DetailsPanel({
   item,
   people,
   contentTypes,
+  headingSlot,
 }: {
   item: ContentItem;
   people: Person[];
   contentTypes: string[];
+  /** The registry slot that names this section, so it can be renamed. */
+  headingSlot?: string;
 }) {
   const loaded = useApi<DetailsResponse>(`/content/${item.id}/details`);
   const [details, setDetails] = useState<ForecastDetails | null>(null);
@@ -85,7 +89,7 @@ export default function DetailsPanel({
     return (
       <section className="section">
         <div className="section-head">
-          <h2 className="section-title">Forecast details</h2>
+          <Slot id={headingSlot ?? "content.section.details"} as="h2" className="section-title" />
         </div>
         <div className="details-form">
           <div className="details-row">
@@ -206,7 +210,7 @@ export default function DetailsPanel({
   return (
     <section className="section">
       <div className="section-head">
-        <h2 className="section-title">Forecast details</h2>
+        <Slot id={headingSlot ?? "content.section.details"} as="h2" className="section-title" />
         {canWrite && (
           <button className="btn" onClick={open}>
             {hasAnything ? "Edit" : "Fill these in"}

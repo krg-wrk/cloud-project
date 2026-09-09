@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useApi } from "../lib/api";
+import { Slot, useCustom } from "../lib/custom";
 import { TODAY, formatLong, formatShort, monthKey, relativeDays } from "../lib/date";
 import { STATUS_LABELS, clashesFor, isOverdue, personName } from "../lib/domain";
 import type { CalendarEvent, ContentItem, PeerReview, Person, Taxonomy } from "../types";
@@ -12,6 +13,7 @@ import ShareLink from "../components/ShareLink";
 
 export default function ContentDetail() {
   const { id } = useParams<{ id: string }>();
+  const custom = useCustom();
   const item = useApi<ContentItem>(`/content/${id}`);
   const people = useApi<Person[]>("/people");
   const events = useApi<CalendarEvent[]>("/events");
@@ -26,15 +28,18 @@ export default function ContentDetail() {
   if (!item.data || !people.data) return <Loading what="this forecast" />;
 
   const c = item.data;
-  const forecaster = people.data.find((p) => p.id === c.forecasterId);
-  const clashes = events.data ? clashesFor(c, events.data, people.data) : [];
+  // Bound once: inside the section callbacks below the narrowing on
+  // people.data is lost, and re-checking it in each is noise.
+  const team = people.data;
+  const forecaster = team.find((p) => p.id === c.forecasterId);
+  const clashes = events.data ? clashesFor(c, events.data, team) : [];
   const submitted = c.status !== "not-started" && c.status !== "in-progress" && c.status !== "at-risk";
   const published = c.status === "published";
 
   return (
     <>
       <div className="breadcrumb">
-        <Link to="/deadlines">Deadlines</Link> <span>/</span>{" "}
+        <Link to="/deadlines">{custom.text("content.crumb")}</Link> <span>/</span>{" "}
         <span>{c.vertical}</span> <span>/</span> <span>{c.id}</span>
       </div>
 
@@ -45,7 +50,7 @@ export default function ContentDetail() {
           </div>
           <h1 className="page-title">{c.title}</h1>
           <p className="page-sub">
-            Due with {personName(people.data, c.managerId)} on{" "}
+            Due with {personName(team, c.managerId)} on{" "}
             <strong>{formatLong(c.submissionDate)}</strong> ({relativeDays(c.submissionDate)}),
             publishing {formatLong(c.publicationDate)}.
           </p>
@@ -75,67 +80,117 @@ export default function ContentDetail() {
             </div>
           )}
 
-          <h2 className="section-title" style={{ marginBottom: 4 }}>
-            Where it is
-          </h2>
-          <div className="timeline">
-            <div className={`timeline-step ${submitted || published ? "done" : "next"}`}>
-              <div className="timeline-dot" />
-              <div>
-                <strong>Copy due with the commissioning manager</strong>
-                <div className="timeline-when">
-                  {formatLong(c.submissionDate)} · {relativeDays(c.submissionDate)}
-                </div>
-              </div>
-            </div>
-            <div
-              className={`timeline-step ${published ? "done" : submitted ? "next" : ""}`}
-            >
-              <div className="timeline-dot" />
-              <div>
-                <strong>Edit and review</strong>
-                <div className="timeline-when">
-                  {submitted ? "In hand" : "Once the copy lands"}
-                </div>
-              </div>
-            </div>
-            <div className={`timeline-step ${published ? "done" : ""}`}>
-              <div className="timeline-dot" />
-              <div>
-                <strong>Live on the platform</strong>
-                <div className="timeline-when">
-                  {formatLong(c.publicationDate)}
-                  {c.publicationDate >= TODAY && ` · ${relativeDays(c.publicationDate)}`}
-                </div>
-              </div>
-            </div>
-          </div>
+          {/*
+            The body is a composition rather than a fixed sequence: which
+            sections appear, what they are called and in what order is the
+            admin's, so a page can be shaped around how the team actually
+            works without a deploy.
+          */}
+          {custom.group("content.section").map((slot) => {
+            switch (slot.id) {
+              case "content.section.where":
+                return (
+                  <div key={slot.id}>
+                    <Slot
+                      id={slot.id}
+                      as="h2"
+                      className="section-title"
+                    />
+                    <div className="timeline">
+                      {custom.group("content.step").map((step) => {
+                        const state =
+                          step.id === "content.step.submission"
+                            ? submitted || published
+                              ? "done"
+                              : "next"
+                            : step.id === "content.step.review"
+                              ? published
+                                ? "done"
+                                : submitted
+                                  ? "next"
+                                  : ""
+                              : published
+                                ? "done"
+                                : "";
+                        const when =
+                          step.id === "content.step.submission"
+                            ? `${formatLong(c.submissionDate)} · ${relativeDays(c.submissionDate)}`
+                            : step.id === "content.step.review"
+                              ? submitted
+                                ? "In hand"
+                                : "Once the copy lands"
+                              : `${formatLong(c.publicationDate)}${
+                                  c.publicationDate >= TODAY
+                                    ? ` · ${relativeDays(c.publicationDate)}`
+                                    : ""
+                                }`;
+                        return (
+                          <div className={`timeline-step ${state}`} key={step.id}>
+                            <div className="timeline-dot" />
+                            <div>
+                              <Slot id={step.id} as="strong" />
+                              <div className="timeline-when">{when}</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
 
-          {c.notes && (
-            <>
-              <h2 className="section-title" style={{ margin: "26px 0 6px" }}>
-                Commissioning note
-              </h2>
-              <p>{c.notes}</p>
-            </>
-          )}
+              case "content.section.note":
+                if (!c.notes) return null;
+                return (
+                  <div key={slot.id}>
+                    <Slot
+                      id={slot.id}
+                      as="h2"
+                      className="section-title"
+                    />
+                    <p>{c.notes}</p>
+                  </div>
+                );
 
-          <div style={{ marginTop: 28 }}>
-            <DetailsPanel
-              item={c}
-              people={people.data}
-              contentTypes={(taxonomy.data?.contentTypes ?? []).map((t) => t.name)}
-            />
-          </div>
+              case "content.section.details":
+                return (
+                  <div key={slot.id} style={{ marginTop: 28 }}>
+                    <DetailsPanel
+                      item={c}
+                      people={team}
+                      contentTypes={(taxonomy.data?.contentTypes ?? []).map((t) => t.name)}
+                      headingSlot={slot.id}
+                    />
+                  </div>
+                );
 
-          <section className="section">
-            <Notes contentId={c.id} people={people.data} />
-          </section>
+              case "content.section.notes":
+                return (
+                  <section className="section" key={slot.id}>
+                    <Notes
+                      contentId={c.id}
+                      people={team}
+                      headingSlot={slot.id}
+                    />
+                  </section>
+                );
 
-          <h2 className="section-title" style={{ margin: "26px 0 10px" }}>
-            Also in {c.vertical}
-          </h2>
-          <RelatedList vertical={c.vertical} excludeId={c.id} />
+              case "content.section.related":
+                return (
+                  <div key={slot.id}>
+                    <Slot
+                      id={slot.id}
+                      as="h2"
+                      className="section-title"
+                      suffix={` · ${c.vertical}`}
+                    />
+                    <RelatedList vertical={c.vertical} excludeId={c.id} />
+                  </div>
+                );
+
+              default:
+                return null;
+            }
+          })}
         </div>
 
         <aside>
@@ -155,48 +210,39 @@ export default function ContentDetail() {
               </Link>
             )}
             <dl className="facts">
-              <div className="fact">
-                <dt>Reference</dt>
-                <dd>{c.id}</dd>
-              </div>
-              <div className="fact">
-                <dt>Type</dt>
-                <dd>{c.type}</dd>
-              </div>
-              <div className="fact">
-                <dt>Vertical</dt>
-                <dd>{c.vertical}</dd>
-              </div>
-              <div className="fact">
-                <dt>Season</dt>
-                <dd>{c.season}</dd>
-              </div>
-              <div className="fact">
-                <dt>Submission</dt>
-                <dd>{formatLong(c.submissionDate)}</dd>
-              </div>
-              <div className="fact">
-                <dt>Publication</dt>
-                <dd>{formatLong(c.publicationDate)}</dd>
-              </div>
-              <div className="fact">
-                <dt>Commissioned by</dt>
-                <dd>{personName(people.data, c.managerId)}</dd>
-              </div>
+              {custom.group("content.facts").map((slot) => {
+                const value: Record<string, ReactNode> = {
+                  "content.facts.reference": c.id,
+                  "content.facts.type": c.type,
+                  "content.facts.vertical": c.vertical,
+                  "content.facts.season": c.season,
+                  "content.facts.submission": formatLong(c.submissionDate),
+                  "content.facts.publication": formatLong(c.publicationDate),
+                  "content.facts.manager": personName(team, c.managerId),
+                };
+                return (
+                  <div className="fact" key={slot.id}>
+                    <Slot id={slot.id} as="dt" />
+                    <dd>{value[slot.id]}</dd>
+                  </div>
+                );
+              })}
             </dl>
-            <Link
-              to={`/calendar/${monthKey(c.submissionDate)}?forecaster=${c.forecasterId}`}
-              className="btn"
-              style={{ display: "block", marginTop: 14, textAlign: "center" }}
-            >
-              See this month
-            </Link>
+            {custom.shown("content.action.month") && (
+              <Link
+                to={`/calendar/${monthKey(c.submissionDate)}?forecaster=${c.forecasterId}`}
+                className="btn"
+                style={{ display: "block", marginTop: 14, textAlign: "center" }}
+              >
+                <Slot id="content.action.month" />
+              </Link>
+            )}
           </div>
 
           <div style={{ marginTop: 12 }}>
             <PeerReviewPanel
               item={c}
-              people={people.data}
+              people={team}
               review={review}
               onChange={setReview}
             />

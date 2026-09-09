@@ -218,3 +218,32 @@ export interface ViewPage {
   /** Set when the read failed, so the page can say what went wrong. */
   error?: string;
 }
+
+/* ---- The built-in pages, made changeable -------------------------------- */
+
+/**
+ * What an admin has changed about one slot on a hand-written page.
+ *
+ * A slot is one customisable thing: a heading, a field label, a table column,
+ * a navigation item. The client declares which slots exist and what they say
+ * by default, so this carries only the differences — an untouched slot has no
+ * record and the code's own wording stands.
+ */
+export interface SlotOverride {
+  /** New wording. Absent means the default stands. */
+  label?: string;
+  /** Taken off the page. Only slots the registry marks as hideable. */
+  hidden?: boolean;
+  /** Position within its group. Absent means the declared order. */
+  order?: number;
+}
+
+/**
+ * A change to one slot. An absent field is left as it was — renaming
+ * something must not un-hide it — and `null` clears that field.
+ */
+export interface SlotPatch {
+  label?: string | null;
+  hidden?: boolean;
+  order?: number | null;
+}

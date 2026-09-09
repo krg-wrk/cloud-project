@@ -19,6 +19,7 @@ import {
   type ConnectorKind,
   type Filter,
   type Layout,
+  type SlotPatch,
   type ViewDef,
   type ViewPage,
   type ViewSpec,
@@ -229,6 +230,78 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
       };
     }
   }
+
+  /**
+   * The wording and layout of the built-in pages.
+   *
+   * Read by anyone signed in, because no page can render without it. There is
+   * nothing sensitive in it — it is the app's own wording — and it carries
+   * only what an admin has changed, so the client falls back to the defaults
+   * it already has in code.
+   */
+  router.get("/customisation", (req: ViewerRequest, res) => {
+    if (!req.viewer?.active) {
+      res.json({ slots: {} });
+      return;
+    }
+    res.json({ slots: studio.listSlots() });
+  });
+
+  /**
+   * A slot id is a dotted path the client's registry declares — "content",
+   * "content.facts.season". Validated to that shape so it stays a key and
+   * cannot become anything else.
+   */
+  const SLOT_ID = /^[a-z][a-z0-9]*(\.[a-z0-9-]+)*$/;
+
+  router.put("/studio/slots/:slot", (req: ViewerRequest, res) => {
+    const viewer = requireAdmin(req, res);
+    if (!viewer) return;
+    const slot = req.params.slot;
+    if (!SLOT_ID.test(slot) || slot.length > 80) {
+      res.status(400).json({ error: `"${slot}" is not a slot id.` });
+      return;
+    }
+    const body = req.body ?? {};
+    const patch: SlotPatch = {};
+    if (body.label !== undefined) {
+      if (body.label === null) patch.label = null;
+      else if (typeof body.label === "string") {
+        const trimmed = body.label.trim().slice(0, 200);
+        // An empty rename means "use the default", which is a reset of that
+        // one field rather than a heading with nothing in it.
+        patch.label = trimmed === "" ? null : trimmed;
+      }
+    }
+    if (typeof body.hidden === "boolean") patch.hidden = body.hidden;
+    if (body.order !== undefined) {
+      patch.order = body.order === null ? null : Number(body.order) || 0;
+    }
+    if (Object.keys(patch).length === 0) {
+      res.status(400).json({ error: "Nothing to change." });
+      return;
+    }
+    studio.setSlot(slot, patch, viewer.email);
+    res.json({ slots: studio.listSlots() });
+  });
+
+  router.delete("/studio/slots/:slot", (req: ViewerRequest, res) => {
+    if (!requireAdmin(req, res)) return;
+    studio.resetSlot(req.params.slot);
+    res.json({ slots: studio.listSlots() });
+  });
+
+  /** Reset a page, or the lot. The prefix is matched on the slot id. */
+  router.delete("/studio/slots", (req: ViewerRequest, res) => {
+    if (!requireAdmin(req, res)) return;
+    const prefix = typeof req.query.prefix === "string" ? req.query.prefix : undefined;
+    if (prefix && !/^[a-z][a-z0-9.-]{0,79}$/.test(prefix)) {
+      res.status(400).json({ error: "That is not a slot prefix." });
+      return;
+    }
+    const cleared = studio.resetSlots(prefix);
+    res.json({ cleared, slots: studio.listSlots() });
+  });
 
   // --- Admin ------------------------------------------------------------
 

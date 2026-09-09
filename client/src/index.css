@@ -3517,3 +3517,175 @@ a.view-row:hover {
     flex-direction: column;
   }
 }
+
+/* -------------------------------------------------------------------------
+   Changing the built-in pages
+
+   Two surfaces: edit mode, which turns labels on the real page into
+   something you click, and the editor in the studio, which lists them all.
+   Edit mode has to be unmistakable — an edit mode you cannot tell you are in
+   is a trap — but it must not move anything, or the page you are judging is
+   not the page.
+   ------------------------------------------------------------------------- */
+
+.slot-edit {
+  padding: 0;
+  border: none;
+  border-bottom: 1px dashed var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  font: inherit;
+  color: inherit;
+  text-align: inherit;
+  cursor: text;
+}
+
+.slot-edit:hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+/* Sized to the text it replaces, so clicking a heading does not reflow it. */
+.slot-input {
+  width: 100%;
+  min-width: 8ch;
+  padding: 0;
+  border: none;
+  border-bottom: 1px solid var(--accent);
+  background: var(--paper);
+  font: inherit;
+  color: inherit;
+  letter-spacing: inherit;
+}
+
+.slot-input:focus {
+  outline: none;
+}
+
+.edit-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 8px 20px;
+  flex-wrap: wrap;
+  padding: 11px 20px calc(11px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--accent);
+  background: var(--accent-wash);
+  font-size: 12.5px;
+}
+
+.edit-bar strong {
+  font-weight: 500;
+}
+
+.edit-bar-count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-45);
+}
+
+/* ---- The editor -------------------------------------------------------- */
+
+.slot-group {
+  margin-top: 14px;
+}
+
+.slot-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 6px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-45);
+}
+
+.slot-group-head em {
+  font-style: normal;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  font-size: 10.5px;
+}
+
+.slot-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 170px) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--rule);
+}
+
+.slot-row:last-child {
+  border-bottom: none;
+}
+
+/* A hidden row stays listed, greyed, so putting it back is one click. */
+.slot-row.hidden {
+  opacity: 0.55;
+}
+
+.slot-row.hidden input {
+  text-decoration: line-through;
+}
+
+.slot-row-what {
+  min-width: 0;
+  font-size: 11.5px;
+  color: var(--ink-45);
+}
+
+.slot-kind {
+  display: block;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.slot-row-what em {
+  font-style: normal;
+  font-size: 11px;
+}
+
+.slot-row input {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.slot-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.slot-row-actions .btn {
+  padding: 5px 8px;
+  font-size: 11.5px;
+}
+
+@media (max-width: 760px) {
+  .slot-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .slot-row-actions {
+    flex-wrap: wrap;
+  }
+}

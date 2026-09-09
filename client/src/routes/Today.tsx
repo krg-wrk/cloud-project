@@ -6,6 +6,7 @@ import {
   monthKey,
   relativeDays,
 } from "../lib/date";
+import { Slot, useCustom } from "../lib/custom";
 import {
   KIND_LABELS,
   clashesFor,
@@ -49,6 +50,7 @@ function DeadlineRow({
 }
 
 export default function Today() {
+  const custom = useCustom();
   const { person, isManager } = useViewer();
   const { data, error, loading } = useApi<Schedule>("/schedule");
   const sessions = useApi<SessionWithSignUps[]>(
@@ -100,12 +102,14 @@ export default function Today() {
               timeZone: "UTC",
             })}
           </div>
-          <h1 className="page-title">Morning, {firstName}</h1>
-          <p className="page-sub">
-            {isManager
-              ? "Everything in commission across the team, with the deadlines closest to landing first."
-              : "Your submission deadlines, what publishes next, and anything in the diary that gets in the way."}
-          </p>
+          <h1 className="page-title">
+            <Slot id="today.greeting" />, {firstName}
+          </h1>
+          <Slot
+            id={isManager ? "today.sub.team" : "today.sub.mine"}
+            as="p"
+            className="page-sub"
+          />
         </div>
         <Link to={`/calendar/${monthKey(TODAY)}`} className="btn">
           Open the calendar
@@ -133,10 +137,10 @@ export default function Today() {
         </div>
       </div>
 
-      {overdue.length > 0 && (
+      {overdue.length > 0 && custom.shown("today.section.overdue") && (
         <section className="section">
           <div className="section-head">
-            <h2 className="section-title">Past deadline</h2>
+            <Slot id="today.section.overdue" as="h2" className="section-title" />
             <Link to="/deadlines?status=at-risk" className="section-link">
               All at-risk work →
             </Link>
@@ -154,9 +158,10 @@ export default function Today() {
         </section>
       )}
 
+      {custom.shown("today.section.next") && (
       <section className="section">
         <div className="section-head">
-          <h2 className="section-title">Next up</h2>
+          <Slot id="today.section.next" as="h2" className="section-title" />
           <Link to="/deadlines" className="section-link">
             Every deadline →
           </Link>
@@ -176,11 +181,12 @@ export default function Today() {
           </div>
         )}
       </section>
+      )}
 
-      {clashing.length > 0 && (
+      {clashing.length > 0 && custom.shown("today.section.review") && (
         <section className="section">
           <div className="section-head">
-            <h2 className="section-title">Worth a look</h2>
+            <Slot id="today.section.review" as="h2" className="section-title" />
           </div>
           {clashing.map(({ item, clashes }) => (
             <div className="callout" key={item.id} style={{ marginBottom: 8 }}>
@@ -201,9 +207,10 @@ export default function Today() {
         className="section"
         style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}
       >
+        {custom.shown("today.section.publishing") && (
         <div>
           <div className="section-head">
-            <h2 className="section-title">Publishing soon</h2>
+            <Slot id="today.section.publishing" as="h2" className="section-title" />
           </div>
           <div className="deadline-list">
             {publishingSoon.map((item) => (
@@ -223,12 +230,18 @@ export default function Today() {
             ))}
           </div>
         </div>
+        )}
 
+        {custom.shown(
+          mySessions.length > 0 ? "today.section.sessions" : "today.section.diary",
+        ) && (
         <div>
           <div className="section-head">
-            <h2 className="section-title">
-              {mySessions.length > 0 ? "Your next sessions" : "In the diary"}
-            </h2>
+            <Slot
+              id={mySessions.length > 0 ? "today.section.sessions" : "today.section.diary"}
+              as="h2"
+              className="section-title"
+            />
             <Link to={mySessions.length > 0 ? "/workshops?mine=1" : "/whats-on"} className="section-link">
               {mySessions.length > 0 ? "Learning →" : "What’s on →"}
             </Link>
@@ -275,12 +288,13 @@ export default function Today() {
               ))}
           </div>
         </div>
+        )}
       </div>
 
-      {isManager && (
+      {isManager && custom.shown("today.section.team") && (
         <section className="section">
           <div className="section-head">
-            <h2 className="section-title">Who&rsquo;s carrying what</h2>
+            <Slot id="today.section.team" as="h2" className="section-title" />
             <Link to="/team" className="section-link">
               The team →
             </Link>

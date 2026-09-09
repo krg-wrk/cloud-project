@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { send, useApi } from "../lib/api";
 import { formatLong } from "../lib/date";
+import { Slot, useCustom } from "../lib/custom";
 import { Icon } from "../lib/icons";
 import type { ResearchLink, TrendDetail as Trend } from "../types";
 import { Avatar, ErrorNote, Loading } from "../components/bits";
@@ -19,6 +20,7 @@ import { CALLS, CallPill, StatePill } from "./Trends";
  */
 export default function TrendDetail() {
   const { id } = useParams<{ id: string }>();
+  const custom = useCustom();
   const loaded = useApi<Trend>(`/trends/${id}`);
   const [saved, setSaved] = useState<Trend | null>(null);
   const [editing, setEditing] = useState(false);
@@ -207,20 +209,26 @@ export default function TrendDetail() {
             </section>
           ) : (
             <>
-              {trend.needToKnow && (
+              {trend.needToKnow && custom.shown("trend.section.needtoknow") && (
                 <section className="card" style={{ marginTop: 20 }}>
-                  <h2 className="section-title">
-                    <Icon name="ai" /> Need to know
-                  </h2>
+                  <Slot
+                    id="trend.section.needtoknow"
+                    as="h2"
+                    className="section-title"
+                    prefix={<Icon name="ai" />}
+                  />
                   <p style={{ margin: 0 }}>{trend.needToKnow}</p>
                 </section>
               )}
 
-              {trend.opportunity && (
+              {trend.opportunity && custom.shown("trend.section.opportunity") && (
                 <section style={{ marginTop: 24 }}>
-                  <h2 className="section-title">
-                    <Icon name="trends" /> The opportunity
-                  </h2>
+                  <Slot
+                    id="trend.section.opportunity"
+                    as="h2"
+                    className="section-title"
+                    prefix={<Icon name="trends" />}
+                  />
                   <div className="prose-long">
                     {trend.opportunity.split(/\n+/).map((para, i) => (
                       <p key={i}>{para}</p>
@@ -229,20 +237,26 @@ export default function TrendDetail() {
                 </section>
               )}
 
-              {trend.note && (
+              {trend.note && custom.shown("trend.section.note") && (
                 <section className="card" style={{ marginTop: 12 }}>
-                  <h2 className="section-title">
-                    <Icon name="note" /> Owner&rsquo;s note
-                  </h2>
+                  <Slot
+                    id="trend.section.note"
+                    as="h2"
+                    className="section-title"
+                    prefix={<Icon name="note" />}
+                  />
                   <p style={{ whiteSpace: "pre-wrap", margin: 0 }}>{trend.note}</p>
                 </section>
               )}
 
-              {trend.industries.length > 0 && (
+              {trend.industries.length > 0 && custom.shown("trend.section.scores") && (
               <section style={{ marginTop: 24 }}>
-                <h2 className="section-title">
-                  <Icon name="published" /> Industry scores
-                </h2>
+                <Slot
+                  id="trend.section.scores"
+                  as="h2"
+                  className="section-title"
+                  prefix={<Icon name="published" />}
+                />
                 <div className="score-grid">
                   {trend.industries.map((industry) => {
                     const done = trend.scored.includes(industry);
@@ -258,10 +272,14 @@ export default function TrendDetail() {
               </section>
               )}
 
+              {custom.shown("trend.section.links") && (
               <section style={{ marginTop: 24 }}>
-                <h2 className="section-title">
-                  <Icon name="link" /> Supporting material
-                </h2>
+                <Slot
+                  id="trend.section.links"
+                  as="h2"
+                  className="section-title"
+                  prefix={<Icon name="link" />}
+                />
                 {trend.links.length === 0 ? (
                   <div className="empty small">
                     <p>
@@ -283,12 +301,16 @@ export default function TrendDetail() {
                   </ul>
                 )}
               </section>
+              )}
 
-              {Object.keys(trend.labels).length > 0 && (
+              {Object.keys(trend.labels).length > 0 && custom.shown("trend.section.labels") && (
                 <section style={{ marginTop: 24 }}>
-                  <h2 className="section-title">
-                    <Icon name="tier" /> Labels
-                  </h2>
+                  <Slot
+                    id="trend.section.labels"
+                    as="h2"
+                    className="section-title"
+                    prefix={<Icon name="tier" />}
+                  />
                   <dl className="label-groups">
                     {Object.entries(trend.labels).map(([group, values]) => (
                       <div key={group}>
@@ -312,85 +334,78 @@ export default function TrendDetail() {
         <aside>
           <div className="card">
             <div className="card-label">This profile</div>
+            {/*
+              The panel is a composition: which facts appear, what they are
+              called and in what order is the admin's. A fact whose value the
+              sheet has not set stays off the panel regardless — an empty row
+              says less than no row.
+            */}
             <dl className="facts">
-              <div className="fact">
-                <dt>Owner</dt>
-                <dd>
-                  {trend.ownerName ? (
-                    <span className="who">
-                      <Avatar id={trend.ownerId} name={trend.ownerName} />
-                      {trend.ownerName}
-                    </span>
-                  ) : (
-                    <span className="muted">Not set on the sheet</span>
-                  )}
-                </dd>
-              </div>
-              {others.length > 0 && (
-                <div className="fact">
-                  <dt>Also credited</dt>
-                  <dd>{others.join(", ")}</dd>
-                </div>
-              )}
-              {callBlurb && (
-                <div className="fact">
-                  <dt>The call</dt>
-                  <dd>{callBlurb}</dd>
-                </div>
-              )}
-              {trend.publishedOn && (
-                <div className="fact">
-                  <dt>Published</dt>
-                  <dd>{formatLong(trend.publishedOn)}</dd>
-                </div>
-              )}
-              {trend.editorStatus && (
-                <div className="fact">
-                  <dt>In Content Editor</dt>
-                  <dd>{trend.editorStatus}</dd>
-                </div>
-              )}
-              <div className="fact">
-                <dt>Called for</dt>
-                <dd>
-                  {trend.activeFrom.slice(0, 4)}&ndash;{trend.activeTo.slice(0, 4)}
-                </dd>
-              </div>
-              <div className="fact">
-                <dt>Proof points</dt>
-                <dd>{trend.proofPoints}</dd>
-              </div>
-              <div className="fact">
-                <dt>Strategies</dt>
-                <dd>{trend.strategies}</dd>
-              </div>
-              {/* The sheet gives one line per industry when a profile is scored
-                  per industry, and a single "ALL - …" when it is not, so each
-                  line is its own row — and a list takes the full width rather
-                  than wrapping in the value column. */}
-              {trend.latestScoreMonth && (
-                <div className={scoreLines.length > 1 ? "fact stack" : "fact"}>
-                  <dt>Latest score</dt>
-                  <dd className="score-month">
-                    {scoreLines.map((line, i) => (
-                      <span key={i}>{line}</span>
-                    ))}
-                  </dd>
-                </div>
-              )}
-              <div className="fact">
-                <dt>Trend ID</dt>
-                <dd className="mono">{trend.id}</dd>
-              </div>
-              {trend.lastSynced && (
-                <div className="fact">
-                  <dt>Synced</dt>
-                  <dd>{formatLong(trend.lastSynced)}</dd>
-                </div>
-              )}
+              {custom.group("trend.facts").map((slot) => {
+                const rows: Record<string, { value: ReactNode; when?: boolean; stack?: boolean }> = {
+                  "trend.facts.owner": {
+                    value: trend.ownerName ? (
+                      <span className="who">
+                        <Avatar id={trend.ownerId} name={trend.ownerName} />
+                        {trend.ownerName}
+                      </span>
+                    ) : (
+                      <span className="muted">Not set on the sheet</span>
+                    ),
+                  },
+                  "trend.facts.authors": { value: others.join(", "), when: others.length > 0 },
+                  "trend.facts.call": { value: callBlurb, when: Boolean(callBlurb) },
+                  "trend.facts.published": {
+                    value: trend.publishedOn && formatLong(trend.publishedOn),
+                    when: Boolean(trend.publishedOn),
+                  },
+                  "trend.facts.editor": {
+                    value: trend.editorStatus,
+                    when: Boolean(trend.editorStatus),
+                  },
+                  "trend.facts.window": {
+                    value: (
+                      <>
+                        {trend.activeFrom.slice(0, 4)}&ndash;{trend.activeTo.slice(0, 4)}
+                      </>
+                    ),
+                    when: Boolean(trend.activeFrom && trend.activeTo),
+                  },
+                  "trend.facts.proof": { value: trend.proofPoints },
+                  "trend.facts.strategies": { value: trend.strategies },
+                  "trend.facts.score": {
+                    // The sheet gives one line per industry when a profile is
+                    // scored per industry, and a single "ALL - …" when it is
+                    // not, so each line is its own row and a list takes the
+                    // full width rather than wrapping in the value column.
+                    value: (
+                      <span className="score-month">
+                        {scoreLines.map((line, i) => (
+                          <span key={i}>{line}</span>
+                        ))}
+                      </span>
+                    ),
+                    when: Boolean(trend.latestScoreMonth),
+                    stack: scoreLines.length > 1,
+                  },
+                  "trend.facts.id": { value: <span className="mono">{trend.id}</span> },
+                  "trend.facts.synced": {
+                    value: trend.lastSynced && formatLong(trend.lastSynced),
+                    when: Boolean(trend.lastSynced),
+                  },
+                };
+                const row = rows[slot.id];
+                if (!row || row.when === false) return null;
+                return (
+                  <div className={row.stack ? "fact stack" : "fact"} key={slot.id}>
+                    <Slot id={slot.id} as="dt" />
+                    <dd>{row.value}</dd>
+                  </div>
+                );
+              })}
             </dl>
 
-            {trend.editorUrl && (
+            {trend.editorUrl && custom.shown("trend.action.editor") && (
               <a
                 className="btn solid wide"
                 href={trend.editorUrl}
@@ -398,10 +413,10 @@ export default function TrendDetail() {
                 rel="noreferrer noopener"
               >
                 <Icon name="edit" />
-                Open in Content Editor
+                <Slot id="trend.action.editor" />
               </a>
             )}
-            {trend.publishedUrl && (
+            {trend.publishedUrl && custom.shown("trend.action.live") && (
               <a
                 className="btn wide"
                 href={trend.publishedUrl}
@@ -409,7 +424,7 @@ export default function TrendDetail() {
                 rel="noreferrer noopener"
               >
                 <Icon name="link" />
-                View the published profile
+                <Slot id="trend.action.live" />
               </a>
             )}
 
