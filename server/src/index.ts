@@ -7,6 +7,8 @@ import { readAuthConfig, viewerMiddleware } from "./auth.js";
 import { CachedDataSource, createDataSource } from "./data/index.js";
 import { SignUps } from "./signUps.js";
 import { HubStore } from "./store.js";
+import { createStudioRouter } from "./studio/api.js";
+import { StudioStore } from "./studio/store.js";
 
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
@@ -14,6 +16,8 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 // Read-only schedule from the sheets; everything the team writes goes in the store.
 const data = new CachedDataSource(createDataSource());
 const store = new HubStore();
+// Connections, datasets and views: configuration, in the same database.
+const studio = new StudioStore(store.connection);
 const signUps = new SignUps(store);
 const drafter = createNoteDrafter();
 const auth = readAuthConfig();
@@ -34,6 +38,7 @@ app.use(
     people: await data.listPeople(),
   })),
   createApiRouter(data, store, signUps, drafter),
+  createStudioRouter(studio, data),
 );
 
 // In production the built client is served from the same origin, and every
@@ -64,6 +69,8 @@ app.listen(PORT, () => {
     `Forecasters Hub API on http://localhost:${PORT}\n` +
       `  schedule:  ${data.name}\n` +
       `  auth:      ${auth.mode}${auth.mode === "proxy" ? ` (${auth.emailHeader})` : " — switcher enabled"}\n` +
-      `  AI notes:  ${drafter.model === "none" ? "off (no GEMINI_API_KEY)" : drafter.model}`,
+      `  AI notes:  ${drafter.model === "none" ? "off (no GEMINI_API_KEY)" : drafter.model}\n` +
+      `  studio:    ${studio.listConnections().length} connections, ` +
+      `${studio.listDatasets().length} datasets, ${studio.listViews().length} views`,
   );
 });

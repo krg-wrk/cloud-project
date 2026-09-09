@@ -156,6 +156,14 @@ export class HubStore {
     this.db.close();
   }
 
+  /**
+   * The studio's tables live in the same database and own their own SQL, so
+   * they get the handle rather than another two hundred lines in here.
+   */
+  get connection(): DatabaseSync {
+    return this.db;
+  }
+
   // --- Notes -------------------------------------------------------------
 
   notesFor(contentId: string): ContentNote[] {

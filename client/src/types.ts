@@ -303,3 +303,156 @@ export interface Schedule {
   entries: PersonalEntry[];
   peerReviews: MyPeerReview[];
 }
+
+/* ---- The studio: connections, datasets and views ------------------------ */
+
+/**
+ * These mirror server/src/studio/types.ts. Note what is missing: a
+ * connection's credential has no field here, because it has no field in any
+ * response either.
+ */
+export type ConnectorKind = "hub" | "smartsheet" | "google-sheets" | "mongodb" | "snowflake";
+
+export type FieldType = "text" | "number" | "date" | "boolean" | "person" | "url" | "list";
+
+export interface Field {
+  name: string;
+  type: FieldType;
+  /** Present when the column has few enough values to offer as a picker. */
+  options?: string[];
+}
+
+export interface Connection {
+  id: string;
+  label: string;
+  kind: ConnectorKind;
+  settings: Record<string, string>;
+  secretEnv?: string;
+  hasSecret: boolean;
+  /** The last four characters, so a credential can be recognised not read. */
+  secretHint?: string;
+  checkedAt?: string;
+  checkOk?: boolean;
+  checkNote?: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export interface ConnectorInfo {
+  kind: ConnectorKind;
+  /** False for the systems that are modelled but not built yet. */
+  live: boolean;
+  needs: {
+    settings: { key: string; label: string; placeholder?: string; required: boolean }[];
+    credential: string;
+  };
+}
+
+export interface Dataset {
+  id: string;
+  connectionId: string;
+  label: string;
+  ref: string;
+  fields: Field[];
+  rowCount?: number;
+  refreshSeconds: number;
+  describedAt?: string;
+  updatedAt: string;
+  updatedBy: string;
+}
+
+export type Layout = "table" | "cards" | "list" | "calendar" | "board";
+
+export type FilterOp =
+  | "is"
+  | "is-not"
+  | "contains"
+  | "empty"
+  | "not-empty"
+  | "before"
+  | "after"
+  | "gt"
+  | "lt"
+  | "mine";
+
+export interface Filter {
+  field: string;
+  op: FilterOp;
+  value?: string;
+}
+
+export interface FieldRoles {
+  title?: string;
+  subtitle?: string;
+  body?: string;
+  date?: string;
+  endDate?: string;
+  status?: string;
+  group?: string;
+  person?: string;
+  image?: string;
+  link?: string;
+  columns?: string[];
+  meta?: string[];
+}
+
+export interface ViewSpec {
+  layout: Layout;
+  fields: FieldRoles;
+  filters: Filter[];
+  sort?: { field: string; direction: "asc" | "desc" };
+  pageSize: number;
+}
+
+export interface Audience {
+  roles: Me["role"][] | "all";
+  verticals: string[] | "all";
+  emails: string[];
+}
+
+export interface ViewDef {
+  id: string;
+  slug: string;
+  label: string;
+  icon: string;
+  section: string;
+  order: number;
+  datasetId: string;
+  description?: string;
+  spec: ViewSpec;
+  audience: Audience;
+  state: "draft" | "live";
+  updatedAt: string;
+  updatedBy: string;
+}
+
+/** A custom view in the sidebar. */
+export interface ViewLink {
+  slug: string;
+  label: string;
+  icon: string;
+  section: string;
+  order: number;
+  state: "draft" | "live";
+}
+
+/** A view and its rows, as the generic renderer receives them. */
+export interface ViewPage {
+  view: ViewLink & { description?: string; spec: ViewSpec };
+  fields: Field[];
+  source: { dataset: string; connection: string; kind: ConnectorKind };
+  total: number;
+  rows: Record<string, string>[];
+  /** Set when the source would not answer, so the page can say why. */
+  error?: string;
+}
+
+/** What the builder's preview returns: the same shape, plus the source size. */
+export interface Preview {
+  fields: Field[];
+  source: { dataset: string; connection: string; kind: ConnectorKind };
+  total: number;
+  sourceRows: number;
+  rows: Record<string, string>[];
+  error?: string;
+}

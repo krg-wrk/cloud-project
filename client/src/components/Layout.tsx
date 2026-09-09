@@ -5,7 +5,7 @@ import { TODAY, monthKey } from "../lib/date";
 import { isOutstanding, isOverdue } from "../lib/domain";
 import { Icon } from "../lib/icons";
 import { ViewerProvider, useViewer } from "../lib/viewer";
-import type { ContentItem, Me, Person, SessionWithSignUps } from "../types";
+import type { ContentItem, Me, Person, SessionWithSignUps, ViewLink } from "../types";
 import { Avatar, ErrorNote, Loading } from "./bits";
 
 const ROLE_LABELS: Record<Me["role"], string> = {
@@ -66,6 +66,9 @@ interface Section {
   group: "work" | "team";
   /** Shown as a tab on a phone; the rest go behind "More". */
   primary?: boolean;
+  /** Built in the studio rather than written by hand. */
+  custom?: boolean;
+  order?: number;
 }
 
 /**
@@ -124,18 +127,51 @@ function sections({
   ];
 }
 
+/**
+ * A view built in the studio, as a sidebar section.
+ *
+ * It lands in whichever group it was given, alongside the hand-written pages,
+ * because to the person it was built for there is no difference between the
+ * two. Only the studio's own draft badge gives it away.
+ */
+function asSection(view: ViewLink): Section {
+  return {
+    to: `/v/${view.slug}`,
+    label: view.label,
+    icon: view.icon,
+    group: view.section === "The team" ? "team" : "work",
+    badge: view.state === "draft" ? "Draft" : undefined,
+    custom: true,
+    order: view.order,
+  };
+}
+
 function useSections(content: ContentItem[]): Section[] {
-  const { person, isManager } = useViewer();
+  const { person, isManager, isAdmin } = useViewer();
   const scope = isManager ? content : content.filter((c) => c.forecasterId === person?.id);
   const sessions = useApi<SessionWithSignUps[]>(
     person ? `/sessions?when=upcoming&person=${person.id}` : "/sessions?when=upcoming",
   );
-  return sections({
+  // The server decides which views this account may see, including whether
+  // drafts are among them.
+  const views = useApi<ViewLink[]>("/views");
+
+  const fixed = sections({
     overdue: scope.filter((c) => isOverdue(c)).length,
     outstanding: scope.filter(isOutstanding).length,
     mySessions: person ? (sessions.data?.length ?? 0) : 0,
     forecasters: new Set(content.map((c) => c.forecasterId)).size,
   });
+
+  const custom = [...(views.data ?? [])]
+    .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label))
+    .map(asSection);
+
+  const studio: Section[] = isAdmin
+    ? [{ to: "/studio", label: "Studio", icon: "studio", group: "team" }]
+    : [];
+
+  return [...fixed, ...custom, ...studio];
 }
 
 function Sidebar({ content }: { content: ContentItem[] }) {

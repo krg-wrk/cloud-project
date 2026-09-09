@@ -50,6 +50,21 @@ export const ICON_PATHS: Record<string, string> = {
   clock: "M12 7.5V12l3 1.8M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z",
   plus: "M12 5v14M5 12h14",
   edit: "M15.5 4.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L15.5 4.5ZM14 6l4 4",
+
+  // The studio. The five layouts double as the layout picker's own icons, so
+  // the choice reads as a shape rather than a word.
+  studio: "M4 7h7M15 7h5M4 17h5M13 17h7M13 4.5v5M9 14.5v5",
+  source:
+    "M12 8.5c4.4 0 8-1.2 8-2.75S16.4 3 12 3 4 4.2 4 5.75 7.6 8.5 12 8.5ZM4 5.75v12.5C4 19.8 7.6 21 12 21s8-1.2 8-2.75V5.75M4 12c0 1.55 3.6 2.75 8 2.75s8-1.2 8-2.75",
+  table: "M3 5h18v14H3zM3 10h18M3 15h18M9 5v14M15 5v14",
+  cards: "M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z",
+  list: "M4 6h16M4 12h16M4 18h10",
+  board: "M4 4h5v16H4zM10.5 4h5v10h-5zM17 4h3v13h-3z",
+  refresh: "M20 11a8 8 0 1 0-2.3 6.3M20 5v6h-6",
+  trash: "M4 7h16M9.5 7V4.5h5V7M6 7l1 13h10l1-13M10.5 11v5M13.5 11v5",
+  eye: "M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12S18 18.5 12 18.5 2.5 12 2.5 12Zm9.5 2.6a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2Z",
+  lock: "M7 10.5V7.5a5 5 0 0 1 10 0v3M5.5 10.5h13a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z",
+  people: "M17 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-7A3.5 3.5 0 0 0 3 18.5V20M10 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM21 20v-2a3.5 3.5 0 0 0-2.2-3.2",
 };
 
 export type IconName = keyof typeof ICON_PATHS | string;

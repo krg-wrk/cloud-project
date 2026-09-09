@@ -4,9 +4,14 @@ import { Navigate, RouterProvider, createBrowserRouter } from "react-router-dom"
 import Layout from "./components/Layout";
 import CalendarView from "./routes/CalendarView";
 import ContentDetail from "./routes/ContentDetail";
+import CustomView from "./routes/CustomView";
 import Deadlines from "./routes/Deadlines";
 import Kpis from "./routes/Kpis";
 import SessionDetail from "./routes/SessionDetail";
+import Studio from "./routes/studio/Studio";
+import Connections from "./routes/studio/Connections";
+import Datasets from "./routes/studio/Datasets";
+import Views from "./routes/studio/Views";
 import Subscribe from "./routes/Subscribe";
 import { TeamList, TeamMember } from "./routes/Team";
 import Today from "./routes/Today";
@@ -40,6 +45,22 @@ const router = createBrowserRouter([
       { path: "trends", element: <Trends /> },
       { path: "trends/:id", element: <TrendDetail /> },
       { path: "subscribe", element: <Subscribe /> },
+
+      // Views built in the studio. One route, one renderer, any layout — a
+      // custom view is as linkable as a hand-written page.
+      { path: "v/:slug", element: <CustomView /> },
+
+      {
+        path: "studio",
+        element: <Studio />,
+        children: [
+          { index: true, element: <Navigate to="/studio/connections" replace /> },
+          { path: "connections", element: <Connections /> },
+          { path: "datasets", element: <Datasets /> },
+          { path: "views", element: <Views /> },
+        ],
+      },
+
       { path: "*", element: <Navigate to="/" replace /> },
     ],
   },

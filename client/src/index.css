@@ -2865,3 +2865,655 @@ a.session-title:hover {
   flex-wrap: wrap;
   gap: 5px;
 }
+
+/* -------------------------------------------------------------------------
+   The studio, and the views it builds
+
+   The studio is a workbench: dense, plain, and readable at a glance, because
+   an admin is comparing five things at once rather than reading one. The
+   views it produces get the same furniture as the hand-written pages — that
+   is the point of having one renderer.
+   ------------------------------------------------------------------------- */
+
+.btn.danger {
+  color: var(--status-at-risk);
+}
+
+.btn.danger:hover {
+  border-color: var(--status-at-risk);
+}
+
+.btn.danger .icon {
+  color: currentColor;
+}
+
+.muted {
+  color: var(--ink-45);
+}
+
+code.mono,
+.mono {
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+/* The three steps, in the order you do them. */
+.studio-tabs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 1px;
+  margin-bottom: 22px;
+  background: var(--rule);
+  border: 1px solid var(--rule);
+}
+
+.studio-tab {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 13px 15px;
+  background: var(--paper);
+  color: var(--ink-70);
+}
+
+.studio-tab .icon {
+  margin-top: 2px;
+  color: var(--ink-45);
+}
+
+.studio-tab b {
+  display: block;
+  font-weight: 500;
+  font-size: 13.5px;
+}
+
+.studio-tab em {
+  display: block;
+  margin-top: 2px;
+  font-style: normal;
+  font-size: 11.5px;
+  color: var(--ink-45);
+}
+
+.studio-tab:hover {
+  color: var(--ink);
+}
+
+.studio-tab.active {
+  color: var(--ink);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.studio-tab.active .icon {
+  color: var(--accent);
+}
+
+.studio-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.studio-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.studio-item {
+  padding: 16px 18px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.studio-item.editing {
+  border-left: 3px solid var(--accent);
+  margin-bottom: 12px;
+}
+
+.studio-item-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.studio-item h2 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.studio-item-head p {
+  margin: 3px 0 0;
+}
+
+.studio-item-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* A two-column grid of the page's own .fact rows, so it reads like the rest. */
+.studio-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  column-gap: 26px;
+  margin: 12px 0 0;
+}
+
+.studio-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border-left: 3px solid var(--rule-strong);
+  background: var(--ground);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.studio-note .icon {
+  margin-top: 1px;
+}
+
+.studio-note.ok {
+  border-left-color: var(--status-published);
+  color: var(--ink);
+}
+
+.studio-note.ok .icon {
+  color: var(--status-published);
+}
+
+.studio-note.bad {
+  border-left-color: var(--status-in-review);
+}
+
+.studio-note.bad .icon {
+  color: var(--status-in-review);
+}
+
+.studio-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px 16px;
+  margin: 12px 0;
+}
+
+.studio-form .field.wide {
+  grid-column: 1 / -1;
+}
+
+.studio-form .field input,
+.studio-form .field select,
+.builder .field input,
+.builder .field select {
+  width: 100%;
+}
+
+.studio-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.field-options {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: center;
+}
+
+/* ---- The builder ------------------------------------------------------- */
+
+/*
+ * Controls on the left, the view itself on the right, both scrolling with the
+ * page. The preview is the wide half because it is the thing being judged.
+ */
+.builder {
+  display: grid;
+  grid-template-columns: minmax(0, 420px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.builder-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.builder-step {
+  padding: 15px 17px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.builder-step + .builder-step {
+  margin-top: 10px;
+}
+
+.builder-step .section-title {
+  margin-top: 0;
+}
+
+.slug-field,
+.icon-field {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.slug-field span {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-45);
+  flex: none;
+}
+
+.icon-field .icon {
+  flex: none;
+  color: var(--ink-70);
+}
+
+/* The five shapes, as shapes. */
+.layout-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.layout-option {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 6px 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-70);
+}
+
+.layout-option .icon {
+  color: var(--ink-45);
+}
+
+.layout-option:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.layout-option.on {
+  border-color: var(--accent);
+  background: var(--accent-wash);
+  color: var(--ink);
+}
+
+.layout-option.on .icon {
+  color: var(--accent);
+}
+
+/* Multi-select as a row of toggles: the columns of a table, the roles of an
+   audience. Cheaper to scan than a multiple <select> and works on a phone. */
+.chip-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.chip {
+  padding: 4px 9px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--ground);
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-70);
+  white-space: nowrap;
+}
+
+.chip:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.chip.on {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.filter-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1.2fr) auto;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.filter-row select,
+.filter-row input {
+  min-width: 0;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.builder-save {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding: 14px 17px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.builder-save .field {
+  flex: 1;
+  min-width: 190px;
+}
+
+.builder-preview {
+  position: sticky;
+  top: 20px;
+  padding: 16px 18px 18px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.preview-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.preview-head .section-title {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+/* The preview is a window on a page, not the page: it scrolls in place. */
+.preview-body {
+  max-height: 72vh;
+  overflow: auto;
+  margin-top: 14px;
+}
+
+/* ---- A built view ----------------------------------------------------- */
+
+/* Where the rows came from, said on the page rather than only in the studio. */
+.view-source {
+  display: flex;
+  align-items: center;
+  gap: 7px 16px;
+  flex-wrap: wrap;
+  padding: 9px 14px;
+  margin-bottom: 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font-size: 12px;
+}
+
+.view-source > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.view-source-right {
+  margin-left: auto;
+}
+
+.view-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+  gap: 14px;
+}
+
+.view-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+  overflow: hidden;
+  color: inherit;
+}
+
+a.view-card:hover {
+  border-color: var(--ink);
+}
+
+/*
+ * The same stand-in the trend cards use: a hue from the row, always painted,
+ * with the image laid over it. A picture column on a sheet points at a host
+ * that may be slow, private or gone.
+ */
+.view-cover {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 16 / 10;
+  margin: 0;
+  overflow: hidden;
+  background: linear-gradient(
+    135deg,
+    hsl(var(--hue) 20% 89%),
+    hsl(calc(var(--hue) + 40) 16% 80%)
+  );
+}
+
+.view-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.view-card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 13px 15px 15px;
+}
+
+.view-card-title {
+  margin: 0;
+  font-size: 15.5px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.view-card-sub {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-70);
+}
+
+.view-card-text {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-70);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.view-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 12px;
+  width: 100%;
+  padding-top: 9px;
+  border-top: 1px solid var(--rule);
+  font-size: 11.5px;
+  color: var(--ink-45);
+}
+
+.view-rows {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.view-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  padding: 11px 16px;
+  border-top: 1px solid var(--rule);
+  color: inherit;
+}
+
+.view-row:first-child {
+  border-top: none;
+}
+
+a.view-row:hover {
+  background: var(--ground);
+}
+
+.view-row-when {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-70);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.view-row-main {
+  min-width: 0;
+}
+
+.view-row-meta {
+  margin-top: 2px;
+  font-size: 12px;
+  color: var(--ink-45);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---- Board ------------------------------------------------------------ */
+
+.board {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  align-items: flex-start;
+}
+
+.board-column {
+  flex: none;
+  width: 250px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--ground);
+}
+
+.board-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.board-head b {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--ink-45);
+}
+
+.board-card {
+  margin: 8px;
+  padding: 10px 11px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+
+.board-card-title {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.board-card-sub {
+  margin-top: 3px;
+  font-size: 11.5px;
+  color: var(--ink-70);
+}
+
+.board-card-when {
+  margin-top: 5px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-45);
+}
+
+/*
+ * On a narrow screen the builder stacks and the preview stops sticking —
+ * a sticky panel taller than the viewport cannot be scrolled past.
+ */
+@media (max-width: 1180px) {
+  .builder {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .builder-preview {
+    position: static;
+  }
+}
+
+@media (max-width: 700px) {
+  .filter-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .studio-item-head {
+    flex-direction: column;
+  }
+}

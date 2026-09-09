@@ -266,6 +266,26 @@ export function viewerMiddleware(
 }
 
 /** Guard for routes that need an identity mapped to a person. */
+/**
+ * The gate on every studio route.
+ *
+ * Building a view means naming a data source and choosing who sees it, so it
+ * is an admin's job and only an admin's — a commissioning manager gets no
+ * more here than a forecaster does.
+ */
+export function requireAdmin(req: ViewerRequest, res: Response): Viewer | null {
+  const viewer = req.viewer;
+  if (!viewer?.active) {
+    res.status(403).json({ error: "This account does not have access to the Hub." });
+    return null;
+  }
+  if (!isAdmin(viewer)) {
+    res.status(403).json({ error: "The studio is open to Hub admins only." });
+    return null;
+  }
+  return viewer;
+}
+
 export function requirePerson(req: ViewerRequest, res: Response): string | null {
   const id = req.viewer?.personId;
   if (!req.viewer?.active) {
