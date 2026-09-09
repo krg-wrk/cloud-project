@@ -176,8 +176,15 @@ export interface TrendProfile {
   profileId: string;
   title: string;
   slug: string;
+  /** The sheet credits people by name; the id is derived from it. */
   ownerId: string;
+  ownerName: string;
   authorIds: string[];
+  authorNames: string[];
+  /** "Published" or "Unpublished" on the platform. */
+  published?: string;
+  /** draft, review or archived, in Content Editor. */
+  editorStatus?: string;
   types: string[];
   call?: TrendCall;
   publishedOn: string;
@@ -192,8 +199,10 @@ export interface TrendProfile {
   strategies: number;
   proofPoints: number;
   industries: string[];
+  needingScore: string[];
   scored: string[];
   missingScore: string[];
+  latestScoreMonth?: string;
   hashtags: string[];
   labels: Record<string, string[]>;
   lastSynced?: string;
@@ -203,7 +212,15 @@ export interface TrendProfile {
 export interface TrendRow extends TrendProfile {
   linkCount: number;
   hasNote: boolean;
+  mine: boolean;
   canWrite: boolean;
+}
+
+/** The list response: the rows, the real owner list, and the sheet's size. */
+export interface TrendList {
+  owners: { id: string; name: string }[];
+  total: number;
+  rows: TrendRow[];
 }
 
 /** One profile in full, with what the Hub holds against it. */

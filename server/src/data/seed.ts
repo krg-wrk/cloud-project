@@ -1,3 +1,4 @@
+import tfdb from "./tfdb.json" with { type: "json" };
 import type { AccessRow } from "../auth.js";
 import type {
   CalendarEvent,
@@ -855,30 +856,32 @@ export const events: CalendarEvent[] = eventRows.map(
 
 
 /**
- * The trend database, in the shape the TFDB sheet holds it.
+ * The trend database.
  *
- * The trends themselves are invented, and the owners are the invented people
- * above — no real profile, author or comment from the sheet is copied here.
- * What is taken from it is structure: the columns, the trend types, the
- * Invest/Test/Expand/Protect call, the industry list, the label groups, and
- * the fact that a profile carries a cover image, an editor link and a live
- * link. The Hub reads the real rows from the sheet in a deployed environment.
+ * These are the real rows from the TFDB workbook's "Trend Profiles" tab —
+ * 446 published and in-progress profiles with their owners, cover images,
+ * Content Editor links, industry scores and labels. The Governance tab and
+ * the dated import snapshots in that workbook are ignored, and two columns
+ * are deliberately left out of the extract: Modified By (email addresses)
+ * and Latest Comment. Neither is needed to show a profile.
  *
- * [id, profileId, title, slug, ownerId, types, call, publishedOn,
- *  activeFrom, activeTo, strategies, proofPoints, industries, scored,
- *  description, needToKnow]
+ * In a deployed environment the Hub reads the same sheet live; this file is
+ * the seed, so the Hub runs with no credentials and no network.
  */
-type TrendRow = [
-  string, string, string, string, string, string[], TrendCall | undefined,
-  string, string, string, number, number, string[], string[], string, string,
-];
+// The JSON widens to a union of per-row shapes because an absent `call` is an
+// absent key, so the assertion goes through unknown rather than inventing a
+// structural overlap tsc cannot see.
+export const trends: TrendProfile[] = tfdb as unknown as TrendProfile[];
 
 /** The industries a profile can be tagged to and scored for. */
 export const TREND_INDUSTRIES = [
   "Beauty",
   "Consumer Tech",
   "Fashion",
+  "Fashion Buying",
+  "Fashion Design",
   "Food & Drink",
+  "Insight",
   "Interiors",
   "Sports & Outdoor",
   "Overall",
@@ -888,218 +891,3 @@ export const TREND_INDUSTRIES = [
 export const TREND_TYPES = ["Design & Aesthetic", "Lifestyle", "Product / Item", "Systemic"];
 
 export const TREND_CALLS: TrendCall[] = ["Protect", "Test", "Expand", "Invest"];
-
-const trendRows: TrendRow[] = [
-  ["485", "6a26a48c4abf618f8254aec4", "Repair as Retail", "repair-as-retail", "ao",
-   ["Systemic", "Lifestyle"], "Invest", "2026-07-30", "2027-01-01", "2030-12-31", 5, 14,
-   ["Fashion", "Interiors", "Overall"], ["Fashion", "Overall"],
-   "Repair moves from a service desk at the back of the shop to the reason for the visit, with pricing, waiting lists and a trained bench behind it.",
-   "Mending becomes a product line rather than an aftercare promise. Expect repair capacity, not repair messaging, to be the thing a shopper checks before buying."],
-  ["488", "6a26ee1a4abf618f82585292", "Saturated Calm", "saturated-calm", "ao",
-   ["Design & Aesthetic"], "Test", "2026-07-22", "2026-01-01", "2029-12-31", 3, 6,
-   ["Fashion", "Interiors"], ["Fashion"],
-   "High-chroma colour used at low volume: one saturated piece against quiet neutrals, rather than a saturated wardrobe.",
-   "The appetite is for a single loud decision, not a loud whole. Ranges built entirely on brights will read as last season."],
-  ["491", "69a8575479d056e468ea243d", "Proof of Origin", "proof-of-origin", "ao",
-   ["Systemic"], undefined, "2026-07-15", "2027-06-01", "2035-12-31", 2, 3,
-   ["Fashion", "Food & Drink", "Overall"], [],
-   "Provenance stops being a marketing claim and becomes a scannable record that a shopper can check at the shelf.",
-   "The claim is no longer the asset — the verifiable record is. Anyone without one will be read as having something to hide."],
-  ["494", "6a1b3c7e4abf618f82441a09", "Value Over Volume", "value-over-volume", "tb",
-   ["Lifestyle", "Product / Item"], "Invest", "2026-07-07", "2026-01-01", "2030-12-31", 6, 21,
-   ["Fashion", "Sports & Outdoor", "Overall"],
-   ["Fashion", "Sports & Outdoor", "Overall"],
-   "Menswear buyers trade breadth for durability: fewer pieces, heavier cloth, and a willingness to pay for a jacket that lasts five winters.",
-   "Unit growth is the wrong target in this category now. The winning ranges are shorter and dearer, with the wear life stated on the ticket."],
-  ["497", "6a1c5d914abf618f8245bb31", "Soft Tailoring", "soft-tailoring", "tb",
-   ["Design & Aesthetic", "Product / Item"], "Expand", "2026-07-20", "2026-01-01", "2029-12-31", 4, 11,
-   ["Fashion"], ["Fashion"],
-   "The unstructured jacket returns, cut long and worn with formal trousers — tailoring loosens without collapsing into loungewear.",
-   "The distinction that matters is drape, not formality. Read this as a construction change rather than a dressing-down of the category."],
-  ["502", "6a09fe224abf618f823fc7d8", "The Barrier Obsession", "the-barrier-obsession", "rc",
-   ["Product / Item"], "Invest", "2026-03-31", "2026-01-01", "2029-01-31", 7, 26,
-   ["Beauty", "Overall"], ["Beauty", "Overall"],
-   "Skin barrier language moves from dermatology to the mass shelf, and claims shift from active strength to how little a product disturbs.",
-   "Potency is no longer the proof point. Formulations will be judged on what they leave alone."],
-  ["505", "6a0a11b34abf618f823fd944", "Skinimalism, Phase Three", "skinimalism-phase-three", "rc",
-   ["Lifestyle", "Product / Item"], "Protect", "2026-07-09", "2026-01-01", "2028-12-31", 3, 18,
-   ["Beauty"], ["Beauty"],
-   "The pared-back routine consolidates: fewer steps, each doing more. The novelty has gone and what is left is a habit.",
-   "This is a mature trend to defend rather than a new one to chase. The growth is in reformulating what people already buy."],
-  ["508", "6a1e88c14abf618f8247d012", "Clinic at Home", "clinic-at-home", "rc",
-   ["Product / Item", "Systemic"], "Test", "2026-07-24", "2027-01-01", "2030-12-31", 4, 5,
-   ["Beauty", "Consumer Tech"], ["Beauty"],
-   "Devices that used to need an appointment arrive as consumer products, and with them the question of who is accountable for the result.",
-   "The regulatory position is the commercial risk here, not the technology. Watch liability language as closely as claims."],
-  ["511", "6a20a4de4abf618f824911fe", "Quiet Kitchens", "quiet-kitchens", "pr",
-   ["Design & Aesthetic", "Lifestyle"], "Expand", "2026-07-13", "2026-01-01", "2030-12-31", 5, 9,
-   ["Interiors", "Consumer Tech"], ["Interiors"],
-   "Kitchens designed to be heard less: soft-close everything, textiles on hard surfaces, and appliances chosen on decibels.",
-   "Sound becomes a spec a shopper compares. Expect decibel figures on packaging where wattage used to be."],
-  ["514", "6a21b7ff4abf618f824a3388", "Outdoor Living, Year Round", "outdoor-living-year-round", "pr",
-   ["Lifestyle"], undefined, "2026-07-06", "2027-01-01", "2030-12-31", 3, 4,
-   ["Interiors", "Sports & Outdoor"], [],
-   "The garden becomes a winter room: heating, lighting and weatherproof upholstery extend the season at both ends.",
-   "The season is no longer the constraint on the category. Ranges built for a summer window will miss most of the year."],
-  ["517", "6a22c9104abf618f824b5599", "The Low Profile Shift", "the-low-profile-shift", "jw",
-   ["Product / Item", "Design & Aesthetic"], "Invest", "2026-07-10", "2026-01-01", "2029-07-31", 4, 12,
-   ["Fashion", "Sports & Outdoor"], ["Fashion", "Sports & Outdoor"],
-   "Sneaker silhouettes flatten: the chunky sole recedes and the flat court shoe carries the volume in the upper instead.",
-   "The volume has not gone, it has moved. Read upper construction rather than stack height to place a style."],
-  ["520", "6a23da214abf618f824c77aa", "Post-Leather Materials", "post-leather-materials", "jw",
-   ["Product / Item", "Systemic"], "Test", "2026-07-27", "2027-01-01", "2035-12-31", 2, 7,
-   ["Fashion", "Interiors"], ["Fashion"],
-   "Mycelium and plant-based coatings reach a price and a wear life a buyer will sign off, which moves the conversation from ethics to margin.",
-   "The blocker is no longer the material's story but its second-year condition. Ask for wear data, not certificates."],
-  ["523", "6a24eb324abf618f824d99bb", "Fermentation Goes Mainstream", "fermentation-goes-mainstream", "mc",
-   ["Lifestyle", "Product / Item"], "Expand", "2026-07-16", "2026-01-01", "2030-12-31", 6, 15,
-   ["Food & Drink", "Beauty"], ["Food & Drink"],
-   "Fermented flavour moves from the specialist aisle to the centre of the plate, and with it a tolerance for sourness in mass products.",
-   "Sourness is now a mainstream flavour cue rather than an acquired taste. Reformulating down the sweetness scale is the opportunity."],
-  ["526", "6a25fc434abf618f824ebbcc", "Low-Alcohol, High-Design", "low-alcohol-high-design", "mc",
-   ["Design & Aesthetic", "Product / Item"], "Invest", "2026-08-06", "2026-01-01", "2030-12-31", 5, 19,
-   ["Food & Drink", "Overall"], ["Food & Drink", "Overall"],
-   "The no-and-low category stops apologising: packaging and pricing sit alongside the spirits they replace rather than below them.",
-   "Price positioning is the signal here. A no-and-low range priced as a compromise will be read as one."],
-  ["529", "6a270d544abf618f824fdddd", "Wearables After the Watch", "wearables-after-the-watch", "da",
-   ["Product / Item"], undefined, "2026-07-30", "2027-01-01", "2030-12-31", 3, 6,
-   ["Consumer Tech", "Sports & Outdoor"], [],
-   "Sensing moves off the wrist and into rings, patches and clothing, which forces a rethink of where a screen is needed at all.",
-   "The form factor question is really a screen question. Products that assume a display will look overbuilt."],
-  ["532", "6a281e654abf618f8250ffee", "The Quiet Commute", "the-quiet-commute", "da",
-   ["Lifestyle", "Systemic"], "Expand", "2026-07-21", "2026-01-01", "2029-12-31", 4, 8,
-   ["Consumer Tech", "Interiors"], ["Consumer Tech"],
-   "Noise control becomes the point of the journey rather than a feature of the headphones, and shapes what people carry.",
-   "The category is quiet, not audio. Anything sold on sound quality alone is competing in the wrong race."],
-  ["535", "6a292f764abf618f825221ff", "The Handed-Down Wardrobe", "the-handed-down-wardrobe", "sm",
-   ["Systemic", "Product / Item"], "Invest", "2026-07-15", "2026-01-01", "2030-12-31", 5, 10,
-   ["Fashion", "Overall"], ["Fashion"],
-   "Kidswear bought to be passed on: sizing that grows, seams that survive a second child, and resale value quoted at the point of sale.",
-   "Resale value becomes a first-sale argument. Construction that fails a second child will be visible in the resale data."],
-  ["538", "6a2a40874abf618f82534400", "Play as Infrastructure", "play-as-infrastructure", "sm",
-   ["Systemic", "Lifestyle"], undefined, "2026-07-13", "2027-01-01", "2035-12-31", 1, 2,
-   ["Interiors", "Fashion"], [],
-   "Play stops being a category of product and becomes a requirement of the space — in homes, in shops, and in the clothes themselves.",
-   "This is a planning-and-fixtures trend before it is a product trend. The early signals are in retail design, not ranges."],
-];
-
-/**
- * The label groups the sheet carries. Vocabulary from the real taxonomy;
- * which profile gets which is invented.
- */
-const trendLabels: Record<string, Record<string, string[]>> = {
-  "485": {
-    Generations: ["Gen Z", "Millennials", "Gen X"],
-    Personas: ["The Keepers", "The Restorers"],
-    Emotions: ["Quietude", "Strategic Joy"],
-    Sustainability: ["Sustainability"],
-    "Design & Aesthetics": ["Form & Function"],
-  },
-  "488": {
-    Generations: ["Gen Z", "Millennials"],
-    Personas: ["The Gleamers"],
-    Emotions: ["Glimmers", "Flourishing"],
-    CMF: ["CMF", "Colour", "Finish"],
-    "Design & Aesthetics": ["Design Aesthetics", "Textiles"],
-  },
-  "491": { Generations: ["Alphas", "Betas", "Gen Z"], Personas: ["The Challengers"], Emotions: ["Selective Engagement"] },
-  "494": { Generations: ["Gen X", "Boomers", "Millennials"], Markets: ["Men's"], Personas: ["The Keepers"], Emotions: ["Quietude"] },
-  "497": { Generations: ["Gen X", "Millennials"], Markets: ["Men's"], "Design & Aesthetics": ["Design Aesthetics", "Trims & Details"] },
-  "502": { Generations: ["Gen Z", "Millennials", "Gen X"], "Ingredients & Formulation": ["Ingredients", "Texture"], Emotions: ["Flourishing"] },
-  "505": { Generations: ["Millennials", "Gen X"], "Ingredients & Formulation": ["Ingredients", "Format"], Emotions: ["Quietude"] },
-  "508": { Generations: ["Gen X", "Boomers"], "Ingredients & Formulation": ["Format"], Personas: ["The Ascendants"] },
-  "511": { Generations: ["Millennials", "Gen X", "Boomers"], "Design & Aesthetics": ["Form & Function"], Emotions: ["Quietude"] },
-  "514": { Generations: ["Gen X", "Boomers"], "Design & Aesthetics": ["Form & Function"], Emotions: ["Flourishing"] },
-  "517": { Generations: ["Gen Z", "Alphas"], Markets: ["Gender-Inclusive"], "Design & Aesthetics": ["Design Aesthetics"] },
-  "520": { Generations: ["Gen Z", "Millennials"], Sustainability: ["Sustainability"], CMF: ["Material", "Finish"] },
-  "523": { Generations: ["Gen Z", "Millennials"], "Ingredients & Formulation": ["Flavour", "Mouthfeel", "Ingredients"] },
-  "526": { Generations: ["Gen Z", "Millennials"], "Ingredients & Formulation": ["Flavour"], Packaging: ["Packaging"], Personas: ["The Synergists"] },
-  "529": { Generations: ["Gen Z", "Millennials"], "Design & Aesthetics": ["UX/UI", "Form & Function"], Personas: ["The Ascendants"] },
-  "532": { Generations: ["Millennials", "Gen X"], "Design & Aesthetics": ["UX/UI"], Emotions: ["Quietude", "Witherwill"] },
-  "535": { Generations: ["Alphas", "Millennials"], "Age Ranges": ["Baby/Toddler (0-3 years)", "Kids (3-8 years)", "Tween (9-12 years)"] },
-  "538": { Generations: ["Alphas", "Betas"], "Age Ranges": ["Kids (3-8 years)", "Tween (9-12 years)"], Personas: ["The Restorers"] },
-};
-
-const trendHashtags: Record<string, string[]> = {
-  "485": ["#Repair", "#CircularDesign", "#SlowLuxury"],
-  "488": ["#SaturatedCalm", "#Colour28"],
-  "491": ["#ProofOfOrigin", "#Traceability"],
-  "494": ["#ValueOverVolume", "#Longevity"],
-  "497": ["#SoftTailoring"],
-  "502": ["#BarrierCare", "#SkinBarrier"],
-  "505": ["#Skinimalism"],
-  "508": ["#ClinicAtHome", "#BeautyTech"],
-  "511": ["#QuietKitchens", "#wellnessrituals"],
-  "514": ["#OutdoorLiving"],
-  "517": ["#LowProfile", "#Sneakers"],
-  "520": ["#PostLeather", "#Mycelium", "#deadstockdesign"],
-  "523": ["#Fermentation", "#aperitif"],
-  "526": ["#LowNoAlcohol", "#SoftSelling"],
-  "529": ["#Wearables"],
-  "532": ["#QuietCommute"],
-  "535": ["#HandedDown", "#Resale"],
-  "538": ["#PlayAsInfrastructure"],
-};
-
-/**
- * Second authors, where a profile has one. The sheet's AUTHORS column can
- * list several people; the Owner column names the one accountable for it.
- */
-const trendCoAuthors: Record<string, string[]> = {
-  "485": ["sm"],
-  "494": ["jw"],
-  "508": ["da"],
-  "511": ["mc"],
-  "526": ["rc"],
-  "535": ["ao"],
-};
-
-/**
- * Cover images sit on the platform's media host, so they need the network.
- * Two profiles have none, which is what an owner has to fix — and in the
- * offline demo the rest fall back to the same stand-in, which is honest about
- * where the image comes from.
- */
-const MEDIA = "https://media.wgsn.com/ss_image_store";
-const noCover = new Set(["491", "538"]);
-
-export const trends: TrendProfile[] = trendRows.map(
-  (
-    [
-      id, profileId, title, slug, ownerId, types, call, publishedOn,
-      activeFrom, activeTo, strategies, proofPoints, industries, scored,
-      description, needToKnow,
-    ],
-    i,
-  ) => ({
-    id,
-    profileId,
-    title,
-    slug,
-    ownerId,
-    authorIds: [ownerId, ...(trendCoAuthors[id] ?? [])],
-    types,
-    call,
-    publishedOn,
-    activeFrom,
-    activeTo,
-    editorUrl: `https://www.wgsn.com/report-editor/${profileId}`,
-    publishedUrl: `https://www.wgsn.com/trends/${slug}`,
-    coverImageUrl: noCover.has(id)
-      ? undefined
-      : `${MEDIA}/${(i + 11) * 7}/${(i + 3) * 13}/original_WGSN_${slug.replace(/-/g, "_")}.jpg`,
-    description,
-    needToKnow,
-    // The full opportunity write-up lives in Content Editor; the sheet's
-    // column runs to a couple of thousand words, so the Hub links out to it.
-    opportunity: `${needToKnow} The full opportunity, by industry, is in the profile.`,
-    strategies,
-    proofPoints,
-    industries,
-    scored,
-    missingScore: industries.filter((ind) => !scored.includes(ind)),
-    hashtags: trendHashtags[id] ?? [],
-    labels: trendLabels[id] ?? {},
-    lastSynced: "2026-09-07",
-  }),
-);

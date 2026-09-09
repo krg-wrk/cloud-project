@@ -32,6 +32,7 @@
 
     --late: #b8341f;
     --warn: #9c6b16;
+    --warn-ink: #7d5511;
     --ok: #256b48;
     --info: #2f5f9e;
     --violet: #6b4fc0;
@@ -86,6 +87,7 @@
 
       --late: #ef8676;
       --warn: #dcab5b;
+      --warn-ink: #dcab5b;
       --ok: #64bd8f;
       --info: #7aa8dd;
       --violet: #a793ef;
@@ -127,6 +129,7 @@
 
     --late: #ef8676;
     --warn: #dcab5b;
+    --warn-ink: #dcab5b;
     --ok: #64bd8f;
     --info: #7aa8dd;
     --violet: #a793ef;
@@ -1216,6 +1219,16 @@
     border-bottom: none;
   }
 
+  /* A fact whose value is a list rather than a figure needs the full width. */
+  .fact.stack {
+    display: block;
+  }
+
+  .fact.stack dd {
+    margin-top: 5px;
+    text-align: left;
+  }
+
   .fact dt {
     color: var(--ink-soft);
   }
@@ -2220,10 +2233,69 @@
     gap: 10px;
   }
 
-  .trend-years {
-    font-family: var(--mono);
-    font-size: 11px;
+  /*
+   * Where a profile is: live on the platform, or still in Content Editor. The
+   * tint is faint on purpose — the state is context, not the headline.
+   */
+  .tag.state-live {
+    color: var(--ok);
+    border-color: color-mix(in srgb, var(--ok) 34%, var(--line));
+    background: color-mix(in srgb, var(--ok) 8%, transparent);
+  }
+
+  .tag.state-draft {
+    color: var(--warn-ink);
+    border-color: color-mix(in srgb, var(--warn) 32%, var(--line));
+    background: color-mix(in srgb, var(--warn) 8%, transparent);
+  }
+
+  .tag.state-archived {
     color: var(--ink-soft);
+  }
+
+  .soft {
+    color: var(--ink-soft);
+  }
+
+  /*
+   * The state and the call, at the top right of a profile. They label the
+   * heading, so they sit level with it rather than at the foot of the lede.
+   */
+  .pill-stack {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-start;
+  }
+
+  /*
+   * "ALL - 2030-12", or one line per industry where the profile has been
+   * scored per industry — straight off the sheet, so each line is its own row.
+   */
+  .score-month {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-family: var(--mono);
+    font-size: 11.5px;
+  }
+
+  /*
+   * The opportunity write-up is the one place on a profile that carries real
+   * prose, so it gets a measure and paragraph spacing rather than the tight
+   * single-line rhythm the rest of the page uses.
+   */
+  .prose-long {
+    max-width: 64ch;
+  }
+
+  .prose-long p {
+    margin: 0 0 0.85em;
+    line-height: 1.62;
+  }
+
+  .prose-long p:last-child {
+    margin-bottom: 0;
   }
 
   .trend-name {
@@ -2940,14 +3012,24 @@
     return h;
   }
 
-  function face(id, big) {
-    const p = person(id);
-    const label = (p?.name ?? id)
+  /**
+   * Initials on a coloured disc. Pass the name when you already have it —
+   * trend profiles credit people by name, not by an id in the people list,
+   * and looking one up there would fall back to the wrong person.
+   */
+  function faceFor(name, seed, big) {
+    const label = (name || seed || "?")
       .split(/\s+/)
       .slice(0, 2)
       .map((w) => w[0].toUpperCase())
       .join("");
-    return `<span class="face${big ? " big" : ""}" style="--c:hsl(${hue(id)} 55% 45%)">${label}</span>`;
+    return `<span class="face${big ? " big" : ""}" style="--c:hsl(${hue(
+      seed,
+    )} 55% 45%)">${label}</span>`;
+  }
+
+  function face(id, big) {
+    return faceFor(person(id)?.name, id, big);
   }
 
   const day = (d) => new Date(d + "T00:00:00Z");
@@ -3330,11 +3412,24 @@
     };
   }
 
+  /**
+   * The sheet credits people by display name, not by id, so the id on a
+   * profile is derived from the name. Matching a viewer against it means
+   * deriving the same id from their name.
+   */
+  function nameId(name) {
+    return (name ?? "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+  }
+
   /** The owner, anyone credited on it, a manager for the industry, an admin. */
   function canWriteTrend(v, t) {
     if (v.isAdmin) return true;
-    if (v.person.id === t.ownerId) return true;
-    if (t.authorIds.includes(v.person.id)) return true;
+    const mine = new Set([v.person.id, nameId(v.person.name)].filter(Boolean));
+    if (mine.has(t.ownerId)) return true;
+    if ((t.authorIds ?? []).some((a) => mine.has(a))) return true;
     if (!v.isManager) return false;
     if (v.verticals === "all") return true;
     return t.industries.some((industry) =>
@@ -5556,15 +5651,25 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
   const TRENDS = DATA.trends ?? [];
   const TREND_TYPES_LIST = ["Design & Aesthetic", "Lifestyle", "Product / Item", "Systemic"];
+
+  /** The industries a profile is tagged to on the sheet, and scored for. */
   const INDUSTRIES = [
     "Beauty",
     "Consumer Tech",
-    "Fashion",
+    "Fashion Buying",
+    "Fashion Design",
     "Food & Drink",
+    "Insight",
     "Interiors",
     "Sports & Outdoor",
-    "Overall",
   ];
+
+  /** Owners as the sheet spells them, for the filter. */
+  const TREND_OWNERS = [
+    ...new Map(TRENDS.filter((t) => t.ownerName).map((t) => [t.ownerId, t.ownerName])),
+  ]
+    .map(([id, name]) => ({ id, name }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
   /**
    * The strategic call, ordered by how much commitment it asks for. The sheet
@@ -5579,6 +5684,15 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
   ];
 
   const trendById = (id) => TRENDS.find((t) => t.id === id);
+
+  /** Where a profile is: live on the platform, or still in Content Editor. */
+  function statePill(t) {
+    if (t.editorStatus === "archived") return `<span class="tag state-archived">Archived</span>`;
+    if (t.published === "Published") return `<span class="tag state-live">Live</span>`;
+    return `<span class="tag state-draft">${
+      t.editorStatus === "review" ? "In review" : "Draft"
+    }</span>`;
+  }
 
   function callPill(call) {
     if (!call) {
@@ -5597,8 +5711,11 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
    * so in this offline demo it will not load — which is exactly what the
    * stand-in is for. It takes a hue from the trend's own id, so a profile
    * stays recognisable, and says which case it is.
+   *
+   * Because the stand-in is always there, a card's image can load lazily
+   * without a blank frame in the meantime, which matters on a list of 446.
    */
-  function coverImage(t, ratio = "16 / 10") {
+  function coverImage(t, ratio = "16 / 10", eager) {
     const style = `aspect-ratio:${ratio};--h:${hue(t.id)}`;
     const fallback =
       `<span class="cover-fallback">${icon("image", 20)}<span>${
@@ -5607,7 +5724,9 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     if (t.coverImageUrl) {
       return `<figure class="cover" style="${style}">
         ${fallback}
-        <img src="${esc(t.coverImageUrl)}" alt="${esc(t.title)}" onerror="this.remove()" />
+        <img src="${esc(t.coverImageUrl)}" alt="${esc(t.title)}" loading="${
+          eager ? "eager" : "lazy"
+        }" onerror="this.remove()" />
         ${t.coverFromHub ? `<figcaption>Linked in the Hub</figcaption>` : ""}
       </figure>`;
     }
@@ -5620,24 +5739,30 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     const type = params.get("type") ?? "";
     const call = params.get("call") ?? "";
     const industry = params.get("industry") ?? "";
+    const state = params.get("state") ?? "";
     const needsScore = params.get("needsScore") === "1";
+
+    const own = new Set([v.person.id, nameId(v.person.name)].filter(Boolean));
+    const isMine = (t) => own.has(t.ownerId) || (t.authorIds ?? []).some((a) => own.has(a));
 
     let rows = TRENDS.map(trendView);
     if (owner === "mine") {
-      rows = rows.filter((t) => t.ownerId === v.person.id || t.authorIds.includes(v.person.id));
+      rows = rows.filter(isMine);
     } else if (owner !== "all") {
       rows = rows.filter((t) => t.ownerId === owner || t.authorIds.includes(owner));
     }
     if (type) rows = rows.filter((t) => t.types.includes(type));
     if (call) rows = rows.filter((t) => t.call === call);
     if (industry) rows = rows.filter((t) => t.industries.includes(industry));
+    if (state === "published") rows = rows.filter((t) => t.published === "Published");
+    if (state === "unpublished") rows = rows.filter((t) => t.published !== "Published");
+    if (state === "archived") rows = rows.filter((t) => t.editorStatus === "archived");
     if (needsScore) rows = rows.filter((t) => t.missingScore.length > 0);
     rows.sort((a, b) => a.title.localeCompare(b.title));
 
-    const mine = rows.filter(
-      (t) => t.ownerId === v.person.id || t.authorIds.includes(v.person.id),
-    ).length;
+    const mine = rows.filter(isMine).length;
     const awaiting = rows.filter((t) => t.missingScore.length > 0).length;
+    const live = rows.filter((t) => t.published === "Published").length;
 
     return `
       <div class="head">
@@ -5646,15 +5771,16 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             owner === "mine" ? "Profiles you own or are credited on" : "The trend database"
           }</div>
           <h1>Trends</h1>
-          <p class="lede">Published trend profiles from TFDB. Which are yours, what the call is
+          <p class="lede">Trend profiles from TFDB. Which are yours, what the call is
             on each, which industries are still waiting for a score, and the way straight
             through to the profile in Content Editor or on the live site.</p>
         </div>
         <div class="figures inline">
           <div class="figure"><b>${rows.length}</b><span>${
-            owner === "mine" ? "Yours" : "Profiles"
+            owner === "mine" ? "Yours" : "Showing"
           }</span></div>
           ${owner !== "mine" ? `<div class="figure"><b>${mine}</b><span>Yours</span></div>` : ""}
+          <div class="figure"><b>${live}</b><span>Live</span></div>
           <div class="figure${awaiting ? " hot" : ""}"><b>${awaiting}</b><span>Awaiting a score</span></div>
         </div>
       </div>
@@ -5664,19 +5790,12 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           <select data-filter="owner">
             <option value="mine"${owner === "mine" ? " selected" : ""}>Mine</option>
             <option value="all"${owner === "all" ? " selected" : ""}>Everyone</option>
-            ${
-              v.isManager
-                ? people
-                    .filter((p) => p.role === "forecaster")
-                    .map(
-                      (p) =>
-                        `<option value="${p.id}"${p.id === owner ? " selected" : ""}>${esc(
-                          p.name,
-                        )}</option>`,
-                    )
-                    .join("")
-                : ""
-            }
+            ${TREND_OWNERS.map(
+              (o) =>
+                `<option value="${esc(o.id)}"${o.id === owner ? " selected" : ""}>${esc(
+                  o.name,
+                )}</option>`,
+            ).join("")}
           </select></label>
         <label class="field"><span>Trend type</span>
           <select data-filter="type"><option value="">All types</option>${TREND_TYPES_LIST.map(
@@ -5687,6 +5806,15 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             (i) =>
               `<option value="${esc(i)}"${i === industry ? " selected" : ""}>${esc(i)}</option>`,
           ).join("")}</select></label>
+        <label class="field"><span>State</span>
+          <select data-filter="state">
+            <option value=""${state ? "" : " selected"}>Any state</option>
+            <option value="published"${state === "published" ? " selected" : ""}>Live</option>
+            <option value="unpublished"${
+              state === "unpublished" ? " selected" : ""
+            }>Not published</option>
+            <option value="archived"${state === "archived" ? " selected" : ""}>Archived</option>
+          </select></label>
         <div class="field"><span>Call</span>
           <div class="toggles">
             <button class="toggle${call ? "" : " on"}" data-call="">Any</button>
@@ -5713,7 +5841,9 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         rows.length === 0
           ? `<div class="none">${icon("trends", 20)}<p>${
               owner === "mine"
-                ? "No trend profiles are owned by you, or credit you as an author."
+                ? `No trend profiles on the sheet are owned by ${esc(
+                    v.person.name,
+                  )}, or credit them as an author. Pick an owner above to see a forecaster&rsquo;s own.`
                 : "No profiles match those filters."
             }</p></div>`
           : `<div class="trend-grid">${rows
@@ -5721,22 +5851,28 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                 (t) => `<a class="trend-card" href="#/trends/${t.id}">
                   ${coverImage(t)}
                   <div class="trend-card-body">
-                    <div class="trend-card-top">${callPill(t.call)}
-                      <span class="trend-years">${t.activeFrom.slice(0, 4)}–${t.activeTo.slice(
-                        0,
-                        4,
-                      )}</span></div>
+                    <div class="trend-card-top">${callPill(t.call)}${statePill(t)}</div>
                     <h2 class="trend-name">${esc(t.title)}</h2>
                     <p class="trend-summary">${esc(t.description)}</p>
                     <div class="trend-types">${t.types
                       .map((x) => `<span class="tag">${esc(x)}</span>`)
                       .join("")}</div>
                     <div class="trend-meta">
-                      <span title="Owner">${icon("forecasters", 13)}${esc(
-                        nameOf(t.ownerId),
-                      )}</span>
-                      <span title="Proof points logged">${icon("tier", 13)}${t.proofPoints}</span>
-                      <span title="Strategies">${icon("deadlines", 13)}${t.strategies}</span>
+                      ${
+                        t.ownerName
+                          ? `<span title="Owner">${icon("forecasters", 13)}${esc(
+                              t.ownerName,
+                            )}</span>`
+                          : ""
+                      }
+                      ${
+                        t.proofPoints
+                          ? `<span title="Proof points logged">${icon(
+                              "tier",
+                              13,
+                            )}${t.proofPoints}</span>`
+                          : ""
+                      }
                       ${
                         t.missingScore.length
                           ? `<span class="needs-score" title="No score yet for ${esc(
@@ -5770,8 +5906,12 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     const t = trendView(raw);
     const v = viewer();
     const canWrite = canWriteTrend(v, t);
-    const others = t.authorIds.filter((a) => a !== t.ownerId);
+    const others = (t.authorNames ?? []).filter((a) => a !== t.ownerName);
     const callBlurb = (CALLS.find(([c]) => c === t.call) ?? [])[1];
+    const years =
+      t.activeFrom && t.activeTo
+        ? ` · called for ${t.activeFrom.slice(0, 4)}–${t.activeTo.slice(0, 4)}`
+        : "";
 
     return `
       <div class="crumb"><a href="#/trends">Trends</a><span>/</span>
@@ -5779,19 +5919,16 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
       <div class="head">
         <div>
-          <div class="eyebrow">${t.types.map(esc).join(" · ")} · called for ${t.activeFrom.slice(
-            0,
-            4,
-          )}–${t.activeTo.slice(0, 4)}</div>
+          <div class="eyebrow">${t.types.map(esc).join(" · ") || "Trend profile"}${years}</div>
           <h1>${esc(t.title)}</h1>
-          <p class="lede">${esc(t.description)}</p>
+          ${t.description ? `<p class="lede">${esc(t.description)}</p>` : ""}
         </div>
-        <div>${callPill(t.call)}</div>
+        <div class="pill-stack">${statePill(t)}${callPill(t.call)}</div>
       </div>
 
       <div class="split">
         <div class="prose">
-          ${coverImage(t, "16 / 7")}
+          ${coverImage(t, "16 / 7", true)}
 
           ${
             t.missingScore.length
@@ -5836,10 +5973,26 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                   </div>
                 </section>`
               : `
-          <section class="sec" style="margin-top:22px">
-            <div class="sec-head"><h2>${icon("ai")} Need to know</h2></div>
-            <p>${esc(t.needToKnow)}</p>
-          </section>
+          ${
+            t.needToKnow
+              ? `<section class="sec" style="margin-top:22px">
+                  <div class="sec-head"><h2>${icon("ai")} Need to know</h2></div>
+                  <p>${esc(t.needToKnow)}</p>
+                </section>`
+              : ""
+          }
+
+          ${
+            t.opportunity
+              ? `<section class="sec">
+                  <div class="sec-head"><h2>${icon("trends")} The opportunity</h2></div>
+                  <div class="prose-long">${t.opportunity
+                    .split(/\n+/)
+                    .map((para) => `<p>${esc(para)}</p>`)
+                    .join("")}</div>
+                </section>`
+              : ""
+          }
 
           ${
             t.note
@@ -5850,18 +6003,24 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
               : ""
           }
 
-          <section class="sec">
-            <div class="sec-head"><h2>${icon("published")} Industry scores</h2></div>
-            <div class="score-grid">${t.industries
-              .map((industry) => {
-                const done = t.scored.includes(industry);
-                return `<div class="score ${done ? "done" : "missing"}">${icon(
-                  done ? "published" : "at-risk",
-                  15,
-                )}<span>${esc(industry)}</span><em>${done ? "Scored" : "No score"}</em></div>`;
-              })
-              .join("")}</div>
-          </section>
+          ${
+            t.industries.length
+              ? `<section class="sec">
+                  <div class="sec-head"><h2>${icon("published")} Industry scores</h2></div>
+                  <div class="score-grid">${t.industries
+                    .map((industry) => {
+                      const done = t.scored.includes(industry);
+                      return `<div class="score ${done ? "done" : "missing"}">${icon(
+                        done ? "published" : "at-risk",
+                        15,
+                      )}<span>${esc(industry)}</span><em>${
+                        done ? "Scored" : "No score"
+                      }</em></div>`;
+                    })
+                    .join("")}</div>
+                </section>`
+              : ""
+          }
 
           <section class="sec">
             <div class="sec-head"><h2>${icon("link")} Supporting material</h2></div>
@@ -5902,24 +6061,55 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           <div class="panel">
             <div class="panel-label">This profile</div>
             <dl>
-              <div class="fact"><dt>Owner</dt><dd><span class="who">${face(t.ownerId)}${esc(
-                nameOf(t.ownerId),
-              )}</span></dd></div>
+              <div class="fact"><dt>Owner</dt><dd>${
+                t.ownerName
+                  ? `<span class="who">${faceFor(t.ownerName, t.ownerId)}${esc(
+                      t.ownerName,
+                    )}</span>`
+                  : `<span class="soft">Not set on the sheet</span>`
+              }</dd></div>
               ${
                 others.length
                   ? `<div class="fact"><dt>Also credited</dt><dd>${others
-                      .map((a) => esc(nameOf(a)))
+                      .map(esc)
                       .join(", ")}</dd></div>`
                   : ""
               }
               ${callBlurb ? `<div class="fact"><dt>The call</dt><dd>${esc(callBlurb)}</dd></div>` : ""}
-              <div class="fact"><dt>Published</dt><dd>${long(t.publishedOn)}</dd></div>
-              <div class="fact"><dt>Called for</dt><dd>${t.activeFrom.slice(
-                0,
-                4,
-              )}–${t.activeTo.slice(0, 4)}</dd></div>
+              ${
+                t.publishedOn
+                  ? `<div class="fact"><dt>Published</dt><dd>${long(t.publishedOn)}</dd></div>`
+                  : ""
+              }
+              ${
+                t.editorStatus
+                  ? `<div class="fact"><dt>In Content Editor</dt><dd>${esc(
+                      t.editorStatus,
+                    )}</dd></div>`
+                  : ""
+              }
+              ${
+                t.activeFrom && t.activeTo
+                  ? `<div class="fact"><dt>Called for</dt><dd>${t.activeFrom.slice(
+                      0,
+                      4,
+                    )}–${t.activeTo.slice(0, 4)}</dd></div>`
+                  : ""
+              }
               <div class="fact"><dt>Proof points</dt><dd>${t.proofPoints}</dd></div>
               <div class="fact"><dt>Strategies</dt><dd>${t.strategies}</dd></div>
+              ${
+                t.latestScoreMonth
+                  ? (() => {
+                      const lines = t.latestScoreMonth.split("\n");
+                      return `<div class="fact${
+                        lines.length > 1 ? " stack" : ""
+                      }"><dt>Latest score</dt><dd class="score-month">${lines
+                        .map((line) => `<span>${esc(line)}</span>`)
+                        .join("")}</dd></div>`;
+                    })()
+                  : ""
+              }
               <div class="fact"><dt>Trend ID</dt><dd><span class="mono-tag">${esc(
                 t.id,
               )}</span></dd></div>
@@ -5929,10 +6119,18 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                   : ""
               }
             </dl>
-            <a class="wide-btn solid" href="${esc(t.editorUrl)}" target="_blank"
-              rel="noreferrer noopener">${icon("edit")}Open in Content Editor</a>
-            <a class="wide-btn" href="${esc(t.publishedUrl)}" target="_blank"
-              rel="noreferrer noopener">${icon("link")}View the published profile</a>
+            ${
+              t.editorUrl
+                ? `<a class="wide-btn solid" href="${esc(t.editorUrl)}" target="_blank"
+                    rel="noreferrer noopener">${icon("edit")}Open in Content Editor</a>`
+                : ""
+            }
+            ${
+              t.publishedUrl
+                ? `<a class="wide-btn" href="${esc(t.publishedUrl)}" target="_blank"
+                    rel="noreferrer noopener">${icon("link")}View the published profile</a>`
+                : ""
+            }
             ${
               canWrite && trendForm !== t.id
                 ? `<button class="wide-btn" data-trend-open="${t.id}">${icon("note")}${

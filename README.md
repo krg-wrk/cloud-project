@@ -31,7 +31,7 @@ credentials to set up first.
 | Forecast | `/content/ss-4013` | One forecast: dates, status, details, notes, peer review |
 | Team | `/team`, `/team/ao` | Per-forecaster pages |
 | Performance | `/performance` | KPIs per forecaster and across the team, over any time range |
-| Trends | `/trends`, `/trends/:id` | Published trend profiles from TFDB: which are yours, the call on each, which industries still need a score |
+| Trends | `/trends`, `/trends/:id` | All 446 TFDB trend profiles: which are yours, the call on each, which industries still need a score |
 | Learning | `/workshops`, `/workshops/ws-201` | The workshop and knowledge-sharing programme, with sign-ups |
 | What's on | `/whats-on` | Leave, public holidays, shows |
 
@@ -177,8 +177,14 @@ so `javascript:` and `data:` are a way in and are refused with a plain message.
 or are credited on, what the strategic call is on each, and which industries
 are still waiting for a score. `/trends/:id` is one profile.
 
-The columns are the **TFDB - Published Trend Profiles** sheet's own, which is
-Snowflake-linked, so the Hub reads it and never writes to it:
+The data is the real thing. All **446 profiles** from the TFDB workbook's
+`Trend Profiles` tab are in the repository (`server/src/data/tfdb.json`) — 343
+published, 103 not, 49 archived in Content Editor. The workbook's `Governance`
+tab (the trend request and approval pipeline) and its eight `Import <date>`
+snapshots are not read.
+
+Because the sheet is Snowflake-linked, the Hub reads it and never writes to
+it. The columns it reads:
 
 - **Identity** — `TREND_ID` (the short number the team quotes), `ID` (the
   Content Editor document id), `TITLE`, `TREND_URL_SLUG`.
@@ -193,7 +199,19 @@ Snowflake-linked, so the Hub reads it and never writes to it:
   not four words.
 - **`MORE_LABELS`** — the strategic call: Protect, Test, Expand, Invest. Often
   not set yet, and the page says "No call yet" rather than guessing one.
-- **`START_DATE` / `END_DATE`** — the window the trend is called for.
+- **`START_DATE` / `END_DATE`** — the window the trend is called for. Three
+  profiles have no window and simply do not show one.
+- **`Trend Profile Owner`, `Authors`** — credited by display name, not by an
+  id, so the Hub derives an id from the name (`nameId`) and matches a signed-in
+  person by their name as well as their person id. 48 people own a profile.
+- **`Published`, `RE Status`** — whether the profile is live on the platform,
+  and where it is in Content Editor (draft, review, archived). The page shows
+  this as one pill and offers it as a filter, because "my drafts" is a real
+  question.
+- **`Latest Score Month`** — one line per industry where the profile is scored
+  per industry, a single `ALL - YYYY-MM` where it is not. Rendered as it comes.
+- **`Trend Opportunity`** — the long write-up. It is the most useful thing on a
+  profile, so the profile page renders it in full; the list does not carry it.
 - **`NUMBER_OF_STRATEGIES`, `NUMBER_OF_PROOF_POINTS`** — the counts the KPI
   sheet also tracks.
 - **`TAGGED_PRODUCTS`, `Industries Scored`, `Industries Missing Score`** — what
@@ -321,14 +339,25 @@ because it is counted against the editor's dates rather than the Hub's.
 ### What is not in this repo
 
 The KPI sheet holds real staff names, addresses, grades, individual ratings and
-client names. The TFDB sheet holds real profile authors, owners and comments.
-**None of that is copied into this repository or the demo.** The seed data uses
-invented forecasters and invented trend profiles, and the Hub reads the real
-team, grades, departments and profiles from the sheets at run time. What has
-been taken from the sheets is structure only: the column names, the metric
-definitions, the tier taxonomy, the role benchmark figures, the trend types,
-the Invest/Test/Expand/Protect calls, the industry list and the label
-vocabularies.
+client names. **None of that is copied into this repository or the demo.** The
+seed data uses invented forecasters, and the Hub reads the real team, grades
+and departments from the sheet at run time. What has been taken from that
+sheet is structure only: the column names, the metric definitions, the tier
+taxonomy and the role benchmark figures.
+
+The TFDB profiles are the exception, and deliberately so: the trend data was
+supplied for exactly this, and the profiles are published editorial work
+rather than anything about a person's employment. So the profiles, their
+owners' and authors' names, their scores and their cover image addresses are
+in the repository. Two of the sheet's columns are not, because they are
+neither editorial nor needed:
+
+- **`Modified By`** — staff email addresses.
+- **`Latest Comment`** — internal working notes on a profile.
+
+The `Governance` tab is not read at all. It is a request-and-approval pipeline
+carrying pitch notes, approval decisions and per-person workflow, none of
+which the Hub needs to show a profile.
 
 ## The calendar
 

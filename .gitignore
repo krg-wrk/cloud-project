@@ -10,4 +10,10 @@ build/
 # Built demo page (regenerate with node demo/build.mjs)
 demo/forecasters-hub.html
 
-data/
+# The local SQLite database. HUB_DB defaults to ./data/hub.db, relative to
+# wherever the server is started, so the files are ignored by name — an
+# unanchored `data/` also swallowed server/src/data/, where the seed and the
+# TFDB profiles live.
+hub.db
+hub.db-shm
+hub.db-wal

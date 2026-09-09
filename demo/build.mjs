@@ -44,8 +44,10 @@ const html = readFileSync(join(here, "hub.template.html"), "utf8").replace(
 
 const out = join(here, "forecasters-hub.html");
 writeFileSync(out, html);
+const live = trends.filter((t) => t.published === "Published").length;
 console.log(
-  `${out} — ${people.length} people, ${content.length} forecasts, ${events.length} events, ` +
-    `${sessions.length} sessions, ${trends.length} trends, ${metrics.length} metrics, ` +
-    `${CONTENT_TYPES.length} formats`,
+  `${out} — ${(html.length / 1e6).toFixed(2)} MB\n` +
+    `  ${people.length} people, ${content.length} forecasts, ${events.length} events, ` +
+    `${sessions.length} sessions, ${metrics.length} metrics, ${CONTENT_TYPES.length} formats\n` +
+    `  ${trends.length} trend profiles from TFDB (${live} live, ${trends.length - live} not published)`,
 );

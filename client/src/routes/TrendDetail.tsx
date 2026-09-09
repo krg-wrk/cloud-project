@@ -2,14 +2,12 @@ import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { send, useApi } from "../lib/api";
 import { formatLong } from "../lib/date";
-import { personName } from "../lib/domain";
 import { Icon } from "../lib/icons";
-import { useViewer } from "../lib/viewer";
 import type { ResearchLink, TrendDetail as Trend } from "../types";
-import { ErrorNote, Loading, Who } from "../components/bits";
+import { Avatar, ErrorNote, Loading } from "../components/bits";
 import { TrendImage } from "../components/TrendImage";
 import ShareLink from "../components/ShareLink";
-import { CALLS, CallPill } from "./Trends";
+import { CALLS, CallPill, StatePill } from "./Trends";
 
 /**
  * One trend profile.
@@ -21,7 +19,6 @@ import { CALLS, CallPill } from "./Trends";
  */
 export default function TrendDetail() {
   const { id } = useParams<{ id: string }>();
-  const { people } = useViewer();
   const loaded = useApi<Trend>(`/trends/${id}`);
   const [saved, setSaved] = useState<Trend | null>(null);
   const [editing, setEditing] = useState(false);
@@ -73,7 +70,8 @@ export default function TrendDetail() {
   }
 
   const callBlurb = CALLS.find((c) => c.id === trend.call)?.blurb;
-  const authors = trend.authorIds.filter((a) => a !== trend.ownerId);
+  const others = trend.authorNames.filter((a) => a !== trend.ownerName);
+  const scoreLines = (trend.latestScoreMonth ?? "").split("\n").filter(Boolean);
 
   return (
     <>
@@ -92,7 +90,10 @@ export default function TrendDetail() {
           <p className="page-sub">{trend.description}</p>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 8, alignItems: "flex-end" }}>
-          <CallPill call={trend.call} />
+          <div style={{ display: "flex", gap: 6 }}>
+            <StatePill published={trend.published} editorStatus={trend.editorStatus} />
+            <CallPill call={trend.call} />
+          </div>
           <ShareLink />
         </div>
       </div>
@@ -105,6 +106,7 @@ export default function TrendDetail() {
             imageUrl={trend.coverImageUrl}
             imageCredit={trend.coverFromHub ? "Linked in the Hub" : undefined}
             ratio="16 / 7"
+            eager
           />
 
           {trend.missingScore.length > 0 && (
@@ -205,12 +207,27 @@ export default function TrendDetail() {
             </section>
           ) : (
             <>
-              <section className="card" style={{ marginTop: 20 }}>
-                <h2 className="section-title">
-                  <Icon name="ai" /> Need to know
-                </h2>
-                <p style={{ margin: 0 }}>{trend.needToKnow}</p>
-              </section>
+              {trend.needToKnow && (
+                <section className="card" style={{ marginTop: 20 }}>
+                  <h2 className="section-title">
+                    <Icon name="ai" /> Need to know
+                  </h2>
+                  <p style={{ margin: 0 }}>{trend.needToKnow}</p>
+                </section>
+              )}
+
+              {trend.opportunity && (
+                <section style={{ marginTop: 24 }}>
+                  <h2 className="section-title">
+                    <Icon name="trends" /> The opportunity
+                  </h2>
+                  <div className="prose-long">
+                    {trend.opportunity.split(/\n+/).map((para, i) => (
+                      <p key={i}>{para}</p>
+                    ))}
+                  </div>
+                </section>
+              )}
 
               {trend.note && (
                 <section className="card" style={{ marginTop: 12 }}>
@@ -221,6 +238,7 @@ export default function TrendDetail() {
                 </section>
               )}
 
+              {trend.industries.length > 0 && (
               <section style={{ marginTop: 24 }}>
                 <h2 className="section-title">
                   <Icon name="published" /> Industry scores
@@ -238,6 +256,7 @@ export default function TrendDetail() {
                   })}
                 </div>
               </section>
+              )}
 
               <section style={{ marginTop: 24 }}>
                 <h2 className="section-title">
@@ -297,13 +316,20 @@ export default function TrendDetail() {
               <div className="fact">
                 <dt>Owner</dt>
                 <dd>
-                  <Who id={trend.ownerId} name={personName(people, trend.ownerId)} />
+                  {trend.ownerName ? (
+                    <span className="who">
+                      <Avatar id={trend.ownerId} name={trend.ownerName} />
+                      {trend.ownerName}
+                    </span>
+                  ) : (
+                    <span className="muted">Not set on the sheet</span>
+                  )}
                 </dd>
               </div>
-              {authors.length > 0 && (
+              {others.length > 0 && (
                 <div className="fact">
                   <dt>Also credited</dt>
-                  <dd>{authors.map((a) => personName(people, a)).join(", ")}</dd>
+                  <dd>{others.join(", ")}</dd>
                 </div>
               )}
               {callBlurb && (
@@ -312,10 +338,18 @@ export default function TrendDetail() {
                   <dd>{callBlurb}</dd>
                 </div>
               )}
-              <div className="fact">
-                <dt>Published</dt>
-                <dd>{formatLong(trend.publishedOn)}</dd>
-              </div>
+              {trend.publishedOn && (
+                <div className="fact">
+                  <dt>Published</dt>
+                  <dd>{formatLong(trend.publishedOn)}</dd>
+                </div>
+              )}
+              {trend.editorStatus && (
+                <div className="fact">
+                  <dt>In Content Editor</dt>
+                  <dd>{trend.editorStatus}</dd>
+                </div>
+              )}
               <div className="fact">
                 <dt>Called for</dt>
                 <dd>
@@ -330,6 +364,20 @@ export default function TrendDetail() {
                 <dt>Strategies</dt>
                 <dd>{trend.strategies}</dd>
               </div>
+              {/* The sheet gives one line per industry when a profile is scored
+                  per industry, and a single "ALL - …" when it is not, so each
+                  line is its own row — and a list takes the full width rather
+                  than wrapping in the value column. */}
+              {trend.latestScoreMonth && (
+                <div className={scoreLines.length > 1 ? "fact stack" : "fact"}>
+                  <dt>Latest score</dt>
+                  <dd className="score-month">
+                    {scoreLines.map((line, i) => (
+                      <span key={i}>{line}</span>
+                    ))}
+                  </dd>
+                </div>
+              )}
               <div className="fact">
                 <dt>Trend ID</dt>
                 <dd className="mono">{trend.id}</dd>
@@ -390,7 +438,7 @@ export default function TrendDetail() {
             <div className="card">
               <div className="card-label">Last change here</div>
               <p className="muted small" style={{ margin: 0 }}>
-                {personName(people, trend.updatedBy)} on {formatLong(trend.updatedAt.slice(0, 10))}
+                {formatLong(trend.updatedAt.slice(0, 10))}
               </p>
             </div>
           )}

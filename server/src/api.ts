@@ -9,6 +9,7 @@ import {
   canWriteNote,
   canWritePeerReview,
   canWriteTrend,
+  nameId,
   requirePerson,
   seesWholeTeam,
   type Viewer,
@@ -372,7 +373,7 @@ export function createApiRouter(
    * owner has added on top. The Hub's cover image wins where both have one,
    * because the owner set it more recently than the sync.
    */
-  function trendView(trend: TrendProfile, viewer: Viewer) {
+  function trendView(trend: TrendProfile, viewer: Viewer, viewerName?: string) {
     const extras = store.trendExtrasFor(trend.id);
     return {
       ...trend,
@@ -383,7 +384,7 @@ export function createApiRouter(
       note: extras?.note,
       updatedBy: extras?.updatedBy,
       updatedAt: extras?.updatedAt,
-      canWrite: canWriteTrend(viewer, trend),
+      canWrite: canWriteTrend(viewer, trend, viewerName),
     };
   }
 
@@ -392,41 +393,68 @@ export function createApiRouter(
    * is the question the page answers — with ?owner= to widen it. The whole
    * database is readable by the team; it is their shared record.
    */
+  /**
+   * Trend profiles.
+   *
+   * The sheet credits people by name, so "mine" matches the signed-in
+   * person's id or their name in the sheet's own id form. A forecaster opens
+   * on their own profiles; a manager on the whole database, which is the view
+   * they need. `owners` comes back alongside the rows so the page can offer
+   * the real list without a second request.
+   */
   router.get("/trends", async (req: ViewerRequest, res, next) => {
     try {
       const viewer = req.viewer!;
+      const viewerName = req.viewer?.name;
       const all = await data.listTrends();
       const owner = typeof req.query.owner === "string" ? req.query.owner : undefined;
       const type = typeof req.query.type === "string" ? req.query.type : undefined;
       const call = typeof req.query.call === "string" ? req.query.call : undefined;
       const industry = typeof req.query.industry === "string" ? req.query.industry : undefined;
+      const state = typeof req.query.state === "string" ? req.query.state : undefined;
       const needsScore = req.query.needsScore === "1";
+
+      const mine = new Set([viewer.personId, nameId(viewerName)].filter(Boolean));
+      const isMine = (t: TrendProfile) =>
+        mine.has(t.ownerId) || t.authorIds.some((a) => mine.has(a));
 
       let rows = all;
       if (owner === "mine" || (!owner && !seesWholeTeam(viewer) && viewer.personId)) {
-        rows = rows.filter(
-          (t) => t.ownerId === viewer.personId || t.authorIds.includes(viewer.personId ?? ""),
-        );
+        rows = rows.filter(isMine);
       } else if (owner && owner !== "all") {
         rows = rows.filter((t) => t.ownerId === owner || t.authorIds.includes(owner));
       }
       if (type) rows = rows.filter((t) => t.types.includes(type));
       if (call) rows = rows.filter((t) => t.call === call);
       if (industry) rows = rows.filter((t) => t.industries.includes(industry));
+      if (state === "published") rows = rows.filter((t) => t.published === "Published");
+      if (state === "unpublished") rows = rows.filter((t) => t.published !== "Published");
+      if (state === "archived") rows = rows.filter((t) => t.editorStatus === "archived");
       if (needsScore) rows = rows.filter((t) => t.missingScore.length > 0);
 
       const extras = store.allTrendExtras();
-      res.json(
-        rows
+      // Owners as the sheet spells them, for the page's filter.
+      const owners = [...new Map(all.filter((t) => t.ownerName).map((t) => [t.ownerId, t.ownerName]))]
+        .map(([id, name]) => ({ id, name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+
+      res.json({
+        owners,
+        total: all.length,
+        rows: rows
           .map((t) => ({
             ...t,
+            // The full opportunity write-up is long and only the profile page
+            // shows it, so the list does not carry it.
+            opportunity: undefined,
             coverImageUrl: extras[t.id]?.coverImageUrl ?? t.coverImageUrl,
             linkCount: extras[t.id]?.links.length ?? 0,
             hasNote: Boolean(extras[t.id]?.note),
-            canWrite: canWriteTrend(viewer, t),
+            mine: isMine(t),
+            canWrite: canWriteTrend(viewer, t, viewerName),
           }))
           .sort((a, b) => a.title.localeCompare(b.title)),
-      );
+      });
     } catch (err) {
       next(err);
     }
@@ -439,7 +467,7 @@ export function createApiRouter(
         res.status(404).json({ error: `No trend profile with id "${req.params.id}"` });
         return;
       }
-      res.json(trendView(trend, req.viewer!));
+      res.json(trendView(trend, req.viewer!, req.viewer?.name));
     } catch (err) {
       next(err);
     }
@@ -460,7 +488,7 @@ export function createApiRouter(
         res.status(404).json({ error: `No trend profile with id "${req.params.id}"` });
         return;
       }
-      if (!canWriteTrend(req.viewer!, trend)) {
+      if (!canWriteTrend(req.viewer!, trend, req.viewer?.name)) {
         res.status(403).json({
           error: "Only the profile's owner, a credited author or a commissioning manager can change it.",
         });
@@ -482,7 +510,7 @@ export function createApiRouter(
         note: req.body?.note ? String(req.body.note).trim().slice(0, 4000) : undefined,
         updatedBy: personId,
       });
-      res.json(trendView(trend, req.viewer!));
+      res.json(trendView(trend, req.viewer!, req.viewer?.name));
     } catch (err) {
       next(err);
     }

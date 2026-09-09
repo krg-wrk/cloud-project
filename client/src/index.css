@@ -1151,6 +1151,16 @@ table.schedule .overdue {
   border-bottom: none;
 }
 
+/* A fact whose value is a list rather than a figure needs the full width. */
+.fact.stack {
+  display: block;
+}
+
+.fact.stack dd {
+  margin-top: 5px;
+  text-align: left;
+}
+
 .fact dt {
   color: var(--ink-45);
 }
@@ -2725,6 +2735,62 @@ a.session-title:hover {
 .needs-score {
   color: var(--status-at-risk);
   font-weight: 500;
+}
+
+/*
+ * Where a profile is: live on the platform, or still in Content Editor. The
+ * tint is faint on purpose — the state is context, not the headline.
+ */
+.tag.state-live {
+  color: var(--status-published);
+  border-color: color-mix(in srgb, var(--status-published) 34%, var(--rule));
+  background: color-mix(in srgb, var(--status-published) 7%, var(--ground));
+}
+
+/*
+ * A darker step of the in-review amber: the status colour is set for headings
+ * and reads at 3.9:1 as 11px text on the tinted pill, which is under the 4.5:1
+ * small-text floor. This one measures 5.45:1.
+ */
+.tag.state-draft {
+  color: #7d5511;
+  border-color: color-mix(in srgb, var(--status-in-review) 32%, var(--rule));
+  background: color-mix(in srgb, var(--status-in-review) 7%, var(--ground));
+}
+
+.tag.state-archived {
+  color: var(--ink-45);
+  background: var(--ground);
+}
+
+/*
+ * "ALL - 2030-12", or one line per industry where the profile has been scored
+ * per industry — straight off the sheet, so each line gets its own row.
+ */
+.score-month {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+/*
+ * The opportunity write-up is the one place on the profile that carries real
+ * prose, so it gets a measure and paragraph spacing rather than the tight
+ * single-line rhythm the rest of the card uses.
+ */
+.prose-long {
+  max-width: 62ch;
+}
+
+.prose-long p {
+  margin: 0 0 0.85em;
+  line-height: 1.62;
+}
+
+.prose-long p:last-child {
+  margin-bottom: 0;
 }
 
 .figure.hot b {

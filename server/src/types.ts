@@ -140,9 +140,19 @@ export interface TrendProfile {
   profileId: string;
   title: string;
   slug: string;
-  /** Person id of the owner. AUTHORS can list more than one person. */
+  /**
+   * The sheet names the owner rather than keying to a person, so the name is
+   * what the page shows and the id is derived from it — which is also how a
+   * signed-in forecaster is matched to the profiles they own.
+   */
   ownerId: string;
+  ownerName: string;
   authorIds: string[];
+  authorNames: string[];
+  /** "Published" or "Unpublished" on the platform. */
+  published?: string;
+  /** Where the profile is in Content Editor: draft, review or archived. */
+  editorStatus?: string;
   /** Design & Aesthetic / Lifestyle / Product / Item / Systemic — more than one. */
   types: string[];
   /** The strategic call: Invest, Test, Expand or Protect. Often not set yet. */
@@ -162,8 +172,11 @@ export interface TrendProfile {
   proofPoints: number;
   /** Industries the profile is tagged to, and where its scores stand. */
   industries: string[];
+  needingScore: string[];
   scored: string[];
   missingScore: string[];
+  /** The score month per industry, or "Missing", as the sheet reports it. */
+  latestScoreMonth?: string;
   hashtags: string[];
   /** The label groups: generations, personas, emotions, CMF and so on. */
   labels: Record<string, string[]>;

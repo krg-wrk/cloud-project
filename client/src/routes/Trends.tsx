@@ -1,9 +1,8 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { useApi, query } from "../lib/api";
-import { personName } from "../lib/domain";
 import { Icon } from "../lib/icons";
 import { useViewer } from "../lib/viewer";
-import type { TrendCall, TrendRow } from "../types";
+import type { TrendCall, TrendList } from "../types";
 import { ErrorNote, Loading } from "../components/bits";
 import { TrendImage } from "../components/TrendImage";
 import ShareLink from "../components/ShareLink";
@@ -15,17 +14,18 @@ export const TREND_TYPES = ["Design & Aesthetic", "Lifestyle", "Product / Item",
 export const INDUSTRIES = [
   "Beauty",
   "Consumer Tech",
-  "Fashion",
+  "Fashion Buying",
+  "Fashion Design",
   "Food & Drink",
+  "Insight",
   "Interiors",
   "Sports & Outdoor",
-  "Overall",
 ];
 
 /**
  * The strategic call, in the order of how much commitment it asks for. The
- * sheet calls this column MORE_LABELS; it is often not set yet, which the
- * page says rather than guessing.
+ * sheet calls this column MORE_LABELS; a fifth of the profiles have none yet,
+ * which the page says rather than guessing.
  */
 export const CALLS: { id: TrendCall; blurb: string }[] = [
   { id: "Protect", blurb: "Defend the position you already have" },
@@ -44,16 +44,40 @@ export function CallPill({ call }: { call?: TrendCall }) {
     );
   }
   return (
-    <span className={`call-pill call-${call.toLowerCase()}`} title={CALLS.find((c) => c.id === call)?.blurb}>
+    <span
+      className={`call-pill call-${call.toLowerCase()}`}
+      title={CALLS.find((c) => c.id === call)?.blurb}
+    >
       <i />
       {call}
     </span>
   );
 }
 
+/** Where a profile is: live on the platform, or still in Content Editor. */
+export function StatePill({
+  published,
+  editorStatus,
+}: {
+  published?: string;
+  editorStatus?: string;
+}) {
+  if (editorStatus === "archived") {
+    return <span className="tag state-archived">Archived</span>;
+  }
+  if (published === "Published") {
+    return <span className="tag state-live">Live</span>;
+  }
+  return (
+    <span className="tag state-draft">
+      {editorStatus === "review" ? "In review" : "Draft"}
+    </span>
+  );
+}
+
 export default function Trends() {
   const [params, setParams] = useSearchParams();
-  const { person, people, isManager } = useViewer();
+  const { isManager } = useViewer();
 
   // A forecaster's own profiles are the point of the page; a manager opens on
   // the whole database, because that is the view they need.
@@ -61,14 +85,16 @@ export default function Trends() {
   const type = params.get("type") ?? "";
   const call = params.get("call") ?? "";
   const industry = params.get("industry") ?? "";
+  const state = params.get("state") ?? "";
   const needsScore = params.get("needsScore") === "1";
 
-  const { data, error, loading } = useApi<TrendRow[]>(
+  const { data, error, loading } = useApi<TrendList>(
     `/trends${query({
       owner,
       type: type || undefined,
       call: call || undefined,
       industry: industry || undefined,
+      state: state || undefined,
       needsScore: needsScore ? "1" : undefined,
     })}`,
   );
@@ -82,11 +108,10 @@ export default function Trends() {
 
   if (error) return <ErrorNote message={error} />;
 
-  const rows = data ?? [];
-  const mine = person
-    ? rows.filter((t) => t.ownerId === person.id || t.authorIds.includes(person.id)).length
-    : 0;
+  const rows = data?.rows ?? [];
+  const mine = rows.filter((t) => t.mine).length;
   const awaiting = rows.filter((t) => t.missingScore.length > 0).length;
+  const live = rows.filter((t) => t.published === "Published").length;
 
   return (
     <>
@@ -97,22 +122,26 @@ export default function Trends() {
           </div>
           <h1 className="page-title">Trends</h1>
           <p className="page-sub">
-            Published trend profiles from TFDB. Which are yours, what the call is on each,
-            which industries are still waiting for a score, and the way straight through to
-            the profile in Content Editor or on the live site.
+            Trend profiles from TFDB. Which are yours, what the call is on each, which
+            industries are still waiting for a score, and the way straight through to the
+            profile in Content Editor or on the live site.
           </p>
         </div>
         <div className="head-figures">
           <div className="figure">
             <b>{rows.length}</b>
-            <span>{owner === "mine" ? "Yours" : "Profiles"}</span>
+            <span>{owner === "mine" ? "Yours" : "Showing"}</span>
           </div>
-          {owner !== "mine" && person && (
+          {owner !== "mine" && (
             <div className="figure">
               <b>{mine}</b>
               <span>Yours</span>
             </div>
           )}
+          <div className="figure">
+            <b>{live}</b>
+            <span>Live</span>
+          </div>
           <div className={awaiting ? "figure hot" : "figure"}>
             <b>{awaiting}</b>
             <span>Awaiting a score</span>
@@ -126,14 +155,11 @@ export default function Trends() {
           <select id="owner" value={owner} onChange={(e) => setParam("owner", e.target.value)}>
             <option value="mine">Mine</option>
             <option value="all">Everyone</option>
-            {isManager &&
-              people
-                .filter((p) => p.role === "forecaster")
-                .map((p) => (
-                  <option key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
+            {(data?.owners ?? []).map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
           </select>
         </div>
         <div className="field">
@@ -160,6 +186,15 @@ export default function Trends() {
                 {v}
               </option>
             ))}
+          </select>
+        </div>
+        <div className="field">
+          <label htmlFor="state">State</label>
+          <select id="state" value={state} onChange={(e) => setParam("state", e.target.value)}>
+            <option value="">Any state</option>
+            <option value="published">Live</option>
+            <option value="unpublished">Not published</option>
+            <option value="archived">Archived</option>
           </select>
         </div>
         <div className="field">
@@ -203,7 +238,7 @@ export default function Trends() {
           <Icon name="trends" size={22} />
           <p>
             {owner === "mine"
-              ? "No trend profiles are owned by you, or credit you as an author."
+              ? "No trend profiles on the sheet are owned by you, or credit you as an author. Pick an owner above to see a forecaster’s own."
               : "No profiles match those filters."}
           </p>
         </div>
@@ -219,7 +254,7 @@ export default function Trends() {
               <div className="trend-card-body">
                 <div className="trend-card-top">
                   <CallPill call={trend.call} />
-                  <span className="trend-season">{trend.activeFrom.slice(0, 4)}–{trend.activeTo.slice(0, 4)}</span>
+                  <StatePill published={trend.published} editorStatus={trend.editorStatus} />
                 </div>
                 <h2 className="trend-name">{trend.title}</h2>
                 <p className="trend-summary">{trend.description}</p>
@@ -231,18 +266,18 @@ export default function Trends() {
                   ))}
                 </div>
                 <div className="trend-meta">
-                  <span title="Owner">
-                    <Icon name="forecasters" size={13} />
-                    {personName(people, trend.ownerId)}
-                  </span>
-                  <span title="Proof points logged">
-                    <Icon name="tier" size={13} />
-                    {trend.proofPoints}
-                  </span>
-                  <span title="Strategies">
-                    <Icon name="deadlines" size={13} />
-                    {trend.strategies}
-                  </span>
+                  {trend.ownerName && (
+                    <span title="Owner">
+                      <Icon name="forecasters" size={13} />
+                      {trend.ownerName}
+                    </span>
+                  )}
+                  {trend.proofPoints > 0 && (
+                    <span title="Proof points logged">
+                      <Icon name="tier" size={13} />
+                      {trend.proofPoints}
+                    </span>
+                  )}
                   {trend.missingScore.length > 0 && (
                     <span
                       className="needs-score"

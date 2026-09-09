@@ -124,6 +124,7 @@ export const COLUMNS = {
     id: "TREND_ID",
     slug: "TREND_URL_SLUG",
     published: "Published",
+    editorStatus: "RE Status",
     publishedLink: "PUBLISHED LINK",
     publishedOn: "Publish Date",
     authors: "AUTHORS",
@@ -140,8 +141,10 @@ export const COLUMNS = {
     opportunity: "MAIN_OPPORTUNITY",
     strategies: "NUMBER_OF_STRATEGIES",
     proofPoints: "NUMBER_OF_PROOF_POINTS",
+    needingScore: "Industries Needing Scores",
     scored: "Industries Scored",
     missingScore: "Industries Missing Score",
+    latestScoreMonth: "Latest Score Month",
     lastSynced: "Last Synced",
   },
   /**
@@ -433,15 +436,12 @@ export class SmartsheetSource implements DataSource {
           profileId: (row[c.profileId] ?? "").trim(),
           title: row[c.title].trim(),
           slug: (row[c.slug] ?? "").trim(),
+          // The sheet names people rather than keying to them, so keep the
+          // name for display and derive the id the same way the seed does.
+          ownerName: (row[c.owner] ?? "").trim(),
           ownerId: personId(row[c.owner]),
-          authorIds: [
-            ...new Set(
-              (row[c.authors] ?? "")
-                .split(/\s*,\s*/)
-                .filter(Boolean)
-                .map((name) => personId(name)),
-            ),
-          ],
+          authorNames: authorList(row[c.authors], row[c.owner]),
+          authorIds: authorList(row[c.authors], row[c.owner]).map((name) => personId(name)),
           types: splitKnown(row[c.types], TREND_TYPES),
           call: TREND_CALLS.find((k) => (row[c.call] ?? "").includes(k)),
           publishedOn: isoDate(row[c.publishedOn]),
@@ -456,8 +456,12 @@ export class SmartsheetSource implements DataSource {
           strategies: countOf(row[c.strategies]),
           proofPoints: countOf(row[c.proofPoints]),
           industries,
+          needingScore: splitKnown(row[c.needingScore], TREND_INDUSTRIES),
           scored,
           missingScore: splitKnown(row[c.missingScore], TREND_INDUSTRIES),
+          latestScoreMonth: (row[c.latestScoreMonth] ?? "").trim() || undefined,
+          published: (row[c.published] ?? "").trim() || undefined,
+          editorStatus: (row[c.editorStatus] ?? "").trim() || undefined,
           hashtags: (row[c.hashtags] ?? "").split(/\s+/).filter((h) => h.startsWith("#")),
           labels,
           lastSynced: isoDate(row[c.lastSynced]) || undefined,
@@ -499,6 +503,20 @@ function splitKnown(value: string | undefined, vocabulary: string[]): string[] {
     .sort((a, b) => b.length - a.length)
     .filter((name) => v.includes(name))
     .sort((a, b) => vocabulary.indexOf(a) - vocabulary.indexOf(b));
+}
+
+/**
+ * The AUTHORS cell lists full names; the Owner is the one accountable and is
+ * put first whether or not the authors cell repeats them.
+ */
+function authorList(authors: string | undefined, owner: string | undefined): string[] {
+  const names = (authors ?? "")
+    .split(/\s*,\s*/)
+    .map((n) => n.trim())
+    .filter(Boolean);
+  const lead = (owner ?? "").trim();
+  if (lead && !names.includes(lead)) names.unshift(lead);
+  return [...new Set(names)];
 }
 
 function countOf(value: string | undefined): number {

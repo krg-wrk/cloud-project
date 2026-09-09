@@ -100,11 +100,14 @@ export function canWriteDetails(viewer: Viewer, item: ContentItem): boolean {
 export function canWriteTrend(
   viewer: Viewer,
   trend: { ownerId: string; authorIds?: string[]; industries?: string[] },
+  /** The signed-in person's name, since the sheet credits people by name. */
+  viewerName?: string,
 ): boolean {
   if (!viewer.active) return false;
   if (isAdmin(viewer)) return true;
-  if (viewer.personId === trend.ownerId) return true;
-  if (trend.authorIds?.includes(viewer.personId ?? "")) return true;
+  const mine = new Set([viewer.personId, nameId(viewerName)].filter(Boolean));
+  if (mine.has(trend.ownerId)) return true;
+  if ((trend.authorIds ?? []).some((a) => mine.has(a))) return true;
   if (!isManager(viewer)) return false;
   if (viewer.verticals === "all") return true;
   // An industry on a profile is broader than a vertical, so match on either
@@ -116,6 +119,18 @@ export function canWriteTrend(
         industry.toLowerCase().includes(v.split(" ")[0].toLowerCase()),
     ),
   );
+}
+
+/**
+ * The id form of a person's name, matching how the trends sheet's Owner and
+ * AUTHORS columns are turned into ids. It is how a signed-in forecaster is
+ * recognised as the owner of a profile the sheet credits by name.
+ */
+export function nameId(name: string | undefined): string {
+  return (name ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
 }
 
 /** KPIs: your own always; a manager for their verticals; an admin for anyone. */
