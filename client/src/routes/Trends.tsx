@@ -244,8 +244,12 @@ export default function Trends() {
         </div>
       ) : (
         <div className="trend-grid">
+          {/* TREND_ID is the number the team quotes and is not unique on the
+              sheet — an archived earlier version shares it with the live
+              profile — so the link and the key use the Content Editor
+              document id, which is. */}
           {rows.map((trend) => (
-            <Link key={trend.id} to={`/trends/${trend.id}`} className="trend-card">
+            <Link key={trend.profileId} to={`/trends/${trend.profileId}`} className="trend-card">
               <TrendImage
                 trendId={trend.id}
                 name={trend.title}

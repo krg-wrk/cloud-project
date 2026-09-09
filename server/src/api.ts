@@ -374,7 +374,7 @@ export function createApiRouter(
    * because the owner set it more recently than the sync.
    */
   function trendView(trend: TrendProfile, viewer: Viewer, viewerName?: string) {
-    const extras = store.trendExtrasFor(trend.id);
+    const extras = store.trendExtrasFor(trend.profileId);
     return {
       ...trend,
       coverImageUrl: extras?.coverImageUrl ?? trend.coverImageUrl,
@@ -447,9 +447,9 @@ export function createApiRouter(
             // The full opportunity write-up is long and only the profile page
             // shows it, so the list does not carry it.
             opportunity: undefined,
-            coverImageUrl: extras[t.id]?.coverImageUrl ?? t.coverImageUrl,
-            linkCount: extras[t.id]?.links.length ?? 0,
-            hasNote: Boolean(extras[t.id]?.note),
+            coverImageUrl: extras[t.profileId]?.coverImageUrl ?? t.coverImageUrl,
+            linkCount: extras[t.profileId]?.links.length ?? 0,
+            hasNote: Boolean(extras[t.profileId]?.note),
             mine: isMine(t),
             canWrite: canWriteTrend(viewer, t, viewerName),
           }))
@@ -460,9 +460,30 @@ export function createApiRouter(
     }
   });
 
+  /**
+   * Resolve a profile from the path.
+   *
+   * `TREND_ID` is the short number the team quotes, and it is not unique on
+   * the sheet: an archived earlier version of a trend carries the same one as
+   * the live profile. So the record is keyed on the Content Editor document
+   * id, which is, and the short number still resolves — to the live profile
+   * rather than whichever row came first.
+   */
+  async function findTrend(ref: string): Promise<TrendProfile | undefined> {
+    const all = await data.listTrends();
+    const byProfile = all.find((t) => t.profileId === ref);
+    if (byProfile) return byProfile;
+    const byNumber = all.filter((t) => t.id === ref);
+    return (
+      byNumber.find((t) => t.published === "Published" && t.editorStatus !== "archived") ??
+      byNumber.find((t) => t.editorStatus !== "archived") ??
+      byNumber[0]
+    );
+  }
+
   router.get("/trends/:id", async (req: ViewerRequest, res, next) => {
     try {
-      const trend = (await data.listTrends()).find((t) => t.id === req.params.id);
+      const trend = await findTrend(req.params.id);
       if (!trend) {
         res.status(404).json({ error: `No trend profile with id "${req.params.id}"` });
         return;
@@ -483,7 +504,7 @@ export function createApiRouter(
     try {
       const personId = requirePerson(req, res);
       if (!personId) return;
-      const trend = (await data.listTrends()).find((t) => t.id === req.params.id);
+      const trend = await findTrend(req.params.id);
       if (!trend) {
         res.status(404).json({ error: `No trend profile with id "${req.params.id}"` });
         return;
@@ -504,7 +525,7 @@ export function createApiRouter(
       }
 
       store.setTrendExtras({
-        trendId: trend.id,
+        trendId: trend.profileId,
         coverImageUrl,
         links,
         note: req.body?.note ? String(req.body.note).trim().slice(0, 4000) : undefined,

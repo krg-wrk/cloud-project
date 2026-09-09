@@ -3396,11 +3396,11 @@
   const entriesFor = (personId) => entries.get(personId) ?? [];
   const reviewFor = (contentId) => reviews.get(contentId) ?? null;
   const detailsFor = (contentId) => details.get(contentId) ?? null;
-  const extrasFor = (trendId) => trendExtras.get(trendId) ?? null;
+  const extrasFor = (profileId) => trendExtras.get(profileId) ?? null;
 
   /** The sheet's row plus the Hub's, with the Hub's cover image winning. */
   function trendView(t) {
-    const x = extrasFor(t.id);
+    const x = extrasFor(t.profileId);
     return {
       ...t,
       coverImageUrl: x?.coverImageUrl ?? t.coverImageUrl,
@@ -5683,7 +5683,20 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     ["Invest", "Back it properly"],
   ];
 
-  const trendById = (id) => TRENDS.find((t) => t.id === id);
+  /**
+   * `TREND_ID` is the short number the team quotes, and it is not unique on
+   * the sheet: an archived earlier version of a trend carries the same one as
+   * the live profile. So a profile is addressed by its Content Editor
+   * document id, which is unique, and the short number still resolves — to
+   * the live profile rather than whichever row came first.
+   */
+  const trendById = (ref) =>
+    TRENDS.find((t) => t.profileId === ref) ??
+    TRENDS.filter((t) => t.id === ref).sort(
+      (a, b) =>
+        Number(b.published === "Published") - Number(a.published === "Published") ||
+        Number(a.editorStatus === "archived") - Number(b.editorStatus === "archived"),
+    )[0];
 
   /** Where a profile is: live on the platform, or still in Content Editor. */
   function statePill(t) {
@@ -5848,7 +5861,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             }</p></div>`
           : `<div class="trend-grid">${rows
               .map(
-                (t) => `<a class="trend-card" href="#/trends/${t.id}">
+                (t) => `<a class="trend-card" href="#/trends/${t.profileId}">
                   ${coverImage(t)}
                   <div class="trend-card-body">
                     <div class="trend-card-top">${callPill(t.call)}${statePill(t)}</div>
@@ -5943,7 +5956,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           }
 
           ${
-            trendForm === t.id
+            trendForm === t.profileId
               ? `<section class="sec" style="margin-top:22px">
                   <div class="sec-head"><h2>${icon("edit")} What the Hub holds</h2></div>
                   <div class="note-composer">
@@ -5965,7 +5978,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                         <input id="t-url" placeholder="https://…" style="width:100%" /></label>
                     </div>
                     <div class="composer-row">
-                      <button class="toggle solid" data-trend-save="${t.id}">Save</button>
+                      <button class="toggle solid" data-trend-save="${t.profileId}">Save</button>
                       <button class="toggle" data-trend-cancel="1">Cancel</button>
                     </div>
                     <p class="signup-note">Only http and https addresses are kept — the image is
@@ -6132,8 +6145,8 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                 : ""
             }
             ${
-              canWrite && trendForm !== t.id
-                ? `<button class="wide-btn" data-trend-open="${t.id}">${icon("note")}${
+              canWrite && trendForm !== t.profileId
+                ? `<button class="wide-btn" data-trend-open="${t.profileId}">${icon("note")}${
                     t.note || t.links.length ? "Edit your note and links" : "Add a note or links"
                   }</button>`
                 : ""
@@ -6576,8 +6589,8 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     );
     view.querySelectorAll("[data-trend-save]").forEach((el) =>
       el.addEventListener("click", () => {
-        const trendId = el.dataset.trendSave;
-        const existing = extrasFor(trendId);
+        const profileId = el.dataset.trendSave;
+        const existing = extrasFor(profileId);
         // The image is rendered and the links are links, so only http(s) is
         // kept — the same rule the server applies, for the same reason.
         const links = [...(existing?.links ?? [])];
@@ -6585,8 +6598,8 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         const url = view.querySelector("#t-url").value.trim();
         if (url && /^https?:\/\//i.test(url)) links.push({ label: label || url, url });
         const cover = view.querySelector("#t-cover").value.trim();
-        setTrendExtras(trendId, {
-          trendId,
+        setTrendExtras(profileId, {
+          trendId: profileId,
           coverImageUrl: /^https?:\/\//i.test(cover) ? cover : undefined,
           links,
           note: view.querySelector("#t-note").value.trim() || undefined,
