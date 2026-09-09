@@ -3100,6 +3100,173 @@
     }
   }
 
+  /* -------------------------------------------------------------------------
+     Changing the built-in pages
+
+     Edit mode has to be unmistakable — a mode you cannot tell you are in is a
+     trap — but it must not move anything, or the page you are judging is not
+     the page.
+     ------------------------------------------------------------------------- */
+
+  .slot-edit {
+    padding: 0;
+    border: none;
+    border-bottom: 1px dashed var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, transparent);
+    font: inherit;
+    color: inherit;
+    text-align: inherit;
+    cursor: text;
+  }
+
+  .slot-edit:hover {
+    background: color-mix(in srgb, var(--accent) 20%, transparent);
+  }
+
+  /* Sized to the text it replaces, so clicking a heading does not reflow it. */
+  .slot-input {
+    width: 100%;
+    min-width: 8ch;
+    padding: 0;
+    border: none;
+    border-bottom: 1px solid var(--accent);
+    background: var(--paper);
+    font: inherit;
+    color: inherit;
+    letter-spacing: inherit;
+  }
+
+  .slot-input:focus {
+    outline: none;
+  }
+
+  .edit-bar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    gap: 8px 20px;
+    flex-wrap: wrap;
+    padding: 11px 20px calc(11px + env(safe-area-inset-bottom, 0px));
+    border-top: 1px solid var(--accent);
+    background: var(--accent-wash);
+    font-size: 12.5px;
+  }
+
+  .edit-bar strong {
+    font-weight: 500;
+  }
+
+  .edit-bar-count {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-soft);
+  }
+
+  .slot-group {
+    margin-top: 14px;
+  }
+
+  .slot-group-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 6px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid var(--line);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .slot-group-head em {
+    font-style: normal;
+    letter-spacing: 0.04em;
+    text-transform: none;
+    font-size: 10.5px;
+  }
+
+  .slot-row {
+    display: grid;
+    grid-template-columns: minmax(120px, 170px) minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .slot-row:last-child {
+    border-bottom: none;
+  }
+
+  /* A hidden row stays listed, greyed, so putting it back is one click. */
+  .slot-row.hidden {
+    opacity: 0.55;
+  }
+
+  .slot-row.hidden input {
+    text-decoration: line-through;
+  }
+
+  .slot-row-what {
+    min-width: 0;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+
+  .slot-kind {
+    display: block;
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .slot-row-what em {
+    font-style: normal;
+    font-size: 11px;
+  }
+
+  .slot-row input {
+    width: 100%;
+    min-width: 0;
+    padding: 6px 9px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+  }
+
+  .slot-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .slot-row-actions .toggle {
+    padding: 5px 8px;
+    font-size: 11.5px;
+  }
+
+  @media (max-width: 760px) {
+    .slot-row {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 6px;
+    }
+
+    .slot-row-actions {
+      flex-wrap: wrap;
+    }
+  }
+
   /* ---- Navigation on a phone -------------------------------------------- */
 
   /*
@@ -3523,6 +3690,7 @@
     </div>
   </aside>
   <main id="view"></main>
+  <div id="edit-bar"></div>
 </div>
 
 <button class="sheet-scrim" id="scrim" hidden aria-label="Close menu"></button>
@@ -4031,6 +4199,12 @@
   const datasets = new Map();
   const views = new Map();
 
+  // What an admin has changed about the built-in pages: wording, what is on
+  // them, and in what order. Shared like everything else.
+  const slots = new Map();
+  let editingSlots = false;
+  let slotOpen = null;
+
   const notesFor = (contentId) => notes.get(contentId) ?? [];
   const entriesFor = (personId) => entries.get(personId) ?? [];
   const reviewFor = (contentId) => reviews.get(contentId) ?? null;
@@ -4273,6 +4447,67 @@
     render();
   }
 
+  /**
+   * Change one slot.
+   *
+   * A field left out is left alone — renaming something must not un-hide it —
+   * and an empty rename resets that field, so the shipped wording comes back
+   * rather than a blank heading. A record that overrides nothing is deleted,
+   * which is how the default is restored.
+   */
+  function setSlot(id, patch) {
+    const existing = slots.get(id) ?? {};
+    const next = { ...existing };
+    if (patch.label !== undefined) {
+      const trimmed = String(patch.label).trim();
+      if (trimmed === "" || trimmed === SLOT_DEFS.get(id)?.label) delete next.label;
+      else next.label = trimmed;
+    }
+    if (patch.hidden !== undefined) {
+      if (patch.hidden) next.hidden = true;
+      else delete next.hidden;
+    }
+    if (patch.order !== undefined) {
+      if (patch.order === null) delete next.order;
+      else next.order = patch.order;
+    }
+    if (Object.keys(next).length === 0) {
+      slots.delete(id);
+      if (store) store.collection("studioSlots").doc(id).delete().catch(() => {});
+      return;
+    }
+    slots.set(id, next);
+    if (store) store.collection("studioSlots").doc(id).set(next).catch(() => {});
+  }
+
+  function clearSlot(id) {
+    slots.delete(id);
+    if (store) store.collection("studioSlots").doc(id).delete().catch(() => {});
+  }
+
+  /** Put a page, or everything, back to what the code says. */
+  function clearSlots(prefix) {
+    for (const id of [...slots.keys()]) {
+      if (!prefix || id.startsWith(prefix)) clearSlot(id);
+    }
+  }
+
+  /**
+   * Move a slot within its group.
+   *
+   * The whole group is written with explicit positions rather than just the
+   * two that swapped, because a group where some items have an order and
+   * others do not sorts unpredictably the next time one moves.
+   */
+  function moveSlot(id, groupId, delta) {
+    const order = slotGroup(groupId).map((x) => x.id);
+    const at = order.indexOf(id);
+    const to = at + delta;
+    if (at < 0 || to < 0 || to >= order.length) return;
+    order.splice(to, 0, ...order.splice(at, 1));
+    order.forEach((slotId, i) => setSlot(slotId, { order: i }));
+  }
+
   /** A view on a removed dataset cannot render, so it goes too. */
   function removeDataset(id) {
     for (const v of [...views.values()].filter((x) => x.datasetId === id)) {
@@ -4337,6 +4572,16 @@
     watch("studioDatasets", (id, body) =>
       datasets.set(id, { ...body, id, fields: Array.isArray(body.fields) ? body.fields : [] }),
     );
+    watch("studioSlots", (id, body) => {
+      const override = {};
+      if (typeof body.label === "string" && body.label) override.label = body.label;
+      if (body.hidden === true) override.hidden = true;
+      if (typeof body.order === "number") override.order = body.order;
+      // A record that overrides nothing is the same as no record.
+      if (Object.keys(override).length) slots.set(id, override);
+      else slots.delete(id);
+    });
+
     watch("studioViews", (id, body) => {
       if (!body.slug || !body.spec) return;
       views.set(id, {
@@ -4446,18 +4691,63 @@
     const late = scope.filter(isLate).length;
     // One list of sections, so the rail and the phone bar cannot drift apart.
     // [label, href, key, badge, iconName, primary]
+    // The fixed sections, each named by the slot an admin can rename. Order
+    // and visibility come from the same registry group.
+    const fixed = {
+      "nav.item.today": ["#/", "", late ? `${late} late` : "", "today", true, "work"],
+      "nav.item.deadlines": ["#/deadlines", "deadlines", String(open), "deadlines", true, "work"],
+      "nav.item.calendar": [
+        `#/calendar/${TODAY.slice(0, 7)}`,
+        "calendar",
+        "",
+        "calendar",
+        true,
+        "work",
+      ],
+      "nav.item.trends": ["#/trends", "trends", "", "trends", true, "work"],
+      "nav.item.performance": ["#/performance", "performance", "", "performance", false, "work"],
+      "nav.item.learning": [
+        "#/learning",
+        "learning",
+        mySessionCount(me.id) || "",
+        "learning",
+        false,
+        "team",
+      ],
+      "nav.item.team": [
+        "#/team",
+        "team",
+        String(people.filter((p) => p.role === "forecaster").length),
+        "forecasters",
+        false,
+        "team",
+      ],
+      "nav.item.whats-on": ["#/whats-on", "whats-on", "", "whats-on", false, "team"],
+      "nav.item.subscribe": ["#/subscribe", "subscribe", "", "subscribe", false, "team"],
+    };
+    const ordered = slotGroup("nav.item").filter((x) => fixed[x.id]);
+    const inGroup = (which) =>
+      ordered
+        .filter((x) => fixed[x.id][5] === which)
+        .map((x) => {
+          const [href, key, badge, iconName, primary] = fixed[x.id];
+          // A label is typed by an admin and is interpolated into the rail
+          // and the phone bar as HTML, so it is escaped here. The group
+          // headings go through slot(), which escapes its own text.
+          return [esc(slotText(x.id)), href, key, badge, iconName, primary];
+        });
+
+    /*
+     * A group heading is editable where you see it. A sidebar item is not:
+     * it is an anchor, and a button inside one would swallow the click that
+     * navigates. Items are renamed from the studio's list, which is a step
+     * away rather than a different mechanism.
+     */
     const links = [
-      ["Your work", null, null, null, null, false],
-      ["Today", "#/", "", late ? `${late} late` : "", "today", true],
-      ["Deadlines", "#/deadlines", "deadlines", String(open), "deadlines", true],
-      ["Calendar", `#/calendar/${TODAY.slice(0, 7)}`, "calendar", "", "calendar", true],
-      ["Trends", "#/trends", "trends", "", "trends", true],
-      ["Performance", "#/performance", "performance", "", "performance", false],
-      ["The team", null, null, null, null, false],
-      ["Learning", "#/learning", "learning", mySessionCount(me.id) || "", "learning", false],
-      ["Forecasters", "#/team", "team", String(people.filter((p) => p.role === "forecaster").length), "forecasters", false],
-      ["What’s on", "#/whats-on", "whats-on", "", "whats-on", false],
-      ["Add to your calendar", "#/subscribe", "subscribe", "", "subscribe", false],
+      [slot("nav.group.work", { tag: "" }), null, null, null, null, false],
+      ...inGroup("work"),
+      [slot("nav.group.team", { tag: "" }), null, null, null, null, false],
+      ...inGroup("team"),
     ];
 
     // Views built in the studio land in the group they were given, beside the
@@ -4466,14 +4756,15 @@
     const mine = [...views.values()]
       .filter(canSeeView)
       .sort((a, b) => a.order - b.order || a.label.localeCompare(b.label));
-    for (const group of ["Your work", "The team"]) {
-      const at = links.findIndex(([label, href]) => href === null && label === group);
+    for (const group of ["work", "team"]) {
+      const heading = slot(`nav.group.${group}`, { tag: "" });
+      const at = links.findIndex(([label, href]) => href === null && label === heading);
       const upTo = links.findIndex(
         ([, href], i) => href === null && i > at,
       );
       const insertAt = upTo === -1 ? links.length : upTo;
       const rows = mine
-        .filter((v) => (v.section === "The team" ? group === "The team" : group === "Your work"))
+        .filter((v) => (v.section === "The team" ? group === "team" : group === "work"))
         .map((v) => [
           v.label,
           `#/v/${v.slug}`,
@@ -4651,7 +4942,7 @@
       <div class="head">
         <div>
           <div class="eyebrow">${fmt(TODAY, { weekday: "long", day: "numeric", month: "long" })}</div>
-          <h1>Morning, ${esc(me.name.split(" ")[0])}</h1>
+          <h1>${slot("today.greeting", { tag: "" })}, ${esc(me.name.split(" ")[0])}</h1>
           <p class="lede">${
             manager
               ? "Everything in commission across the team, closest deadline first."
@@ -4669,13 +4960,14 @@
 
       ${
         late.length
-          ? `<section class="sec"><div class="sec-head"><h2>Past deadline</h2></div>
+          && slotShown("today.section.overdue")
+          ? `<section class="sec"><div class="sec-head">${slot("today.section.overdue", { tag: "h2" })}</div>
              <div class="rows">${late.map((c) => deadlineRow(c, manager)).join("")}</div></section>`
           : ""
       }
 
       <section class="sec">
-        <div class="sec-head"><h2>Next up</h2><a class="sec-link" href="#/deadlines">Every deadline →</a></div>
+        <div class="sec-head">${slot("today.section.next", { tag: "h2" })}<a class="sec-link" href="#/deadlines">Every deadline →</a></div>
         ${
           next.length
             ? `<div class="rows">${next.slice(0, 6).map((c) => deadlineRow(c, manager)).join("")}</div>`
@@ -4685,7 +4977,8 @@
 
       ${
         flagged.length
-          ? `<section class="sec"><div class="sec-head"><h2>Worth a look</h2></div>
+          && slotShown("today.section.review")
+          ? `<section class="sec"><div class="sec-head">${slot("today.section.review", { tag: "h2" })}</div>
             ${flagged
               .map(
                 ({ item, hits }) =>
@@ -4702,7 +4995,7 @@
 
       <div class="sec" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px">
         <div>
-          <div class="sec-head"><h2>Publishing soon</h2></div>
+          <div class="sec-head">${slot("today.section.publishing", { tag: "h2" })}</div>
           <div class="rows">${publishing
             .map(
               (c) => `<a class="row" href="#/content/${c.id}">
@@ -4755,7 +5048,8 @@
 
       ${
         manager
-          ? `<section class="sec"><div class="sec-head"><h2>Who’s carrying what</h2>
+          && slotShown("today.section.team")
+          ? `<section class="sec"><div class="sec-head">${slot("today.section.team", { tag: "h2" })}
               <a class="sec-link" href="#/team">The team →</a></div>
              <div class="rows">${people
                .filter((p) => p.role === "forecaster")
@@ -4801,8 +5095,8 @@
     return `
       <div class="head">
         <div>
-          <div class="eyebrow">Submission deadlines</div>
-          <h1>Deadlines</h1>
+          ${slot("deadlines.eyebrow", { tag: "div", cls: "eyebrow" })}
+          ${slot("deadlines.title", { tag: "h1" })}
           <p class="lede">Every commissioned piece and the date its copy is due. Filter it, then send
             the link — whoever opens it sees the same list.</p>
         </div>
@@ -4840,25 +5134,58 @@
 
       ${
         rows.length
-          ? `<div class="table-scroll"><table>
-              <thead><tr><th>Due</th><th>Title</th><th>Type</th><th>Vertical</th>
-                <th>Season</th><th>Forecaster</th><th>Publishes</th><th>Status</th></tr></thead>
-              <tbody>${rows
+          ? (() => {
+              // The columns are the admin's: which ones, in what order,
+              // called what. Each is a renderer keyed by its slot, so hiding
+              // one drops it from the head and the body together.
+              const columns = slotGroup("deadlines.column");
+              const numeric = new Set([
+                "deadlines.column.season",
+                "deadlines.column.publication",
+              ]);
+              const cellFor = (c) => ({
+                "deadlines.column.submission": `${short(c.submissionDate)}
+                      <div style="font-size:10px;opacity:.7">${rel(c.submissionDate)}</div>`,
+                "deadlines.column.title": `<a class="link-title" href="#/content/${c.id}">${esc(
+                  c.title,
+                )}</a>`,
+                "deadlines.column.type": esc(c.type),
+                "deadlines.column.vertical": esc(c.vertical),
+                "deadlines.column.season": esc(c.season),
+                "deadlines.column.forecaster": `<a href="#/team/${
+                  c.forecasterId
+                }"><span class="who">${face(c.forecasterId)}${esc(
+                  nameOf(c.forecasterId),
+                )}</span></a>`,
+                "deadlines.column.publication": short(c.publicationDate),
+                "deadlines.column.status": statusChip(c.status),
+              });
+              return `<div class="table-scroll"><table>
+              <thead><tr>${columns
                 .map(
-                  (c) => `<tr>
-                    <td class="num${isLate(c) ? " hot" : ""}">${short(c.submissionDate)}
-                      <div style="font-size:10px;opacity:.7">${rel(c.submissionDate)}</div></td>
-                    <td><a class="link-title" href="#/content/${c.id}">${esc(c.title)}</a></td>
-                    <td>${esc(c.type)}</td>
-                    <td>${esc(c.vertical)}</td>
-                    <td class="num">${esc(c.season)}</td>
-                    <td><a href="#/team/${c.forecasterId}"><span class="who">${face(
-                      c.forecasterId,
-                    )}${esc(nameOf(c.forecasterId))}</span></a></td>
-                    <td class="num">${short(c.publicationDate)}</td>
-                    <td>${statusChip(c.status)}</td></tr>`,
+                  (col) =>
+                    `<th${numeric.has(col.id) ? ' class="num"' : ""}>${slot(col.id, {
+                      tag: "",
+                    })}</th>`,
                 )
-                .join("")}</tbody></table></div>`
+                .join("")}</tr></thead>
+              <tbody>${rows
+                .map((c) => {
+                  const cells = cellFor(c);
+                  return `<tr>${columns
+                    .map((col) => {
+                      const cls =
+                        col.id === "deadlines.column.submission"
+                          ? `num${isLate(c) ? " hot" : ""}`
+                          : numeric.has(col.id)
+                            ? "num"
+                            : "";
+                      return `<td${cls ? ` class="${cls}"` : ""}>${cells[col.id] ?? ""}</td>`;
+                    })
+                    .join("")}</tr>`;
+                })
+                .join("")}</tbody></table></div>`;
+            })()
           : `<div class="none">Nothing matches those filters.</div>`
       }`;
   }
@@ -5329,7 +5656,7 @@
     const related = content.filter((x) => x.vertical === c.vertical && x.id !== c.id).slice(0, 5);
 
     return `
-      <div class="crumb"><a href="#/deadlines">Deadlines</a><span>/</span>
+      <div class="crumb"><a href="#/deadlines">${esc(slotText("content.crumb"))}</a><span>/</span>
         <span>${esc(c.vertical)}</span><span>/</span><span>${esc(c.id)}</span></div>
 
       <div class="head">
@@ -5360,32 +5687,57 @@
               : ""
           }
 
-          <h2>Where it is</h2>
-          <ul class="steps">
-            <li class="step ${submitted ? "done" : "here"}"><i></i>
-              <div><b>Copy due with the commissioning manager</b>
-                <span>${long(c.submissionDate)} · ${rel(c.submissionDate)}</span></div></li>
-            <li class="step ${published ? "done" : submitted ? "here" : ""}"><i></i>
-              <div><b>Edit and review</b>
-                <span>${submitted ? "In hand" : "Once the copy lands"}</span></div></li>
-            <li class="step ${published ? "done" : ""}"><i></i>
-              <div><b>Live on the platform</b>
-                <span>${long(c.publicationDate)}${
-                  c.publicationDate >= TODAY ? " · " + rel(c.publicationDate) : ""
-                }</span></div></li>
-          </ul>
-
-          ${
-            c.notes
-              ? `<h2 style="margin-top:24px">Commissioning note</h2><p>${esc(c.notes)}</p>`
-              : ""
-          }
-
-          <section class="sec" style="margin-top:28px">${detailsMarkup(c)}</section>
-
-          <section class="sec" style="margin-top:28px">${notesMarkup(c)}</section>
-
-          <h2 style="margin:24px 0 10px">Also in ${esc(c.vertical)}</h2>
+          <!--
+            The body is a composition rather than a fixed sequence: which
+            sections appear, what they are called and in what order is the
+            admin's, so the page can be shaped around how the team works.
+          -->
+          ${slotGroup("content.section")
+            .map((sec) => {
+              switch (sec.id) {
+                case "content.section.where": {
+                  const states = {
+                    "content.step.submission": submitted ? "done" : "here",
+                    "content.step.review": published ? "done" : submitted ? "here" : "",
+                    "content.step.published": published ? "done" : "",
+                  };
+                  const whens = {
+                    "content.step.submission": `${long(c.submissionDate)} · ${rel(
+                      c.submissionDate,
+                    )}`,
+                    "content.step.review": submitted ? "In hand" : "Once the copy lands",
+                    "content.step.published": `${long(c.publicationDate)}${
+                      c.publicationDate >= TODAY ? " · " + rel(c.publicationDate) : ""
+                    }`,
+                  };
+                  return `${slot(sec.id, { tag: "h2" })}
+                    <ul class="steps">${slotGroup("content.step")
+                      .map(
+                        (step) => `<li class="step ${states[step.id] ?? ""}"><i></i>
+                          <div>${slot(step.id, { tag: "b" })}
+                            <span>${whens[step.id] ?? ""}</span></div></li>`,
+                      )
+                      .join("")}</ul>`;
+                }
+                case "content.section.note":
+                  return c.notes
+                    ? `${slot(sec.id, { tag: "h2", cls: "" })}<p>${esc(c.notes)}</p>`
+                    : "";
+                case "content.section.details":
+                  return `<section class="sec" style="margin-top:28px">${detailsMarkup(
+                    c,
+                    sec.id,
+                  )}</section>`;
+                case "content.section.notes":
+                  return `<section class="sec" style="margin-top:28px">${notesMarkup(
+                    c,
+                    sec.id,
+                  )}</section>`;
+                case "content.section.related":
+                  return `${slot(sec.id, {
+                    tag: "h2",
+                    suffix: ` · ${esc(c.vertical)}`,
+                  })}
           ${
             related.length
               ? `<div class="rows">${related
@@ -5398,7 +5750,12 @@
                   )
                   .join("")}</div>`
               : `<div class="none">Nothing else in this vertical.</div>`
-          }
+          }`;
+                default:
+                  return "";
+              }
+            })
+            .join("")}
         </div>
 
         <aside>
@@ -5410,18 +5767,39 @@
                   owner?.vertical ?? "",
                 )} · ${esc(owner?.region ?? "")}</span></span>
             </a>
-            <dl>
-              <div class="fact"><dt>Reference</dt><dd class="mono-tag">${esc(c.id)}</dd></div>
-              <div class="fact"><dt>Type</dt><dd>${esc(c.type)}</dd></div>
-              <div class="fact"><dt>Vertical</dt><dd>${esc(c.vertical)}</dd></div>
-              <div class="fact"><dt>Season</dt><dd>${esc(c.season)}</dd></div>
-              <div class="fact"><dt>Submission</dt><dd>${long(c.submissionDate)}</dd></div>
-              <div class="fact"><dt>Publication</dt><dd>${long(c.publicationDate)}</dd></div>
-              <div class="fact"><dt>Commissioned by</dt><dd>${esc(nameOf(c.managerId))}</dd></div>
-            </dl>
-            <a class="wide-btn" href="#/calendar/${c.submissionDate.slice(0, 7)}?forecaster=${
-              c.forecasterId
-            }">See this month</a>
+            <!--
+              The panel is a composition: which facts appear, what they are
+              called and in what order is the admin's.
+            -->
+            <dl>${(() => {
+              const values = {
+                "content.facts.reference": `<span class="mono-tag">${esc(c.id)}</span>`,
+                "content.facts.type": esc(c.type),
+                "content.facts.vertical": esc(c.vertical),
+                "content.facts.season": esc(c.season),
+                "content.facts.submission": long(c.submissionDate),
+                "content.facts.publication": long(c.publicationDate),
+                "content.facts.manager": esc(nameOf(c.managerId)),
+              };
+              return slotGroup("content.facts")
+                .map(
+                  (f) =>
+                    `<div class="fact">${slot(f.id, { tag: "dt" })}<dd>${
+                      values[f.id] ?? ""
+                    }</dd></div>`,
+                )
+                .join("");
+            })()}</dl>
+            ${
+              slotShown("content.action.month")
+                ? `<a class="wide-btn" href="#/calendar/${c.submissionDate.slice(
+                    0,
+                    7,
+                  )}?forecaster=${c.forecasterId}">${slot("content.action.month", {
+                    tag: "",
+                  })}</a>`
+                : ""
+            }
           </div>
           ${peerReviewMarkup(c)}
           ${
@@ -5533,7 +5911,7 @@
   /** Draft text held between renders, so typing survives a re-render. */
   let composer = { contentId: null, body: "", isAi: false, model: null, steer: "", busy: false, problem: null };
 
-  function notesMarkup(item) {
+  function notesMarkup(item, headingSlot = "content.section.notes") {
     const v = viewer();
     const canWrite = canWriteNote(v, item);
     const list = notesFor(item.id);
@@ -5541,7 +5919,10 @@
 
     return `
       <div class="sec-head">
-        <h2>Notes${list.length ? ` (${list.length})` : ""}</h2>
+        ${slot(headingSlot, {
+          tag: "h2",
+          suffix: list.length ? ` (${list.length})` : "",
+        })}
         ${canWrite ? "" : `<span class="signup-note">Read only — ${esc(
           nameOf(item.forecasterId),
         )}'s piece</span>`}
@@ -6076,13 +6457,13 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
   let detailsForm = null;
 
-  function detailsMarkup(item) {
+  function detailsMarkup(item, headingSlot = "content.section.details") {
     const v = viewer();
     const canWrite = canWriteNote(v, item);
     const d = detailsFor(item.id);
 
     if (detailsForm === item.id) {
-      return `<div class="sec-head"><h2>Forecast details</h2></div>
+      return `<div class="sec-head">${slot(headingSlot, { tag: "h2" })}</div>
         <div class="note-composer">
           <div class="details-row">
             <label class="field"><span>Content type</span>
@@ -6125,7 +6506,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     const anything = d && (d.contentType || years || d.editorId || d.editorUrl || (d.researchLinks ?? []).length);
     const tier = tierFor(d?.contentType ?? item.type);
 
-    return `<div class="sec-head"><h2>Forecast details</h2>
+    return `<div class="sec-head">${slot(headingSlot, { tag: "h2" })}
         ${canWrite ? `<button class="toggle" data-details-open="${item.id}">${
           anything ? "Edit" : "Fill these in"
         }</button>` : ""}</div>
@@ -6568,22 +6949,37 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     return `
       <div class="head">
         <div>
-          <div class="eyebrow">${
-            owner === "mine" ? "Profiles you own or are credited on" : "The trend database"
-          }</div>
-          <h1>Trends</h1>
+          ${slot(owner === "mine" ? "trends.eyebrow.mine" : "trends.eyebrow.all", {
+            tag: "div",
+            cls: "eyebrow",
+          })}
+          ${slot("trends.title", { tag: "h1" })}
           <p class="lede">Trend profiles from TFDB. Which are yours, what the call is
             on each, which industries are still waiting for a score, and the way straight
             through to the profile in Content Editor or on the live site.</p>
         </div>
-        <div class="figures inline">
-          <div class="figure"><b>${rows.length}</b><span>${
-            owner === "mine" ? "Yours" : "Showing"
-          }</span></div>
-          ${owner !== "mine" ? `<div class="figure"><b>${mine}</b><span>Yours</span></div>` : ""}
-          <div class="figure"><b>${live}</b><span>Live</span></div>
-          <div class="figure${awaiting ? " hot" : ""}"><b>${awaiting}</b><span>Awaiting a score</span></div>
-        </div>
+        <!-- Which figures, in what order, called what — the admin's. -->
+        <div class="figures inline">${(() => {
+          const figures = {
+            "trends.figure.showing": { n: rows.length },
+            "trends.figure.mine": { n: mine, when: owner !== "mine" },
+            "trends.figure.live": { n: live },
+            "trends.figure.awaiting": { n: awaiting, hot: awaiting > 0 },
+          };
+          return slotGroup("trends.figure")
+            .map((f) => {
+              const figure = figures[f.id];
+              if (!figure || figure.when === false) return "";
+              return `<div class="figure${figure.hot ? " hot" : ""}"><b>${
+                figure.n
+              }</b>${slot(f.id, {
+                tag: "span",
+                fallback:
+                  f.id === "trends.figure.showing" && owner === "mine" ? "Yours" : undefined,
+              })}</div>`;
+            })
+            .join("");
+        })()}</div>
       </div>
 
       <div class="filters">
@@ -6775,18 +7171,18 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                 </section>`
               : `
           ${
-            t.needToKnow
+            t.needToKnow && slotShown("trend.section.needtoknow")
               ? `<section class="sec" style="margin-top:22px">
-                  <div class="sec-head"><h2>${icon("ai")} Need to know</h2></div>
+                  <div class="sec-head">${slot("trend.section.needtoknow", { tag: "h2", prefix: icon("ai") + " " })}</div>
                   <p>${esc(t.needToKnow)}</p>
                 </section>`
               : ""
           }
 
           ${
-            t.opportunity
+            t.opportunity && slotShown("trend.section.opportunity")
               ? `<section class="sec">
-                  <div class="sec-head"><h2>${icon("trends")} The opportunity</h2></div>
+                  <div class="sec-head">${slot("trend.section.opportunity", { tag: "h2", prefix: icon("trends") + " " })}</div>
                   <div class="prose-long">${t.opportunity
                     .split(/\n+/)
                     .map((para) => `<p>${esc(para)}</p>`)
@@ -6798,16 +7194,16 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           ${
             t.note
               ? `<section class="sec">
-                  <div class="sec-head"><h2>${icon("note")} Owner’s note</h2></div>
+                  <div class="sec-head">${slot("trend.section.note", { tag: "h2", prefix: icon("note") + " " })}</div>
                   <div class="panel"><div class="note-body">${esc(t.note)}</div></div>
                 </section>`
               : ""
           }
 
           ${
-            t.industries.length
+            t.industries.length && slotShown("trend.section.scores")
               ? `<section class="sec">
-                  <div class="sec-head"><h2>${icon("published")} Industry scores</h2></div>
+                  <div class="sec-head">${slot("trend.section.scores", { tag: "h2", prefix: icon("published") + " " })}</div>
                   <div class="score-grid">${t.industries
                     .map((industry) => {
                       const done = t.scored.includes(industry);
@@ -6824,7 +7220,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           }
 
           <section class="sec">
-            <div class="sec-head"><h2>${icon("link")} Supporting material</h2></div>
+            <div class="sec-head">${slot("trend.section.links", { tag: "h2", prefix: icon("link") + " " })}</div>
             ${
               t.links.length
                 ? `<ul class="research-list">${t.links
@@ -6844,7 +7240,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           ${
             Object.keys(t.labels ?? {}).length
               ? `<section class="sec">
-                  <div class="sec-head"><h2>${icon("tier")} Labels</h2></div>
+                  <div class="sec-head">${slot("trend.section.labels", { tag: "h2", prefix: icon("tier") + " " })}</div>
                   <dl class="label-groups">${Object.entries(t.labels)
                     .map(
                       ([group, values]) => `<div><dt>${esc(group)}</dt><dd>${values
@@ -6861,75 +7257,81 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         <aside>
           <div class="panel">
             <div class="panel-label">This profile</div>
-            <dl>
-              <div class="fact"><dt>Owner</dt><dd>${
-                t.ownerName
-                  ? `<span class="who">${faceFor(t.ownerName, t.ownerId)}${esc(
-                      t.ownerName,
-                    )}</span>`
-                  : `<span class="soft">Not set on the sheet</span>`
-              }</dd></div>
-              ${
-                others.length
-                  ? `<div class="fact"><dt>Also credited</dt><dd>${others
-                      .map(esc)
-                      .join(", ")}</dd></div>`
-                  : ""
-              }
-              ${callBlurb ? `<div class="fact"><dt>The call</dt><dd>${esc(callBlurb)}</dd></div>` : ""}
-              ${
-                t.publishedOn
-                  ? `<div class="fact"><dt>Published</dt><dd>${long(t.publishedOn)}</dd></div>`
-                  : ""
-              }
-              ${
-                t.editorStatus
-                  ? `<div class="fact"><dt>In Content Editor</dt><dd>${esc(
-                      t.editorStatus,
-                    )}</dd></div>`
-                  : ""
-              }
-              ${
-                t.activeFrom && t.activeTo
-                  ? `<div class="fact"><dt>Called for</dt><dd>${t.activeFrom.slice(
-                      0,
-                      4,
-                    )}–${t.activeTo.slice(0, 4)}</dd></div>`
-                  : ""
-              }
-              <div class="fact"><dt>Proof points</dt><dd>${t.proofPoints}</dd></div>
-              <div class="fact"><dt>Strategies</dt><dd>${t.strategies}</dd></div>
-              ${
-                t.latestScoreMonth
-                  ? (() => {
-                      const lines = t.latestScoreMonth.split("\n");
-                      return `<div class="fact${
-                        lines.length > 1 ? " stack" : ""
-                      }"><dt>Latest score</dt><dd class="score-month">${lines
-                        .map((line) => `<span>${esc(line)}</span>`)
-                        .join("")}</dd></div>`;
-                    })()
-                  : ""
-              }
-              <div class="fact"><dt>Trend ID</dt><dd><span class="mono-tag">${esc(
-                t.id,
-              )}</span></dd></div>
-              ${
-                t.lastSynced
-                  ? `<div class="fact"><dt>Synced</dt><dd>${long(t.lastSynced)}</dd></div>`
-                  : ""
-              }
-            </dl>
+            <!--
+              The panel is a composition: which facts appear, what they are
+              called and in what order is the admin's. A fact the sheet has
+              not set stays off it regardless — an empty row says less than
+              no row.
+            -->
+            <dl>${(() => {
+              const lines = (t.latestScoreMonth ?? "").split("\n").filter(Boolean);
+              const rows = {
+                "trend.facts.owner": {
+                  value: t.ownerName
+                    ? `<span class="who">${faceFor(t.ownerName, t.ownerId)}${esc(
+                        t.ownerName,
+                      )}</span>`
+                    : `<span class="soft">Not set on the sheet</span>`,
+                },
+                "trend.facts.authors": {
+                  value: others.map(esc).join(", "),
+                  when: others.length > 0,
+                },
+                "trend.facts.call": { value: esc(callBlurb ?? ""), when: Boolean(callBlurb) },
+                "trend.facts.published": {
+                  value: t.publishedOn ? long(t.publishedOn) : "",
+                  when: Boolean(t.publishedOn),
+                },
+                "trend.facts.editor": {
+                  value: esc(t.editorStatus ?? ""),
+                  when: Boolean(t.editorStatus),
+                },
+                "trend.facts.window": {
+                  value:
+                    t.activeFrom && t.activeTo
+                      ? `${t.activeFrom.slice(0, 4)}–${t.activeTo.slice(0, 4)}`
+                      : "",
+                  when: Boolean(t.activeFrom && t.activeTo),
+                },
+                "trend.facts.proof": { value: String(t.proofPoints) },
+                "trend.facts.strategies": { value: String(t.strategies) },
+                "trend.facts.score": {
+                  value: `<span class="score-month">${lines
+                    .map((line) => `<span>${esc(line)}</span>`)
+                    .join("")}</span>`,
+                  when: Boolean(t.latestScoreMonth),
+                  stack: lines.length > 1,
+                },
+                "trend.facts.id": { value: `<span class="mono-tag">${esc(t.id)}</span>` },
+                "trend.facts.synced": {
+                  value: t.lastSynced ? long(t.lastSynced) : "",
+                  when: Boolean(t.lastSynced),
+                },
+              };
+              return slotGroup("trend.facts")
+                .map((f) => {
+                  const row = rows[f.id];
+                  if (!row || row.when === false) return "";
+                  return `<div class="fact${row.stack ? " stack" : ""}">${slot(f.id, {
+                    tag: "dt",
+                  })}<dd>${row.value}</dd></div>`;
+                })
+                .join("");
+            })()}</dl>
             ${
-              t.editorUrl
+              t.editorUrl && slotShown("trend.action.editor")
                 ? `<a class="wide-btn solid" href="${esc(t.editorUrl)}" target="_blank"
-                    rel="noreferrer noopener">${icon("edit")}Open in Content Editor</a>`
+                    rel="noreferrer noopener">${icon("edit")}${slot("trend.action.editor", {
+                      tag: "",
+                    })}</a>`
                 : ""
             }
             ${
-              t.publishedUrl
+              t.publishedUrl && slotShown("trend.action.live")
                 ? `<a class="wide-btn" href="${esc(t.publishedUrl)}" target="_blank"
-                    rel="noreferrer noopener">${icon("link")}View the published profile</a>`
+                    rel="noreferrer noopener">${icon("link")}${slot("trend.action.live", {
+                      tag: "",
+                    })}</a>`
                 : ""
             }
             ${
@@ -6960,6 +7362,472 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           }
         </aside>
       </div>`;
+  }
+
+  /* ---- the built-in pages, made changeable -------------------------------
+   *
+   * The same idea as the studio's views, applied to the pages that ship: a
+   * "slot" is one customisable thing — a heading, a field label, a table
+   * column, a navigation item. This file declares which slots exist and what
+   * they say by default; the shared store holds only what an admin changed,
+   * so an untouched slot has no record and the wording in the code stands.
+   *
+   * Two ways in, as in the running Hub. Edit mode turns every label on the
+   * real page into something you click and retype; the studio's own list is
+   * the exhaustive one, and is where things are hidden and reordered.
+   * ----------------------------------------------------------------------- */
+
+  const slotTitle = (id, label, hint) => ({ id, label, kind: "title", hint });
+  const slotSection = (id, label) => ({ id, label, kind: "section", hideable: true });
+  const slotField = (id, label) => ({ id, label, kind: "field", hideable: true });
+  const slotColumn = (id, label) => ({ id, label, kind: "column", hideable: true });
+  const slotNav = (id, label) => ({ id, label, kind: "nav", hideable: true });
+
+  const SLOT_PAGES = [
+    {
+      id: "nav",
+      label: "Navigation",
+      path: "/",
+      groups: [
+        {
+          id: "nav.group",
+          label: "Group headings",
+          slots: [slotTitle("nav.group.work", "Your work"), slotTitle("nav.group.team", "The team")],
+        },
+        {
+          id: "nav.item",
+          label: "Sidebar items",
+          orderable: true,
+          slots: [
+            slotNav("nav.item.today", "Today"),
+            slotNav("nav.item.deadlines", "Deadlines"),
+            slotNav("nav.item.calendar", "Calendar"),
+            slotNav("nav.item.trends", "Trends"),
+            slotNav("nav.item.performance", "Performance"),
+            slotNav("nav.item.learning", "Learning"),
+            slotNav("nav.item.team", "Forecasters"),
+            slotNav("nav.item.whats-on", "What’s on"),
+            slotNav("nav.item.subscribe", "Add to your calendar"),
+          ],
+        },
+      ],
+    },
+    {
+      id: "today",
+      label: "Today",
+      path: "/",
+      groups: [
+        {
+          id: "today.head",
+          label: "Page heading",
+          slots: [slotTitle("today.greeting", "Morning", "The word before the person’s first name")],
+        },
+        {
+          /*
+           * Renamable and hideable, but not reorderable: these sections sit
+           * in a two-column layout where each has its own shape, so moving
+           * one is a design decision rather than a sort order.
+           */
+          id: "today.section",
+          label: "Sections",
+          slots: [
+            slotSection("today.section.overdue", "Past deadline"),
+            slotSection("today.section.next", "Next up"),
+            slotSection("today.section.review", "Worth a look"),
+            slotSection("today.section.publishing", "Publishing soon"),
+            slotSection("today.section.diary", "In the diary"),
+            slotSection("today.section.team", "Who’s carrying what"),
+          ],
+        },
+      ],
+    },
+    {
+      id: "deadlines",
+      label: "Deadlines",
+      path: "/deadlines",
+      groups: [
+        {
+          id: "deadlines.head",
+          label: "Page heading",
+          slots: [
+            slotTitle("deadlines.eyebrow", "Submission deadlines"),
+            slotTitle("deadlines.title", "Deadlines"),
+          ],
+        },
+        {
+          id: "deadlines.column",
+          label: "Table columns",
+          orderable: true,
+          slots: [
+            slotColumn("deadlines.column.submission", "Due"),
+            slotColumn("deadlines.column.title", "Title"),
+            slotColumn("deadlines.column.type", "Format"),
+            slotColumn("deadlines.column.vertical", "Vertical"),
+            slotColumn("deadlines.column.season", "Season"),
+            slotColumn("deadlines.column.forecaster", "Forecaster"),
+            slotColumn("deadlines.column.publication", "Publishes"),
+            slotColumn("deadlines.column.status", "Status"),
+          ],
+        },
+      ],
+    },
+    {
+      id: "content",
+      label: "A forecast",
+      path: "/content/ss-4013",
+      groups: [
+        {
+          id: "content.head",
+          label: "Page heading",
+          slots: [
+            slotTitle("content.crumb", "Deadlines", "The first step of the breadcrumb"),
+            { id: "content.action.month", label: "See this month", kind: "action", hideable: true },
+          ],
+        },
+        {
+          id: "content.section",
+          label: "Sections",
+          orderable: true,
+          slots: [
+            slotSection("content.section.where", "Where it is"),
+            slotSection("content.section.note", "Commissioning note"),
+            slotSection("content.section.details", "Forecast details"),
+            slotSection("content.section.notes", "Notes"),
+            slotSection("content.section.related", "Also in this vertical"),
+          ],
+        },
+        {
+          id: "content.step",
+          label: "The stages",
+          orderable: true,
+          slots: [
+            { id: "content.step.submission", label: "Copy due with the commissioning manager", kind: "step" },
+            { id: "content.step.review", label: "Edit and review", kind: "step" },
+            { id: "content.step.published", label: "Live on the platform", kind: "step" },
+          ],
+        },
+        {
+          id: "content.facts",
+          label: "The panel on the right",
+          orderable: true,
+          slots: [
+            slotField("content.facts.reference", "Reference"),
+            slotField("content.facts.type", "Type"),
+            slotField("content.facts.vertical", "Vertical"),
+            slotField("content.facts.season", "Season"),
+            slotField("content.facts.submission", "Submission"),
+            slotField("content.facts.publication", "Publication"),
+            slotField("content.facts.manager", "Commissioned by"),
+          ],
+        },
+      ],
+    },
+    {
+      id: "trends",
+      label: "Trends",
+      path: "/trends",
+      groups: [
+        {
+          id: "trends.head",
+          label: "Page heading",
+          slots: [
+            slotTitle("trends.eyebrow.mine", "Profiles you own or are credited on"),
+            slotTitle("trends.eyebrow.all", "The trend database"),
+            slotTitle("trends.title", "Trends"),
+          ],
+        },
+        {
+          id: "trends.figure",
+          label: "The figures",
+          orderable: true,
+          slots: [
+            slotField("trends.figure.showing", "Showing"),
+            slotField("trends.figure.mine", "Yours"),
+            slotField("trends.figure.live", "Live"),
+            slotField("trends.figure.awaiting", "Awaiting a score"),
+          ],
+        },
+      ],
+    },
+    {
+      id: "trend",
+      label: "A trend profile",
+      path: "/trends/482",
+      groups: [
+        {
+          id: "trend.section",
+          label: "Sections",
+          orderable: true,
+          slots: [
+            slotSection("trend.section.needtoknow", "Need to know"),
+            slotSection("trend.section.opportunity", "The opportunity"),
+            slotSection("trend.section.note", "Owner’s note"),
+            slotSection("trend.section.scores", "Industry scores"),
+            slotSection("trend.section.links", "Supporting material"),
+            slotSection("trend.section.labels", "Labels"),
+          ],
+        },
+        {
+          id: "trend.facts",
+          label: "The panel on the right",
+          orderable: true,
+          slots: [
+            slotField("trend.facts.owner", "Owner"),
+            slotField("trend.facts.authors", "Also credited"),
+            slotField("trend.facts.call", "The call"),
+            slotField("trend.facts.published", "Published"),
+            slotField("trend.facts.editor", "In Content Editor"),
+            slotField("trend.facts.window", "Called for"),
+            slotField("trend.facts.proof", "Proof points"),
+            slotField("trend.facts.strategies", "Strategies"),
+            slotField("trend.facts.score", "Latest score"),
+            slotField("trend.facts.id", "Trend ID"),
+            slotField("trend.facts.synced", "Synced"),
+          ],
+        },
+        {
+          id: "trend.action",
+          label: "The buttons",
+          slots: [
+            { id: "trend.action.editor", label: "Open in Content Editor", kind: "action", hideable: true },
+            { id: "trend.action.live", label: "View the published profile", kind: "action", hideable: true },
+          ],
+        },
+      ],
+    },
+  ];
+
+  const SLOT_DEFS = new Map(
+    SLOT_PAGES.flatMap((p) => p.groups.flatMap((g) => g.slots)).map((s) => [s.id, s]),
+  );
+  const SLOT_GROUPS = new Map(SLOT_PAGES.flatMap((p) => p.groups).map((g) => [g.id, g]));
+  const SLOT_COUNT = SLOT_DEFS.size;
+
+  /** What a slot says: the override, else the declared default. */
+  const slotText = (id, fallback) => slots.get(id)?.label ?? SLOT_DEFS.get(id)?.label ?? fallback ?? id;
+
+  /** Whether a slot is on the page. Only hideable slots can be off it. */
+  const slotShown = (id) => slots.get(id)?.hidden !== true;
+
+  /** A group's slots, in the admin's order, with hidden ones dropped. */
+  function slotGroup(groupId) {
+    const declared = SLOT_GROUPS.get(groupId)?.slots ?? [];
+    return declared
+      .filter((s) => slots.get(s.id)?.hidden !== true)
+      .map((s, i) => ({ slot: s, at: slots.get(s.id)?.order ?? i, i }))
+      // A slot with no order keeps its declared position; the tie-break on the
+      // declared index stops two equal orders swapping on re-render.
+      .sort((a, b) => a.at - b.at || a.i - b.i)
+      .map((x) => x.slot);
+  }
+
+  /**
+   * A label, editable in place when edit mode is on.
+   *
+   * Renders as whatever element the page wants. In edit mode it gains a
+   * dashed underline and a click turns it into an input — the difference
+   * between "there is an admin screen somewhere" and "I can fix this where I
+   * noticed it".
+   */
+  function slot(id, { tag = "span", cls = "", prefix = "", suffix = "", fallback } = {}) {
+    const text = slotText(id, fallback);
+    const open = tag ? `<${tag}${cls ? ` class="${cls}"` : ""}>` : "";
+    const close = tag ? `</${tag}>` : "";
+    if (!editingSlots) return `${open}${prefix}${esc(text)}${suffix}${close}`;
+    if (slotOpen === id) {
+      return `${open}<input class="slot-input" id="slot-input" data-slot-input="${esc(
+        id,
+      )}" value="${esc(text)}" aria-label="Wording for ${esc(id)}" />${close}`;
+    }
+    return `${open}${prefix}<button type="button" class="slot-edit" data-slot-edit="${esc(
+      id,
+    )}" title="Rename — ${esc(id)}">${esc(text)}</button>${suffix}${close}`;
+  }
+
+  /* ---- the editor -------------------------------------------------------- */
+
+  const SLOT_KIND_WORDS = {
+    title: "Title",
+    eyebrow: "Eyebrow",
+    sub: "Standfirst",
+    section: "Section heading",
+    field: "Field label",
+    column: "Column",
+    nav: "Sidebar item",
+    action: "Button",
+    step: "Stage",
+  };
+
+  let slotPageOpen = "content";
+  let slotFind = "";
+
+  function studioPages() {
+    const changed = slots.size;
+    const needle = slotFind.trim().toLowerCase();
+
+    const pages = SLOT_PAGES.map((page) => ({
+      page,
+      groups: page.groups
+        .map((group) => ({
+          group,
+          slots: needle
+            ? group.slots.filter(
+                (s) =>
+                  slotText(s.id).toLowerCase().includes(needle) ||
+                  s.label.toLowerCase().includes(needle) ||
+                  s.id.includes(needle),
+              )
+            : group.slots,
+        }))
+        .filter((g) => g.slots.length),
+    })).filter((p) => p.groups.length);
+
+    return `
+      <div class="studio-bar">
+        <p class="signup-note" style="margin:0">${SLOT_COUNT} things you can rename across
+          ${SLOT_PAGES.length} pages. ${
+            changed === 0
+              ? "None changed yet — every page says what it ships with."
+              : `${changed} changed.`
+          }</p>
+        <div class="toggles">
+          <button class="toggle${editingSlots ? " on" : ""}" data-slot-mode="${
+            editingSlots ? "0" : "1"
+          }">${icon("edit", 14)}${editingSlots ? "Editing on the page" : "Edit on the page"}</button>
+          ${
+            changed
+              ? `<button class="toggle danger" data-slot-reset-all="1">${icon(
+                  "refresh",
+                  14,
+                )}Reset everything</button>`
+              : ""
+          }
+        </div>
+      </div>
+
+      <p class="studio-note">${icon("eye", 14)}<span><strong>Edit on the page</strong> turns every
+        label in the app into something you click and retype. Turn it on, walk to the page that
+        reads wrong, and fix it where you noticed it. This list is the same set of labels, all in
+        one place, and it is also where you hide things and change their order.</span></p>
+
+      <label class="field" style="max-width:340px;margin-bottom:16px"><span>Find a label</span>
+        <input id="slot-find" data-slot-find="1" type="search" value="${esc(slotFind)}"
+          placeholder="Season, Proof points, Where it is…" /></label>
+
+      ${
+        pages.length === 0
+          ? `<div class="none">${icon("studio", 20)}<p>Nothing matches &ldquo;${esc(
+              slotFind,
+            )}&rdquo;.</p></div>`
+          : `<div class="studio-list">${pages
+              .map(({ page, groups }) => slotPageCard(page, groups, Boolean(needle)))
+              .join("")}</div>`
+      }`;
+  }
+
+  function slotPageCard(page, groups, forceOpen) {
+    const open = forceOpen || slotPageOpen === page.id;
+    const all = groups.flatMap((g) => g.slots);
+    const touched = all.filter((s) => slots.has(s.id)).length;
+    return `<div class="studio-item">
+      <div class="studio-item-head">
+        <div>
+          <h2>${esc(page.label)}</h2>
+          <p class="signup-note">${all.length} labels${
+            touched ? ` · ${touched} changed` : ""
+          } · <a class="link-out" href="#${esc(page.path)}">see the page</a></p>
+        </div>
+        <div class="studio-item-actions">
+          ${
+            touched
+              ? `<button class="toggle danger" data-slot-reset-page="${esc(page.id)}">${icon(
+                  "refresh",
+                  14,
+                )}Reset this page</button>`
+              : ""
+          }
+          <button class="toggle" data-slot-page="${esc(page.id)}">${open ? "Hide" : "Open"}</button>
+        </div>
+      </div>
+      ${
+        open
+          ? groups
+              .map(
+                ({ group, slots: rows }) => `<div class="slot-group">
+                  <div class="slot-group-head"><span>${esc(group.label)}</span>${
+                    group.orderable ? `<em>reorder with the arrows</em>` : ""
+                  }</div>
+                  ${rows
+                    .map((s, i) => slotRow(s, group, i === 0, i === rows.length - 1))
+                    .join("")}
+                </div>`,
+              )
+              .join("")
+          : ""
+      }
+    </div>`;
+  }
+
+  function slotRow(def, group, first, last) {
+    const override = slots.get(def.id);
+    const hidden = override?.hidden === true;
+    return `<div class="slot-row${hidden ? " hidden" : ""}">
+      <div class="slot-row-what">
+        <span class="slot-kind">${SLOT_KIND_WORDS[def.kind] ?? def.kind}</span>
+        ${def.hint ? `<em>${esc(def.hint)}</em>` : ""}
+      </div>
+      <input data-slot-label="${esc(def.id)}" value="${esc(slotText(def.id))}"
+        aria-label="Wording for ${esc(def.label)}"${hidden ? " disabled" : ""} />
+      <div class="slot-row-actions">
+        ${
+          group.orderable
+            ? `<button class="toggle" data-slot-move="-1" data-slot-id="${esc(
+                def.id,
+              )}" data-slot-group="${esc(group.id)}" aria-label="Move up"${
+                first || hidden ? " disabled" : ""
+              }>&uarr;</button>
+               <button class="toggle" data-slot-move="1" data-slot-id="${esc(
+                 def.id,
+               )}" data-slot-group="${esc(group.id)}" aria-label="Move down"${
+                 last || hidden ? " disabled" : ""
+               }>&darr;</button>`
+            : ""
+        }
+        ${
+          def.hideable
+            ? `<button class="toggle" data-slot-hide="${esc(def.id)}" data-slot-to="${
+                hidden ? "0" : "1"
+              }" title="${hidden ? "Put it back on the page" : "Take it off the page"}">${icon(
+                hidden ? "eye" : "lock",
+                14,
+              )}${hidden ? "Hidden" : "Shown"}</button>`
+            : `<span class="signup-note" title="A page needs its title">always shown</span>`
+        }
+        ${
+          override
+            ? `<button class="toggle" data-slot-clear="${esc(def.id)}" title="Back to &ldquo;${esc(
+                def.label,
+              )}&rdquo;">${icon("refresh", 14)}</button>`
+            : ""
+        }
+      </div>
+    </div>`;
+  }
+
+  /** The bar an admin gets while editing, so the mode is never invisible. */
+  function editBar() {
+    if (!editingSlots) return "";
+    const changed = slots.size;
+    return `<div class="edit-bar" role="status">
+      <span><strong>Editing the wording.</strong> Click any dashed label to rename it. Enter
+        saves, Escape leaves it.</span>
+      <span class="edit-bar-count">${
+        changed === 0
+          ? "nothing changed yet"
+          : `${changed} ${changed === 1 ? "change" : "changes"} in place`
+      }</span>
+      <button class="toggle" data-slot-mode="0">Done</button>
+    </div>`;
   }
 
   /* ---- the studio -------------------------------------------------------
@@ -7280,6 +8148,10 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       ${tab("connections", 1, "Connections", "Where data comes from", "source")}
       ${tab("datasets", 2, "Datasets", "Which table, and its columns", "table")}
       ${tab("views", 3, "Views", "What people see", "eye")}
+      <a class="studio-tab${here === "pages" ? " on" : ""}" href="#/studio/pages">${icon(
+        "edit",
+        15,
+      )}<span><b>The built-in pages</b><em>Rename, hide, reorder</em></span></a>
     </nav>`;
   }
 
@@ -7293,20 +8165,23 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     const body =
       tab === "datasets"
         ? studioDatasets()
-        : tab === "views"
-          ? params.get("build")
-            ? studioBuilder(params.get("build"))
-            : studioViews()
-          : studioConnections();
+        : tab === "pages"
+          ? studioPages()
+          : tab === "views"
+            ? params.get("build")
+              ? studioBuilder(params.get("build"))
+              : studioViews()
+            : studioConnections();
 
     return `
       <div class="head">
         <div>
           <div class="eyebrow">Admin</div>
           <h1>${icon("studio", 26)} Studio</h1>
-          <p class="lede">Point the Hub at a data source, then build views of it for whoever
-            needs them — without a deploy. Every view gets a real address, so a link to one is
-            a link anyone it is meant for can open.</p>
+          <p class="lede">Point the Hub at a data source and build views of it for whoever
+            needs them, and change the wording and layout of the pages that come built in. All
+            of it without a deploy, and every view gets a real address so a link to one is a
+            link anyone it is meant for can open.</p>
         </div>
       </div>
       ${studioTabs(tab)}
@@ -8420,6 +9295,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     const caret = document.activeElement?.selectionStart;
 
     view.innerHTML = html;
+    document.getElementById("edit-bar").innerHTML = editBar();
     renderNav();
     renderUrl();
 
@@ -9032,6 +9908,58 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       }),
     );
 
+    // The built-in pages' editor -------------------------------------------
+    view.querySelectorAll("[data-slot-page]").forEach((el) =>
+      el.addEventListener("click", () => {
+        slotPageOpen = slotPageOpen === el.dataset.slotPage ? null : el.dataset.slotPage;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-slot-find]").forEach((el) =>
+      el.addEventListener("input", () => {
+        slotFind = el.value;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-slot-label]").forEach((el) =>
+      el.addEventListener("change", () => {
+        setSlot(el.dataset.slotLabel, { label: el.value });
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-slot-hide]").forEach((el) =>
+      el.addEventListener("click", () => {
+        setSlot(el.dataset.slotHide, { hidden: el.dataset.slotTo === "1" });
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-slot-move]").forEach((el) =>
+      el.addEventListener("click", () => {
+        moveSlot(el.dataset.slotId, el.dataset.slotGroup, Number(el.dataset.slotMove));
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-slot-clear]").forEach((el) =>
+      el.addEventListener("click", () => {
+        clearSlot(el.dataset.slotClear);
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-slot-reset-page]").forEach((el) =>
+      el.addEventListener("click", () => {
+        if (!window.confirm("Put this page back to the wording it ships with?")) return;
+        clearSlots(`${el.dataset.slotResetPage}.`);
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-slot-reset-all]").forEach((el) =>
+      el.addEventListener("click", () => {
+        if (!window.confirm("Put every page back to the wording it ships with?")) return;
+        clearSlots("");
+        render();
+      }),
+    );
+
     // A calendar view's month, per view, so stepping through one sticks.
     view.querySelectorAll("[data-v-month]").forEach((el) =>
       el.addEventListener("click", () => {
@@ -9056,7 +9984,51 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       sheetOpen = false;
       renderNav();
     }
+
+    // Edit mode's own controls: the bar, and every dashed label in the page
+    // or the sidebar. Delegated, because they are re-rendered constantly.
+    const mode = e.target.closest("[data-slot-mode]");
+    if (mode) {
+      editingSlots = mode.dataset.slotMode === "1";
+      slotOpen = null;
+      render();
+      return;
+    }
+    const edit = e.target.closest("[data-slot-edit]");
+    if (edit) {
+      slotOpen = edit.dataset.slotEdit;
+      render();
+      document.getElementById("slot-input")?.select();
+      return;
+    }
   });
+
+  // Enter saves, Escape abandons — the same keys as the studio's own boxes.
+  document.addEventListener("keydown", (e) => {
+    const input = e.target.closest("[data-slot-input]");
+    if (!input) return;
+    if (e.key === "Enter") {
+      setSlot(input.dataset.slotInput, { label: input.value });
+      slotOpen = null;
+      render();
+    }
+    if (e.key === "Escape") {
+      slotOpen = null;
+      render();
+    }
+  });
+
+  document.addEventListener(
+    "blur",
+    (e) => {
+      const input = e.target.closest?.("[data-slot-input]");
+      if (!input) return;
+      setSlot(input.dataset.slotInput, { label: input.value });
+      slotOpen = null;
+      render();
+    },
+    true,
+  );
 
   window.addEventListener("hashchange", render);
   render();

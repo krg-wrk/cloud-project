@@ -34,7 +34,7 @@ credentials to set up first.
 | Trends | `/trends`, `/trends/:id` | All 446 TFDB trend profiles: which are yours, the call on each, which industries still need a score |
 | Learning | `/workshops`, `/workshops/ws-201` | The workshop and knowledge-sharing programme, with sign-ups |
 | What's on | `/whats-on` | Leave, public holidays, shows |
-| Studio | `/studio` | Admin: connect a data source, build views of it, choose who sees them |
+| Studio | `/studio` | Admin: connect a data source, build views of it, choose who sees them, and change the wording of the built-in pages |
 | A built view | `/v/beauty-deadlines` | Anything the studio was pointed at, in any of five layouts |
 
 Every view is addressable, and every filter lives in the query string — so
@@ -448,6 +448,66 @@ is blocked by the egress policy of the environment this was built in, so
 error paths. Everything else — the store, the query layer, the whole studio
 UI, and the Hub connector reading all seven tables — was exercised end to end.
 
+## Changing the built-in pages
+
+The studio covers views you build. This covers the pages that ship. Every
+heading, field label, table column and navigation item across Navigation,
+Today, Deadlines, a forecast, Trends and a trend profile — 87 of them — can be
+renamed, and most can be hidden or reordered.
+
+Two ways in, because they suit different moments:
+
+- **Edit on the page.** An admin toggles it and every label in the app becomes
+  something you click and retype. You notice a heading reads wrong while
+  looking at it, and you fix it there. A bar along the bottom says you are in
+  the mode and how to leave it, because a mode you cannot tell you are in is a
+  trap.
+- **The built-in pages** tab in the studio. The same set in one searchable
+  list, and the only place things are hidden, reordered, or reset — per page or
+  altogether.
+
+### How it holds together
+
+`client/src/lib/slots.ts` declares every slot with its default wording. The
+pages read from it and the editor lists it, so the two cannot drift: a heading
+not in the registry is not editable, and one that is appears in the editor
+with nothing else to wire up.
+
+The defaults stay in code. `studio_slots` holds only what an admin changed, so
+an untouched slot has no row, the shipped wording is what ships, and adding a
+heading needs no migration.
+
+Pages that were a fixed run of markup are now compositions. The
+content-detail sections, its stages and its facts panel; the trend-detail
+sections and facts; the deadlines columns; the trends figures — each renders
+from its registry group in the admin's order, so hiding a column drops it from
+the head and the body together, and a fact the sheet has not set stays off the
+panel regardless.
+
+Three things that would otherwise bite, handled:
+
+- **A rename does not un-hide.** A patch leaves out what it does not mention,
+  so each field is independent. An empty rename resets that one field to the
+  default rather than leaving a blank heading.
+- **Reordering writes the whole group.** Explicit positions for every item,
+  because a group where some have an order and others do not sorts
+  unpredictably the next time one moves.
+- **A label is untrusted text.** React escapes it in the app; the demo builds
+  HTML by hand, so it escapes it explicitly — a label of
+  `<img src=x onerror=...>` renders as those characters and does not run. That
+  matters in the demo especially, where the store is shared with everyone
+  looking at the page.
+
+Not everything on a page is a slot. A status word comes off the sheet, a
+person's name is their name, and a date's format is a decision rather than a
+label — changing those is editing data or writing code, not renaming. A
+sidebar item is renamed from the list rather than in place, because it is an
+anchor and a button inside one would swallow the click that navigates.
+
+Edit mode is admin-only and survives a reload, since the natural way to use it
+is to turn it on and then go to the page that reads wrong — including by
+pasting its address.
+
 ### In the demo
 
 The standalone demo carries the same studio, with two honest differences.
@@ -455,7 +515,10 @@ There is no server, so a Smartsheet connection says it cannot hold a token or
 make the call rather than pretending; and "This Hub's own tables" reads the
 data inlined in the page, which is the same shape the real reader returns. A
 view built in the demo is saved to the artifact's shared store, so it is there
-for everyone else looking at the page, and it has an address you can send.
+for everyone else looking at the page, and it has an address you can send. The
+same is true of the wording: rename a heading in the demo and everyone on that
+page sees it. The demo declares 71 slots rather than 87, because a few of the
+app's standfirsts are not in its markup.
 
 ## The calendar
 
