@@ -8078,7 +8078,14 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     return [...names].map((name) => {
       const values = rows.map((r) => r[name]).filter((v) => v !== "" && v != null);
       const type = inferType(values);
-      const field = { name, type };
+      /*
+       * `key` and `name` are separate in the running Hub, where a Smartsheet
+       * column's id is the key so a rename cannot break a view. The only
+       * source that reads here is this page's own tables, whose column names
+       * are code and cannot be renamed — so the two are the same value, and
+       * the shape stays identical to the app's.
+       */
+      const field = { key: name, name, type };
       const distinct = [...new Set(values)];
       if (type !== "date" && type !== "url" && distinct.length && distinct.length <= 40) {
         field.options = distinct.sort((a, b) => String(a).localeCompare(String(b), "en", { numeric: true }));
@@ -8146,7 +8153,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
     const sort = spec.sort;
     if (sort?.field) {
-      const type = fields.find((f) => f.name === sort.field)?.type;
+      const type = fields.find((f) => f.key === sort.field)?.type;
       const dir = sort.direction === "desc" ? -1 : 1;
       out = [...out].sort((a, b) => {
         const x = String(a[sort.field] ?? "").trim();
@@ -8440,7 +8447,9 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       <thead><tr><th>Column</th><th>Reads as</th><th>Values</th></tr></thead>
       <tbody>${fields
         .map(
-          (f) => `<tr><td>${esc(f.name)}</td><td>${TYPE_LABELS[f.type] ?? f.type}</td><td>${
+          (f) => `<tr><td>${esc(f.name)}${
+            f.key !== f.name ? `<div class="mono-tag">${esc(f.key)}</div>` : ""
+          }</td><td>${TYPE_LABELS[f.type] ?? f.type}</td><td>${
             f.options
               ? f.options
                   .slice(0, 6)
@@ -8678,8 +8687,8 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                             .map(
                               (f) =>
                                 `<button class="chip${
-                                  (b.spec.fields[role] ?? []).includes(f.name) ? " on" : ""
-                                }" data-b-list="${role}" data-b-name="${esc(f.name)}">${esc(
+                                  (b.spec.fields[role] ?? []).includes(f.key) ? " on" : ""
+                                }" data-b-list="${role}" data-b-name="${esc(f.key)}">${esc(
                                   f.name,
                                 )}</button>`,
                             )
@@ -8691,8 +8700,8 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                           )
                             .map(
                               (f) =>
-                                `<option value="${esc(f.name)}"${
-                                  b.spec.fields[role] === f.name ? " selected" : ""
+                                `<option value="${esc(f.key)}"${
+                                  b.spec.fields[role] === f.key ? " selected" : ""
                                 }>${esc(f.name)}</option>`,
                             )
                             .join("")}</select></label>`,
@@ -8706,13 +8715,13 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           ${(b.spec.filters ?? []).length === 0 ? `<p class="signup-note">No filters — every row in the dataset.</p>` : ""}
           ${(b.spec.filters ?? [])
             .map((f, i) => {
-              const field = fields.find((x) => x.name === f.field);
+              const field = fields.find((x) => x.key === f.field);
               const needsValue = !["empty", "not-empty", "mine"].includes(f.op);
               return `<div class="filter-row">
                 <select data-f-field="${i}">${fields
                   .map(
                     (x) =>
-                      `<option value="${esc(x.name)}"${x.name === f.field ? " selected" : ""}>${esc(
+                      `<option value="${esc(x.key)}"${x.key === f.field ? " selected" : ""}>${esc(
                         x.name,
                       )}</option>`,
                   )
@@ -8754,8 +8763,8 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
               <select data-b-sort="1"><option value="">Source order</option>${fields
                 .map(
                   (f) =>
-                    `<option value="${esc(f.name)}"${
-                      b.spec.sort?.field === f.name ? " selected" : ""
+                    `<option value="${esc(f.key)}"${
+                      b.spec.sort?.field === f.key ? " selected" : ""
                     }>${esc(f.name)}</option>`,
                 )
                 .join("")}</select></label>
@@ -8941,12 +8950,13 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
   }
 
   function viewTable(spec, fields, rows) {
-    const columns = (spec.fields.columns ?? []).length ? spec.fields.columns : fields.map((f) => f.name);
-    const typeOf = (name) => fields.find((f) => f.name === name)?.type;
+    const columns = (spec.fields.columns ?? []).length ? spec.fields.columns : fields.map((f) => f.key);
+    const typeOf = (key) => fields.find((f) => f.key === key)?.type;
+    const titleOf = (key) => fields.find((f) => f.key === key)?.name ?? key;
     const link = spec.fields.link;
     return `<div class="table-scroll"><table>
       <thead><tr>${columns
-        .map((c) => `<th${typeOf(c) === "number" ? ' class="num"' : ""}>${esc(c)}</th>`)
+        .map((c) => `<th${typeOf(c) === "number" ? ' class="num"' : ""}>${esc(titleOf(c))}</th>`)
         .join("")}</tr></thead>
       <tbody>${rows
         .map(
@@ -8971,7 +8981,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
   function viewCards(spec, fields, rows) {
     const f = spec.fields;
-    const typeOf = (name) => fields.find((x) => x.name === name)?.type;
+    const typeOf = (key) => fields.find((x) => x.key === key)?.type;
     return `<div class="view-cards">${rows
       .map((row, i) => {
         const url = webOnly(viewCell(row, f.link));
@@ -9903,7 +9913,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         if (!fields.length) return;
         builder.spec.filters = [
           ...(builder.spec.filters ?? []),
-          { field: fields[0].name, op: "is", value: "" },
+          { field: fields[0].key, op: "is", value: "" },
         ];
         render();
       }),

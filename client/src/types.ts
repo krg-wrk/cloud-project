@@ -315,7 +315,15 @@ export type ConnectorKind = "hub" | "smartsheet" | "google-sheets" | "mongodb" |
 
 export type FieldType = "text" | "number" | "date" | "boolean" | "person" | "url" | "list";
 
+/**
+ * One column of a dataset.
+ *
+ * `key` and `name` are separate on purpose. A view's spec refers to columns by
+ * `key` — for Smartsheet, the column's own id, which survives a rename or a
+ * move. `name` is the title as of the last read, and is what a person sees.
+ */
 export interface Field {
+  key: string;
   name: string;
   type: FieldType;
   /** Present when the column has few enough values to offer as a picker. */
@@ -355,6 +363,8 @@ export interface Dataset {
   ref: string;
   fields: Field[];
   rowCount?: number;
+  /** True when the source holds more rows than the read pulled. */
+  truncated?: boolean;
   refreshSeconds: number;
   describedAt?: string;
   updatedAt: string;

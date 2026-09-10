@@ -374,10 +374,10 @@ is that, at `/studio`, admin-only, in three steps in the order you do them.
   credential. It exists so the studio can be used on the first visit instead
   of waiting for a token, and because a view over the commissioning schedule
   is a thing people will actually want.
-- **Smartsheet.** Any sheet, by id, with an API token. Test says what came
-  back in words you can act on: a refused token, a sheet not shared with the
-  token's account, and a blocked network read differently, because they need
-  different fixes.
+- **Smartsheet.** Any sheet **or report**, by id, with an API token. Test says
+  what came back in words you can act on: a refused token, a sheet not shared
+  with the token's account, and a blocked network read differently, because
+  they need different fixes.
 
 Google Sheets, MongoDB and Snowflake are modelled with the settings each will
 need, and every one of them reports "not wired up yet" rather than failing
@@ -389,6 +389,29 @@ step is what makes the builder quick — once the columns and their types are
 known, every field picker downstream is a list rather than a name to
 remember, and a filter on a column with 40 or fewer distinct values offers
 those values as a picker.
+
+### A column is its id, not its title
+
+A dataset's columns carry two things: a **key**, which is what a view's spec
+binds to, and a **name**, which is what people see. For Smartsheet the key is
+the column's own id; for a report it is the report's `virtualId`, because a
+report's cells are addressed by that and not by the underlying sheet's column
+id. The name is refreshed every time the columns are read.
+
+So renaming "Submission Date" to "Copy due" in Smartsheet, or dragging it to
+the other end of the sheet, changes the label everywhere in the Hub and breaks
+nothing. Re-reading the columns is what picks the new title up. The studio
+shows the id under the title whenever the two differ, so a rename is visibly a
+change of label rather than of identity. Datasets saved before this existed had
+the title as the key; they keep working, and reading their columns again moves
+them onto ids.
+
+**A sheet of a few thousand rows is read in full.** The API pages at 500, so
+the reader follows `totalPages` and keeps asking until it has everything — six
+requests for the team's 3,000-row sheets. There is a 20,000-row cap so one
+enormous sheet cannot exhaust the server's memory; a dataset that hits it is
+marked `truncated`, and the studio says "read was capped" beside the row count
+rather than implying it has the lot.
 
 **3. Views** are what people see. A view is a dataset, a layout, a mapping of
 which column carries what, some filters, and an audience:
@@ -426,10 +449,11 @@ that a credential is set and its last four characters. Two ways to supply one:
 - **Pasted into the studio.** For trying something out. Editing a
   connection's label does not touch it; an empty string clears it.
 
-A Smartsheet ref is checked against `^\d{6,25}$` before it goes anywhere near
-a URL, so a stored dataset cannot make the server fetch an arbitrary address.
-Settings whose key looks like a credential (`token`, `secret`, `password`,
-`key`) are dropped rather than stored in the open.
+A Smartsheet ref is checked against `^(sheet|report):\d{6,25}$` (or a bare id)
+before it goes anywhere near a URL, so a stored dataset cannot make the server
+fetch an arbitrary address. Settings whose key looks like a credential
+(`token`, `secret`, `password`, `key`) are dropped rather than stored in the
+open.
 
 ### Who sees what is decided on the server
 
@@ -443,10 +467,26 @@ sidebar.
 ### What is not verified
 
 The Smartsheet reader has not run against the live API. `api.smartsheet.com`
-is blocked by the egress policy of the environment this was built in, so
-`probe`, `catalogue`, `describe` and `read` are exercised only against their
-error paths. Everything else — the store, the query layer, the whole studio
-UI, and the Hub connector reading all seven tables — was exercised end to end.
+is blocked by the egress policy of the environment this was built in, so it
+cannot be. Standing in for that, `npm test -w server` runs the reader against
+a stubbed API that serves the shapes Smartsheet documents, and checks the
+seven things that would otherwise only fail in production:
+
+- a ref names a sheet or a report and nothing else — a URL, a path, a short
+  number and an empty string are all refused;
+- all six pages of a 3,000-row sheet are read, each asking for 500;
+- a renamed and moved column keeps its key and updates its name;
+- a report reads through `/reports/…` and keys on `virtualId`, with a contact
+  column typed as a person;
+- a column with no cell on a row reads as empty rather than missing;
+- 25,000 rows against the cap is cut, flagged `truncated`, and still reports
+  the source's real size;
+- a refused token, a blocked network and an unshared sheet produce three
+  different messages.
+
+The tests run against `server/dist`, so they exercise what actually ships.
+Everything else — the store, the query layer, the whole studio UI, and the Hub
+connector reading all seven tables — was exercised end to end.
 
 ## Changing the built-in pages
 

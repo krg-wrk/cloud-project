@@ -84,7 +84,8 @@ export default function Datasets() {
           {rows.length === 0
             ? "No datasets yet."
             : `${rows.length} dataset${rows.length === 1 ? "" : "s"}.`}{" "}
-          Read a dataset&rsquo;s columns and the view builder can offer them by name.
+          A view binds to a column&rsquo;s id, not its title, so renaming or moving a column in
+          the source does not break it — reading the columns again just refreshes the labels.
         </p>
         <button className="btn solid" onClick={() => setAdding(true)}>
           <Icon name="plus" /> Add a dataset
@@ -145,7 +146,18 @@ export default function Datasets() {
                 <dl className="studio-facts">
                   <div className="fact">
                     <dt>Rows</dt>
-                    <dd>{dataset.rowCount ?? <span className="muted">not read yet</span>}</dd>
+                    <dd>
+                      {dataset.rowCount == null ? (
+                        <span className="muted">not read yet</span>
+                      ) : (
+                        <>
+                          {dataset.rowCount.toLocaleString()}
+                          {dataset.truncated && (
+                            <span className="needs-score"> · read was capped</span>
+                          )}
+                        </>
+                      )}
+                    </dd>
                   </div>
                   <div className="fact">
                     <dt>Columns</dt>
@@ -220,8 +232,13 @@ function FieldTable({ fields }: { fields: Field[] }) {
         </thead>
         <tbody>
           {fields.map((f) => (
-            <tr key={f.name}>
-              <td>{f.name}</td>
+            <tr key={f.key}>
+              <td>
+                {f.name}
+                {/* The id a view actually binds to, so a rename is visibly
+                    a change of label rather than of identity. */}
+                {f.key !== f.name && <div className="muted mono">{f.key}</div>}
+              </td>
               <td>{TYPE_LABELS[f.type]}</td>
               <td>
                 {f.options ? (
@@ -333,12 +350,14 @@ function DatasetForm({
         ) : (
           <div className="field">
             <label htmlFor="d-ref">
-              {connection?.kind === "smartsheet" ? "Sheet id" : "Table or collection"}
+              {connection?.kind === "smartsheet" ? "Sheet or report id" : "Table or collection"}
             </label>
             <input
               id="d-ref"
               value={ref}
-              placeholder={connection?.kind === "smartsheet" ? "6141831453742468" : ""}
+              placeholder={
+                connection?.kind === "smartsheet" ? "6141831453742468 or report:614183…" : ""
+              }
               onChange={(e) => setRef(e.target.value)}
             />
           </div>
@@ -375,8 +394,9 @@ function DatasetForm({
 
       {connection?.kind === "smartsheet" && tables.length === 0 && (
         <p className="muted small">
-          The sheet id is the long number in the sheet&rsquo;s URL, or under File &rarr;
-          Properties. The sheet has to be shared with the token&rsquo;s account.
+          The id is the long number in the URL, or under File &rarr; Properties. A report works
+          too — prefix it <code className="mono">report:</code>. Either way it has to be shared
+          with the token&rsquo;s account.
         </p>
       )}
 

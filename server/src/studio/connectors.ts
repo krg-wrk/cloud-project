@@ -22,8 +22,14 @@ export interface Connector {
   probe(ctx: ConnectorContext): Promise<{ ok: boolean; note: string }>;
   /** The tables available, when the system can list them. */
   catalogue?(ctx: ConnectorContext): Promise<{ ref: string; label: string }[]>;
-  /** The columns of one table, and how many rows it has. */
-  describe(ctx: ConnectorContext, ref: string): Promise<{ fields: Field[]; rowCount: number }>;
+  /**
+   * The columns of one table, how many rows it has, and whether the read
+   * stopped short of all of them.
+   */
+  describe(
+    ctx: ConnectorContext,
+    ref: string,
+  ): Promise<{ fields: Field[]; rowCount: number; truncated?: boolean }>;
   read(ctx: ConnectorContext, ref: string): Promise<Record<string, string>[]>;
 }
 
@@ -60,7 +66,7 @@ class NotWiredUp implements Connector {
     return { ok: false, note: this.note };
   }
 
-  async describe(): Promise<{ fields: Field[]; rowCount: number }> {
+  async describe(): Promise<{ fields: Field[]; rowCount: number; truncated?: boolean }> {
     throw new Error(this.note);
   }
 
@@ -117,9 +123,11 @@ export class HubConnector implements Connector {
     const names = new Set<string>();
     for (const row of rows) for (const key of Object.keys(row)) names.add(key);
     return {
+      // These column names come from the Hub's own types, so they are code
+      // and cannot be renamed out from under a view. The name is the key.
       fields: [...names]
         .filter((n) => n !== "_row")
-        .map((name) => fieldFromValues(name, rows.map((r) => r[name]).filter(Boolean))),
+        .map((name) => fieldFromValues(name, name, rows.map((r) => r[name]).filter(Boolean))),
       rowCount: rows.length,
     };
   }
@@ -161,25 +169,63 @@ const API = "https://api.smartsheet.com/2.0";
 
 interface SmartsheetColumn {
   id: number;
+  /** Reports only. Their cells carry this rather than the underlying id. */
+  virtualId?: number;
   title: string;
   type?: string;
   options?: string[];
 }
 
+interface SmartsheetCell {
+  columnId?: number;
+  virtualColumnId?: number;
+  value?: unknown;
+  displayValue?: string;
+}
+
 interface SmartsheetSheet {
   name?: string;
+  /** The whole size, whatever this page holds. */
   totalRowCount?: number;
+  /** Paging, as the API reports it back. */
+  pageNumber?: number;
+  totalPages?: number;
   columns: SmartsheetColumn[];
-  rows: { id: number; cells: { columnId: number; value?: unknown; displayValue?: string }[] }[];
+  rows: { id: number; cells: SmartsheetCell[] }[];
+}
+
+/** How many rows one read will pull before it stops and says so. */
+const ROW_CAP = 20000;
+
+/** Smartsheet's own maximum for a page of rows. */
+const PAGE_SIZE = 500;
+
+/**
+ * What a dataset's ref points at.
+ *
+ * `sheet:123` or `report:123`; a bare number means a sheet, which is how
+ * datasets saved before reports existed keep working. The id is checked to be
+ * a long number before it goes anywhere near a URL, so a stored dataset
+ * cannot become a way to make the server fetch an arbitrary address.
+ */
+export function parseRef(ref: string): { kind: "sheet" | "report"; id: string } {
+  const m = /^(sheet|report):(\d{6,25})$/.exec(ref.trim());
+  if (m) return { kind: m[1] as "sheet" | "report", id: m[2] };
+  if (/^\d{6,25}$/.test(ref.trim())) return { kind: "sheet", id: ref.trim() };
+  throw new Error(
+    `"${ref}" is not a Smartsheet reference. Expected a sheet or report id — a long number.`,
+  );
 }
 
 /**
  * Smartsheet, which is where the team works today and so the one that has to
  * be right.
  *
- * A sheet id is checked before it goes into a URL: it is a long number, and
- * anything else is refused rather than concatenated. That keeps a stored
- * dataset from being a way to make the server fetch an arbitrary address.
+ * Two things this handles that a naive reader does not. Columns are addressed
+ * by their id rather than their title, so renaming or moving a column in
+ * Smartsheet does not empty the views built on it. And rows are paged: a
+ * sheet of a few thousand does not arrive in one response, and assuming it
+ * does means silently reading the first page and calling it the whole sheet.
  */
 export class SmartsheetConnector implements Connector {
   readonly kind = "smartsheet" as const;
@@ -230,40 +276,113 @@ export class SmartsheetConnector implements Connector {
     }
   }
 
+  /**
+   * Everything this token can see, sheets and reports together.
+   *
+   * A report is offered because that is often the right thing to point at: it
+   * is already filtered and already spans the sheets someone cares about, so
+   * the Hub does not have to reproduce that filtering.
+   */
   async catalogue(ctx: ConnectorContext): Promise<{ ref: string; label: string }[]> {
-    const res = await this.call<{ data?: { id: number; name: string }[] }>(
+    const sheets = await this.call<{ data?: { id: number; name: string }[] }>(
       ctx,
       "/sheets?pageSize=500",
       "account",
     );
-    return (res.data ?? []).map((s) => ({ ref: String(s.id), label: s.name }));
+    const out = (sheets.data ?? []).map((x) => ({
+      ref: `sheet:${x.id}`,
+      label: x.name,
+    }));
+
+    // A token may have sheet access and no report access, and that should not
+    // cost the whole catalogue.
+    try {
+      const reports = await this.call<{ data?: { id: number; name: string }[] }>(
+        ctx,
+        "/reports?pageSize=500",
+        "account",
+      );
+      for (const r of reports.data ?? []) {
+        out.push({ ref: `report:${r.id}`, label: `${r.name} (report)` });
+      }
+    } catch {
+      // No reports listed; the sheets are still worth offering.
+    }
+    return out;
   }
 
   async describe(
     ctx: ConnectorContext,
     ref: string,
-  ): Promise<{ fields: Field[]; rowCount: number }> {
-    const sheet = await this.fetchSheet(ctx, ref);
-    const rows = flatten(sheet);
+  ): Promise<{ fields: Field[]; rowCount: number; truncated: boolean }> {
+    const read = await this.fetchAll(ctx, ref);
     return {
-      fields: sheet.columns.map((c) => fieldFor(c, rows)),
-      rowCount: sheet.totalRowCount ?? rows.length,
+      fields: read.columns.map((c) => fieldFor(c, read.rows)),
+      rowCount: read.total,
+      truncated: read.truncated,
     };
   }
 
   async read(ctx: ConnectorContext, ref: string): Promise<Record<string, string>[]> {
-    return flatten(await this.fetchSheet(ctx, ref));
+    return (await this.fetchAll(ctx, ref)).rows;
   }
 
-  private fetchSheet(ctx: ConnectorContext, ref: string): Promise<SmartsheetSheet> {
-    if (!/^\d{6,25}$/.test(ref)) {
-      throw new Error(`"${ref}" is not a Smartsheet sheet id — they are long numbers.`);
+  /**
+   * Every row, a page at a time.
+   *
+   * Smartsheet returns 500 rows per page at most, so a sheet of 3,000 is six
+   * requests. Reading only the first page is the failure this exists to
+   * avoid: it looks like a working view over a sheet that is quietly missing
+   * five sixths of its rows.
+   *
+   * `ROW_CAP` stops a runaway source taking the server's memory with it. When
+   * it bites, `truncated` says so and the studio and the view both show it,
+   * rather than presenting a partial read as the whole thing.
+   */
+  private async fetchAll(
+    ctx: ConnectorContext,
+    ref: string,
+  ): Promise<{
+    columns: SmartsheetColumn[];
+    rows: Record<string, string>[];
+    total: number;
+    truncated: boolean;
+  }> {
+    const { kind, id } = parseRef(ref);
+    const base = kind === "report" ? `/reports/${id}` : `/sheets/${id}`;
+    const extra = kind === "report" ? "" : "&level=2&include=objectValue";
+
+    let columns: SmartsheetColumn[] = [];
+    const rows: Record<string, string>[] = [];
+    let total = 0;
+    let page = 1;
+    let truncated = false;
+
+    for (;;) {
+      const body = await this.call<SmartsheetSheet>(
+        ctx,
+        `${base}?page=${page}&pageSize=${PAGE_SIZE}${extra}`,
+        "sheet",
+      );
+      if (page === 1) {
+        columns = body.columns ?? [];
+        total = body.totalRowCount ?? (body.rows ?? []).length;
+      }
+      rows.push(...flatten(body));
+      if (rows.length >= ROW_CAP) {
+        truncated = rows.length < total;
+        rows.length = ROW_CAP;
+        break;
+      }
+      // Trust totalPages when it is there; otherwise stop on a short page,
+      // which is what a last page looks like.
+      const pages = body.totalPages ?? 0;
+      const short = (body.rows ?? []).length < PAGE_SIZE;
+      if ((pages && page >= pages) || short) break;
+      page += 1;
     }
-    return this.call<SmartsheetSheet>(
-      ctx,
-      `/sheets/${ref}?level=2&include=objectValue`,
-      "sheet",
-    );
+
+    return { columns, rows, total: Math.max(total, rows.length), truncated };
   }
 }
 
@@ -289,19 +408,25 @@ function smartsheetMessage(
   return `Smartsheet returned ${status} ${statusText}.`;
 }
 
-/** One row per sheet row, keyed by column title, values as displayed. */
+/**
+ * One row per sheet row, keyed by column id, values as displayed.
+ *
+ * Keyed by id and not by title, which is the point of the whole exercise: a
+ * renamed column keeps the same id, so the views built on it keep working.
+ */
 function flatten(sheet: SmartsheetSheet): Record<string, string>[] {
-  const titleById = new Map(sheet.columns.map((c) => [c.id, c.title]));
-  return sheet.rows.map((row) => {
+  const keys = new Set((sheet.columns ?? []).map(columnKey));
+  return (sheet.rows ?? []).map((row) => {
     const flat: Record<string, string> = { _row: String(row.id) };
-    for (const cell of row.cells) {
-      const title = titleById.get(cell.columnId);
-      if (!title) continue;
-      flat[title] = cell.displayValue ?? (cell.value != null ? String(cell.value) : "");
+    for (const cell of row.cells ?? []) {
+      // A report's cells carry the virtual id; a sheet's carry the column id.
+      const key = String(cell.virtualColumnId ?? cell.columnId ?? "");
+      if (!keys.has(key)) continue;
+      flat[key] = cell.displayValue ?? (cell.value != null ? String(cell.value) : "");
     }
     // A column with no cell on this row still has to be present, or a filter
     // on it reads as undefined rather than empty.
-    for (const c of sheet.columns) if (!(c.title in flat)) flat[c.title] = "";
+    for (const key of keys) if (!(key in flat)) flat[key] = "";
     return flat;
   });
 }
@@ -317,8 +442,20 @@ const ISO_DATE = /^\d{4}-\d{2}-\d{2}/;
  * editor, which is most of what makes the builder quick to use.
  */
 function fieldFor(column: SmartsheetColumn, rows: Record<string, string>[]): Field {
-  const values = rows.map((r) => r[column.title]).filter((v) => v != null && v !== "");
-  return fieldFromValues(column.title, values, declaredType(column), column.options);
+  const key = columnKey(column);
+  const values = rows.map((r) => r[key]).filter((v) => v != null && v !== "");
+  return fieldFromValues(key, column.title, values, declaredType(column), column.options);
+}
+
+/**
+ * A column's stable key.
+ *
+ * A sheet's columns have an `id`. A report's have a `virtualId` as well, and
+ * it is the virtual one its cells carry — a report draws from several sheets,
+ * so the underlying column ids are not unique within it.
+ */
+function columnKey(column: SmartsheetColumn): string {
+  return String(column.virtualId ?? column.id);
 }
 
 /**
@@ -330,13 +467,14 @@ function fieldFor(column: SmartsheetColumn, rows: Record<string, string>[]): Fie
  * into a picker instead of a box to type a value into from memory.
  */
 export function fieldFromValues(
+  key: string,
   name: string,
   values: string[],
   declared?: FieldType,
   options?: string[],
 ): Field {
   const type = declared ?? inferredType(values);
-  const field: Field = { name, type };
+  const field: Field = { key, name, type };
   const distinct = [...new Set(options ?? values)].filter((v) => v !== "");
   if (type !== "date" && type !== "url" && distinct.length > 0 && distinct.length <= 40) {
     field.options = distinct.sort((a, b) => a.localeCompare(b, "en", { numeric: true }));

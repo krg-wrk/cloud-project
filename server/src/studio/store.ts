@@ -11,7 +11,7 @@ import type {
   ViewDef,
   ViewSpec,
 } from "./types.js";
-import { EVERYONE } from "./types.js";
+import { EVERYONE, withKeys } from "./types.js";
 
 /**
  * Where the studio's configuration lives.
@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS studio_datasets (
   ref TEXT NOT NULL,
   fields TEXT NOT NULL DEFAULT '[]',
   row_count INTEGER,
+  truncated INTEGER NOT NULL DEFAULT 0,
   refresh_seconds INTEGER NOT NULL DEFAULT 60,
   described_at TEXT,
   created_at TEXT NOT NULL,
@@ -313,11 +314,23 @@ export class StudioStore {
     return this.dataset(id);
   }
 
-  /** Store what a describe found: the columns, and how many rows there were. */
-  recordFields(id: string, fields: Field[], rowCount: number): Dataset | undefined {
+  /**
+   * Store what a describe found: the columns, how many rows there were, and
+   * whether the read stopped short of all of them.
+   */
+  recordFields(
+    id: string,
+    fields: Field[],
+    rowCount: number,
+    truncated = false,
+  ): Dataset | undefined {
     this.db
-      .prepare(`UPDATE studio_datasets SET fields = ?, row_count = ?, described_at = ? WHERE id = ?`)
-      .run(JSON.stringify(fields), rowCount, now(), id);
+      .prepare(
+        `UPDATE studio_datasets
+            SET fields = ?, row_count = ?, truncated = ?, described_at = ?
+          WHERE id = ?`,
+      )
+      .run(JSON.stringify(fields), rowCount, truncated ? 1 : 0, now(), id);
     return this.dataset(id);
   }
 
@@ -533,8 +546,11 @@ function toDataset(row: Record<string, unknown>): Dataset {
     connectionId: str(row.connection_id),
     label: str(row.label),
     ref: str(row.ref),
-    fields: json<Field[]>(row.fields, []),
+    // A dataset described before columns had ids keeps working: the title
+    // stands in as the key, which is what it was being used as.
+    fields: withKeys(json<Field[]>(row.fields, [])),
     rowCount: row.row_count == null ? undefined : Number(row.row_count),
+    truncated: Boolean(Number(row.truncated ?? 0)),
     refreshSeconds: Number(row.refresh_seconds ?? 60),
     describedAt: opt(row.described_at),
     createdAt: str(row.created_at),

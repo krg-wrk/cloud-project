@@ -501,7 +501,14 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
         dataset.ref,
       );
       reader.forget(connection.id, dataset.ref);
-      res.json(studio.recordFields(dataset.id, described.fields, described.rowCount));
+      res.json(
+        studio.recordFields(
+          dataset.id,
+          described.fields,
+          described.rowCount,
+          described.truncated ?? false,
+        ),
+      );
     } catch (err) {
       if (err instanceof Error) {
         res.status(502).json({ error: err.message });

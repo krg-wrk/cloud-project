@@ -36,12 +36,42 @@ export const CONNECTOR_KINDS: ConnectorKind[] = [
 /** What a column holds, which decides how a view can use it. */
 export type FieldType = "text" | "number" | "date" | "boolean" | "person" | "url" | "list";
 
+/**
+ * One column of a dataset.
+ *
+ * `key` and `name` are deliberately separate, and the difference is the whole
+ * point. A view's spec refers to columns by `key` — for Smartsheet, the
+ * column's own id, which does not change when someone renames the column or
+ * drags it somewhere else. `name` is the title as the source has it *today*,
+ * refreshed every time the dataset's columns are read, and it is what the
+ * studio and the rendered view show a person.
+ *
+ * So renaming "Submission Date" to "Copy due" in Smartsheet changes the label
+ * everywhere and breaks nothing. Under the old scheme, where the title *was*
+ * the key, it emptied every view built on that column.
+ */
 export interface Field {
-  /** The column title in the source, used verbatim so the sheet stays legible. */
+  /**
+   * The stable identifier rows are keyed by. A Smartsheet column id, a
+   * report's virtual column id, or — for the Hub's own tables, whose column
+   * names are code — the name itself.
+   */
+  key: string;
+  /** The column's title in the source, as of the last read. */
   name: string;
   type: FieldType;
   /** Distinct values, when there are few enough for the filter to offer a picker. */
   options?: string[];
+}
+
+/**
+ * A dataset's columns as they came back before this scheme existed had no
+ * `key`. Reading one, the title stands in as the key — which is exactly what
+ * it was being used as — so existing views keep working until the dataset's
+ * columns are read again.
+ */
+export function withKeys(fields: Field[]): Field[] {
+  return fields.map((f) => (f.key ? f : { ...f, key: f.name }));
 }
 
 /**
@@ -76,10 +106,22 @@ export interface Dataset {
   id: string;
   connectionId: string;
   label: string;
-  /** Whatever the connector addresses — a sheet id, a collection, a table. */
+  /**
+   * Whatever the connector addresses. For Smartsheet this is `sheet:<id>` or
+   * `report:<id>` — a report is a different endpoint with its own column
+   * identifiers, so which one it is has to be part of the address. A bare
+   * number means a sheet, which is how datasets saved before reports existed
+   * keep working.
+   */
   ref: string;
   fields: Field[];
   rowCount?: number;
+  /**
+   * Set when the source holds more rows than were read. A view over it is
+   * showing the first N, and the studio says so rather than implying it has
+   * everything.
+   */
+  truncated?: boolean;
   /** How long a read is cached. Sheets change a few times a day at most. */
   refreshSeconds: number;
   describedAt?: string;

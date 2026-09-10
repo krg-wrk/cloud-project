@@ -287,11 +287,12 @@ export default function ViewBuilder({
                     <div className="chip-picker">
                       {fields.map((f) => (
                         <button
-                          key={f.name}
+                          key={f.key}
                           className={
-                            (spec.fields[role] ?? []).includes(f.name) ? "chip on" : "chip"
+                            (spec.fields[role] ?? []).includes(f.key) ? "chip on" : "chip"
                           }
-                          onClick={() => toggleInList(role, f.name)}
+                          onClick={() => toggleInList(role, f.key)}
+                          title={f.name}
                         >
                           {f.name}
                         </button>
@@ -308,7 +309,7 @@ export default function ViewBuilder({
                     >
                       <option value="">Not set</option>
                       {suggested(fields, role).map((f) => (
-                        <option key={f.name} value={f.name}>
+                        <option key={f.key} value={f.key}>
                           {f.name}
                         </option>
                       ))}
@@ -342,7 +343,7 @@ export default function ViewBuilder({
               >
                 <option value="">Source order</option>
                 {fields.map((f) => (
-                  <option key={f.name} value={f.name}>
+                  <option key={f.key} value={f.key}>
                     {f.name}
                   </option>
                 ))}
@@ -576,7 +577,7 @@ function Filters({
         <p className="muted small">No filters — every row in the dataset.</p>
       )}
       {spec.filters.map((filter, i) => {
-        const field = fields.find((f) => f.name === filter.field);
+        const field = fields.find((f) => f.key === filter.field);
         const needsValue = !["empty", "not-empty", "mine"].includes(filter.op);
         return (
           <div className="filter-row" key={i}>
@@ -586,7 +587,7 @@ function Filters({
               aria-label="Column"
             >
               {fields.map((f) => (
-                <option key={f.name} value={f.name}>
+                <option key={f.key} value={f.key}>
                   {f.name}
                 </option>
               ))}
@@ -647,7 +648,7 @@ function Filters({
         onClick={() =>
           onChange({
             ...spec,
-            filters: [...spec.filters, { field: fields[0].name, op: "is", value: "" }],
+            filters: [...spec.filters, { field: fields[0].key, op: "is", value: "" }],
           })
         }
       >

@@ -180,9 +180,12 @@ function Table({
   const columns =
     spec.fields.columns && spec.fields.columns.length > 0
       ? spec.fields.columns
-      : fields.map((f) => f.name);
+      : fields.map((f) => f.key);
   const link = spec.fields.link;
-  const typeOf = (name: string) => fields.find((f) => f.name === name)?.type;
+  // A spec names columns by key; the heading shows the source's own title as
+  // of the last read, so a rename in Smartsheet reads through here.
+  const typeOf = (key: string) => fields.find((f) => f.key === key)?.type;
+  const titleOf = (key: string) => fields.find((f) => f.key === key)?.name ?? key;
 
   return (
     <div className="table-wrap">
@@ -191,7 +194,7 @@ function Table({
           <tr>
             {columns.map((c) => (
               <th key={c} className={typeOf(c) === "number" ? "num" : undefined}>
-                {c}
+                {titleOf(c)}
               </th>
             ))}
           </tr>
@@ -233,7 +236,8 @@ function Cards({
 }) {
   const f = spec.fields;
   const image = f.image;
-  const typeOf = (name: string) => fields.find((x) => x.name === name)?.type;
+  const typeOf = (key: string) => fields.find((x) => x.key === key)?.type;
+  const titleOf = (key: string) => fields.find((x) => x.key === key)?.name ?? key;
 
   return (
     <div className="view-cards">
@@ -273,7 +277,7 @@ function Cards({
                   {(f.meta ?? [])
                     .filter((m) => cell(row, m))
                     .map((m) => (
-                      <span key={m} title={m}>
+                      <span key={m} title={titleOf(m)}>
                         {typeOf(m) === "url" ? (
                           <LinkOut url={cell(row, m)}>
                             <Icon name="link" size={13} />

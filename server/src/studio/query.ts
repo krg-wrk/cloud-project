@@ -141,7 +141,9 @@ export function applySpec(
 
   const sort = spec.sort;
   if (sort?.field) {
-    const type = fields.find((f) => f.name === sort.field)?.type;
+    // A spec refers to columns by key, not by title — a renamed column keeps
+    // the same key, which is the point.
+    const type = fields.find((f) => f.key === sort.field)?.type;
     const dir = sort.direction === "desc" ? -1 : 1;
     out = [...out].sort((a, b) => {
       const x = (a[sort.field] ?? "").trim();
@@ -188,7 +190,7 @@ export function usedFields(spec: ViewSpec, fields: Field[]): Field[] {
       spec.sort?.field,
     ].filter((x): x is string => Boolean(x)),
   );
-  return fields.filter((x) => names.has(x.name));
+  return fields.filter((x) => names.has(x.key));
 }
 
 /** Only the keys a view draws, so a row does not carry the whole sheet. */
@@ -196,16 +198,13 @@ export function project(
   rows: Record<string, string>[],
   fields: Field[],
 ): Record<string, string>[] {
-  const names = fields.map((f) => f.name);
   return rows.map((row) => {
     const out: Record<string, string> = { _row: row._row ?? "" };
-    for (const name of names) out[name] = display(row[name] ?? "", typeOf(fields, name));
+    for (const field of fields) {
+      out[field.key] = display(row[field.key] ?? "", field.type);
+    }
     return out;
   });
-}
-
-function typeOf(fields: Field[], name: string): Field["type"] | undefined {
-  return fields.find((f) => f.name === name)?.type;
 }
 
 /**
