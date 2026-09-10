@@ -32,6 +32,8 @@ credentials to set up first.
 | Team | `/team`, `/team/ao` | Per-forecaster pages |
 | Performance | `/performance` | KPIs per forecaster and across the team, over any time range |
 | Trends | `/trends`, `/trends/:id` | All 446 TFDB trend profiles: which are yours, the call on each, which industries still need a score |
+| Data | `/data` | The analysis that sits beside the schedule rather than in it |
+| Proof Point Library | `/data/proof-points` | 10,235 data callouts matched against every trend profile, with the reasoning and the owner's decision |
 | Learning | `/workshops`, `/workshops/ws-201` | The workshop and knowledge-sharing programme, with sign-ups |
 | What's on | `/whats-on` | Leave, public holidays, shows |
 | Studio | `/studio` | Admin: connect a data source, build views of it, choose who sees them, and change the wording of the built-in pages |
@@ -247,6 +249,106 @@ for.
 An image address is rendered in an `<img>` and a link in an anchor, so both go
 through the same http(s)-only check as a research link — a `javascript:` or
 `data:` address is refused with a message rather than dropped silently.
+
+## Data: the Proof Point Library
+
+A trend profile asserts something about the world. A **proof point** is a data
+callout that backs it up — a survey figure, a search-volume rise, a catwalk
+count — and finding them by hand is the slowest part of writing a forecast.
+
+The matching runs outside the Hub, and it is a separate piece of work: every
+data callout is embedded, the closest are reranked against the trend's own
+description, and then two models score each candidate independently without
+seeing the other's answer. Where they agree, and how strongly, is the **tier**:
+
+| Tier | What it means | How many |
+| --- | --- | --- |
+| A | Both models agree, and both scored it high (85–98) | 4,666 |
+| B | Both models agree (70–85) | 4,589 |
+| C | Both agree, but neither was confident (60–70) | 400 |
+| D | One model only, scoring it very high (90–98) | 580 |
+
+That output — 10,235 suggestions across 357 trends — is what `/data/proof-points`
+reads. It started as an Apps Script proof of concept, so the controls are the
+ones the team has already learnt: the three-way **match quality** (top is A and
+D, mid adds B, all adds C), the industry and forecast chips, and toggles for
+approved-only, WGSN's own data, and hiding what a profile already cites. A
+search box over the callout text and the reasoning is new, because ten
+thousand cards without one is not browsable.
+
+Each card is the proof point **as it would appear in the forecast** — the
+pipeline pre-renders it, donuts and all — scaled down and faded at the cut.
+Clicking one enlarges it, with both models' reasoning side by side, the other
+trends it matched, the forecast it came from, and its source. **Copy as text**
+puts the plain-text version on the clipboard, which is what pastes into
+Content Editor with the figure, the context and the attribution intact.
+
+`/data` is a section rather than a page because more analysis is coming, and
+because a forecaster looking for evidence should not have to know which
+project produced it.
+
+### The trend is the Hub's, not the pipeline's
+
+All 357 trends in the library are in the Hub's own trend database under the
+same id, so the Hub is the authority on every one of them. Title, industries
+and ownership are read from there, and the pipeline's copy is used only for a
+trend the Hub has never heard of.
+
+That matters twice. One of the 357 has already been renamed since the matching
+last ran — the sheet still says "Anatomy of Cute", the Hub says "All Things
+Cute" — and the Hub's name is the one people will recognise. And ownership in
+the sheet is an address typed into a column, which cannot answer "does *this*
+viewer own it", cannot see co-authors, and goes stale; read through the Hub,
+**my trends** in the library means exactly what **Mine** means on the Trends
+page.
+
+A forecaster lands on their own trends and a manager on the whole library, but
+the server has the last word: asking for your own trends when you own none of
+them would be an empty page every time, so it gives you everyone's and the
+response says which filter it actually applied.
+
+### The markup is rebuilt, not filtered
+
+Each proof point arrives as HTML, and the library injects it into the page —
+the thing you must not do with markup you did not write. Two of its
+ingredients are model output and one is the callout's own text, so none of it
+is trustworthy enough to inject as-is.
+
+So `sanitiseProofPointHtml` rebuilds it. Every tag, attribute and class is
+checked against a list of what a proof point actually contains — sixteen tags,
+the SVG presentation attributes, twenty-one classes — and anything else is
+**dropped**, not escaped, not partially cleaned. A `<script>` cannot survive
+that, and neither can an `onclick`, a `style`, a `javascript:` href, or a tag
+nobody has thought about yet. Unclosed tags are closed and misnested ones
+ignored, so a broken proof point cannot leave the page's own markup open.
+
+Two deliberate rewrites: a link is re-emitted with `target="_blank"` and
+`rel="noopener noreferrer"` whatever the source said, and a root-relative href
+— a fifth of them, because the pipeline ran inside WGSN's own site — is
+resolved against `https://www.wgsn.com` rather than pointing at the Hub.
+
+It runs once at boot, over all 10,235, so no path to the client skips it.
+Running it over the whole corpus drops **nothing**: no tag, no attribute, no
+class is lost, and no output contains a script, an event handler or a
+`javascript:` URL.
+
+The library is held in memory rather than in a database: the file is written
+by a pipeline that runs weekly, nothing edits it through the Hub, and every
+filter is a scan over ten thousand small objects. Repopulate it with
+`python3 tools/extract-proof-points.py <the workbook>`.
+
+### What the demo carries
+
+All 10,235 rendered proof points are 22 MB of markup, and the shareable demo
+has to be a single file under 16 MB — so it takes 627 of them: every decided
+one, plus a fixed stride through the rest, which keeps the spread across
+tiers, trends, industries and forecast years. The markup is sanitised at build
+time by the same function, because there is no server to do it on the way out.
+
+The proof points do not follow the demo's dark theme. The pipeline draws its
+donuts and gauges with colours baked into the SVG, so on a dark ground the
+figures would disappear; a proof point is an artefact made for a white slide
+and is shown as one in both themes, like an image.
 
 ## KPIs
 
@@ -682,3 +784,8 @@ seed module as the app, so the two never drift apart.
 - `npm run build` — builds both
 - `npm start` — runs the built server; with `NODE_ENV=production` it also
   serves the built client, with a catch-all so deep links survive a refresh
+- `npm test -w server` — the Smartsheet reader against a stubbed API, and the
+  proof point library and its sanitiser
+- `node demo/build.mjs` — rebuilds the shareable single-file demo
+- `python3 tools/extract-proof-points.py <workbook.xlsx>` — regenerates the
+  proof point seed from the Proof Points Reviewer workbook

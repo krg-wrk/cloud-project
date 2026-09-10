@@ -5,6 +5,8 @@ import Layout from "./components/Layout";
 import CalendarView from "./routes/CalendarView";
 import ContentDetail from "./routes/ContentDetail";
 import CustomView from "./routes/CustomView";
+import Data from "./routes/data/Data";
+import ProofPoints from "./routes/data/ProofPoints";
 import Deadlines from "./routes/Deadlines";
 import Kpis from "./routes/Kpis";
 import SessionDetail from "./routes/SessionDetail";
@@ -46,6 +48,12 @@ const router = createBrowserRouter([
       { path: "trends", element: <Trends /> },
       { path: "trends/:id", element: <TrendDetail /> },
       { path: "subscribe", element: <Subscribe /> },
+
+      // Data: the analysis that sits beside the schedule. The library's
+      // filters — and which proof point is enlarged — are all in the query
+      // string, so any state of it is a link.
+      { path: "data", element: <Data /> },
+      { path: "data/proof-points", element: <ProofPoints /> },
 
       // Views built in the studio. One route, one renderer, any layout — a
       // custom view is as linkable as a hand-written page.

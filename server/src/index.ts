@@ -5,6 +5,8 @@ import { createNoteDrafter } from "./ai.js";
 import { createApiRouter, createFeedRouter } from "./api.js";
 import { readAuthConfig, viewerMiddleware } from "./auth.js";
 import { CachedDataSource, createDataSource } from "./data/index.js";
+import { createProofPointRouter } from "./proofPoints/api.js";
+import { ProofPointLibrary } from "./proofPoints/library.js";
 import { SignUps } from "./signUps.js";
 import { HubStore } from "./store.js";
 import { createStudioRouter } from "./studio/api.js";
@@ -21,6 +23,8 @@ const studio = new StudioStore(store.connection);
 const signUps = new SignUps(store);
 const drafter = createNoteDrafter();
 const auth = readAuthConfig();
+// Read once at boot: the pipeline writes it weekly and nothing edits it here.
+const proofPoints = new ProofPointLibrary();
 
 store.seedSignUpsIfEmpty(await data.listSignUps());
 
@@ -39,6 +43,7 @@ app.use(
   })),
   createApiRouter(data, store, signUps, drafter),
   createStudioRouter(studio, data),
+  createProofPointRouter(proofPoints, data),
 );
 
 // In production the built client is served from the same origin, and every
@@ -71,6 +76,7 @@ app.listen(PORT, () => {
       `  auth:      ${auth.mode}${auth.mode === "proxy" ? ` (${auth.emailHeader})` : " — switcher enabled"}\n` +
       `  AI notes:  ${drafter.model === "none" ? "off (no GEMINI_API_KEY)" : drafter.model}\n` +
       `  studio:    ${studio.listConnections().length} connections, ` +
-      `${studio.listDatasets().length} datasets, ${studio.listViews().length} views`,
+      `${studio.listDatasets().length} datasets, ${studio.listViews().length} views\n` +
+      `  proof pts: ${proofPoints.size.toLocaleString()} across ${proofPoints.trendCount} trends`,
   );
 });

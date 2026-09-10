@@ -3703,6 +3703,630 @@
       transition: none !important;
     }
   }
+  /* --- Data: the Proof Point Library ------------------------------------- */
+
+  .muted {
+    color: var(--ink-soft);
+  }
+
+  .small {
+    font-size: 12px;
+  }
+
+  .toggle.small {
+    padding: 4px 9px;
+    font-size: 11.5px;
+  }
+
+  /*
+   * The section landing page reuses the studio's card shape, because a
+   * sub-view of Data and a view built in the studio are the same kind of
+   * thing to the person clicking on one.
+   */
+  .view-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 14px;
+  }
+
+  .view-grid .view-card {
+    padding: 16px 18px 18px;
+    gap: 8px;
+  }
+
+  .view-card-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+  }
+
+  .view-card-head h2 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  .view-card-head .icon {
+    color: var(--accent);
+  }
+
+  .view-card-figure {
+    margin: 4px 0 0;
+    font-size: 12.5px;
+    color: var(--ink-soft);
+  }
+
+  .view-card-figure b {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .filters .field.wide {
+    flex-basis: 100%;
+  }
+
+  .pp-count {
+    margin: -8px 0 14px;
+    text-align: center;
+  }
+
+  .pager {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin: 22px 0 6px;
+  }
+
+  /* --- The cards --------------------------------------------------------- */
+
+  .pp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(262px, 1fr));
+    gap: 14px;
+    align-items: start;
+  }
+
+  .pp-card {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--paper);
+    overflow: hidden;
+  }
+
+  .pp-card:hover {
+    border-color: var(--line-firm);
+  }
+
+  /*
+   * The figure is a window onto the proof point rather than the whole of it.
+   * A proof point is designed for a slide and is taller than a card wants to
+   * be, so it is scaled down, clipped, and faded at the cut — which reads as
+   * "there is more of this" rather than as a rendering fault.
+   */
+  .pp-card-open {
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: none;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .pp-card-figure {
+    position: relative;
+    height: 196px;
+    overflow: hidden;
+    /* The proof point's own ground, which does not follow the theme — see
+       the note on .pp below. */
+    background: #ebebe8;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .pp-card-figure::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 44px;
+    background: linear-gradient(to bottom, rgb(235 235 232 / 0%), #ebebe8);
+    pointer-events: none;
+  }
+
+  .pp-render.scaled {
+    transform: scale(0.62);
+    transform-origin: top center;
+    width: 161.3%;
+    margin-left: -30.65%;
+    pointer-events: none;
+  }
+
+  /* Room at the top of a card for the badge, which sits over the figure. */
+  .pp-render.scaled .pp-slide {
+    padding-top: 46px;
+  }
+
+  .pp-card-badges {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 1;
+    display: flex;
+    gap: 5px;
+  }
+
+  .pp-state {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 7px;
+    border-radius: 999px;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+  }
+
+  /* On the proof point's own light ground, so these are fixed too. */
+  .pp-state.approved {
+    background: #dff0e5;
+    color: #256b48;
+  }
+
+  .pp-state.rejected {
+    background: #f6dedb;
+    color: #b8341f;
+  }
+
+  .pp-state.pending {
+    background: #ffffff;
+    border: 1px solid #c7c7c1;
+    color: #56565c;
+  }
+
+  .pp-card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 12px 14px 14px;
+  }
+
+  .pp-card-trend {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .pp-card-trend a {
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  .pp-card-trend a:hover {
+    color: var(--accent);
+  }
+
+  .pp-match {
+    flex: none;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .pp-also {
+    margin: -4px 0 0;
+  }
+
+  .pp-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .pp-tag {
+    display: inline-flex;
+    padding: 2px 6px;
+    border-radius: 2px;
+    background: var(--sunken);
+    color: var(--ink-mid);
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  /* How it matched, in the accent — it is the page's own judgement, not a
+     tag that came off a sheet. */
+  .pp-tag.tier-a,
+  .pp-tag.tier-d {
+    background: var(--accent-wash);
+    color: var(--accent);
+  }
+
+  .pp-tag.industry {
+    background: var(--sunken);
+    color: var(--teal);
+  }
+
+  .pp-tag.wgsn {
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .pp-tag.known {
+    background: var(--sunken);
+    color: var(--review);
+  }
+
+  .pp-forecast {
+    font-size: 12px;
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* --- Enlarged ---------------------------------------------------------- */
+
+  /*
+   * The enlarged proof point has its own address — ?open=s000123 — so it can
+   * be sent to someone and so the back button closes it. It is a dialog
+   * rather than a page because the grid behind it is where you were, and
+   * coming back to the same scroll position is the point.
+   */
+  .pp-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    border: none;
+    background: rgb(14 14 16 / 42%);
+    cursor: pointer;
+  }
+
+  .pp-dialog {
+    position: fixed;
+    z-index: 61;
+    inset: 3vh 50% auto auto;
+    transform: translateX(50%);
+    width: min(1040px, 94vw);
+    max-height: 94vh;
+    overflow: auto;
+    background: var(--paper);
+    border: 1px solid var(--line-firm);
+    border-radius: var(--radius-card);
+    box-shadow: 0 18px 48px rgb(14 14 16 / 18%);
+  }
+
+  .pp-dialog-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px 20px 14px;
+    background: var(--paper);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .pp-dialog-head h2 {
+    margin: 2px 0 0;
+    font-size: 20px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  /* What the tier means, on its own line — beside the figure it wrapped into
+     the Close button at phone width. */
+  .pp-dialog-tier {
+    margin: 2px 0 0;
+    max-width: 44ch;
+  }
+
+  .pp-dialog-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+    gap: 24px;
+    padding: 20px;
+  }
+
+  .pp-dialog-figure {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /*
+   * The proof point on its own white panel, separate from the Hub's chrome.
+   *
+   * Only the grey slide carries a background of its own; the caption below it
+   * does not, so without this it would sit on whatever the page is — which is
+   * fine on paper and unreadable in the dark theme.
+   */
+  .pp-dialog-figure .pp-render {
+    width: 100%;
+    padding: 18px 18px 20px;
+    background: #ffffff;
+    border: 1px solid #e2e2de;
+    border-radius: var(--radius-card);
+  }
+
+  .pp-dialog-side {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .pp-dialog-block {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 7px;
+  }
+
+  .pp-dialog-block p {
+    margin: 0;
+  }
+
+  /* The model's own words, set apart from the Hub's. */
+  .pp-why {
+    margin: 0;
+    padding: 9px 11px;
+    background: var(--ground);
+    border-left: 2px solid var(--line-firm);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--ink-mid);
+  }
+
+  .pp-why.second {
+    border-left-color: var(--accent-soft);
+  }
+
+  /* Which of the two models said it, and what it scored. */
+  .pp-why-who {
+    display: block;
+    margin-bottom: 3px;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .pp-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 13px;
+  }
+
+  .pp-list a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  @media (max-width: 860px) {
+    .pp-dialog-body {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .pp-dialog {
+      inset: 0 0 auto 0;
+      transform: none;
+      width: 100%;
+      max-height: 100vh;
+      height: 100%;
+      border: 0;
+      border-radius: 0;
+    }
+  }
+
+  /* --- A proof point itself ---------------------------------------------- */
+
+  /*
+   * These classes are not the Hub's: they are written by the matching
+   * pipeline, which renders each proof point as the markup it would appear
+   * in. The sanitiser allows exactly this list and no more, so a class
+   * arriving here that is not styled below is a change to the pipeline and
+   * gets dropped rather than rendered unstyled.
+   *
+   * It does not follow the theme, and that is deliberate. The pipeline draws
+   * its donuts and gauges with colours baked into the SVG — a light grey
+   * track, a purple arc, black figures — so on a dark ground the numbers
+   * would disappear. A proof point is an artefact made for a white slide,
+   * and it is shown as one in both themes, like an image.
+   */
+  .pp {
+    --pp-slide: #ebebe8;
+    --pp-ink: #0e0e10;
+    --pp-ink-mid: #56565c;
+    --pp-ink-soft: #8b8b91;
+    --pp-line: #c7c7c1;
+    --pp-accent: #4c5578;
+    --pp-ok: #256b48;
+    --pp-late: #b8341f;
+    font-family: var(--sans);
+    color: var(--pp-ink);
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  .pp-slide {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    min-height: 168px;
+    padding: 26px 24px 30px;
+    background: var(--pp-slide);
+    text-align: center;
+  }
+
+  .pp-render.scaled .pp-slide {
+    min-height: 0;
+  }
+
+  .pp-head {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.34;
+    letter-spacing: -0.01em;
+    max-width: 40ch;
+  }
+
+  .pp-sub {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--pp-ink-soft);
+  }
+
+  /* The platform's watermark, where the pipeline puts it. */
+  .pp-mark {
+    position: absolute;
+    right: 12px;
+    bottom: 8px;
+    font-size: 8.5px;
+    letter-spacing: 0.06em;
+    color: var(--pp-ink-soft);
+  }
+
+  .pp-stat-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+  }
+
+  .pp-stat {
+    font-size: 38px;
+    font-weight: 500;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+  }
+
+  /* A rise or a fall, as a triangle beside the figure. */
+  .pp-arrow {
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+  }
+
+  .pp-arrow.pp-up {
+    border-bottom: 13px solid var(--pp-ok);
+  }
+
+  .pp-arrow.pp-down {
+    border-top: 13px solid var(--pp-late);
+  }
+
+  /* "WGSN / DATA", the two-line chip that marks our own figures. */
+  .pp-badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 3px 5px;
+    border-radius: 2px;
+    background: var(--pp-ink);
+    color: #ffffff;
+    font-size: 7px;
+    font-weight: 700;
+    line-height: 1.25;
+    letter-spacing: 0.07em;
+  }
+
+  .pp-desc {
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--pp-ink-mid);
+    max-width: 44ch;
+  }
+
+  .pp-item {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .pp-quote {
+    font-size: 40px;
+    line-height: 0.6;
+    color: var(--pp-line);
+  }
+
+  .pp-quotetext {
+    font-size: 14px;
+    font-style: italic;
+    line-height: 1.45;
+    max-width: 42ch;
+  }
+
+  .pp-author {
+    font-size: 11.5px;
+    color: var(--pp-ink-soft);
+  }
+
+  .pp-caption,
+  .pp-foot {
+    padding: 12px 2px 0;
+  }
+
+  .pp-caption .image-caption,
+  .pp .body {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--pp-ink-mid);
+  }
+
+  .pp-caption strong,
+  .pp .body strong {
+    font-weight: 600;
+    color: var(--pp-ink);
+  }
+
+  .pp-foot {
+    padding-top: 8px;
+  }
+
+  .pp-foot .body {
+    font-size: 11px;
+    color: var(--pp-ink-soft);
+  }
+
+  /* A source line the pipeline emitted with nothing in it, which is common —
+     it would otherwise sit there as unexplained space under the caption. */
+  .pp-foot:not(:has(*:not(:empty))) {
+    display: none;
+  }
+
+  .pp .link {
+    color: var(--pp-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .pp svg {
+    max-width: 100%;
+    height: auto;
+  }
+
 </style>
 
 <div class="demo-note">
@@ -4760,9 +5384,13 @@
 
   function renderNav() {
     const { parts } = route();
-    // A custom view lives at /v/<slug>, so "here" has to carry both segments
-    // or every one of them would highlight at once.
-    const here = parts[0] === "v" ? `v/${parts[1] ?? ""}` : (parts[0] ?? "");
+    // A custom view lives at /v/<slug> and a Data sub-view at /data/<name>,
+    // so "here" has to carry both segments or every one of them would
+    // highlight at once.
+    const here =
+      parts[0] === "v" || parts[0] === "data"
+        ? `${parts[0]}/${parts[1] ?? ""}`
+        : (parts[0] ?? "");
     const me = person(viewerId);
     const scope = me.role === "forecaster" ? content.filter((c) => c.forecasterId === me.id) : content;
     const open = scope.filter(isOpen).length;
@@ -4784,6 +5412,19 @@
       ],
       "nav.item.trends": ["#/trends", "trends", "", "trends", true, "work"],
       "nav.item.performance": ["#/performance", "performance", "", "performance", false, "work"],
+      /*
+       * Data has sub-views rather than one page, so the section heading is
+       * the group and each analysis is an item under it. One so far; the
+       * shape is there for the next.
+       */
+      "nav.item.proof-points": [
+        "#/data/proof-points",
+        "data/proof-points",
+        "",
+        "proof",
+        false,
+        "data",
+      ],
       "nav.item.learning": [
         "#/learning",
         "learning",
@@ -4824,6 +5465,14 @@
     const links = [
       [slot("nav.group.work", { tag: "" }), null, null, null, null, false],
       ...inGroup("work"),
+      // The heading only appears if the group has anything in it, so hiding
+      // the library does not leave a stray "Data" above nothing.
+      ...(inGroup("data").length
+        ? [
+            [slot("nav.group.data", { tag: "" }), null, null, null, null, false],
+            ...inGroup("data"),
+          ]
+        : []),
       [slot("nav.group.team", { tag: "" }), null, null, null, null, false],
       ...inGroup("team"),
     ];
@@ -7477,7 +8126,11 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         {
           id: "nav.group",
           label: "Group headings",
-          slots: [slotTitle("nav.group.work", "Your work"), slotTitle("nav.group.team", "The team")],
+          slots: [
+            slotTitle("nav.group.work", "Your work"),
+            slotTitle("nav.group.data", "Data"),
+            slotTitle("nav.group.team", "The team"),
+          ],
         },
         {
           id: "nav.item",
@@ -7489,6 +8142,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             slotNav("nav.item.calendar", "Calendar"),
             slotNav("nav.item.trends", "Trends"),
             slotNav("nav.item.performance", "Performance"),
+            slotNav("nav.item.proof-points", "Proof Point Library"),
             slotNav("nav.item.learning", "Learning"),
             slotNav("nav.item.team", "Forecasters"),
             slotNav("nav.item.whats-on", "What’s on"),
@@ -7630,6 +8284,57 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             slotField("trends.figure.mine", "Yours"),
             slotField("trends.figure.live", "Live"),
             slotField("trends.figure.awaiting", "Awaiting a score"),
+          ],
+        },
+      ],
+    },
+    {
+      id: "data",
+      label: "Data",
+      path: "/data",
+      groups: [
+        {
+          id: "data.head",
+          label: "Page heading",
+          slots: [slotTitle("data.eyebrow", "Analysis"), slotTitle("data.title", "Data")],
+        },
+      ],
+    },
+    {
+      id: "proof",
+      label: "Proof Point Library",
+      path: "/data/proof-points",
+      groups: [
+        {
+          id: "proof.head",
+          label: "Page heading",
+          slots: [
+            slotTitle("proof.eyebrow", "Data"),
+            slotTitle("proof.title", "Proof Point Library"),
+          ],
+        },
+        {
+          id: "proof.figure",
+          label: "The figures",
+          orderable: true,
+          slots: [
+            slotField("proof.figure.showing", "Showing"),
+            slotField("proof.figure.mine", "On your trends"),
+            slotField("proof.figure.approved", "Approved"),
+            slotField("proof.figure.wgsn", "WGSN data"),
+          ],
+        },
+        {
+          id: "proof.filter",
+          label: "Filter labels",
+          slots: [
+            slotField("proof.filter.owner", "Owner"),
+            slotField("proof.filter.trend", "Trend"),
+            slotField("proof.filter.search", "Search"),
+            slotField("proof.filter.quality", "Match quality"),
+            slotField("proof.filter.state", "Show"),
+            slotField("proof.filter.industry", "Industry"),
+            slotField("proof.filter.forecast", "Forecast"),
           ],
         },
       ],
@@ -9267,6 +9972,539 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       </div>`;
   }
 
+  /* ---- Data: the Proof Point Library ------------------------------------ */
+
+  /*
+   * A trend profile asserts something; a proof point is the data that backs
+   * it up. The matching runs outside the Hub — every data callout embedded,
+   * the closest reranked against the trend's own description, and two models
+   * scoring the result independently — and this is the read side of it.
+   *
+   * The demo carries a slice of the library rather than all 10,235, because
+   * the rendered proof points are 22 MB of markup and this page has to be one
+   * file. The markup was sanitised at build time by the same function the
+   * server uses, so what is inlined here has already been through the gate.
+   */
+  const PROOF = DATA.proofPoints ?? { points: [], trends: [], total: 0, trendTotal: 0, tiers: {} };
+  const PROOF_TRENDS = new Map((PROOF.trends ?? []).map((t) => [t.id, t]));
+
+  const QUALITY_TIERS = { top: ["A", "D"], mid: ["A", "B", "D"], all: ["A", "B", "C", "D"] };
+  const QUALITIES = [
+    ["top", "Top matches", "Both models scored it high, or one was very sure"],
+    ["mid", "Top + mid", "Everything the two models agreed on"],
+    ["all", "All matches", "Including the ones neither was confident about"],
+  ];
+
+  /**
+   * What the Hub knows about a trend, which outranks the pipeline's snapshot.
+   *
+   * Every trend in the library is in the Hub's own trend database under the
+   * same id, so the Hub is the authority on all of them: the current title,
+   * the current industry tags, and — the reason this exists — ownership as
+   * person records, so "my trends" here means the same set as "Mine" on the
+   * Trends page.
+   */
+  function proofTrend(trendId) {
+    const hub = TRENDS.find((t) => t.id === trendId && t.editorStatus !== "archived")
+      ?? TRENDS.find((t) => t.id === trendId);
+    const sheet = PROOF_TRENDS.get(trendId);
+    const v = viewer();
+    const own = new Set([v.person.id, nameId(v.person.name)].filter(Boolean));
+    if (hub) {
+      return {
+        id: trendId,
+        title: hub.title,
+        industries: hub.industries ?? [],
+        ownerName: hub.ownerName ?? "",
+        mine: own.has(hub.ownerId) || (hub.authorIds ?? []).some((a) => own.has(a)),
+        profileId: hub.profileId,
+        description: sheet?.description ?? hub.description ?? "",
+        total: sheet?.total ?? 0,
+        tierA: sheet?.tierA ?? 0,
+        publishedUrl: sheet?.publishedUrl ?? hub.publishedUrl,
+      };
+    }
+    return {
+      id: trendId,
+      title: sheet?.title ?? trendId,
+      industries: sheet?.industries ?? [],
+      ownerName: sheet?.ownerName ?? "",
+      mine: false,
+      profileId: "",
+      description: sheet?.description ?? "",
+      total: sheet?.total ?? 0,
+      tierA: sheet?.tierA ?? 0,
+      publishedUrl: sheet?.publishedUrl,
+    };
+  }
+
+  /** A proof point with its trend filled in, as the cards need it. */
+  function proofRow(p) {
+    const t = proofTrend(p.trendId);
+    return {
+      ...p,
+      trendTitle: t.title,
+      industries: t.industries,
+      ownerName: t.ownerName,
+      mine: t.mine,
+      profileId: t.profileId,
+    };
+  }
+
+  /** Where a suggestion stands with the trend's owner. */
+  function decisionPill(p) {
+    if (p.decision === "approve") return `<span class="pp-state approved">Approved</span>`;
+    if (p.decision === "reject") return `<span class="pp-state rejected">Not used</span>`;
+    return `<span class="pp-state pending">In review</span>`;
+  }
+
+  /** How it matched, and what it is tagged to. */
+  function proofTags(r) {
+    return `<div class="pp-tags">
+      <span class="pp-tag tier-${r.tier.toLowerCase()}" title="Tier ${r.tier}">${
+        r.tier === "A" ? "Top match" : r.tier === "D" ? "One model" : `Tier ${r.tier}`
+      }</span>
+      ${r.industries
+        .slice(0, 3)
+        .map((i) => `<span class="pp-tag industry">${esc(i)}</span>`)
+        .join("")}
+      <span class="pp-tag forecast">${esc(r.forecastTag)}</span>
+      ${
+        r.wgsnData
+          ? `<span class="pp-tag wgsn" title="WGSN&rsquo;s own data rather than a third party&rsquo;s">WGSN data</span>`
+          : ""
+      }
+      ${
+        r.alreadyKnown
+          ? `<span class="pp-tag known" title="Already cited in the profile">Already used</span>`
+          : ""
+      }
+    </div>`;
+  }
+
+  /** The Data section: one analysis so far, and room for the next. */
+  function pageData() {
+    return `
+      <div class="head">
+        <div>
+          ${slot("data.eyebrow", { tag: "div", cls: "eyebrow" })}
+          ${slot("data.title", { tag: "h1" })}
+          <p class="lede">What we work out about the work: the evidence behind the trends,
+            and the analysis that sits beside the schedule rather than in it.</p>
+        </div>
+      </div>
+      <div class="view-grid">
+        <a class="view-card" href="#/data/proof-points">
+          <div class="view-card-head">${icon("proof", 18)}<h2>Proof Point Library</h2></div>
+          <p class="muted">Every data callout we hold, matched against every trend profile by
+            two models working independently. Filter it, read the reasoning, copy what you
+            need into a forecast.</p>
+          <p class="view-card-figure"><b>${PROOF.total.toLocaleString()}</b> suggestions across
+            <b>${PROOF.trendTotal}</b> trends
+            ${
+              PROOF.points.length < PROOF.total
+                ? `<br><span class="muted" style="font-size:11.5px">${PROOF.points.length} of them
+                    in this demo — the whole library is 22 MB of rendered markup, and this page
+                    is one file.</span>`
+                : ""
+            }</p>
+        </a>
+      </div>`;
+  }
+
+  function pageProofPoints(params) {
+    const v = viewer();
+    const askedOwner = params.get("owner") ?? (v.isManager ? "all" : "mine");
+    const trendId = params.get("trend") ?? "";
+    const industry = params.get("industry") ?? "";
+    const forecast = params.get("forecast") ?? "";
+    const quality = QUALITY_TIERS[params.get("quality")] ? params.get("quality") : "top";
+    const approved = params.get("approved") === "1";
+    const wgsnData = params.get("wgsnData") === "1";
+    const fresh = params.get("fresh") === "1";
+    const search = (params.get("q") ?? "").trim().toLowerCase();
+    const page = Math.max(Number(params.get("page") ?? 1) || 1, 1);
+    const open = params.get("open") ?? "";
+    const pageSize = 24;
+
+    const rows = PROOF.points.map(proofRow);
+    const tiers = new Set(QUALITY_TIERS[quality]);
+    // Asking for your own trends when you own none would be an empty page
+    // every time, so it falls back to everyone's and the page says so.
+    const mineAll = rows.filter((r) => r.mine).length;
+    const owner = askedOwner === "mine" && mineAll > 0 ? "mine" : "all";
+
+    const hay = (r) =>
+      `${r.text} ${r.trendTitle} ${r.forecastTitle ?? ""} ${r.whyClaude ?? ""} ${
+        r.whyGemini ?? ""
+      }`.toLowerCase();
+
+    // Every test except the named one, so a picker can count without itself.
+    const passes = (r, skip) => {
+      if (skip !== "quality" && !tiers.has(r.tier)) return false;
+      if (skip !== "trend" && trendId && r.trendId !== trendId) return false;
+      if (owner === "mine" && !r.mine) return false;
+      if (approved && r.decision !== "approve") return false;
+      if (wgsnData && !r.wgsnData) return false;
+      if (fresh && r.alreadyKnown) return false;
+      if (skip !== "forecast" && forecast && r.forecastTag !== forecast) return false;
+      if (skip !== "industry" && industry && !r.industries.includes(industry)) return false;
+      if (search && !hay(r).includes(search)) return false;
+      return true;
+    };
+
+    const matched = rows
+      .filter((r) => passes(r))
+      .sort(
+        (a, b) => b.match - a.match || a.trendId.localeCompare(b.trendId) || a.id.localeCompare(b.id),
+      );
+    const total = matched.length;
+    const pages = Math.max(Math.ceil(total / pageSize), 1);
+    const at = Math.min(page, pages);
+    const shown = matched.slice((at - 1) * pageSize, at * pageSize);
+    const from = total === 0 ? 0 : (at - 1) * pageSize + 1;
+    const to = Math.min(at * pageSize, total);
+
+    // The pickers offer what the *other* filters leave, so choosing one does
+    // not leave a row of a single chip and no way back.
+    const industries = [
+      ...new Set(rows.filter((r) => passes(r, "industry")).flatMap((r) => r.industries)),
+    ].sort();
+    const forecasts = [
+      ...new Set(rows.filter((r) => passes(r, "forecast")).map((r) => r.forecastTag)),
+    ].sort((a, b) => {
+      // The years in order, then everything else after them — "Forecasting
+      // pre-2028" carries a year but is not one of them.
+      const year = (s) => Number(/^Forecast (\d{4})$/.exec(s)?.[1] ?? 9999);
+      return year(a) - year(b) || a.localeCompare(b);
+    });
+    const perTrend = new Map();
+    for (const r of rows.filter((x) => passes(x, "trend"))) {
+      perTrend.set(r.trendId, (perTrend.get(r.trendId) ?? 0) + 1);
+    }
+    const trendOptions = [...perTrend.entries()]
+      .map(([id, n]) => ({ id, title: proofTrend(id).title, total: n }))
+      .sort((a, b) => a.title.localeCompare(b.title));
+
+    const figures = {
+      "proof.figure.showing": { n: total },
+      "proof.figure.mine": {
+        n: matched.filter((r) => r.mine).length,
+        when: owner !== "mine" && mineAll > 0,
+      },
+      "proof.figure.approved": { n: matched.filter((r) => r.decision === "approve").length },
+      "proof.figure.wgsn": { n: matched.filter((r) => r.wgsnData).length },
+    };
+
+    const card = (r) => `
+      <div class="pp-card">
+        <button class="pp-card-open" data-pp-open="${esc(r.id)}"
+          aria-label="Enlarge ${esc(r.trendTitle)}">
+          <div class="pp-card-figure">
+            <div class="pp-render scaled">${r.html}</div>
+            <span class="pp-card-badges">${decisionPill(r)}</span>
+          </div>
+        </button>
+        <div class="pp-card-body">
+          <div class="pp-card-trend">
+            <a href="#/data/proof-points?trend=${esc(r.trendId)}">${esc(r.trendTitle)}</a>
+            <span class="pp-match" title="${r.match}% match">${r.match}%</span>
+          </div>
+          ${
+            (r.alsoMatches ?? []).length
+              ? `<p class="pp-also muted small">+ ${r.alsoMatches.length} other trend${
+                  r.alsoMatches.length === 1 ? "" : "s"
+                }</p>`
+              : ""
+          }
+          ${proofTags(r)}
+          ${
+            r.forecastUrl && r.forecastTitle
+              ? `<a class="pp-forecast" href="${esc(r.forecastUrl)}" target="_blank"
+                   rel="noopener noreferrer">${esc(r.forecastTitle)}</a>`
+              : ""
+          }
+          <button class="toggle small" data-pp-copy="${esc(r.id)}">${icon(
+            "copy",
+            13,
+          )}Copy as text</button>
+        </div>
+      </div>`;
+
+    return `
+      <div class="head">
+        <div>
+          ${slot("proof.eyebrow", { tag: "div", cls: "eyebrow" })}
+          ${slot("proof.title", { tag: "h1" })}
+          <p class="lede">Every data callout we hold, matched against every trend profile by
+            two models scoring independently. What was suggested, why, and whether the
+            trend&rsquo;s owner took it.</p>
+        </div>
+        <div class="figures inline">${slotGroup("proof.figure")
+          .map((f) => {
+            const figure = figures[f.id];
+            if (!figure || figure.when === false) return "";
+            return `<div class="figure"><b>${figure.n.toLocaleString()}</b>${slot(f.id, {
+              tag: "span",
+            })}</div>`;
+          })
+          .join("")}</div>
+      </div>
+
+      <div class="filters">
+        <label class="field"><span>${esc(slotText("proof.filter.owner"))}</span>
+          <select data-pp-filter="owner"${mineAll === 0 ? " disabled" : ""}
+            title="${
+              mineAll === 0
+                ? "No trend in the library is owned by or credited to you, so there is nothing to narrow to"
+                : ""
+            }">
+            <option value="mine"${owner === "mine" ? " selected" : ""}>My trends</option>
+            <option value="all"${owner === "all" ? " selected" : ""}>Everyone&rsquo;s</option>
+          </select></label>
+        <label class="field"><span>${esc(slotText("proof.filter.trend"))}</span>
+          <select data-pp-filter="trend"><option value="">All trends</option>${trendOptions
+            .map(
+              (t) =>
+                `<option value="${esc(t.id)}"${t.id === trendId ? " selected" : ""}>${esc(
+                  t.title,
+                )} (${t.total})</option>`,
+            )
+            .join("")}</select></label>
+        <label class="field"><span>${esc(slotText("proof.filter.search"))}</span>
+          <input id="pp-q" type="search" data-pp-filter="q" value="${esc(params.get("q") ?? "")}"
+            placeholder="A figure, a brand, a word"></label>
+        <div class="field"><span>${esc(slotText("proof.filter.quality"))}</span>
+          <div class="toggles">${QUALITIES.map(
+            ([id, label, hint]) =>
+              `<button class="toggle${id === quality ? " on" : ""}" data-pp-quality="${id}"
+                 title="${esc(hint)}">${esc(label)}</button>`,
+          ).join("")}</div>
+        </div>
+        <div class="field"><span>${esc(slotText("proof.filter.state"))}</span>
+          <div class="toggles">
+            <button class="toggle${approved ? " on" : ""}" data-pp-flag="approved"
+              title="Only the ones a trend&rsquo;s owner has accepted">${icon(
+                "proof",
+                13,
+              )}Approved only</button>
+            <button class="toggle${wgsnData ? " on" : ""}" data-pp-flag="wgsnData"
+              title="WGSN&rsquo;s own data rather than a third party&rsquo;s">WGSN data</button>
+            <button class="toggle${fresh ? " on" : ""}" data-pp-flag="fresh"
+              title="Hide the ones the profile already cites">Not yet used</button>
+          </div>
+        </div>
+        ${
+          industries.length > 1
+            ? `<div class="field wide"><span>${esc(slotText("proof.filter.industry"))}</span>
+                <div class="toggles">${industries
+                  .map(
+                    (i) =>
+                      `<button class="toggle${i === industry ? " on" : ""}"
+                         data-pp-chip="industry" data-pp-value="${esc(i)}">${esc(i)}</button>`,
+                  )
+                  .join("")}</div></div>`
+            : ""
+        }
+        ${
+          forecasts.length > 1
+            ? `<div class="field wide"><span>${esc(slotText("proof.filter.forecast"))}</span>
+                <div class="toggles">${forecasts
+                  .map(
+                    (f) =>
+                      `<button class="toggle${f === forecast ? " on" : ""}"
+                         data-pp-chip="forecast" data-pp-value="${esc(f)}">${esc(f)}</button>`,
+                  )
+                  .join("")}</div></div>`
+            : ""
+        }
+      </div>
+
+      ${
+        shown.length === 0
+          ? `<div class="none">${icon("proof", 20)}<p>${
+              owner === "mine"
+                ? "No proof points have been suggested for the trends you own under these filters. Switch to everyone&rsquo;s above, or widen the match quality."
+                : "Nothing matches those filters. Widening the match quality is usually the one that helps."
+            }</p></div>`
+          : `<p class="pp-count muted small">${from.toLocaleString()}&ndash;${to.toLocaleString()}
+               of ${total.toLocaleString()}${
+                 total < PROOF.points.length
+                   ? ` filtered from ${PROOF.points.length.toLocaleString()}`
+                   : ""
+               } &middot; click a proof point to enlarge it</p>
+             <div class="pp-grid">${shown.map(card).join("")}</div>
+             ${
+               pages > 1
+                 ? `<div class="pager">
+                      <button class="toggle" data-pp-page="${at - 1}"${
+                        at <= 1 ? " disabled" : ""
+                      }>${icon("back", 14)}Previous</button>
+                      <span class="muted small">Page ${at.toLocaleString()} of ${pages.toLocaleString()}</span>
+                      <button class="toggle" data-pp-page="${at + 1}"${
+                        at >= pages ? " disabled" : ""
+                      }>Next</button>
+                    </div>`
+                 : ""
+             }`
+      }
+
+      ${open ? proofDialog(open) : ""}`;
+  }
+
+  /**
+   * A proof point enlarged.
+   *
+   * Its own address — ?open=s000123 — so it can be sent to someone, and so
+   * the back button closes it rather than leaving the page.
+   */
+  function proofDialog(id) {
+    const point = PROOF.points.find((p) => p.id === id);
+    if (!point) return "";
+    const r = proofRow(point);
+    const t = proofTrend(r.trendId);
+    const also = (r.alsoMatches ?? [])
+      .map((a) => ({ ...a, title: proofTrend(a.trendId).title }))
+      .sort((a, b) => b.match - a.match);
+
+    return `
+      <button class="pp-scrim" data-pp-close aria-label="Close"></button>
+      <div class="pp-dialog" role="dialog" aria-label="Proof point" aria-modal="true">
+        <div class="pp-dialog-head">
+          <div>
+            <div class="eyebrow">${esc(r.trendTitle)}</div>
+            <h2>${r.match}% match</h2>
+            <p class="muted small pp-dialog-tier">${esc(PROOF.tiers[r.tier] ?? "")}</p>
+          </div>
+          <button class="toggle" data-pp-close>Close</button>
+        </div>
+        <div class="pp-dialog-body">
+          <div class="pp-dialog-figure">
+            <div class="pp-render">${r.html}</div>
+            <button class="toggle small" data-pp-copy="${esc(r.id)}">${icon(
+              "copy",
+              13,
+            )}Copy as text</button>
+          </div>
+          <div class="pp-dialog-side">
+            <div class="pp-dialog-block">
+              <div class="eyebrow">Where it stands</div>
+              ${decisionPill(r)}
+              ${
+                r.decidedAt
+                  ? `<p class="muted small">${
+                      r.decision === "approve" ? "Approved" : "Rejected"
+                    } on ${esc(r.decidedAt.slice(0, 10))}${
+                      r.decidedByOwner ? " by the trend&rsquo;s owner" : ""
+                    }</p>`
+                  : ""
+              }
+            </div>
+            ${
+              r.whyClaude || r.whyGemini
+                ? `<div class="pp-dialog-block">
+                    <div class="eyebrow">Why it was suggested</div>
+                    <!-- Two reasons, because two models read the same callout
+                         against the same trend without seeing each other's
+                         answer. Labelled: unlabelled, near-identical
+                         paragraphs read as a duplicate rather than as
+                         agreement, which is what the method is showing. -->
+                    ${
+                      r.whyClaude
+                        ? `<p class="pp-why">${
+                            r.claudeScore != null
+                              ? `<b class="pp-why-who">First model &middot; ${r.claudeScore}</b>`
+                              : ""
+                          }${esc(r.whyClaude)}</p>`
+                        : ""
+                    }
+                    ${
+                      r.whyGemini && r.whyGemini !== r.whyClaude
+                        ? `<p class="pp-why second">${
+                            r.geminiScore != null
+                              ? `<b class="pp-why-who">Second model &middot; ${r.geminiScore}</b>`
+                              : ""
+                          }${esc(r.whyGemini)}</p>`
+                        : ""
+                    }
+                    <p class="muted small">${
+                      r.agreed
+                        ? "Both scored it independently and agreed."
+                        : "Only one of the two was confident about this one."
+                    }</p>
+                  </div>`
+                : ""
+            }
+            <div class="pp-dialog-block">
+              <div class="eyebrow">Tags</div>${proofTags(r)}
+            </div>
+            ${
+              also.length
+                ? `<div class="pp-dialog-block">
+                    <div class="eyebrow">Also matches</div>
+                    <ul class="pp-list">${also
+                      .map(
+                        (a) =>
+                          `<li><a href="#/data/proof-points?trend=${esc(a.trendId)}&open=${esc(
+                            a.id,
+                          )}&quality=all">${esc(a.title)}</a>
+                           <span class="muted small">${a.match}%</span></li>`,
+                      )
+                      .join("")}</ul>
+                  </div>`
+                : ""
+            }
+            <div class="pp-dialog-block">
+              <div class="eyebrow">Links</div>
+              <ul class="pp-list">
+                ${
+                  r.forecastUrl
+                    ? `<li><a href="${esc(r.forecastUrl)}" target="_blank"
+                         rel="noopener noreferrer">${esc(
+                           r.forecastTitle ?? "The forecast it came from",
+                         )}</a></li>`
+                    : ""
+                }
+                ${(r.reportTitles ?? [])
+                  .map((x) => `<li class="muted small">${esc(x)}</li>`)
+                  .join("")}
+                ${
+                  r.sourceUrl
+                    ? `<li><a href="${esc(
+                        r.sourceUrl,
+                      )}" target="_blank" rel="noopener noreferrer">Original source</a></li>`
+                    : ""
+                }
+                ${
+                  t.publishedUrl
+                    ? `<li><a href="${esc(t.publishedUrl)}" target="_blank"
+                         rel="noopener noreferrer">${esc(t.title)} on the platform</a></li>`
+                    : ""
+                }
+                ${
+                  r.profileId
+                    ? `<li><a href="#/trends/${esc(r.profileId)}">${esc(
+                        r.trendTitle,
+                      )} in the Hub</a></li>`
+                    : ""
+                }
+              </ul>
+            </div>
+            ${
+              t.description
+                ? `<div class="pp-dialog-block">
+                    <div class="eyebrow">The trend</div>
+                    <p class="pp-why">${esc(t.description)}</p>
+                    <p class="muted small">${esc(t.ownerName)} &middot; ${t.total} suggestions,
+                      ${t.tierA} top tier</p>
+                  </div>`
+                : ""
+            }
+          </div>
+        </div>
+      </div>`;
+  }
+
   function pageWhatsOn(params) {
     const type = params.get("type") ?? "";
     const rows = events
@@ -9370,6 +10608,9 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       case "trends":
         html = parts[1] ? pageTrend(parts[1]) : pageTrends(params);
         break;
+      case "data":
+        html = parts[1] === "proof-points" ? pageProofPoints(params) : pageData();
+        break;
       case "whats-on":
         html = pageWhatsOn(params);
         break;
@@ -9423,6 +10664,78 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     );
     view.querySelectorAll("[data-mine]").forEach((el) =>
       el.addEventListener("click", () => setParam("mine", el.dataset.mine)),
+    );
+
+    // The Proof Point Library ----------------------------------------------
+    /*
+     * Changing a filter goes back to the first page and closes whatever was
+     * enlarged, because both belonged to the old filters. Paging and opening
+     * a card keep them.
+     */
+    const ppSet = (name, value, keepPage) => {
+      const { params } = route();
+      const next = new URLSearchParams(params);
+      if (value) next.set(name, value);
+      else next.delete(name);
+      if (!keepPage) {
+        next.delete("page");
+        next.delete("open");
+      }
+      const query = next.toString();
+      location.hash = `#/data/proof-points${query ? `?${query}` : ""}`;
+    };
+    view.querySelectorAll("[data-pp-filter]").forEach((el) =>
+      el.addEventListener("change", () => ppSet(el.dataset.ppFilter, el.value)),
+    );
+    view.querySelectorAll("[data-pp-quality]").forEach((el) =>
+      el.addEventListener("click", () => ppSet("quality", el.dataset.ppQuality)),
+    );
+    view.querySelectorAll("[data-pp-flag]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const on = el.classList.contains("on");
+        ppSet(el.dataset.ppFlag, on ? "" : "1");
+      }),
+    );
+    // A chip toggles: clicking the one that is on clears it.
+    view.querySelectorAll("[data-pp-chip]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const on = el.classList.contains("on");
+        ppSet(el.dataset.ppChip, on ? "" : el.dataset.ppValue);
+      }),
+    );
+    view.querySelectorAll("[data-pp-page]").forEach((el) =>
+      el.addEventListener("click", () => ppSet("page", el.dataset.ppPage, true)),
+    );
+    view.querySelectorAll("[data-pp-open]").forEach((el) =>
+      el.addEventListener("click", () => ppSet("open", el.dataset.ppOpen, true)),
+    );
+    view.querySelectorAll("[data-pp-close]").forEach((el) =>
+      el.addEventListener("click", () => ppSet("open", "", true)),
+    );
+    /*
+     * The pipeline writes a plain-text version alongside the rendered one,
+     * which is what a forecaster actually wants: it pastes into Content
+     * Editor with the figure, the context and the attribution intact.
+     */
+    view.querySelectorAll("[data-pp-copy]").forEach((el) =>
+      el.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const point = PROOF.points.find((p) => p.id === el.dataset.ppCopy);
+        if (!point) return;
+        const said = el.innerHTML;
+        navigator.clipboard.writeText(point.text).then(
+          () => {
+            el.classList.add("on");
+            el.innerHTML = `${icon("copy", 13)}Copied`;
+            setTimeout(() => {
+              el.classList.remove("on");
+              el.innerHTML = said;
+            }, 1600);
+          },
+          () => {},
+        );
+      }),
     );
     // Notes -----------------------------------------------------------------
     const bodyBox = view.querySelector("#note-body");
@@ -10111,6 +11424,15 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
   // Enter saves, Escape abandons — the same keys as the studio's own boxes.
   document.addEventListener("keydown", (e) => {
+    // Escape closes an enlarged proof point, as it does any dialog.
+    if (e.key === "Escape" && document.querySelector(".pp-dialog")) {
+      const { params } = route();
+      const next = new URLSearchParams(params);
+      next.delete("open");
+      const query = next.toString();
+      location.hash = `#/data/proof-points${query ? `?${query}` : ""}`;
+      return;
+    }
     const input = e.target.closest("[data-slot-input]");
     if (!input) return;
     if (e.key === "Enter") {

@@ -98,6 +98,7 @@ export const SLOT_PAGES: SlotPage[] = [
         label: "Group headings",
         slots: [
           t("nav.group.work", "Your work"),
+          t("nav.group.data", "Data"),
           t("nav.group.team", "The team"),
         ],
       },
@@ -111,6 +112,7 @@ export const SLOT_PAGES: SlotPage[] = [
           nav("nav.item.calendar", "Calendar"),
           nav("nav.item.trends", "Trends"),
           nav("nav.item.performance", "Performance"),
+          nav("nav.item.proof-points", "Proof Point Library"),
           nav("nav.item.workshops", "Learning"),
           nav("nav.item.team", "Forecasters"),
           nav("nav.item.whats-on", "What’s on"),
@@ -315,6 +317,76 @@ export const SLOT_PAGES: SlotPage[] = [
           field("trends.filter.state", "State"),
           field("trends.filter.call", "Call"),
           field("trends.filter.scores", "Scores"),
+        ],
+      },
+    ],
+  },
+
+  {
+    id: "data",
+    label: "Data",
+    path: "/data",
+    groups: [
+      {
+        id: "data.head",
+        label: "Page heading",
+        slots: [
+          t("data.eyebrow", "Analysis"),
+          t("data.title", "Data"),
+          {
+            id: "data.sub",
+            label:
+              "What we work out about the work: the evidence behind the trends, and the analysis that sits beside the schedule rather than in it.",
+            kind: "sub",
+            hint: "The line under the title",
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    id: "proof",
+    label: "Proof Point Library",
+    path: "/data/proof-points",
+    groups: [
+      {
+        id: "proof.head",
+        label: "Page heading",
+        slots: [
+          t("proof.eyebrow", "Data"),
+          t("proof.title", "Proof Point Library"),
+          {
+            id: "proof.sub",
+            label:
+              "Every data callout we hold, matched against every trend profile by two models scoring independently. What was suggested, why, and whether the trend’s owner took it.",
+            kind: "sub",
+            hint: "The line under the title",
+          },
+        ],
+      },
+      {
+        id: "proof.figure",
+        label: "The figures",
+        orderable: true,
+        slots: [
+          field("proof.figure.showing", "Showing"),
+          field("proof.figure.mine", "On your trends"),
+          field("proof.figure.approved", "Approved"),
+          field("proof.figure.wgsn", "WGSN data"),
+        ],
+      },
+      {
+        id: "proof.filter",
+        label: "Filter labels",
+        slots: [
+          field("proof.filter.owner", "Owner"),
+          field("proof.filter.trend", "Trend"),
+          field("proof.filter.search", "Search"),
+          field("proof.filter.quality", "Match quality"),
+          field("proof.filter.state", "Show"),
+          field("proof.filter.industry", "Industry"),
+          field("proof.filter.forecast", "Forecast"),
         ],
       },
     ],

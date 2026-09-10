@@ -466,3 +466,95 @@ export interface Preview {
   rows: Record<string, string>[];
   error?: string;
 }
+
+/* ---- Proof points ------------------------------------------------------- */
+
+/**
+ * How good a match is, as the ensemble judged it. A and B are both models
+ * agreeing at different strengths; C is agreement neither was confident
+ * about; D is one model alone, but very sure.
+ */
+export type ProofPointTier = "A" | "B" | "C" | "D";
+
+/** The same data callout, suggested for another trend. */
+export interface AlsoMatch {
+  id: string;
+  trendId: string;
+  match: number;
+  title?: string;
+  url?: string;
+}
+
+/** A suggested proof point, with its trend's details filled in. */
+export interface ProofPointRow {
+  id: string;
+  trendId: string;
+  trendTitle: string;
+  calloutId: string;
+  tier: ProofPointTier;
+  match: number;
+  claudeScore?: number;
+  geminiScore?: number;
+  agreed: boolean;
+  forecastTag: string;
+  forecastYear?: number;
+  kpiStatus?: string;
+  alreadyKnown: boolean;
+  wgsnData: boolean;
+  whyClaude?: string;
+  whyGemini?: string;
+  /** Sanitised on the server, which is the only place it is safe to do. */
+  html: string;
+  text: string;
+  sourceUrl?: string;
+  forecastUrl?: string;
+  forecastTitle?: string;
+  reportTitles?: string[];
+  alsoMatches?: AlsoMatch[];
+  decision?: "approve" | "reject";
+  decidedAt?: string;
+  decidedByOwner?: boolean;
+  industries: string[];
+  ownerName: string;
+  /** Whether the signed-in person owns the trend it is suggested for. */
+  mine: boolean;
+  /** The Hub's own profile id, so a proof point links to the profile. */
+  profileId?: string;
+}
+
+export type Quality = "top" | "mid" | "all";
+
+/** A page of the library, with the pickers for the filters above it. */
+export interface LibraryPage {
+  total: number;
+  page: number;
+  pageSize: number;
+  rows: ProofPointRow[];
+  /**
+   * Which owner filter the server actually applied. "mine" can be asked for
+   * and not granted — somebody who owns no trends gets everyone's instead —
+   * so the page reads this rather than assuming.
+   */
+  owner: "mine" | "all";
+  counts: { all: number; approved: number; wgsnData: number; mine: number; mineAll: number };
+  trends: { id: string; title: string; total: number; mine: boolean }[];
+  industries: string[];
+  forecasts: string[];
+}
+
+/** One proof point enlarged, with the trend it is evidence for. */
+export interface ProofPointDetail {
+  point: ProofPointRow;
+  trend: {
+    id: string;
+    title: string;
+    description: string;
+    industries: string[];
+    ownerName: string;
+    total: number;
+    tierA: number;
+    editorUrl?: string;
+    publishedUrl?: string;
+  } | null;
+  tierMeaning: string;
+}

@@ -64,7 +64,7 @@ interface Section {
   short?: string;
   badge?: string;
   end?: boolean;
-  group: "work" | "team";
+  group: "work" | "data" | "team";
   /** Shown as a tab on a phone; the rest go behind "More". */
   primary?: boolean;
   /** Built in the studio rather than written by hand. */
@@ -126,6 +126,19 @@ function sections({
       group: "work",
       slot: "nav.item.performance",
     },
+    /*
+     * Data has sub-views rather than one page, so the section heading is the
+     * group and each analysis is an item under it. One so far; the shape is
+     * there for the next.
+     */
+    {
+      to: "/data/proof-points",
+      label: "Proof Point Library",
+      short: "Proof points",
+      icon: "proof",
+      slot: "nav.item.proof-points",
+      group: "data",
+    },
     {
       to: "/workshops",
       label: "Learning",
@@ -166,7 +179,7 @@ function asSection(view: ViewLink): Section {
     to: `/v/${view.slug}`,
     label: view.label,
     icon: view.icon,
-    group: view.section === "The team" ? "team" : "work",
+    group: view.section === "The team" ? "team" : view.section === "Data" ? "data" : "work",
     badge: view.state === "draft" ? "Draft" : undefined,
     custom: true,
     order: view.order,
@@ -243,6 +256,25 @@ function Sidebar({ content }: { content: ContentItem[] }) {
               {s.badge && <span className="count">{s.badge}</span>}
             </NavLink>
           ))}
+
+        {/* The heading only appears if the group has anything in it, so
+            hiding the library does not leave a stray "Data" above nothing. */}
+        {items.some((s) => s.group === "data") && (
+          <>
+            <div className="nav-label" style={{ marginTop: 20 }}>
+              <Slot id="nav.group.data" />
+            </div>
+            {items
+              .filter((s) => s.group === "data")
+              .map((s) => (
+                <NavLink key={s.to} to={s.to} className="nav-link">
+                  <Icon name={s.icon} />
+                  {s.label}
+                  {s.badge && <span className="count">{s.badge}</span>}
+                </NavLink>
+              ))}
+          </>
+        )}
 
         <div className="nav-label" style={{ marginTop: 20 }}>
           <Slot id="nav.group.team" />

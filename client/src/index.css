@@ -3745,3 +3745,620 @@ a.view-row:hover {
 .crumb-row .back-link {
   margin-bottom: 0;
 }
+
+/* --- Data: the Proof Point Library --------------------------------------- */
+
+/*
+ * The section landing page reuses the studio's card grid shape, because a
+ * sub-view of Data and a view built in the studio are the same kind of thing
+ * to the person clicking on one.
+ */
+.view-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 14px;
+}
+
+.view-grid .view-card {
+  padding: 16px 18px 18px;
+  gap: 8px;
+}
+
+.view-card-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.view-card-head h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.view-card-head .icon {
+  color: var(--accent);
+}
+
+.view-card-figure {
+  margin: 4px 0 0;
+  font-size: 12.5px;
+  color: var(--ink-45);
+}
+
+.view-card-figure b {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* A row of chips inside a filter field. */
+.chip-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.filters .field.wide {
+  flex-basis: 100%;
+}
+
+.pp-count {
+  margin: -8px 0 14px;
+  text-align: center;
+}
+
+.pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin: 22px 0 6px;
+}
+
+/* --- The cards ----------------------------------------------------------- */
+
+.pp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(262px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.pp-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.pp-card:hover {
+  border-color: var(--rule-strong);
+}
+
+/*
+ * The figure is a window onto the proof point rather than the whole of it.
+ * A proof point is designed for a slide and is taller than a card wants to
+ * be, so it is scaled down, clipped, and faded at the cut — which reads as
+ * "there is more of this" rather than as a rendering fault. Clicking
+ * enlarges it, which is the whole gesture of the page.
+ */
+.pp-card-open {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pp-card-figure {
+  position: relative;
+  height: 196px;
+  overflow: hidden;
+  background: var(--sunken);
+  border-bottom: 1px solid var(--rule);
+}
+
+.pp-card-figure::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 44px;
+  background: linear-gradient(to bottom, rgb(235 235 232 / 0%), var(--sunken));
+  pointer-events: none;
+}
+
+.pp-card-open:hover .pp-card-figure {
+  background: #e5e5e1;
+}
+
+.pp-render.scaled {
+  transform: scale(0.62);
+  transform-origin: top center;
+  width: 161.3%;
+  margin-left: -30.65%;
+  pointer-events: none;
+}
+
+/* Room at the top of a card for the badge, which sits over the figure. */
+.pp-render.scaled .pp-slide {
+  padding-top: 46px;
+}
+
+.pp-card-badges {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 1;
+  display: flex;
+  gap: 5px;
+}
+
+.pp-state {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.pp-state.approved {
+  background: #dff0e5;
+  color: var(--status-published);
+}
+
+.pp-state.rejected {
+  background: #f6dedb;
+  color: var(--status-at-risk);
+}
+
+.pp-state.pending {
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  color: var(--ink-45);
+}
+
+.pp-card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 14px 14px;
+}
+
+.pp-card-trend {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
+.pp-card-trend a {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+.pp-card-trend a:hover {
+  color: var(--accent);
+}
+
+.pp-match {
+  flex: none;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--ink-45);
+}
+
+.pp-also {
+  margin: -4px 0 0;
+}
+
+.pp-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.pp-tag {
+  display: inline-flex;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--sunken);
+  color: var(--ink-70);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+/* How it matched, in the accent — it is the page's own judgement, not a tag
+   that came off a sheet. */
+.pp-tag.tier-a,
+.pp-tag.tier-d {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.pp-tag.industry {
+  background: #edf0ee;
+  color: #3f5548;
+}
+
+.pp-tag.wgsn {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.pp-tag.known {
+  background: #f4ece2;
+  color: var(--review);
+}
+
+.pp-forecast {
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.btn.small {
+  padding: 4px 9px;
+  font-size: 11.5px;
+}
+
+/* --- Enlarged ------------------------------------------------------------ */
+
+/*
+ * The enlarged proof point has its own address — ?open=s000123 — so it can be
+ * sent to someone and so the back button closes it. It is a dialog rather
+ * than a page because the grid behind it is where you were, and coming back
+ * to the same scroll position is the point.
+ */
+.pp-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  border: none;
+  background: rgb(14 14 16 / 42%);
+  cursor: pointer;
+}
+
+.pp-dialog {
+  position: fixed;
+  z-index: 61;
+  inset: 3vh 50% auto auto;
+  transform: translateX(50%);
+  width: min(1040px, 94vw);
+  max-height: 94vh;
+  overflow: auto;
+  background: var(--paper);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-card);
+  box-shadow: 0 18px 48px rgb(14 14 16 / 18%);
+}
+
+.pp-dialog-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 20px 14px;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+}
+
+.pp-dialog-head h2 {
+  margin: 2px 0 0;
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+/* What the tier means, on its own line — beside the figure it wrapped into
+   the Close button at phone width. */
+.pp-dialog-tier {
+  margin: 2px 0 0;
+  max-width: 44ch;
+}
+
+.pp-dialog-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 24px;
+  padding: 20px;
+}
+
+.pp-dialog-figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+/*
+ * The proof point on its own white panel, separate from the Hub's chrome.
+ *
+ * Only the grey slide carries a background of its own; the caption below it
+ * does not, so without this it would sit on whatever the page is — which is
+ * fine on paper and unreadable on the demo's dark theme. A proof point is an
+ * artefact made for a white slide, and it is shown as one.
+ */
+.pp-dialog-figure .pp-render {
+  width: 100%;
+  padding: 18px 18px 20px;
+  background: #ffffff;
+  border: 1px solid #e2e2de;
+  border-radius: var(--radius-card);
+}
+
+.pp-dialog-side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.pp-dialog-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.pp-dialog-block p {
+  margin: 0;
+}
+
+/* The model's own words, set apart from the Hub's. */
+.pp-why {
+  margin: 0;
+  padding: 9px 11px;
+  background: var(--ground);
+  border-left: 2px solid var(--rule-strong);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--ink-70);
+}
+
+.pp-why.second {
+  border-left-color: var(--accent-soft);
+}
+
+/* Which of the two models said it, and what it scored. */
+.pp-why-who {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  color: var(--ink-45);
+}
+
+.pp-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+}
+
+.pp-list a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+@media (max-width: 860px) {
+  .pp-dialog-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .pp-dialog {
+    inset: 0 0 auto 0;
+    transform: none;
+    width: 100%;
+    max-height: 100vh;
+    height: 100%;
+    border: 0;
+    border-radius: 0;
+  }
+}
+
+/* --- A proof point itself ------------------------------------------------ */
+
+/*
+ * These classes are not the Hub's: they are written by the matching pipeline,
+ * which renders each proof point as the markup it would appear in. The
+ * sanitiser allows exactly this list and no more, so a class arriving here
+ * that is not styled below is a change to the pipeline and gets dropped
+ * rather than rendered unstyled.
+ *
+ * The type is set in the Hub's own faces at the Hub's own sizes. A proof
+ * point is evidence, not a screenshot of a slide, and it should look like it
+ * belongs on the page it is being read on.
+ */
+.pp {
+  font-family: var(--ui);
+  color: var(--ink);
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.pp-slide {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 168px;
+  padding: 26px 24px 30px;
+  background: var(--sunken);
+  text-align: center;
+}
+
+.pp-render.scaled .pp-slide {
+  min-height: 0;
+}
+
+.pp-head {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.34;
+  letter-spacing: -0.01em;
+  max-width: 40ch;
+}
+
+.pp-sub {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-45);
+}
+
+/* The platform's watermark, where the pipeline puts it. */
+.pp-mark {
+  position: absolute;
+  right: 12px;
+  bottom: 8px;
+  font-size: 8.5px;
+  letter-spacing: 0.06em;
+  color: var(--ink-45);
+}
+
+.pp-stat-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+}
+
+.pp-stat {
+  font-size: 38px;
+  font-weight: 500;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+/* A rise or a fall, as a triangle beside the figure. */
+.pp-arrow {
+  width: 0;
+  height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+}
+
+.pp-arrow.pp-up {
+  border-bottom: 13px solid var(--status-published);
+}
+
+.pp-arrow.pp-down {
+  border-top: 13px solid var(--status-at-risk);
+}
+
+/* "WGSN / DATA", the two-line chip that marks our own figures. */
+.pp-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 3px 5px;
+  border-radius: 2px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 7px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: 0.07em;
+}
+
+.pp-desc {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-70);
+  max-width: 44ch;
+}
+
+.pp-item {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.pp-quote {
+  font-family: var(--display);
+  font-size: 40px;
+  line-height: 0.6;
+  color: var(--rule-strong);
+}
+
+.pp-quotetext {
+  font-size: 14px;
+  font-style: italic;
+  line-height: 1.45;
+  max-width: 42ch;
+}
+
+.pp-author {
+  font-size: 11.5px;
+  color: var(--ink-45);
+}
+
+.pp-caption,
+.pp-foot {
+  padding: 12px 2px 0;
+}
+
+.pp-caption .image-caption,
+.pp .body {
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--ink-70);
+}
+
+.pp-caption strong,
+.pp .body strong {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.pp-foot {
+  padding-top: 8px;
+}
+
+.pp-foot .body {
+  font-size: 11px;
+  color: var(--ink-45);
+}
+
+/* A source line the pipeline emitted with nothing in it, which is common —
+   it would otherwise sit there as unexplained space under the caption. */
+.pp-foot:not(:has(*:not(:empty))) {
+  display: none;
+}
+
+.pp .link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.pp svg {
+  max-width: 100%;
+  height: auto;
+}
