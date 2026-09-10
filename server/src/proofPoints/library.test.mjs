@@ -167,7 +167,10 @@ test("the Hub outranks the pipeline's snapshot on every trend it knows", () => {
   // And the industry filter and its chips read the Hub's tagging.
   const page = lib.query({ quality: "all", industry: "Beauty" }, AMARA, undefined, hub);
   assert.deepEqual(ids(page).sort(), ["e", "f"]);
-  assert.ok(!page.industries.includes("Fashion Design"), "the stale tag is gone");
+  assert.ok(
+    !page.industries.some((i) => i.value === "Fashion Design"),
+    "the stale tag is gone",
+  );
   assert.deepEqual(
     page.trends.map((t) => t.title),
     ["The Statement Scarf"],
@@ -205,30 +208,60 @@ test("the filters combine", () => {
   );
 });
 
-test("a picker offers what the other filters leave, not what its own does", () => {
+test("a chip counts against the other filters, not against its own", () => {
   const lib = fixture(SEED);
-  // With an industry chosen, the industry chips still show every industry
-  // available under the *other* filters — otherwise choosing one would leave
-  // a row of a single chip and no way back.
-  const chosen = lib.query({ quality: "all", industry: "Consumer Tech" }, AMARA);
-  assert.deepEqual(chosen.industries, ["Consumer Tech", "Fashion Buying", "Fashion Design"]);
+  const chips = (f) => f.map((x) => `${x.value} ${x.total}`);
 
-  // Every *other* picker does narrow, which is what makes them useful: with
-  // Consumer Tech chosen there is no point offering a trend that has nothing
-  // under it, or a forecast tag with no rows left.
-  assert.deepEqual(
-    chosen.trends.map((t) => t.id),
-    ["1"],
-    "the trend picker drops a trend with nothing to show",
-  );
-  assert.deepEqual(chosen.forecasts, ["Forecast 2028", "KPI not met"]);
-  const scarf = lib.query({ quality: "all", industry: "Fashion Design" }, AMARA);
-  assert.deepEqual(scarf.trends.map((t) => t.id), ["2"]);
-  assert.deepEqual(scarf.forecasts, ["Forecast 2028"], "and a forecast tag with none");
+  // With an industry chosen, the industry chips still say what choosing a
+  // different one instead would give you — counting with its own filter
+  // applied would leave every other chip reading zero.
+  const chosen = lib.query({ quality: "all", industry: "Consumer Tech" }, AMARA);
+  assert.deepEqual(chips(chosen.industries), [
+    "Consumer Tech 4",
+    "Fashion Buying 2",
+    "Fashion Design 2",
+  ]);
+
+  // The forecast chips *do* narrow, because that is a different filter.
+  assert.deepEqual(chips(chosen.forecasts), ["Forecast 2028 3", "KPI not met 1"]);
+
+  // The trend picker is a select rather than a row of chips, so it drops a
+  // trend with nothing to show instead of listing it at zero.
+  assert.deepEqual(chosen.trends.map((t) => t.id), ["1"]);
+});
+
+test("a chip with nothing under it stays, and reads zero", () => {
+  const lib = fixture(SEED);
+  const chips = (f) => f.map((x) => `${x.value} ${x.total}`);
+
+  /*
+   * The whole reason for this: a chip that vanishes when it would return
+   * nothing takes the row's other chips with it as the layout reflows, so
+   * clicking one moves the next one you were about to click.
+   */
+  const narrow = lib.query({ quality: "all", trend: "1" }, AMARA);
+  assert.deepEqual(chips(narrow.industries), [
+    "Consumer Tech 4",
+    "Fashion Buying 0",
+    "Fashion Design 0",
+  ]);
+  assert.deepEqual(chips(narrow.forecasts), ["Forecast 2028 3", "KPI not met 1"]);
+
+  // Whatever is filtered, the chip set is the same length every time.
+  const shapes = [
+    lib.query({}, AMARA),
+    lib.query({ quality: "all" }, AMARA),
+    lib.query({ quality: "all", approved: true }, AMARA),
+    lib.query({ quality: "all", q: "nothing at all matches this" }, AMARA),
+  ].map((page) => [page.industries.length, page.forecasts.length]);
+  for (const shape of shapes) assert.deepEqual(shape, shapes[0], "the chip row never changes size");
 
   // Years first, then the ones without a year.
   const all = lib.query({ quality: "all" }, AMARA);
-  assert.deepEqual(all.forecasts, ["Forecast 2028", "KPI not met"]);
+  assert.deepEqual(
+    all.forecasts.map((f) => f.value),
+    ["Forecast 2028", "KPI not met"],
+  );
   assert.deepEqual(
     all.trends.map((t) => `${t.title} ${t.total}${t.mine ? " mine" : ""}`),
     ["AI Companions 4 mine", "The Graphic Scarf 2"],
@@ -307,13 +340,10 @@ test("a forecast tag that is not a year sorts after the ones that are", () => {
   });
   // "Forecasting pre-2028" means already past, so filing it between 2028 and
   // 2029 on the strength of its digits would put it at the wrong end.
-  assert.deepEqual(lib.query({ quality: "all" }, AMARA).forecasts, [
-    "Forecast 2028",
-    "Forecast 2029",
-    "Forecast 2035",
-    "Forecasting pre-2028",
-    "KPI not met",
-  ]);
+  assert.deepEqual(
+    lib.query({ quality: "all" }, AMARA).forecasts.map((f) => f.value),
+    ["Forecast 2028", "Forecast 2029", "Forecast 2035", "Forecasting pre-2028", "KPI not met"],
+  );
 });
 
 test("a missing seed leaves an empty library rather than stopping the Hub", () => {

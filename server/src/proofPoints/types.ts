@@ -197,6 +197,22 @@ export interface LibraryPage {
   };
   /** The trends with suggestions, for the picker. */
   trends: { id: string; title: string; total: number; mine: boolean }[];
-  industries: string[];
-  forecasts: string[];
+  /**
+   * The chip filters, as every value the library holds with the count each
+   * would leave.
+   *
+   * Every value, including the ones at nought — a chip that vanishes when it
+   * would return nothing takes the row's other chips with it as the layout
+   * reflows, so clicking one moves the next one you were about to click. A
+   * chip that stays and reads zero also says something useful: nothing here,
+   * rather than no such thing.
+   */
+  industries: Facet[];
+  forecasts: Facet[];
+}
+
+export interface Facet {
+  value: string;
+  /** How many would be left with this one chosen and the rest as they are. */
+  total: number;
 }

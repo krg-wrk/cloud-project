@@ -220,13 +220,31 @@ export class ProofPointLibrary {
     const start = (page - 1) * pageSize;
     const rows = matched.slice(start, start + pageSize).map((p) => this.row(p, viewer, name, hub));
 
-    // The pickers: what is available given the other filters.
-    const industries = new Set<string>();
-    for (const p of this.points.filter((x) => passes(x, "industry"))) {
-      for (const industry of about(p.trendId).industries) industries.add(industry);
+    /*
+     * The chip filters.
+     *
+     * Every value the library holds, always, with the count each would leave
+     * given the *other* filters. Counting without the chip's own filter is
+     * what makes the row usable — with Beauty chosen, the industry chips
+     * still say what choosing Interiors instead would give you, rather than
+     * all reading zero.
+     */
+    const industryTotals = new Map<string, number>();
+    const forecastTotals = new Map<string, number>();
+    for (const p of this.points) {
+      for (const industry of about(p.trendId).industries) {
+        if (!industryTotals.has(industry)) industryTotals.set(industry, 0);
+      }
+      if (!forecastTotals.has(p.forecastTag)) forecastTotals.set(p.forecastTag, 0);
     }
-    const forecasts = new Set<string>();
-    for (const p of this.points.filter((x) => passes(x, "forecast"))) forecasts.add(p.forecastTag);
+    for (const p of this.points.filter((x) => passes(x, "industry"))) {
+      for (const industry of about(p.trendId).industries) {
+        industryTotals.set(industry, (industryTotals.get(industry) ?? 0) + 1);
+      }
+    }
+    for (const p of this.points.filter((x) => passes(x, "forecast"))) {
+      forecastTotals.set(p.forecastTag, (forecastTotals.get(p.forecastTag) ?? 0) + 1);
+    }
 
     const perTrend = new Map<string, number>();
     for (const p of this.points.filter((x) => passes(x, "trend"))) {
@@ -252,17 +270,21 @@ export class ProofPointLibrary {
           return { id, title: trend.title, total, mine: trend.mine };
         })
         .sort((a, b) => a.title.localeCompare(b.title)),
-      industries: [...industries].sort(),
+      industries: [...industryTotals.entries()]
+        .map(([value, total]) => ({ value, total }))
+        .sort((a, b) => a.value.localeCompare(b.value)),
       /*
        * The years in order, then everything else alphabetically after them.
        * "Forecasting pre-2028" carries a year but is not one of them — it
        * means "already past" — so matching a bare four digits would file it
        * between 2028 and 2029, which is the wrong end of the row.
        */
-      forecasts: [...forecasts].sort((a, b) => {
-        const year = (s: string) => Number(/^Forecast (\d{4})$/.exec(s)?.[1] ?? 9999);
-        return year(a) - year(b) || a.localeCompare(b);
-      }),
+      forecasts: [...forecastTotals.entries()]
+        .map(([value, total]) => ({ value, total }))
+        .sort((a, b) => {
+          const year = (s: string) => Number(/^Forecast (\d{4})$/.exec(s)?.[1] ?? 9999);
+          return year(a.value) - year(b.value) || a.value.localeCompare(b.value);
+        }),
     };
   }
 }

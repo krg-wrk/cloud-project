@@ -3746,6 +3746,12 @@ a.view-row:hover {
   margin-bottom: 0;
 }
 
+/* The day panel is a bordered box, so its back row needs the gap the other
+   crumb rows get from the page heading below them. */
+.day-view-back {
+  margin-bottom: 12px;
+}
+
 /* --- Data: the Proof Point Library --------------------------------------- */
 
 /*
@@ -3797,6 +3803,208 @@ a.view-row:hover {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+/*
+ * The controls people reach for, on one row that does not move.
+ *
+ * A grid rather than a wrapping flex: the columns are declared, so a select
+ * whose options changed cannot shove its neighbours sideways, and the row is
+ * the same height whatever is filtered. It stacks below the width where four
+ * groups stop fitting.
+ */
+.pp-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 14px;
+  padding: 13px 15px;
+  margin-bottom: 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+/*
+ * Each group is atomic: fixed width, and no wrapping inside it.
+ *
+ * That is what makes the row predictable. A group either fits on a line or
+ * moves to the next one whole — the three match-quality buttons can never
+ * break across two lines with their label stranded above them, which is
+ * what a plain squeeze did. And because every group's width is fixed, where
+ * the row wraps depends on the window and nothing else: clicking a filter
+ * cannot reflow it.
+ */
+.pp-controls > .field,
+.pp-controls-end {
+  flex: none;
+}
+
+.pp-controls > .field > .chip-row {
+  flex-wrap: nowrap;
+}
+
+/* The search box is the one thing that takes up the slack. */
+.pp-controls > .field.pp-search {
+  flex: 1 1 190px;
+  min-width: 170px;
+}
+
+.pp-search input {
+  width: 100%;
+  min-width: 0;
+}
+
+/* A select sizes itself to its widest option, and the options change with
+   the filters — so both are given a width of their own instead. */
+.pp-trend-select {
+  width: 190px;
+}
+
+.pp-owner-select {
+  width: 132px;
+}
+
+/* Pushed to the end of whichever line it lands on. */
+.pp-controls-end {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+/*
+ * How many extra filters are on, as a badge that sits outside the button's
+ * box rather than inside its text.
+ *
+ * In the flow it changed the button's width as filters came and went, which
+ * moved the button under the cursor — the same complaint as the chips, one
+ * control along.
+ */
+.pp-more-btn {
+  position: relative;
+}
+
+.pp-more-btn .count {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-size: 10.5px;
+  line-height: 17px;
+  text-align: center;
+}
+
+.pp-more-btn.accent .count {
+  background: var(--accent-ink);
+  color: var(--accent);
+}
+
+/* On a phone every group takes the full width, so nothing is squeezed. */
+@media (max-width: 700px) {
+  .pp-controls > .field,
+  .pp-controls-end {
+    flex-basis: 100%;
+  }
+
+  .pp-controls > .field > .chip-row {
+    flex-wrap: wrap;
+  }
+
+  .pp-trend-select,
+  .pp-owner-select {
+    width: 100%;
+  }
+}
+
+/* The rest of the filters, when they are asked for. */
+.pp-more {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 15px;
+  margin: -12px 0 12px;
+  border: 1px solid var(--rule);
+  border-top: none;
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--ground);
+}
+
+.pp-more .field.wide {
+  flex-basis: 100%;
+}
+
+/*
+ * The count on a chip, at a width that never changes.
+ *
+ * Tabular figures in a box wide enough for the longest form the count can
+ * take, so a chip's width is decided by its label alone — otherwise
+ * narrowing from 4,493 to 12 would shrink the chip and slide every chip
+ * after it along the row, which is the thing this whole layout is for.
+ */
+.pp-chip-n {
+  min-width: 3ch;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--ink-45);
+  font-variant-numeric: tabular-nums;
+}
+
+.btn.accent .pp-chip-n {
+  color: var(--accent-ink);
+  opacity: 0.72;
+}
+
+/*
+ * A chip with nothing under it stays on the row — taking it away would move
+ * every chip after it — and says so rather than looking clickable.
+ */
+.chip-row .btn:disabled {
+  opacity: 1;
+  color: var(--ink-45);
+  border-color: var(--rule);
+  background: var(--ground);
+  cursor: default;
+}
+
+/* What is on, and the way off it. */
+.pp-active {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 14px;
+}
+
+.pp-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent-wash);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.pp-pill:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.pp-pill span {
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.7;
 }
 
 .filters .field.wide {

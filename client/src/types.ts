@@ -538,8 +538,19 @@ export interface LibraryPage {
   owner: "mine" | "all";
   counts: { all: number; approved: number; wgsnData: number; mine: number; mineAll: number };
   trends: { id: string; title: string; total: number; mine: boolean }[];
-  industries: string[];
-  forecasts: string[];
+  /**
+   * Every value the library holds with the count each would leave, including
+   * the ones at nought — a chip that vanishes when it would return nothing
+   * takes its neighbours with it as the row reflows, so clicking one moves
+   * the next one you were about to click.
+   */
+  industries: Facet[];
+  forecasts: Facet[];
+}
+
+export interface Facet {
+  value: string;
+  total: number;
 }
 
 /** One proof point enlarged, with the trend it is evidence for. */

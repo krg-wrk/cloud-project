@@ -32,6 +32,20 @@ const QUALITIES: { id: Quality; label: string; hint: string }[] = [
   { id: "all", label: "All matches", hint: "Including the ones neither was confident about" },
 ];
 
+/**
+ * A chip's count, at a width that never changes.
+ *
+ * The exact figure would defeat the point of the chip row holding still:
+ * "4,493" is four characters wider than "0", so every chip after it slides
+ * along, and a chip at the end of a row hops onto the next one. Three
+ * characters at most, tabular, right-aligned — so a chip's width is decided
+ * by its label alone. The tooltip carries the real number.
+ */
+function short(n: number): string {
+  if (n < 1000) return String(n);
+  return `${Math.round(n / 1000)}k`;
+}
+
 /** The filters this page owns, and therefore remembers per person. */
 const REMEMBERED = ["owner", "trend", "industry", "forecast", "quality", "approved", "wgsnData", "fresh"];
 
@@ -347,6 +361,30 @@ export default function ProofPoints() {
 
   useRemembered("proof-points", me.email, REMEMBERED, params, setParams);
 
+  /*
+   * Whether the extra filters are showing.
+   *
+   * Not in the address: it is a preference about this person's own screen
+   * rather than part of the view, so a link someone is sent opens the library
+   * they were meant to see and not somebody else's idea of a tidy panel. It
+   * does persist per person, because someone who works in the chips wants
+   * them there every morning.
+   */
+  const [more, setMore] = useState(() => {
+    try {
+      return localStorage.getItem("forecasters-hub.proof-points.more") === "1";
+    } catch {
+      return false;
+    }
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("forecasters-hub.proof-points.more", more ? "1" : "0");
+    } catch {
+      // Blocked storage: the panel just forgets between visits.
+    }
+  }, [more]);
+
   // Left out of the address, the server chooses: a forecaster's own trends, a
   // manager's whole library — and everyone's for somebody who owns none,
   // rather than an empty page. Whatever they pick is remembered above.
@@ -377,20 +415,43 @@ export default function ProofPoints() {
     })}`,
   );
 
-  /** Changing a filter goes back to the first page; paging does not. */
-  function setParam(name: string, value: string, keepPage = false) {
+  /**
+   * Change one thing in the address.
+   *
+   * Two behaviours, and the difference matters:
+   *
+   * - A **filter** replaces the history entry and resets the page, because
+   *   the enlarged card and whatever page you were on both belonged to the
+   *   old filters — and because typing six letters in the search box should
+   *   not put six entries behind you to press back through.
+   * - A **step** — turning a page, opening a card — pushes an entry and keeps
+   *   the filters, so the browser's own back button turns the page back and
+   *   closes the enlarged card. That is what people press, and it was going
+   *   straight past the library to whatever came before it.
+   */
+  function setParam(name: string, value: string, kind: "filter" | "step" = "filter") {
     const next = new URLSearchParams(params);
     if (value) next.set(name, value);
     else next.delete(name);
-    if (!keepPage) next.delete("page");
-    // The enlarged card belongs to the old filters.
-    if (!keepPage) next.delete("open");
-    setParams(next, { replace: true });
+    if (kind === "filter") {
+      next.delete("page");
+      next.delete("open");
+    }
+    setParams(next, { replace: kind === "filter" });
   }
 
   /** A chip toggles: clicking the one that is on clears it. */
   const toggle = (name: string, value: string, current: string) =>
     setParam(name, current === value ? "" : value);
+
+  /** Everything the panel holds, off in one go. */
+  function clearAll() {
+    const next = new URLSearchParams(params);
+    for (const key of ["industry", "forecast", "approved", "wgsnData", "fresh", "q", "page", "open"]) {
+      next.delete(key);
+    }
+    setParams(next, { replace: true });
+  }
 
   if (error) return <ErrorNote message={error} />;
 
@@ -403,6 +464,23 @@ export default function ProofPoints() {
   const pages = Math.max(Math.ceil(total / pageSize), 1);
   const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
   const to = Math.min(page * pageSize, total);
+
+  /*
+   * Whatever is narrowing the page, as a pill with its own way off.
+   *
+   * The trend and the match quality are not here: they are the two controls
+   * always on screen, and match quality is never *not* set. These are the
+   * ones that can be on while the panel that holds them is shut.
+   */
+  const active: { label: string; clear: () => void }[] = [
+    industry && { label: industry, clear: () => setParam("industry", "") },
+    forecast && { label: forecast, clear: () => setParam("forecast", "") },
+    approved && { label: "Approved only", clear: () => setParam("approved", "") },
+    wgsnData && { label: "WGSN data", clear: () => setParam("wgsnData", "") },
+    fresh && { label: "Not yet used", clear: () => setParam("fresh", "") },
+    search && { label: `“${search}”`, clear: () => setParam("q", "") },
+  ].filter((x): x is { label: string; clear: () => void } => Boolean(x));
+  const narrowed = active.length;
 
   return (
     <>
@@ -437,11 +515,26 @@ export default function ProofPoints() {
         </div>
       </div>
 
-      <div className="filters">
+      {/*
+        The controls, in two tiers.
+
+        Everything used to sit in one wrapping bar: seven groups, fifteen
+        chips, two hundred and sixty pixels of controls before a single proof
+        point. Worse, the chip rows were faceted down to what had results, so
+        clicking one changed how many chips there were and the row reflowed
+        under the cursor — the next chip you were about to click had moved.
+
+        Now the four controls people reach for are one fixed row, the rest is
+        behind a disclosure that says how many are on, and whatever is set
+        shows as removable pills above the results. The chip rows carry every
+        value the library holds with its count, so they never change size.
+      */}
+      <div className="pp-controls">
         <div className="field">
           <Slot id="proof.filter.owner" as="label" />
           <select
             id="owner"
+            className="pp-owner-select"
             value={applied}
             onChange={(e) => setParam("owner", e.target.value)}
             // Nothing on their own trends to show, so the choice is not one.
@@ -459,7 +552,17 @@ export default function ProofPoints() {
 
         <div className="field">
           <Slot id="proof.filter.trend" as="label" />
-          <select id="trend" value={trend} onChange={(e) => setParam("trend", e.target.value)}>
+          {/*
+            Fixed width: a select sizes itself to its widest option, and the
+            options change with the filters — so left to itself it resized on
+            every click and shoved the controls beside it sideways.
+          */}
+          <select
+            id="trend"
+            className="pp-trend-select"
+            value={trend}
+            onChange={(e) => setParam("trend", e.target.value)}
+          >
             <option value="">All trends</option>
             {(data?.trends ?? []).map((t) => (
               <option key={t.id} value={t.id}>
@@ -469,7 +572,7 @@ export default function ProofPoints() {
           </select>
         </div>
 
-        <div className="field">
+        <div className="field pp-search">
           <Slot id="proof.filter.search" as="label" />
           <input
             id="pp-q"
@@ -496,71 +599,124 @@ export default function ProofPoints() {
           </div>
         </div>
 
-        <div className="field">
-          <Slot id="proof.filter.state" as="label" />
-          <div className="chip-row">
-            <button
-              className={approved ? "btn accent" : "btn"}
-              onClick={() => setParam("approved", approved ? "" : "1")}
-              title="Only the ones a trend's owner has accepted"
-            >
-              <Icon name="proof" size={13} /> Approved only
-            </button>
-            <button
-              className={wgsnData ? "btn accent" : "btn"}
-              onClick={() => setParam("wgsnData", wgsnData ? "" : "1")}
-              title="WGSN's own data rather than a third party's"
-            >
-              WGSN data
-            </button>
-            <button
-              className={fresh ? "btn accent" : "btn"}
-              onClick={() => setParam("fresh", fresh ? "" : "1")}
-              title="Hide the ones the profile already cites"
-            >
-              Not yet used
-            </button>
-          </div>
+        <div className="pp-controls-end">
+          <button
+            className={more ? "btn accent pp-more-btn" : "btn pp-more-btn"}
+            onClick={() => setMore(!more)}
+            aria-expanded={more}
+            aria-controls="pp-more"
+          >
+            <Icon name="studio" size={14} />
+            More filters
+            {narrowed > 0 && <span className="count">{narrowed}</span>}
+          </button>
+          <ShareLink label="Copy link" />
         </div>
+      </div>
 
-        {(data?.industries.length ?? 0) > 1 && (
+      {more && (
+        <div className="pp-more" id="pp-more">
           <div className="field wide">
             <Slot id="proof.filter.industry" as="label" />
             <div className="chip-row">
               {(data?.industries ?? []).map((i) => (
                 <button
-                  key={i}
-                  className={industry === i ? "btn accent" : "btn"}
-                  onClick={() => toggle("industry", i, industry)}
+                  key={i.value}
+                  className={industry === i.value ? "btn accent" : "btn"}
+                  onClick={() => toggle("industry", i.value, industry)}
+                  // Nothing under it given the other filters. It stays on the
+                  // row so the row does not move, and says so.
+                  disabled={i.total === 0 && industry !== i.value}
+                  title={
+                    i.total === 0
+                      ? `Nothing tagged ${i.value} under the other filters`
+                      : `${i.total.toLocaleString()} proof points`
+                  }
                 >
-                  {i}
+                  {i.value}
+                  <span className="pp-chip-n">{short(i.total)}</span>
                 </button>
               ))}
             </div>
           </div>
-        )}
 
-        {(data?.forecasts.length ?? 0) > 1 && (
           <div className="field wide">
             <Slot id="proof.filter.forecast" as="label" />
             <div className="chip-row">
               {(data?.forecasts ?? []).map((f) => (
                 <button
-                  key={f}
-                  className={forecast === f ? "btn accent" : "btn"}
-                  onClick={() => toggle("forecast", f, forecast)}
+                  key={f.value}
+                  className={forecast === f.value ? "btn accent" : "btn"}
+                  onClick={() => toggle("forecast", f.value, forecast)}
+                  disabled={f.total === 0 && forecast !== f.value}
+                  title={
+                    f.total === 0
+                      ? `Nothing tagged ${f.value} under the other filters`
+                      : `${f.total.toLocaleString()} proof points`
+                  }
                 >
-                  {f}
+                  {f.value}
+                  <span className="pp-chip-n">{short(f.total)}</span>
                 </button>
               ))}
             </div>
           </div>
-        )}
 
-        <div className="filters-right">
-          <ShareLink />
+          <div className="field wide">
+            <Slot id="proof.filter.state" as="label" />
+            <div className="chip-row">
+              <button
+                className={approved ? "btn accent" : "btn"}
+                onClick={() => setParam("approved", approved ? "" : "1")}
+                title="Only the ones a trend&rsquo;s owner has accepted"
+              >
+                <Icon name="proof" size={13} /> Approved only
+                <span className="pp-chip-n">{short(data?.counts.approved ?? 0)}</span>
+              </button>
+              <button
+                className={wgsnData ? "btn accent" : "btn"}
+                onClick={() => setParam("wgsnData", wgsnData ? "" : "1")}
+                title="WGSN&rsquo;s own data rather than a third party&rsquo;s"
+              >
+                WGSN data
+                <span className="pp-chip-n">{short(data?.counts.wgsnData ?? 0)}</span>
+              </button>
+              <button
+                className={fresh ? "btn accent" : "btn"}
+                onClick={() => setParam("fresh", fresh ? "" : "1")}
+                title="Hide the ones the profile already cites"
+              >
+                Not yet used
+              </button>
+            </div>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/*
+        What is on, and the way off it. With the panel closed this is the only
+        thing saying a filter is narrowing the page — which is the failure
+        mode of hiding filters behind a button.
+      */}
+      {active.length > 0 && (
+        <div className="pp-active">
+          {active.map((a) => (
+            <button
+              key={a.label}
+              className="pp-pill"
+              onClick={a.clear}
+              title={`Stop filtering by ${a.label}`}
+            >
+              {a.label}
+              <span aria-hidden>&times;</span>
+            </button>
+          ))}
+          <button className="btn ghost small" onClick={clearAll}>
+            Clear all
+          </button>
+        </div>
+      )}
+
 
       {loading && !data ? (
         <Loading what="the proof point library" />
@@ -585,7 +741,7 @@ export default function ProofPoints() {
 
           <div className="pp-grid">
             {rows.map((row) => (
-              <Card key={row.id} row={row} onOpen={() => setParam("open", row.id, true)} />
+              <Card key={row.id} row={row} onOpen={() => setParam("open", row.id, "step")} />
             ))}
           </div>
 
@@ -594,7 +750,7 @@ export default function ProofPoints() {
               <button
                 className="btn"
                 disabled={page <= 1}
-                onClick={() => setParam("page", String(page - 1), true)}
+                onClick={() => setParam("page", String(page - 1), "step")}
               >
                 <Icon name="back" size={14} /> Previous
               </button>
@@ -604,7 +760,7 @@ export default function ProofPoints() {
               <button
                 className="btn"
                 disabled={page >= pages}
-                onClick={() => setParam("page", String(page + 1), true)}
+                onClick={() => setParam("page", String(page + 1), "step")}
               >
                 Next
               </button>
@@ -613,7 +769,11 @@ export default function ProofPoints() {
         </>
       )}
 
-      {open && <Enlarged id={open} onClose={() => setParam("open", "", true)} />}
+      {/*
+        Closing replaces rather than pushes, so shutting the card does not
+        leave an entry that re-opens it if you then press forward.
+      */}
+      {open && <Enlarged id={open} onClose={() => setParam("open", "")} />}
     </>
   );
 }

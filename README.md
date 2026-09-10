@@ -45,6 +45,38 @@ Every view is addressable, and every filter lives in the query string — so
 Slack and someone else opens the same thing. That's the main thing AppSheet
 could not do.
 
+### Getting back
+
+Every page you reach by clicking something has the way back on the page, and
+it behaves differently depending on how you got there:
+
+- **Clicked through from inside the Hub.** It goes back one step, which
+  returns the list exactly as you left it — filters and scroll position
+  included. Rebuilding the address by hand could not do that: the list's
+  filters are in its query string and the page you are on does not know them.
+- **Arrived on a link somebody sent you.** There is nothing behind you inside
+  the Hub, so it becomes an ordinary link to the list the thing belongs to,
+  and says so: "Trends" rather than "Back".
+
+`location.key === "default"` is the discriminator — React Router gives the
+first entry in a session that key.
+
+The pages that have it: a forecast, a forecaster, a workshop session, a trend
+profile, **a single day of the calendar** (back to the month you were
+looking at), and **the diary when a calendar event opened it** — leave, a
+holiday and a show have no page of their own, so clicking one on the calendar
+opens the diary filtered to its kind. That last one only appears when the
+calendar sent you: the diary is a sidebar page too, and one opened from the
+sidebar should not carry a back button. The calendar's links say where they
+came from (`from=calendar`) and the diary reads it; only a known origin is
+honoured, never a path out of the query string.
+
+The browser's own back button works everywhere as well, because the address
+is real. In the proof point library that includes closing an enlarged proof
+point, which is a pushed history entry — whereas changing a filter replaces
+one, so typing six letters in a search box does not put six entries behind
+you.
+
 ## Workshops and knowledge sharing
 
 `/workshops` is the one part of the Hub people write to rather than read.
@@ -286,6 +318,43 @@ Content Editor with the figure, the context and the attribution intact.
 `/data` is a section rather than a page because more analysis is coming, and
 because a forecaster looking for evidence should not have to know which
 project produced it.
+
+### The controls hold still
+
+The first cut put all of it in one wrapping bar: seven groups, fifteen chips,
+two hundred and sixty pixels of controls before a single proof point. And the
+chip rows were faceted down to whatever had results, so clicking one changed
+how many chips there were and the row reflowed under the cursor — the next
+chip you were about to click had moved.
+
+Three things fix it, and the third is the one that matters:
+
+- **Two tiers.** The four controls people reach for — whose trends, which
+  trend, search, match quality — are one row. The industry and forecast chips
+  and the three show-toggles are behind a disclosure that carries a badge
+  saying how many are on. Whatever is set also shows as a **removable pill**
+  above the results, because the failure mode of hiding filters behind a
+  button is not knowing one is narrowing the page. Eighty-three pixels
+  instead of two hundred and sixty, and two rows of proof points on screen.
+- **Atomic groups.** The row is flex with every group fixed-width and
+  non-wrapping, so a group either fits on a line or moves to the next one
+  whole — the three match-quality buttons can never break across two lines
+  with their label stranded above them. Both selects have a width of their
+  own, because a `<select>` sizes itself to its widest option and the options
+  change with the filters.
+- **Every chip, always, with its count.** A chip that would return nothing
+  stays on the row and reads zero, greyed and unclickable. Removing it is
+  what moved its neighbours. The counts are computed against the *other*
+  filters, not the chip's own — with Beauty chosen the industry chips still
+  say what Interiors instead would give you — and they are abbreviated to
+  three characters (`4k`) in a fixed box, because "4,493" is four characters
+  wider than "0" and that alone was enough to slide a row along. The exact
+  figure is in the tooltip.
+
+The disclosure's open state is kept per person in `localStorage` rather than
+in the address: it is a preference about someone's own screen, not part of
+the view, so a link you send opens the library you meant and not your idea of
+a tidy panel.
 
 ### The trend is the Hub's, not the pipeline's
 

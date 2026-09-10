@@ -4,12 +4,23 @@ import { query, useApi } from "../lib/api";
 import { TODAY, formatMedium, monthKey, monthLabel } from "../lib/date";
 import { EVENT_LABELS, personName } from "../lib/domain";
 import type { CalendarEvent, EventType, Person } from "../types";
+import BackLink from "../components/BackLink";
 import { ErrorNote, EventPill, Loading } from "../components/bits";
 import ShareLink from "../components/ShareLink";
 
 export default function WhatsOn() {
   const [params, setParams] = useSearchParams();
   const type = params.get("type") ?? "";
+  /*
+   * Leave, a holiday and a show have no page of their own, so clicking one on
+   * the calendar opens the diary filtered to its kind. That is a click
+   * through, and it needs the way back — but the diary is also a sidebar
+   * page, and one opened from the sidebar should not carry a back button. So
+   * the calendar says where the click came from and this reads it.
+   *
+   * Only a known origin is honoured, never a path from the query string.
+   */
+  const cameFromCalendar = params.get("from") === "calendar";
   const people = useApi<Person[]>("/people");
   const { data, error, loading } = useApi<CalendarEvent[]>(
     `/events${query({ type: type || undefined, from: TODAY })}`,
@@ -33,6 +44,12 @@ export default function WhatsOn() {
 
   return (
     <>
+      {cameFromCalendar && (
+        <div className="crumb-row">
+          <BackLink to={`/calendar/${monthKey(TODAY)}`} label="Calendar" />
+        </div>
+      )}
+
       <div className="page-head">
         <div>
           <div className="eyebrow">Leave · holidays · workshops · shows</div>

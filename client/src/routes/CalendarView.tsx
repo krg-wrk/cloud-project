@@ -39,6 +39,7 @@ import type {
   Schedule,
   SessionWithSignUps,
 } from "../types";
+import BackLink from "../components/BackLink";
 import { ErrorNote, Loading } from "../components/bits";
 import EntryForm from "../components/EntryForm";
 import ShareLink from "../components/ShareLink";
@@ -188,7 +189,10 @@ function chipHref(chip: Chip): string {
     case "session":
       return `/workshops/${chip.session.id}`;
     case "event":
-      return `/whats-on?type=${chip.event.type}`;
+      // No page of its own, so it opens the diary filtered to its kind.
+      // `from` says where the click came from, so the diary knows to offer
+      // the way back — see WhatsOn.
+      return `/whats-on?type=${chip.event.type}&from=calendar`;
     case "entry":
       return "";
   }
@@ -661,7 +665,7 @@ function SpanBar({
     <Link
       className="cal-span"
       style={style}
-      to={`/whats-on?type=${bar.item.event.type}`}
+      to={`/whats-on?type=${bar.item.event.type}&from=calendar`}
       title={`${title}${who ? ` — ${who}` : ""}, ${dates}`}
     >
       {body}
@@ -744,6 +748,15 @@ function DayView({
 
   return (
     <div className="day-view">
+      {/*
+        A day is reached by clicking a date, so it needs the way back on the
+        page. Going back returns to the month you were looking at with its
+        filters intact, which rebuilding the address could not do — this day
+        does not know them.
+      */}
+      <div className="crumb-row day-view-back">
+        <BackLink to={`/calendar/${monthKey(date)}`} label="Calendar" />
+      </div>
       <div className="day-view-head">
         <div className="day-view-date">
           <b>{dayOfMonth(date)}</b>
