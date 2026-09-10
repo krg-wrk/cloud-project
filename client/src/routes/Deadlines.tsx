@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { query, useApi } from "../lib/api";
 import { Slot, useCustom } from "../lib/custom";
+import { useRemembered } from "../lib/remember";
 import { TODAY, formatShort, relativeDays } from "../lib/date";
 import { STATUS_LABELS, STATUS_ORDER, isOverdue, personName } from "../lib/domain";
 import { useViewer } from "../lib/viewer";
@@ -20,10 +21,16 @@ const VERTICALS = [
   "Footwear & Accessories", "Food & Drink", "Consumer Tech", "Kidswear",
 ];
 
+/** The filters this page owns, and therefore remembers per person. */
+const REMEMBERED = ["forecaster", "vertical", "type", "status", "q"];
+
 export default function Deadlines() {
   const [params, setParams] = useSearchParams();
-  const { person, isManager } = useViewer();
+  const { person, isManager, me } = useViewer();
   const custom = useCustom();
+
+  // What this person last filtered to, when the address carries nothing.
+  useRemembered("deadlines", me.email, REMEMBERED, params, setParams);
   const people = useApi<Person[]>("/people");
   // The formats we publish, and their tiers, come from the taxonomy.
   const taxonomy = useApi<Taxonomy>("/taxonomy");

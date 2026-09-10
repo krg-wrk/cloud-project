@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from "react-router-dom";
 import { useApi, query } from "../lib/api";
 import { Slot, useCustom } from "../lib/custom";
+import { useRemembered } from "../lib/remember";
 import { Icon } from "../lib/icons";
 import { useViewer } from "../lib/viewer";
 import type { TrendCall, TrendList } from "../types";
@@ -76,13 +77,24 @@ export function StatePill({
   );
 }
 
+/** The filters this page owns, and therefore remembers per person. */
+const REMEMBERED = ["owner", "type", "industry", "state", "call", "needsScore"];
+
 export default function Trends() {
   const [params, setParams] = useSearchParams();
-  const { isManager } = useViewer();
+  const { isManager, me } = useViewer();
   const custom = useCustom();
 
-  // A forecaster's own profiles are the point of the page; a manager opens on
-  // the whole database, because that is the view they need.
+  // What this person last looked at, when the address carries no filters of
+  // its own. A link someone was sent always wins over what is remembered.
+  useRemembered("trends", me.email, REMEMBERED, params, setParams);
+
+  /*
+   * A forecaster's own profiles are the point of the page, so that is where
+   * they land. A manager opens on the whole database, because overseeing it
+   * is their job. Either way, whatever they last chose is what comes back
+   * next time — see useRemembered above.
+   */
   const owner = params.get("owner") ?? (isManager ? "all" : "mine");
   const type = params.get("type") ?? "";
   const call = params.get("call") ?? "";

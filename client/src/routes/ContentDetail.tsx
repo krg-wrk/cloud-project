@@ -6,6 +6,7 @@ import { TODAY, formatLong, formatShort, monthKey, relativeDays } from "../lib/d
 import { STATUS_LABELS, clashesFor, isOverdue, personName } from "../lib/domain";
 import type { CalendarEvent, ContentItem, PeerReview, Person, Taxonomy } from "../types";
 import { Avatar, ErrorNote, EventPill, Loading, StatusPill } from "../components/bits";
+import BackLink from "../components/BackLink";
 import DetailsPanel from "../components/DetailsPanel";
 import Notes from "../components/Notes";
 import PeerReviewPanel from "../components/PeerReviewPanel";
@@ -38,9 +39,12 @@ export default function ContentDetail() {
 
   return (
     <>
-      <div className="breadcrumb">
-        <Link to="/deadlines">{custom.text("content.crumb")}</Link> <span>/</span>{" "}
-        <span>{c.vertical}</span> <span>/</span> <span>{c.id}</span>
+      <div className="crumb-row">
+        <BackLink to="/deadlines" label={custom.text("content.crumb")} />
+        <div className="breadcrumb">
+          <Link to="/deadlines">{custom.text("content.crumb")}</Link> <span>/</span>{" "}
+          <span>{c.vertical}</span> <span>/</span> <span>{c.id}</span>
+        </div>
       </div>
 
       <div className="page-head">

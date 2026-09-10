@@ -67,6 +67,8 @@
     --mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
     --rail: 240px;
+    /* Cards with a picture in them; everything else stays square. */
+    --radius-card: 8px;
     color-scheme: light;
   }
 
@@ -2154,10 +2156,15 @@
     gap: 16px;
   }
 
+  /*
+   * A card carrying a picture takes a softer corner than the rest of the app,
+   * which is squared on purpose.
+   */
   .trend-card {
     display: flex;
     flex-direction: column;
     border: 1px solid var(--line);
+    border-radius: var(--radius-card);
     background: var(--paper);
     overflow: hidden;
   }
@@ -2174,6 +2181,7 @@
    * profile stays recognisable, and a linked image simply covers it.
    */
   .cover {
+    border-radius: var(--radius-card);
     position: relative;
     display: flex;
     align-items: center;
@@ -2901,6 +2909,7 @@
     display: flex;
     flex-direction: column;
     border: 1px solid var(--line);
+    border-radius: var(--radius-card);
     background: var(--paper);
     overflow: hidden;
     color: inherit;
@@ -3265,6 +3274,50 @@
     .slot-row-actions {
       flex-wrap: wrap;
     }
+  }
+
+  /*
+   * Back to where you were.
+   *
+   * Beside the breadcrumb, because that is where a reader looks for the way
+   * out. Quiet by default — an escape hatch, not an action.
+   */
+  .back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px 3px 4px;
+    border: 1px solid transparent;
+    background: transparent;
+    font: inherit;
+    font-size: 12.5px;
+    color: var(--ink-mid);
+    cursor: pointer;
+  }
+
+  .back-link .icon {
+    color: var(--ink-soft);
+  }
+
+  .back-link:hover {
+    border-color: var(--line-firm);
+    color: var(--ink);
+  }
+
+  .back-link:hover .icon {
+    color: var(--accent);
+  }
+
+  .crumb-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+
+  .crumb-row .crumb {
+    margin-bottom: 0;
   }
 
   /* ---- Navigation on a phone -------------------------------------------- */
@@ -3786,6 +3839,10 @@
     eye: "M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12S18 18.5 12 18.5 2.5 12 2.5 12Zm9.5 2.6a2.6 2.6 0 1 0 0-5.2 2.6 2.6 0 0 0 0 5.2Z",
     lock: "M7 10.5V7.5a5 5 0 0 1 10 0v3M5.5 10.5h13a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z",
     people: "M17 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-7A3.5 3.5 0 0 0 3 18.5V20M10 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM21 20v-2a3.5 3.5 0 0 0-2.2-3.2",
+    back: "M19 12H5M11 18l-6-6 6-6",
+    data: "M4 6.5C4 5.1 7.6 4 12 4s8 1.1 8 2.5S16.4 9 12 9 4 7.9 4 6.5ZM4 6.5v11C4 18.9 7.6 20 12 20s8-1.1 8-2.5v-11M4 12c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5M9 16.5h.01M12 16.5h.01",
+    proof: "M9 12.5l2 2 4.5-4.5M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z",
+    copy: "M9 9V5.5A1.5 1.5 0 0 1 10.5 4h8A1.5 1.5 0 0 1 20 5.5v8a1.5 1.5 0 0 1-1.5 1.5H15M5.5 9h8A1.5 1.5 0 0 1 15 10.5v8a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 4 18.5v-8A1.5 1.5 0 0 1 5.5 9Z",
   };
 
   /** Presentational by default: the label beside it carries the meaning. */
@@ -4605,6 +4662,27 @@
 
   function go(path) {
     location.hash = path;
+  }
+
+  /*
+   * Back to where you came from.
+   *
+   * `navDepth` counts how far into the app this page load has gone, so the
+   * control only offers history when there is app history to return to.
+   * Someone who opened a link straight to a profile gets a plain link to the
+   * list instead — history.back() would take them out of the Hub entirely.
+   *
+   * It counts hashchange rather than calls to go(), because most navigation
+   * here is an ordinary anchor the browser follows itself.
+   */
+  let navDepth = 0;
+  let goingBack = false;
+
+  function backLink(to, label) {
+    const came = navDepth > 0;
+    return `<button class="back-link" data-back="${esc(to)}" title="${
+      came ? "Back to where you were" : "Back to " + esc(label)
+    }">${icon("back", 14)}${came ? "Back" : esc(label)}</button>`;
   }
 
   function setParam(key, value) {
@@ -5656,8 +5734,9 @@
     const related = content.filter((x) => x.vertical === c.vertical && x.id !== c.id).slice(0, 5);
 
     return `
-      <div class="crumb"><a href="#/deadlines">${esc(slotText("content.crumb"))}</a><span>/</span>
-        <span>${esc(c.vertical)}</span><span>/</span><span>${esc(c.id)}</span></div>
+      <div class="crumb-row">${backLink("/deadlines", slotText("content.crumb"))}
+        <div class="crumb"><a href="#/deadlines">${esc(slotText("content.crumb"))}</a><span>/</span>
+        <span>${esc(c.vertical)}</span><span>/</span><span>${esc(c.id)}</span></div></div>
 
       <div class="head">
         <div>
@@ -6889,19 +6968,24 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
   /**
    * A profile's cover image.
    *
-   * The image is linked from the sheet and sits on the platform's media host,
-   * so in this offline demo it will not load — which is exactly what the
-   * stand-in is for. It takes a hue from the trend's own id, so a profile
-   * stays recognisable, and says which case it is.
+   * Every cover on the sheet is on media.wgsn.com, and a published Artifact
+   * may only load images from a short allowlist that does not include it. So
+   * in this demo they cannot load — not a broken link, a sandbox rule — and
+   * the stand-in says so rather than implying a fault. In the deployed Hub,
+   * on the WGSN network, they load normally.
    *
-   * Because the stand-in is always there, a card's image can load lazily
-   * without a blank frame in the meantime, which matters on a list of 446.
+   * The gradient takes a hue from the trend's own id, so a profile stays
+   * recognisable. Because the stand-in is always there, a card's image can
+   * load lazily without a blank frame in the meantime, which matters on a
+   * list of 446.
    */
   function coverImage(t, ratio = "16 / 10", eager) {
     const style = `aspect-ratio:${ratio};--h:${hue(t.id)}`;
     const fallback =
       `<span class="cover-fallback">${icon("image", 20)}<span>${
-        t.coverImageUrl ? "Cover image did not load" : "No image linked"
+        t.coverImageUrl
+          ? "Image loads in the deployed Hub"
+          : "No image on the sheet"
       }</span></span>`;
     if (t.coverImageUrl) {
       return `<figure class="cover" style="${style}">
@@ -7111,8 +7195,9 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         : "";
 
     return `
-      <div class="crumb"><a href="#/trends">Trends</a><span>/</span>
-        <span>${esc(t.industries[0] ?? "TFDB")}</span><span>/</span><span>${esc(t.id)}</span></div>
+      <div class="crumb-row">${backLink("/trends", "Trends")}
+        <div class="crumb"><a href="#/trends">Trends</a><span>/</span>
+        <span>${esc(t.industries[0] ?? "TFDB")}</span><span>/</span><span>${esc(t.id)}</span></div></div>
 
       <div class="head">
         <div>
@@ -9987,6 +10072,17 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
     // Edit mode's own controls: the bar, and every dashed label in the page
     // or the sidebar. Delegated, because they are re-rendered constantly.
+    const back = e.target.closest("[data-back]");
+    if (back) {
+      if (navDepth > 0) {
+        goingBack = true;
+        history.back();
+      } else {
+        go(back.dataset.back);
+      }
+      return;
+    }
+
     const mode = e.target.closest("[data-slot-mode]");
     if (mode) {
       editingSlots = mode.dataset.slotMode === "1";
@@ -10030,7 +10126,15 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     true,
   );
 
-  window.addEventListener("hashchange", render);
+  window.addEventListener("hashchange", () => {
+    if (goingBack) {
+      goingBack = false;
+      navDepth = Math.max(0, navDepth - 1);
+    } else {
+      navDepth++;
+    }
+    render();
+  });
   render();
   connectStore();
 </script>

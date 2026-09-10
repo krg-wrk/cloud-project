@@ -37,7 +37,7 @@ export function TrendImage({
     <figure className="trend-image" style={style}>
       <span className="cover-fallback" aria-hidden>
         <Icon name="image" size={20} />
-        <span>{imageUrl ? "Cover image did not load" : "No image linked"}</span>
+        <span>{imageUrl ? "Cover image did not load" : "No image on the sheet"}</span>
       </span>
       {imageUrl && !failed && (
         <img

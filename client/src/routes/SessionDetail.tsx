@@ -7,6 +7,7 @@ import { useViewer } from "../lib/viewer";
 import type { Person, SessionWithSignUps } from "../types";
 import { Avatar, ErrorNote, Loading, Who } from "../components/bits";
 import ShareLink from "../components/ShareLink";
+import BackLink from "../components/BackLink";
 
 export default function SessionDetail() {
   const { id } = useParams<{ id: string }>();
@@ -69,9 +70,12 @@ export default function SessionDetail() {
 
   return (
     <>
-      <div className="breadcrumb">
-        <Link to="/workshops">Learning</Link> <span>/</span>{" "}
-        <span>{KIND_LABELS[session.kind]}</span> <span>/</span> <span>{session.id}</span>
+      <div className="crumb-row">
+        <BackLink to="/workshops" label="Learning" />
+        <div className="breadcrumb">
+          <Link to="/workshops">Learning</Link> <span>/</span>{" "}
+          <span>{KIND_LABELS[session.kind]}</span> <span>/</span> <span>{session.id}</span>
+        </div>
       </div>
 
       <div className="page-head">

@@ -5,6 +5,7 @@ import { isOutstanding, isOverdue } from "../lib/domain";
 import type { ContentItem, Person, Schedule } from "../types";
 import { Avatar, ErrorNote, EventPill, Loading, StatusPill } from "../components/bits";
 import ShareLink from "../components/ShareLink";
+import BackLink from "../components/BackLink";
 
 export function TeamList() {
   const people = useApi<Person[]>("/people");
@@ -87,8 +88,11 @@ export function TeamMember() {
 
   return (
     <>
-      <div className="breadcrumb">
-        <Link to="/team">The team</Link> <span>/</span> <span>{p.name}</span>
+      <div className="crumb-row">
+        <BackLink to="/team" label="The team" />
+        <div className="breadcrumb">
+          <Link to="/team">The team</Link> <span>/</span> <span>{p.name}</span>
+        </div>
       </div>
 
       <div className="page-head">

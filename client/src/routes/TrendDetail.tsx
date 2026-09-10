@@ -4,6 +4,7 @@ import { send, useApi } from "../lib/api";
 import { formatLong } from "../lib/date";
 import { Slot, useCustom } from "../lib/custom";
 import { Icon } from "../lib/icons";
+import BackLink from "../components/BackLink";
 import type { ResearchLink, TrendDetail as Trend } from "../types";
 import { Avatar, ErrorNote, Loading } from "../components/bits";
 import { TrendImage } from "../components/TrendImage";
@@ -77,9 +78,12 @@ export default function TrendDetail() {
 
   return (
     <>
-      <div className="breadcrumb">
-        <Link to="/trends">Trends</Link> <span>/</span>{" "}
-        <span>{trend.industries[0] ?? "TFDB"}</span> <span>/</span> <span>{trend.id}</span>
+      <div className="crumb-row">
+        <BackLink to="/trends" label="Trends" />
+        <div className="breadcrumb">
+          <Link to="/trends">Trends</Link> <span>/</span>{" "}
+          <span>{trend.industries[0] ?? "TFDB"}</span> <span>/</span> <span>{trend.id}</span>
+        </div>
       </div>
 
       <div className="page-head">

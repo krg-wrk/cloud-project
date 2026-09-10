@@ -62,6 +62,8 @@
 
   --radius: 2px;
   --radius-sm: 2px;
+  /* Cards with a picture in them; everything else stays square. */
+  --radius-card: 8px;
   --shadow: 0 1px 2px rgb(14 14 16 / 5%);
   --sidebar-width: 244px;
 }
@@ -2401,11 +2403,17 @@ a.session-title:hover {
   gap: 16px;
 }
 
+/*
+ * A card carrying a picture takes a softer corner than the rest of the app,
+ * which is squared on purpose. --radius-card exists so the trend grid and the
+ * studio's view cards stay in step with each other rather than each picking a
+ * number.
+ */
 .trend-card {
   display: flex;
   flex-direction: column;
   border: 1px solid var(--rule);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   background: var(--paper);
   overflow: hidden;
   color: var(--ink);
@@ -2422,6 +2430,7 @@ a.session-title:hover {
  * id, so a profile stays recognisable, and a linked image simply covers it.
  */
 .trend-image {
+  border-radius: var(--radius-card);
   position: relative;
   display: flex;
   align-items: center;
@@ -3304,7 +3313,7 @@ code.mono,
   display: flex;
   flex-direction: column;
   border: 1px solid var(--rule);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   background: var(--paper);
   overflow: hidden;
   color: inherit;
@@ -3320,6 +3329,7 @@ a.view-card:hover {
  * that may be slow, private or gone.
  */
 .view-cover {
+  border-radius: var(--radius-card);
   position: relative;
   display: flex;
   align-items: center;
@@ -3688,4 +3698,50 @@ a.view-row:hover {
   .slot-row-actions {
     flex-wrap: wrap;
   }
+}
+
+/*
+ * Back to where you were.
+ *
+ * Above the page title, in the breadcrumb's place, because that is where a
+ * reader looks for the way out. Quiet by default — it is an escape hatch, not
+ * an action.
+ */
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px 3px 4px;
+  margin-bottom: 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--ink-70);
+}
+
+.back-link .icon {
+  color: var(--ink-45);
+}
+
+.back-link:hover {
+  border-color: var(--rule-strong);
+  color: var(--ink);
+}
+
+.back-link:hover .icon {
+  color: var(--accent);
+}
+
+/* On a page that also has a breadcrumb, the two sit on one line. */
+.crumb-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.crumb-row .back-link {
+  margin-bottom: 0;
 }
