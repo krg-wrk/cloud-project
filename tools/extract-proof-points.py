@@ -29,6 +29,7 @@ import gzip
 import json
 import os
 import sys
+from datetime import datetime, timezone
 
 try:
     import openpyxl
@@ -170,6 +171,9 @@ def build(path):
 
     return {
         "source": "Proof Points Reviewer workbook",
+        # When this extract was taken — not when the matching ran, which the
+        # workbook does not record. The Hub says which of the two it is.
+        "extractedAt": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "trends": trends,
         "points": points,
     }

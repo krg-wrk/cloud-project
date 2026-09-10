@@ -301,7 +301,7 @@ export default function Trends() {
                   {trend.missingScore.length > 0 && (
                     <span
                       className="needs-score"
-                      title={`No score yet for ${trend.missingScore.join(", ")}`}
+                      title={`No score yet for ${trend.missingScore.join(", ")}. Scored in the scoring tool, not here.`}
                     >
                       <Icon name="at-risk" size={13} />
                       {trend.missingScore.length} to score

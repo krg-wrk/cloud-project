@@ -13,6 +13,7 @@ import SessionDetail from "./routes/SessionDetail";
 import Studio from "./routes/studio/Studio";
 import Connections from "./routes/studio/Connections";
 import Datasets from "./routes/studio/Datasets";
+import Freshness from "./routes/studio/Freshness";
 import Views from "./routes/studio/Views";
 import Pages from "./routes/studio/Pages";
 import Subscribe from "./routes/Subscribe";
@@ -67,6 +68,7 @@ const router = createBrowserRouter([
           { path: "connections", element: <Connections /> },
           { path: "datasets", element: <Datasets /> },
           { path: "views", element: <Views /> },
+          { path: "freshness", element: <Freshness /> },
           { path: "pages", element: <Pages /> },
         ],
       },

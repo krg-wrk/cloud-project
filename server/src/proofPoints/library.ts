@@ -31,6 +31,8 @@ import {
 
 interface SeedFile {
   source?: string;
+  /** When this extract was taken from the workbook. */
+  extractedAt?: string;
   trends: ProofPointTrend[];
   points: ProofPoint[];
 }
@@ -43,6 +45,13 @@ const SEED = path.resolve(import.meta.dirname, "../data/proofPoints.json.gz");
 
 export class ProofPointLibrary {
   readonly source: string;
+  /**
+   * When the extract was taken.
+   *
+   * Not when the matching ran — the workbook does not record that — and the
+   * Hub says which of the two it is rather than implying the stronger one.
+   */
+  readonly extractedAt?: string;
   private readonly points: ProofPoint[];
   private readonly trends = new Map<string, ProofPointTrend>();
   /** Lower-cased text per point, built once, for the search box. */
@@ -80,6 +89,7 @@ export class ProofPointLibrary {
     }
 
     this.source = seed.source ?? "seed";
+    this.extractedAt = seed.extractedAt;
   }
 
   get size(): number {

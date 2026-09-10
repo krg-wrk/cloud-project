@@ -66,7 +66,7 @@ app.use(
     access: await data.listAccess(),
     people: await data.listPeople(),
   })),
-  createApiRouter(data, store, signUps, drafter),
+  createApiRouter(data, store, signUps, drafter, proofPoints),
   createStudioRouter(studio, data),
   createProofPointRouter(proofPoints, data),
 );

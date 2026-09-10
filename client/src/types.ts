@@ -622,3 +622,32 @@ export interface SchedulePreview {
   refused: string[];
   expect: Record<string, string>;
 }
+
+/* ---- How fresh the data is ----------------------------------------------- */
+
+/** One cached read, and how long it has left. */
+export interface FreshnessRead {
+  key: string;
+  label: string;
+  readAt: string;
+  ageMs: number;
+  cacheMs: number;
+}
+
+/** A file somebody generates, rather than something read live. */
+export interface FreshnessExtract {
+  label: string;
+  what: string;
+  at: string | null;
+  note: string;
+}
+
+export interface FreshnessReport {
+  visibleToAll: boolean;
+  canChangeVisibility: boolean;
+  source: string;
+  reads: FreshnessRead[];
+  extracts: FreshnessExtract[];
+  /** Where a write would go, or null in a Hub that only reads. */
+  writes: string | null;
+}

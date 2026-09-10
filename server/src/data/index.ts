@@ -83,6 +83,24 @@ export class CachedDataSource implements DataSource {
     this.inner.forget?.(key);
   }
 
+  /**
+   * When each thing was last actually read from the source.
+   *
+   * The Hub caches, the sheets are edited by people, and the trend extract
+   * runs on somebody else's schedule — so "how old is what I am looking at"
+   * is a real question with no answer anywhere on screen. This is the answer
+   * for the reads; the pages report the rest.
+   */
+  freshness(): { key: string; readAt: string; ageMs: number; cacheMs: number }[] {
+    const at = Date.now();
+    return [...this.cache.entries()].map(([key, hit]) => ({
+      key,
+      readAt: new Date(hit.at).toISOString(),
+      ageMs: at - hit.at,
+      cacheMs: this.ttlMs,
+    }));
+  }
+
   private async through<T>(key: string, load: () => Promise<T>): Promise<T> {
     const hit = this.cache.get(key);
     if (hit && Date.now() - hit.at < this.ttlMs) return hit.value as T;

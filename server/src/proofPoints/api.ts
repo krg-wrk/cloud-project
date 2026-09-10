@@ -64,6 +64,7 @@ export function createProofPointRouter(library: ProofPointLibrary, data: DataSou
   router.get("/proof-points/about", (_req, res) => {
     res.json({
       source: library.source,
+      extractedAt: library.extractedAt ?? null,
       points: library.size,
       trends: library.trendCount,
       tiers: TIER_MEANING,

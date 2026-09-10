@@ -4737,3 +4737,69 @@ a.view-row:hover {
 .sched-log li.bad {
   color: var(--status-at-risk);
 }
+
+/* --- How fresh the data is ------------------------------------------------ */
+
+/*
+ * One line at the foot of the page, and only for whoever may see it.
+ *
+ * Quiet on purpose: it is context, not content, and the version of this that
+ * shouted would be turned off within a day. It goes red only when a read is
+ * past its cache window, which is the state worth noticing.
+ */
+.freshness-note {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 34px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+  font-size: 11.5px;
+  color: var(--ink-45);
+}
+
+.freshness-note.stale {
+  color: var(--review);
+}
+
+.freshness-note .icon {
+  color: currentColor;
+}
+
+/*
+ * The way to the scoring tool, from an industry the profile has not been
+ * scored for. Scoring is not something the Hub does — this is where somebody
+ * notices the gap, so it offers the way there rather than a form it cannot
+ * honour.
+ */
+.score-link {
+  margin-left: auto;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.score.missing .score-link {
+  color: var(--status-at-risk);
+}
+
+/*
+ * An industry tagged on a profile that TFDB is not asking for a score on.
+ *
+ * 177 of the 446 profiles have at least one. Drawn as neither done nor
+ * wanting: the row exists because the tag exists, and there is nothing to do
+ * about it.
+ */
+.score.quiet {
+  border-left: 3px solid var(--rule-strong);
+}
+
+.score.quiet .icon,
+.score.quiet em {
+  color: var(--ink-45);
+}

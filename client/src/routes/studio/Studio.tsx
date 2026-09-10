@@ -63,6 +63,13 @@ export default function Studio() {
             <em>What people see</em>
           </span>
         </NavLink>
+        <NavLink to="/studio/freshness" className="studio-tab">
+          <Icon name="clock" size={15} />
+          <span>
+            <b>Freshness</b>
+            <em>How old is what the team is looking at</em>
+          </span>
+        </NavLink>
         <NavLink to="/studio/pages" className="studio-tab">
           <Icon name="edit" size={15} />
           <span>

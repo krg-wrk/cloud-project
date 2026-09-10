@@ -163,6 +163,21 @@ CREATE TABLE IF NOT EXISTS schedule_writes (
 );
 
 CREATE INDEX IF NOT EXISTS schedule_writes_content ON schedule_writes (content_id, at DESC);
+
+/*
+ * Settings that belong to the Hub rather than to a person.
+ *
+ * One row per switch, so adding one needs no migration, and the code's own
+ * default stands until somebody changes it — the same arrangement the page
+ * wording uses. Not for credentials: those go in an environment variable or
+ * the studio's own secret column.
+ */
+CREATE TABLE IF NOT EXISTS hub_settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL,
+  updated_by TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
 `;
 
 const now = () => new Date().toISOString();
@@ -602,6 +617,36 @@ export class HubStore {
    * person's calendar, which is how subscribable feeds work — so it is
    * rotatable, and rotating invalidates the old one immediately.
    */
+  /* ---- Settings that belong to the Hub ---------------------------------- */
+
+  /**
+   * One setting, or the caller's default.
+   *
+   * An untouched setting has no row at all, so what ships is whatever the
+   * code asks for — nothing to seed and nothing to migrate.
+   */
+  setting(key: string, fallback = ""): string {
+    const row = this.db
+      .prepare(`SELECT value FROM hub_settings WHERE key = ?`)
+      .get(key) as { value: string } | undefined;
+    return row?.value ?? fallback;
+  }
+
+  flag(key: string, fallback = false): boolean {
+    const value = this.setting(key, fallback ? "1" : "0");
+    return value === "1" || value === "true";
+  }
+
+  setSetting(key: string, value: string, by: string): void {
+    this.db
+      .prepare(
+        `INSERT INTO hub_settings (key, value, updated_by, updated_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value,
+           updated_by = excluded.updated_by, updated_at = excluded.updated_at`,
+      )
+      .run(key, value, by, now());
+  }
+
   /* ---- The record of what the Hub changed in Smartsheet ----------------- */
 
   /**

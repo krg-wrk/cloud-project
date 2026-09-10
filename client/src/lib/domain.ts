@@ -144,3 +144,13 @@ export function clashesFor(
     return region === undefined || event.region === region;
   });
 }
+
+/**
+ * Where a trend gets scored.
+ *
+ * Scoring is not something the Hub does — it happens in the team's own
+ * scoring tool — so where the Hub notices a missing score it offers the way
+ * there rather than a form it cannot honour. One constant, because when that
+ * address changes it should change in one place.
+ */
+export const SCORING_TOOL = "https://score.wgsndev.com/";

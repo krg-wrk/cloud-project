@@ -93,11 +93,20 @@ function bad(res: Response, message: string): void {
   res.status(400).json({ error: message });
 }
 
+/** One cached read's age, as CachedDataSource reports it. */
+interface Freshness {
+  key: string;
+  readAt: string;
+  ageMs: number;
+  cacheMs: number;
+}
+
 export function createApiRouter(
   data: DataSource,
   store: HubStore,
   signUps: SignUps,
   drafter: NoteDrafter,
+  proofPoints: { size: number; trendCount: number; extractedAt?: string },
 ): Router {
   const router = Router();
 
@@ -128,6 +137,102 @@ export function createApiRouter(
     } catch (err) {
       next(err);
     }
+  });
+
+  /* --- How fresh is any of this ------------------------------------------
+   *
+   * The Hub caches its reads, the sheets are edited by people, and the trend
+   * and proof point extracts run on somebody else's schedule — so "how old is
+   * what I am looking at" is a real question that had no answer anywhere on
+   * screen. Silent staleness is the failure mode nobody spots.
+   *
+   * Admins only to begin with, because it is a diagnostic and the wording
+   * will want tuning once it has been read in anger. An admin can turn it on
+   * for everybody, which is the setting below.
+   */
+
+  const FRESHNESS_FOR_ALL = "freshness.visibleToAll";
+
+  /** What each cached read is called, in the words the team uses. */
+  const READ_LABELS: Record<string, string> = {
+    content: "The commissioning schedule",
+    events: "Leave, holidays and shows",
+    people: "The team",
+    sessions: "The workshop programme",
+    signups: "Workshop sign-ups",
+    access: "Who may sign in",
+    metrics: "The KPI definitions",
+    observations: "KPI readings",
+    trends: "Trend profiles (TFDB)",
+  };
+
+  router.get("/freshness", async (req: ViewerRequest, res, next) => {
+    try {
+      const viewer = req.viewer!;
+      const forAll = store.flag(FRESHNESS_FOR_ALL);
+      if (viewer.role !== "admin" && !forAll) {
+        res.status(403).json({
+          error: "Data freshness is shown to admins. An admin can turn it on for everybody.",
+        });
+        return;
+      }
+
+      /*
+       * Only what has actually been read this session appears. A source
+       * nobody has asked for has no age, and inventing one — "never" — reads
+       * as a fault rather than as "nothing has needed it yet".
+       */
+      const reads = (data.forget ? (data as { freshness?: () => Freshness[] }).freshness?.() ?? [] : [])
+        .map((r) => ({ ...r, label: READ_LABELS[r.key] ?? r.key }))
+        .sort((a, b) => b.ageMs - a.ageMs);
+
+      // The trend sheet stamps its own extract date, which is a different
+      // and more useful thing than when the Hub last read it.
+      const trends = await data.listTrends();
+      const synced = trends.map((t) => t.lastSynced).filter(Boolean).sort();
+
+      res.json({
+        visibleToAll: forAll,
+        canChangeVisibility: viewer.role === "admin",
+        source: data.name,
+        reads,
+        extracts: [
+          {
+            label: "Trend profiles",
+            what: "extracted from TFDB",
+            at: synced.length > 0 ? synced[synced.length - 1] : null,
+            note: `${trends.length} profiles`,
+          },
+          {
+            label: "Proof points",
+            what: "extracted from the Proof Points Reviewer workbook",
+            at: proofPoints.extractedAt ?? null,
+            note: `${proofPoints.size.toLocaleString()} suggestions across ${proofPoints.trendCount} trends`,
+          },
+        ],
+        // Where a write would go, since that is the other thing an admin
+        // wants to know at a glance.
+        writes: data.writes?.target ?? null,
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /** Show it to everybody, or put it back to admins only. */
+  router.put("/freshness/visibility", (req: ViewerRequest, res) => {
+    const viewer = req.viewer!;
+    if (viewer.role !== "admin") {
+      res.status(403).json({ error: "Only an admin can change who sees this." });
+      return;
+    }
+    const body = (req.body ?? {}) as { visibleToAll?: unknown };
+    if (typeof body.visibleToAll !== "boolean") {
+      bad(res, "visibleToAll must be true or false.");
+      return;
+    }
+    store.setSetting(FRESHNESS_FOR_ALL, body.visibleToAll ? "1" : "0", viewer.email);
+    res.json({ visibleToAll: body.visibleToAll });
   });
 
   /** The content taxonomy: every format we publish, and its tier. */

@@ -503,6 +503,55 @@ donuts and gauges with colours baked into the SVG, so on a dark ground the
 figures would disappear; a proof point is an artefact made for a white slide
 and is shown as one in both themes, like an image.
 
+## How fresh is any of this
+
+Three clocks feed the Hub and none of them was visible anywhere. The schedule
+is cached for a minute, so a date somebody corrected in Smartsheet can be that
+stale. The trend profiles are an extract TFDB stamps itself — currently a
+fortnight old. The proof points are an extract from a workbook a pipeline
+writes weekly. Silent staleness is the failure mode nobody spots, and "it says
+the wrong date" is the bug report you get instead of it.
+
+`/studio/freshness` reports all of it: what the Hub has read this session and
+how long each read has left, the extracts and when they were generated, and
+where a write would go. Two kinds of age, kept apart — a cached read is
+seconds old and about to be taken again; an extract is as old as the last time
+somebody generated it, and no amount of refreshing changes that.
+
+**Admins only to begin with.** It is a diagnostic, and the wording will want
+tuning once somebody has read it in anger. An admin can turn it on for
+everybody, and then one quiet line appears at the foot of every page saying
+how old the schedule is — useful when the team is working against a date that
+has just moved, noise the rest of the time. The endpoint refuses rather than
+returning a blank, so a forecaster's Hub has nothing there rather than a
+control they cannot use.
+
+The switch lives in `hub_settings`, a key/value table for the handful of
+things that belong to the Hub rather than to a person. An untouched setting
+has no row, so the code's own default ships and adding one needs no migration
+— the same arrangement the page wording uses.
+
+## Scoring a trend
+
+The Trends page has always badged "3 to score" and then offered no way to do
+it — surfacing work it could not accept. Scoring happens in the team's own
+tool, so the Hub now links there: from the callout on a profile, and from each
+industry that wants one.
+
+That turned up something in the data. TFDB keeps "Industries Scored" and
+"Industries Missing Score" as separate columns, and the second is **not** the
+inverse of the first — `missingScore` is exactly `needingScore − scored` on
+all 446 profiles, and **177 of them are tagged to an industry TFDB is not
+asking for a score on**. The grid was calling those "No score", which reads as
+a gap, and offering to score them would send people to do work nobody wants.
+So there are three states now: scored, wanted (with the link), and *not asked
+for*.
+
+The two columns also use different vocabularies — "Overall" and "Fashion"
+appear in the score columns and never in the industry tags — so the grid lists
+the union of what is tagged and what is asked for. A score the sheet wants is
+no longer invisible because it happens not to be a tag.
+
 ## KPIs
 
 `/performance` reports on a forecaster over any range, and — for commissioning

@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { send, useApi } from "../lib/api";
 import { formatLong } from "../lib/date";
+import { SCORING_TOOL } from "../lib/domain";
 import { Slot, useCustom } from "../lib/custom";
 import { Icon } from "../lib/icons";
 import BackLink from "../components/BackLink";
@@ -125,6 +126,21 @@ export default function TrendDetail() {
               <div style={{ marginTop: 4 }}>
                 {trend.missingScore.join(", ")} — tagged on the profile but not scored.
               </div>
+              {/*
+                Scoring happens in the team's own tool, not here. The Hub is
+                where somebody notices the gap, so this is the way from
+                noticing it to closing it.
+              */}
+              <a
+                className="btn small"
+                href={SCORING_TOOL}
+                target="_blank"
+                rel="noreferrer"
+                style={{ marginTop: 10 }}
+              >
+                <Icon name="link" size={13} />
+                Score it
+              </a>
             </div>
           )}
 
@@ -261,17 +277,56 @@ export default function TrendDetail() {
                   className="section-title"
                   prefix={<Icon name="published" />}
                 />
+                {/*
+                  Three states, not two.
+                
+                  The sheet keeps "Industries Scored" and "Industries Missing
+                  Score" as separate columns, and the second is not simply the
+                  inverse of the first: 177 of the 446 profiles are tagged to
+                  an industry that TFDB is not asking for a score on. Calling
+                  those "No score" reads as a gap, and offering to score them
+                  sends people to do work nobody wants.
+                
+                  The rows are the union of what is tagged and what is asked
+                  for, because the two columns use different vocabularies —
+                  "Overall" and "Fashion" appear in the score columns and
+                  never in the tags — and a score the sheet wants should not
+                  be invisible just because it is not a tag.
+                */}
                 <div className="score-grid">
-                  {trend.industries.map((industry) => {
-                    const done = trend.scored.includes(industry);
-                    return (
-                      <div key={industry} className={done ? "score done" : "score missing"}>
-                        <Icon name={done ? "published" : "at-risk"} size={15} />
-                        <span>{industry}</span>
-                        <em>{done ? "Scored" : "No score"}</em>
-                      </div>
-                    );
-                  })}
+                  {[...new Set([...trend.industries, ...trend.scored, ...trend.missingScore])]
+                    .sort()
+                    .map((industry) => {
+                      const done = trend.scored.includes(industry);
+                      const wanted = trend.missingScore.includes(industry);
+                      const state = done ? "done" : wanted ? "missing" : "quiet";
+                      return (
+                        <div key={industry} className={`score ${state}`}>
+                          <Icon
+                            name={done ? "published" : wanted ? "at-risk" : "clock"}
+                            size={15}
+                          />
+                          <span>{industry}</span>
+                          {done ? (
+                            <em>Scored</em>
+                          ) : wanted ? (
+                            <a
+                              className="score-link"
+                              href={SCORING_TOOL}
+                              target="_blank"
+                              rel="noreferrer"
+                              title={`Score ${trend.title} for ${industry} in the scoring tool`}
+                            >
+                              Score it
+                            </a>
+                          ) : (
+                            <em title="Tagged on the profile, but TFDB is not asking for a score">
+                              Not asked for
+                            </em>
+                          )}
+                        </div>
+                      );
+                    })}
                 </div>
               </section>
               )}

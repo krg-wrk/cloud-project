@@ -8,6 +8,7 @@ import { CustomisationProvider, EditBar, Slot, useCustom } from "../lib/custom";
 import { ViewerProvider, useViewer } from "../lib/viewer";
 import type { ContentItem, Me, Person, SessionWithSignUps, ViewLink } from "../types";
 import { Avatar, ErrorNote, Loading } from "./bits";
+import FreshnessNote from "./FreshnessNote";
 
 const ROLE_LABELS: Record<Me["role"], string> = {
   forecaster: "Forecaster",
@@ -473,6 +474,13 @@ export default function Layout() {
           <Sidebar content={content.data} />
           <main className="main">
             <Outlet />
+            {/*
+              How old the schedule is. Present for an admin, and for everybody
+              when an admin has turned it on — the endpoint refuses otherwise,
+              so there is simply nothing here rather than a control nobody can
+              use.
+            */}
+            <FreshnessNote />
           </main>
           <MobileNav content={content.data} />
         </div>

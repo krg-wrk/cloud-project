@@ -2455,6 +2455,33 @@
     color: var(--late);
   }
 
+  /*
+   * An industry tagged on a profile that TFDB is not asking for a score on.
+   * Drawn as neither done nor wanting: the row exists because the tag exists,
+   * and there is nothing to do about it.
+   */
+  .score.quiet {
+    border-left: 3px solid var(--line-firm);
+  }
+
+  .score.quiet .icon,
+  .score.quiet em {
+    color: var(--ink-soft);
+  }
+
+  /* The way to the scoring tool, from an industry with no score. */
+  .score-link {
+    margin-left: auto;
+    white-space: nowrap;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--late);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
   .label-groups {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
@@ -7771,6 +7798,15 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
   /* ---- trends ------------------------------------------------------------ */
 
   const TRENDS = DATA.trends ?? [];
+
+  /**
+   * Where a trend gets scored.
+   *
+   * Not something the Hub does — it happens in the team's own scoring tool —
+   * so where the Hub notices a missing score it offers the way there rather
+   * than a form it cannot honour.
+   */
+  const SCORING_TOOL = "https://score.wgsndev.com/";
   const TREND_TYPES_LIST = ["Design & Aesthetic", "Lifestyle", "Product / Item", "Systemic"];
 
   /** The industries a profile is tagged to on the sheet, and scored for. */
@@ -8029,7 +8065,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                       }
                       ${
                         t.missingScore.length
-                          ? `<span class="needs-score" title="No score yet for ${esc(
+                          ? `<span class="needs-score" title="Scored in the scoring tool, not here. No score yet for ${esc(
                               t.missingScore.join(", "),
                             )}">${icon("at-risk", 13)}${t.missingScore.length} to score</span>`
                           : ""
@@ -8093,7 +8129,15 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                     : `${t.missingScore.length} industries have no score yet.`
                 }</strong> ${esc(
                   t.missingScore.join(", "),
-                )} — tagged on the profile but not scored.</div>`
+                )} — tagged on the profile but not scored.
+                <!-- Scoring happens in the team's own tool. The Hub is where
+                     somebody notices the gap, so this is the way from
+                     noticing it to closing it. -->
+                <div style="margin-top:10px"><a class="toggle small"
+                  href="${SCORING_TOOL}" target="_blank" rel="noopener noreferrer">${icon(
+                    "link",
+                    13,
+                  )}Score it</a></div></div>`
               : ""
           }
 
@@ -8162,15 +8206,39 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             t.industries.length && slotShown("trend.section.scores")
               ? `<section class="sec">
                   <div class="sec-head">${slot("trend.section.scores", { tag: "h2", prefix: icon("published") + " " })}</div>
-                  <div class="score-grid">${t.industries
+                  <!--
+                    Three states, not two. The sheet keeps "Industries
+                    Scored" and "Industries Missing Score" as separate
+                    columns, and the second is not the inverse of the first:
+                    177 of the 446 profiles are tagged to an industry TFDB is
+                    not asking for a score on. Calling those "No score" reads
+                    as a gap, and offering to score them sends people to do
+                    work nobody wants. The rows are the union of what is
+                    tagged and what is asked for, because the two columns use
+                    different vocabularies.
+                  -->
+                  <div class="score-grid">${[
+                    ...new Set([...t.industries, ...t.scored, ...(t.missingScore ?? [])]),
+                  ]
+                    .sort()
                     .map((industry) => {
                       const done = t.scored.includes(industry);
-                      return `<div class="score ${done ? "done" : "missing"}">${icon(
-                        done ? "published" : "at-risk",
+                      const wanted = (t.missingScore ?? []).includes(industry);
+                      const state = done ? "done" : wanted ? "missing" : "quiet";
+                      return `<div class="score ${state}">${icon(
+                        done ? "published" : wanted ? "at-risk" : "clock",
                         15,
-                      )}<span>${esc(industry)}</span><em>${
-                        done ? "Scored" : "No score"
-                      }</em></div>`;
+                      )}<span>${esc(industry)}</span>${
+                        done
+                          ? "<em>Scored</em>"
+                          : wanted
+                            ? `<a class="score-link" href="${SCORING_TOOL}" target="_blank"
+                                 rel="noopener noreferrer"
+                                 title="Score ${esc(t.title)} for ${esc(
+                                   industry,
+                                 )} in the scoring tool">Score it</a>`
+                            : `<em title="Tagged on the profile, but TFDB is not asking for a score">Not asked for</em>`
+                      }</div>`;
                     })
                     .join("")}</div>
                 </section>`
