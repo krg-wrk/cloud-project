@@ -77,6 +77,14 @@ export interface ContentItem {
   ownership?: Ownership;
   /** Everyone credited, so co-owned work counts for both people. */
   contributorIds?: string[];
+  /**
+   * The row this came out of in the source sheet.
+   *
+   * Only set when the source is one the Hub can write to, and it is the only
+   * address a write may use — `id` is the team's own Content ID, which is a
+   * label rather than a location and is not unique on every sheet.
+   */
+  sourceRowId?: string;
 }
 
 export type Ownership = "sole" | "co-owned" | "byline" | "freelance";
@@ -293,8 +301,83 @@ export interface SessionSignUps {
  * Everything the Hub reads. Implemented by the seed adapter today and by the
  * Smartsheet / Google Sheets adapters against the live sheets.
  */
+/**
+ * The fields of a commissioned forecast the Hub may write back.
+ *
+ * Deliberately five. The schedule belongs to the commissioning managers and
+ * the Hub reads it; this is the short list of things the team learns *after*
+ * a row is created and that somebody currently retypes into Smartsheet by
+ * hand. Everything else — who writes it, which vertical, which season — is
+ * commissioning's to set, and there is no code path here that can reach
+ * another column.
+ */
+export interface WritableFields {
+  status?: Status;
+  submissionDate?: string;
+  publicationDate?: string;
+  /** When the copy actually landed, which the timeliness KPIs measure. */
+  submittedOn?: string;
+  notes?: string;
+}
+
+export const WRITABLE_FIELDS: (keyof WritableFields)[] = [
+  "status",
+  "submissionDate",
+  "publicationDate",
+  "submittedOn",
+  "notes",
+];
+
+/** One cell that would change, as the confirmation names it. */
+export interface CellChange {
+  field: keyof WritableFields;
+  /** The column's title in the sheet, so the confirmation names the real cell. */
+  column: string;
+  from: string;
+  to: string;
+}
+
+/**
+ * What a source will accept back.
+ *
+ * Absent on a source means read-only, which is what the seed always is and
+ * what Smartsheet is until it is switched on deliberately. The API checks for
+ * this rather than for a source's name, so nothing can be written by a source
+ * that has not said it accepts writes.
+ */
+export interface ContentWriter {
+  /** Named in the confirmation, so a person sees which sheet they are changing. */
+  readonly target: string;
+  /**
+   * What the writable cells of one row hold *in the sheet's own words*,
+   * keyed by column title.
+   *
+   * Not the same thing as the domain model, and that is the point. The Hub
+   * reads "Writing" as `in-progress`, so a check that compared the two would
+   * never pass — and a concurrency check that never passes is a concurrency
+   * check that is not there. Everything shown to a person is in the Hub's
+   * words; everything compared against the sheet is in the sheet's.
+   */
+  current(rowId: string): Promise<Record<string, string>>;
+  /**
+   * Apply the change to one row.
+   *
+   * `expect` is what `current` returned when the change was worked out. If
+   * the sheet no longer matches, this throws rather than overwriting —
+   * somebody else edited the row in between, and their edit is not ours to
+   * discard.
+   */
+  apply(
+    rowId: string,
+    changes: WritableFields,
+    expect: Record<string, string>,
+  ): Promise<void>;
+}
+
 export interface DataSource {
   readonly name: string;
+  /** Set only on a source that accepts writes. See ContentWriter. */
+  readonly writes?: ContentWriter;
   listPeople(): Promise<Person[]>;
   listContent(): Promise<ContentItem[]>;
   listEvents(): Promise<CalendarEvent[]>;
@@ -309,4 +392,12 @@ export interface DataSource {
   listMetricObservations(): Promise<MetricObservation[]>;
   /** Trend profiles, owned one apiece. */
   listTrends(): Promise<TrendProfile[]>;
+  /**
+   * Drop a cached read, where the source caches.
+   *
+   * Only one thing needs this: a write the Hub just made means the cached
+   * copy is wrong and the page is about to ask for it again. An uncached
+   * source has nothing to do.
+   */
+  forget?(key: "content" | "events" | "people" | "trends"): void;
 }

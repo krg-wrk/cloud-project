@@ -4570,3 +4570,170 @@ a.view-row:hover {
   max-width: 100%;
   height: auto;
 }
+
+/* --- Changing the commissioning sheet ------------------------------------ */
+
+/*
+ * The one panel in the Hub that edits somebody else's system, so it is drawn
+ * to look like it: its own frame, the sheet named at the top, and a
+ * confirmation that has to be read before anything happens.
+ */
+/*
+ * A frame of its own, and the accent down the side.
+ *
+ * Everything else in this column is prose and lists on the page's own
+ * ground. This one changes the managers' sheet, so it is drawn as a thing
+ * you have stepped into rather than more of the page.
+ */
+.panel.sched {
+  padding: 16px 18px 18px;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+.sched-head {
+  margin-bottom: 14px;
+}
+
+.sched-head p {
+  margin: 4px 0 0;
+}
+
+.sched-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px 16px;
+  margin-bottom: 14px;
+}
+
+.sched-form .field.wide {
+  grid-column: 1 / -1;
+}
+
+.sched-form input,
+.sched-form select,
+.sched-form textarea {
+  padding: 7px 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  width: 100%;
+}
+
+.sched-form textarea {
+  font-family: var(--ui);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.sched-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/*
+ * What will change, cell by cell. Set apart from the form above it, because
+ * this is the thing somebody is being asked to agree to rather than another
+ * control to fill in.
+ */
+.sched-confirm {
+  padding: 14px 15px;
+  margin-bottom: 4px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent-wash);
+}
+
+.sched-confirm-head {
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+
+.sched-changes {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sched-changes li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.sched-changes b {
+  min-width: 128px;
+  font-weight: 500;
+}
+
+/* The arrow points the way the change goes, so it is flipped. */
+.sched-changes .icon {
+  transform: rotate(180deg);
+  color: var(--ink-45);
+}
+
+.sched-from {
+  color: var(--ink-45);
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+}
+
+.sched-to {
+  font-weight: 500;
+}
+
+.sched-done {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--status-published);
+  font-weight: 500;
+}
+
+/*
+ * Smartsheet keeps cell history, and the Hub is taking a slice of that work
+ * off it — so it keeps its own, refusals included.
+ */
+.sched-log {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+}
+
+.sched-log-change {
+  font-variant-numeric: tabular-nums;
+}
+
+.sched-log ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sched-log li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12.5px;
+}
+
+.sched-log li.bad {
+  color: var(--status-at-risk);
+}

@@ -244,6 +244,7 @@ export const SLOT_PAGES: SlotPage[] = [
           section("content.section.where", "Where it is"),
           section("content.section.note", "Commissioning note"),
           section("content.section.details", "Details"),
+          section("content.section.schedule", "Update the sheet"),
           section("content.section.notes", "Notes"),
           section("content.section.related", "Also in this vertical"),
         ],

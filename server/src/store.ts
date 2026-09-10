@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
-import type { ForecastDetails, ResearchLink, TrendExtras } from "./types.js";
+import type { CellChange, ForecastDetails, ResearchLink, TrendExtras } from "./types.js";
 
 /**
  * Everything the Hub owns rather than reads.
@@ -137,6 +137,32 @@ CREATE TABLE IF NOT EXISTS calendar_tokens (
   token TEXT NOT NULL UNIQUE,
   created_at TEXT NOT NULL
 );
+
+/*
+ * Every attempt to change the commissioning sheet, whether it worked or not.
+ *
+ * Smartsheet keeps cell history and the Hub is taking a slice of that work
+ * away from it, so it has to keep its own. This is the record of who changed
+ * which cell, from what to what, and when — and of the ones that were
+ * refused, because a failed write with no trace is worse than no write.
+ */
+CREATE TABLE IF NOT EXISTS schedule_writes (
+  id TEXT PRIMARY KEY,
+  content_id TEXT NOT NULL,
+  source_row_id TEXT NOT NULL,
+  /** Which sheet, in the words the confirmation used. */
+  target TEXT NOT NULL,
+  /** [{ field, column, from, to }], as it was shown before applying. */
+  changes TEXT NOT NULL,
+  by_email TEXT NOT NULL,
+  by_person_id TEXT,
+  at TEXT NOT NULL,
+  ok INTEGER NOT NULL,
+  /** Why it was refused, when it was. */
+  problem TEXT
+);
+
+CREATE INDEX IF NOT EXISTS schedule_writes_content ON schedule_writes (content_id, at DESC);
 `;
 
 const now = () => new Date().toISOString();
@@ -576,6 +602,76 @@ export class HubStore {
    * person's calendar, which is how subscribable feeds work — so it is
    * rotatable, and rotating invalidates the old one immediately.
    */
+  /* ---- The record of what the Hub changed in Smartsheet ----------------- */
+
+  /**
+   * Log an attempt, successful or not.
+   *
+   * Written after the attempt either way, so a refusal leaves a trace. The
+   * caller passes the changes exactly as the confirmation showed them, which
+   * is the point: the log says what somebody was told they were doing.
+   */
+  logScheduleWrite(input: {
+    contentId: string;
+    sourceRowId: string;
+    target: string;
+    changes: CellChange[];
+    byEmail: string;
+    byPersonId?: string | null;
+    ok: boolean;
+    problem?: string;
+  }): ScheduleWrite {
+    const entry: ScheduleWrite = {
+      id: randomUUID(),
+      contentId: input.contentId,
+      sourceRowId: input.sourceRowId,
+      target: input.target,
+      changes: input.changes,
+      byEmail: input.byEmail,
+      byPersonId: input.byPersonId ?? undefined,
+      at: now(),
+      ok: input.ok,
+      problem: input.problem,
+    };
+    this.db
+      .prepare(
+        `INSERT INTO schedule_writes
+           (id, content_id, source_row_id, target, changes, by_email, by_person_id, at, ok, problem)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        entry.id,
+        entry.contentId,
+        entry.sourceRowId,
+        entry.target,
+        JSON.stringify(entry.changes),
+        entry.byEmail,
+        entry.byPersonId ?? null,
+        entry.at,
+        entry.ok ? 1 : 0,
+        entry.problem ?? null,
+      );
+    return entry;
+  }
+
+  /** What the Hub has changed on one forecast, most recent first. */
+  scheduleWrites(contentId: string, limit = 20): ScheduleWrite[] {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM schedule_writes WHERE content_id = ? ORDER BY at DESC LIMIT ?`,
+      )
+      .all(contentId, limit) as Record<string, unknown>[];
+    return rows.map(toScheduleWrite);
+  }
+
+  /** The whole log, for an admin. */
+  allScheduleWrites(limit = 200): ScheduleWrite[] {
+    const rows = this.db
+      .prepare(`SELECT * FROM schedule_writes ORDER BY at DESC LIMIT ?`)
+      .all(limit) as Record<string, unknown>[];
+    return rows.map(toScheduleWrite);
+  }
+
   calendarToken(personId: string): string {
     const row = this.db
       .prepare(`SELECT token FROM calendar_tokens WHERE person_id = ?`)
@@ -686,5 +782,46 @@ function toSignUp(row: Record<string, unknown>): SignUpRow {
     personId: String(row.person_id),
     state: row.state === "waiting" ? "waiting" : "going",
     createdAt: String(row.created_at),
+  };
+}
+
+/**
+ * One recorded attempt to change the commissioning sheet.
+ *
+ * `changes` is what the person was shown before they pressed Apply, so the
+ * log answers "what did they think they were doing" as well as "what
+ * happened". A refused attempt is kept, with the reason.
+ */
+export interface ScheduleWrite {
+  id: string;
+  contentId: string;
+  sourceRowId: string;
+  target: string;
+  changes: CellChange[];
+  byEmail: string;
+  byPersonId?: string;
+  at: string;
+  ok: boolean;
+  problem?: string;
+}
+
+function toScheduleWrite(row: Record<string, unknown>): ScheduleWrite {
+  let changes: CellChange[] = [];
+  try {
+    changes = JSON.parse(String(row.changes)) as CellChange[];
+  } catch {
+    // A log entry with unreadable changes is still worth having.
+  }
+  return {
+    id: String(row.id),
+    contentId: String(row.content_id),
+    sourceRowId: String(row.source_row_id),
+    target: String(row.target),
+    changes,
+    byEmail: String(row.by_email),
+    byPersonId: row.by_person_id ? String(row.by_person_id) : undefined,
+    at: String(row.at),
+    ok: row.ok === 1 || row.ok === true,
+    problem: row.problem ? String(row.problem) : undefined,
   };
 }

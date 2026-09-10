@@ -157,6 +157,90 @@ loose matching (`normaliseStatus`, `normaliseEventType`), so "In Progress",
 Sheet reads are cached for 60s (`CachedDataSource`) to keep page loads quick
 without going stale while someone is looking at a corrected date.
 
+## Changing the sheet from the Hub
+
+Everything else the Hub does with the schedule is read-only: Smartsheet is
+where the commissioning managers work and the Hub reads it. This is the one
+exception, and it is the only thing in the Hub that edits somebody else's
+system — so it is built as narrowly as it can be.
+
+**Five columns.** Status, submission date, publication date, **Actual
+Submission** and the commissioning note. These are the things the team learns
+*after* a row is created and currently retypes into Smartsheet by hand; the
+last one is what the timeliness KPIs measure, and why they could not be
+computed. Who writes it, which vertical, which season — those are
+commissioning's to set, and there is no code path here that can reach another
+column.
+
+**Off unless you turn it on.** `SMARTSHEET_WRITE=1`. Without it the source
+reports no write capability at all, so there is no object to call and the API
+refuses before it builds a request. The seed source never has one. Switching
+it on reads the sheet at startup, so a write flag set against a sheet the
+token cannot see fails at boot with a message rather than the first time a
+manager presses Apply.
+
+**Managers and admins only**, and a manager only in a vertical they oversee.
+A forecaster cannot change even their own row — they can still say whatever
+they need to in a note.
+
+**Two steps, always.** Pressing *Review the change* asks the server what
+would happen and writes nothing; it comes back as the cells that would
+change, named by their real column titles:
+
+```
+This will change 2 cells on Commissioning schedule (sheet 614183…), row 901:
+  Status              In progress  →  Submitted
+  Actual Submission   empty        →  24 Sept
+```
+
+Only *Apply to the sheet* changes anything, and it sends that description back
+with the change so the two cannot disagree.
+
+### Two vocabularies, kept apart
+
+The Hub reads "Writing", "Delivered" and "Live" as `in-progress`, `submitted`
+and `published`, because different sheets word them differently. That means
+there are two languages in play, and mixing them up breaks things quietly:
+
+- **What a person sees** is the Hub's own wording, because that is what the
+  rest of the Hub says.
+- **What is compared against the sheet** is read off the sheet. The
+  concurrency check re-reads the row and refuses if it no longer matches what
+  the confirmation was worked out against — and a check that compared
+  `in-progress` to "Writing" would refuse *every* write, which is a bug whose
+  obvious fix is exactly the wrong one.
+- **What gets written** is one of the *sheet's own picklist options*, found by
+  normalising each option and matching it to the status wanted. The Hub never
+  invents a value the column would reject.
+
+Building this turned up a real bug in the reading code, which had been there
+from the start: `normaliseStatus` tested for "live" before "delivered", and
+"de**live**red" contains it — so a delivered forecast was read as a published
+one, and every timeliness figure computed from it was wrong. Fixed, with a
+test over every status word the sheets use.
+
+### It keeps its own history
+
+Smartsheet has cell history and the Hub is taking a slice of that work off it,
+so `schedule_writes` records every attempt: who, when, which row, which cells,
+from what to what — and the refusals, because a failed write with no trace is
+worse than no write. The forecast page shows it under the panel.
+
+**Not verified against the live API.** Nothing here has touched a real
+Smartsheet: `api.smartsheet.com` is blocked from the environment this was
+built in. In its place, `npm test -w server` runs the writer against a stubbed
+API and asserts the things that must never happen — a write with the flag off,
+a write outside the five columns, a write over somebody else's edit, a status
+the picklist would reject — and the whole path was driven end to end against a
+local stand-in for the API: preview, refusal, apply, the cells that landed,
+the Hub re-reading them, and the log. Before pointing it at the real sheet,
+try it on a copy.
+
+`SMARTSHEET_API` sets the API base, because Smartsheet is regional — a
+European account is served from `api.smartsheet.eu`, and pointing a UK team's
+Hub at the US endpoint either fails or moves their data across a border
+nobody chose.
+
 ## Sign-in and access
 
 The Hub reads the signed-in account and filters itself accordingly — a

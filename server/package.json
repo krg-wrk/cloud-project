@@ -6,9 +6,9 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json && cp src/studio/*.test.mjs dist/studio/ && cp src/proofPoints/*.test.mjs dist/proofPoints/ && cp src/data/*.gz dist/data/",
+    "build": "tsc -p tsconfig.json && cp src/studio/*.test.mjs dist/studio/ && cp src/proofPoints/*.test.mjs dist/proofPoints/ && cp src/data/*.test.mjs dist/data/ && cp src/data/*.gz dist/data/",
     "start": "node dist/index.js",
-    "test": "npm run build && node --test dist/studio/*.test.mjs dist/proofPoints/*.test.mjs"
+    "test": "npm run build && node --test dist/studio/*.test.mjs dist/proofPoints/*.test.mjs dist/data/*.test.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",

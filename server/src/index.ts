@@ -5,6 +5,7 @@ import { createNoteDrafter } from "./ai.js";
 import { createApiRouter, createFeedRouter } from "./api.js";
 import { readAuthConfig, viewerMiddleware } from "./auth.js";
 import { CachedDataSource, createDataSource } from "./data/index.js";
+import { SmartsheetSource } from "./data/smartsheetSource.js";
 import { createProofPointRouter } from "./proofPoints/api.js";
 import { ProofPointLibrary } from "./proofPoints/library.js";
 import { SignUps } from "./signUps.js";
@@ -15,8 +16,12 @@ import { StudioStore } from "./studio/store.js";
 const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 
-// Read-only schedule from the sheets; everything the team writes goes in the store.
-const data = new CachedDataSource(createDataSource());
+/*
+ * The schedule, from the sheets. Read-only unless the deployment turned
+ * writing on below; everything else the team writes goes in the store.
+ */
+const source = createDataSource();
+const data = new CachedDataSource(source);
 const store = new HubStore();
 // Connections, datasets and views: configuration, in the same database.
 const studio = new StudioStore(store.connection);
@@ -27,6 +32,26 @@ const auth = readAuthConfig();
 const proofPoints = new ProofPointLibrary();
 
 store.seedSignUpsIfEmpty(await data.listSignUps());
+
+/*
+ * Turn writing on, if this deployment asked for it.
+ *
+ * Done here rather than lazily so that a write flag set against a sheet the
+ * token cannot see fails at startup with a message, instead of the first time
+ * a manager presses Apply on a change they thought they had made.
+ */
+let writeTarget = "off";
+if (source instanceof SmartsheetSource) {
+  try {
+    writeTarget = await source.enableWrites();
+  } catch (err) {
+    console.error(
+      "SMARTSHEET_WRITE=1 but the commissioning sheet could not be opened for writing:",
+      (err as Error).message,
+    );
+    writeTarget = "off — the sheet could not be opened";
+  }
+}
 
 app.use(cors());
 app.use(express.json());
@@ -77,6 +102,7 @@ app.listen(PORT, () => {
       `  AI notes:  ${drafter.model === "none" ? "off (no GEMINI_API_KEY)" : drafter.model}\n` +
       `  studio:    ${studio.listConnections().length} connections, ` +
       `${studio.listDatasets().length} datasets, ${studio.listViews().length} views\n` +
-      `  proof pts: ${proofPoints.size.toLocaleString()} across ${proofPoints.trendCount} trends`,
+      `  proof pts: ${proofPoints.size.toLocaleString()} across ${proofPoints.trendCount} trends\n` +
+      `  writes:    ${writeTarget === "off" ? "off — the Hub only reads the schedule" : writeTarget}`,
   );
 });

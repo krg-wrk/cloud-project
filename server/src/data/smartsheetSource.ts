@@ -7,8 +7,10 @@ import {
 } from "./seed.js";
 import type {
   CalendarEvent,
+  CellChange,
   ContentItem,
   ContentType,
+  ContentWriter,
   DataSource,
   EventType,
   KnowledgeSession,
@@ -21,9 +23,20 @@ import type {
   Status,
   TrendProfile,
   Vertical,
+  WritableFields,
 } from "../types.js";
+import { WRITABLE_FIELDS } from "../types.js";
 
-const API = "https://api.smartsheet.com/2.0";
+/**
+ * Where the Smartsheet API lives.
+ *
+ * Configurable because Smartsheet is regional: a European account is served
+ * from api.smartsheet.eu, and pointing a UK team's Hub at the US endpoint
+ * either fails or moves their data across a border neither of them chose.
+ * It is also how the write path is exercised against a stub, since the real
+ * API is unreachable from the environment this was built in.
+ */
+const API = (process.env.SMARTSHEET_API ?? "https://api.smartsheet.com/2.0").replace(/\/$/, "");
 
 /**
  * Column titles as they appear in the source sheets. Change these to match the
@@ -189,7 +202,8 @@ interface SmartsheetRow {
 interface SmartsheetSheet {
   id: number;
   name: string;
-  columns: { id: number; title: string }[];
+  /** `options` is a picklist column's allowed values, which a write must use. */
+  columns: { id: number; title: string; type?: string; options?: string[] }[];
   rows: SmartsheetRow[];
 }
 
@@ -199,6 +213,14 @@ type FlatRow = Record<string, string>;
 export interface SmartsheetConfig {
   token: string;
   contentSheetId: string;
+  /**
+   * Whether the Hub may write to the commissioning sheet.
+   *
+   * Off unless switched on deliberately, because this is the managers' live
+   * sheet. With it off the source reports no write capability at all and the
+   * API refuses before it gets anywhere near a request.
+   */
+  allowWrites?: boolean;
   eventsSheetId?: string;
   peopleSheetId?: string;
   sessionsSheetId?: string;
@@ -216,10 +238,182 @@ export interface SmartsheetConfig {
  * service token, which is why every response is normalised into our own
  * domain model here rather than passed through raw.
  */
+/**
+ * Writing back to the commissioning sheet.
+ *
+ * This is the one place in the Hub that changes somebody else's system, so
+ * every constraint is in the type rather than in the caller's good manners:
+ *
+ * - It only exists when `allowWrites` is on. A source with it off has no
+ *   `writes` at all, so there is no object to call.
+ * - It writes only the five columns in `WRITABLE_FIELDS`, addressed by the
+ *   titles in `COLUMNS.content`. A field not in that list has no column to
+ *   write to and is dropped before a request is built.
+ * - It re-reads the row first and refuses if the sheet no longer matches what
+ *   the change was worked out against. Somebody else's edit is not ours to
+ *   discard, and a stale confirmation is exactly how that happens.
+ * - A status is written as one of the *sheet's own* picklist options, chosen
+ *   by normalising each option and matching it to the status wanted — so the
+ *   Hub never invents a value the column would reject.
+ */
+class SmartsheetContentWriter implements ContentWriter {
+  readonly target: string;
+
+  constructor(
+    private readonly source: SmartsheetSource,
+    private readonly sheetId: string,
+    sheetName: string,
+  ) {
+    this.target = `${sheetName} (sheet ${sheetId})`;
+  }
+
+  /** The sheet, the row, and the writable cells as the sheet words them. */
+  private async readRow(rowId: string) {
+    const sheet = await this.source.contentSheet();
+    const row = sheet.rows.find((r) => String(r.id) === rowId);
+    if (!row) {
+      throw new Error(
+        `Row ${rowId} is no longer on ${this.target}. It may have been deleted or moved.`,
+      );
+    }
+    const byId = new Map(sheet.columns.map((col) => [col.id, col]));
+    const writable = new Set<string>(WRITABLE_FIELDS.map((f) => COLUMNS.content[f]));
+    const current: Record<string, string> = {};
+    for (const cell of row.cells) {
+      const col = byId.get(cell.columnId);
+      if (!col || !writable.has(col.title)) continue;
+      current[col.title] = cell.displayValue ?? (cell.value != null ? String(cell.value) : "");
+    }
+    return { sheet, row, current };
+  }
+
+  async current(rowId: string): Promise<Record<string, string>> {
+    return (await this.readRow(rowId)).current;
+  }
+
+  async apply(
+    rowId: string,
+    changes: WritableFields,
+    expect: Record<string, string>,
+  ): Promise<void> {
+    const c = COLUMNS.content;
+    const { sheet, current } = await this.readRow(rowId);
+    const byTitle = new Map(sheet.columns.map((col) => [col.title, col]));
+
+    /*
+     * The row has to be what it was when the change was described. Without
+     * this, two managers looking at the same forecast quietly overwrite each
+     * other and neither is told.
+     */
+    for (const [title, was] of Object.entries(expect)) {
+      const now = current[title] ?? "";
+      if (now.trim() !== was.trim()) {
+        throw new Error(
+          `"${title}" on ${this.target} now reads "${now || "(empty)"}" rather than ` +
+            `"${was || "(empty)"}". Somebody changed the row — reload and look again.`,
+        );
+      }
+    }
+
+    const cells: { columnId: number; value: string | null }[] = [];
+    for (const field of WRITABLE_FIELDS) {
+      if (!(field in changes)) continue;
+      const column = byTitle.get(c[field]);
+      // A column the sheet does not have is not an error worth stopping for,
+      // but it is worth saying: the write simply cannot reach it.
+      if (!column) {
+        throw new Error(
+          `${this.target} has no "${c[field]}" column, so ${field} cannot be written. ` +
+            `Add the column, or correct COLUMNS.content.`,
+        );
+      }
+      const value = changes[field];
+      if (field === "status") {
+        cells.push({ columnId: column.id, value: statusOptionFor(column, value as Status) });
+      } else {
+        cells.push({ columnId: column.id, value: value ? String(value) : null });
+      }
+    }
+    if (cells.length === 0) return;
+
+    const res = await fetch(`${API}/sheets/${this.sheetId}/rows`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${this.source.tokenForWrite}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([{ id: Number(rowId), cells }]),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => ({}))) as { message?: string };
+      throw new Error(
+        `Smartsheet refused the change to ${this.target}: ${res.status} ` +
+          `${body.message ?? res.statusText}`,
+      );
+    }
+  }
+}
+
+/**
+ * The word to write in a status column.
+ *
+ * The sheet's own picklist is the authority: each option is normalised the
+ * same way reading normalises it, and the one that lands on the status we
+ * want is what gets written. A column with no picklist takes a plain label.
+ */
+function statusOptionFor(
+  column: { options?: string[] },
+  status: Status,
+): string {
+  const match = (column.options ?? []).find((option) => normaliseStatus(option) === status);
+  return match ?? STATUS_LABELS[status];
+}
+
+/** What to write when the column has no picklist to choose from. */
+const STATUS_LABELS: Record<Status, string> = {
+  "not-started": "Not Started",
+  "in-progress": "In Progress",
+  submitted: "Submitted",
+  "in-review": "In Review",
+  published: "Published",
+  "at-risk": "At Risk",
+};
+
 export class SmartsheetSource implements DataSource {
   readonly name = "smartsheet";
+  readonly writes?: ContentWriter;
 
   constructor(private readonly config: SmartsheetConfig) {}
+
+  /** The token, for the writer only. Nothing else needs it from outside. */
+  get tokenForWrite(): string {
+    return this.config.token;
+  }
+
+  /** The commissioning sheet as the API returns it, for the writer. */
+  contentSheet(): Promise<SmartsheetSheet> {
+    return this.fetchSheet(this.config.contentSheetId);
+  }
+
+  /**
+   * Turn writing on, once.
+   *
+   * Called at boot rather than in the constructor because it reads the sheet
+   * to learn its name and confirm the token can see it — so a misconfigured
+   * write flag fails at startup with a message, rather than the first time a
+   * manager presses Apply.
+   */
+  async enableWrites(): Promise<string> {
+    if (!this.config.allowWrites) return "off";
+    const sheet = await this.contentSheet();
+    const writer = new SmartsheetContentWriter(
+      this,
+      this.config.contentSheetId,
+      sheet.name ?? "the commissioning sheet",
+    );
+    (this as { writes?: ContentWriter }).writes = writer;
+    return writer.target;
+  }
 
   private async fetchSheet(sheetId: string): Promise<SmartsheetSheet> {
     const res = await fetch(`${API}/sheets/${sheetId}`, {
@@ -277,6 +471,8 @@ export class SmartsheetSource implements DataSource {
       .filter((row) => row[c.title])
       .map((row) => ({
         id: row[c.id] || `ss-${row._rowId}`,
+        // The row, not the Content ID: the only address a write may use.
+        sourceRowId: row._rowId,
         title: row[c.title],
         type: (row[c.type] || "Market Report") as ContentType,
         vertical: (row[c.vertical] || "Womenswear") as Vertical,
@@ -580,12 +776,21 @@ function isoDate(value: string | undefined): string {
   return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
 }
 
+/**
+ * A status word from the sheet, as one of ours.
+ *
+ * Loose matching on purpose: "In Progress", "Writing" and "Draft" are all the
+ * same thing to the Hub, and different sheets word them differently. The
+ * order is not arbitrary — the specific tests have to come before the general
+ * ones, and "live" has to be a whole word, because "delivered" contains it
+ * and a delivered forecast was being read as a published one.
+ */
 function normaliseStatus(value: string | undefined): Status {
   const v = (value ?? "").toLowerCase();
   if (v.includes("risk") || v.includes("blocked")) return "at-risk";
-  if (v.includes("publish") || v.includes("live")) return "published";
   if (v.includes("review")) return "in-review";
-  if (v.includes("submit") || v.includes("delivered")) return "submitted";
+  if (v.includes("submit") || v.includes("deliver")) return "submitted";
+  if (v.includes("publish") || /\blive\b/.test(v)) return "published";
   if (v.includes("progress") || v.includes("writing") || v.includes("draft")) return "in-progress";
   return "not-started";
 }

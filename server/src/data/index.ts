@@ -10,6 +10,13 @@ import { SmartsheetSource } from "./smartsheetSource.js";
  * DATA_SOURCE=smartsheet  reads the commissioning sheets, requires:
  *   SMARTSHEET_TOKEN, SMARTSHEET_CONTENT_SHEET_ID,
  *   SMARTSHEET_EVENTS_SHEET_ID, SMARTSHEET_PEOPLE_SHEET_ID
+ *
+ * SMARTSHEET_API          the API base, for a non-US Smartsheet region
+ *   (api.smartsheet.eu for a European account). Defaults to the US one.
+ *
+ * SMARTSHEET_WRITE=1      also lets commissioning managers change five
+ *   columns of the commissioning sheet from the Hub. Off by default: this is
+ *   the only thing the Hub does that edits somebody else's system.
  */
 export function createDataSource(): DataSource {
   const kind = process.env.DATA_SOURCE ?? "seed";
@@ -25,6 +32,13 @@ export function createDataSource(): DataSource {
     return new SmartsheetSource({
       token,
       contentSheetId,
+      /*
+       * Writing to the managers' live sheet needs saying out loud. Nothing
+       * about a read-only deployment changes; a Hub without this reports no
+       * write capability at all and the API refuses before it builds a
+       * request.
+       */
+      allowWrites: process.env.SMARTSHEET_WRITE === "1",
       eventsSheetId: process.env.SMARTSHEET_EVENTS_SHEET_ID,
       peopleSheetId: process.env.SMARTSHEET_PEOPLE_SHEET_ID,
       sessionsSheetId: process.env.SMARTSHEET_SESSIONS_SHEET_ID,
@@ -56,6 +70,17 @@ export class CachedDataSource implements DataSource {
     private readonly ttlMs = 60_000,
   ) {
     this.name = `${inner.name} (cached ${Math.round(ttlMs / 1000)}s)`;
+  }
+
+  /** Whatever the source underneath will accept back, unchanged. */
+  get writes() {
+    return this.inner.writes;
+  }
+
+  /** When the Hub has just changed something, the cached copy is wrong. */
+  forget(key: "content" | "events" | "people" | "trends"): void {
+    this.cache.delete(key);
+    this.inner.forget?.(key);
   }
 
   private async through<T>(key: string, load: () => Promise<T>): Promise<T> {

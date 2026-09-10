@@ -92,6 +92,21 @@ export function canWriteDetails(viewer: Viewer, item: ContentItem): boolean {
 }
 
 /**
+ * Changing the commissioning sheet itself.
+ *
+ * Narrower than everything else the Hub allows, because this is the only
+ * thing that reaches out of the Hub and edits somebody else's system.
+ * Commissioning is where the managers work: a manager may change a row in a
+ * vertical they oversee, an admin any row, and a forecaster none — not even
+ * their own, where they can still say what they need to in a note.
+ */
+export function canWriteSchedule(viewer: Viewer, item: ContentItem): boolean {
+  if (!viewer.active) return false;
+  if (isAdmin(viewer)) return true;
+  return isManager(viewer) && inScope(viewer, item.vertical);
+}
+
+/**
  * A trend profile belongs to one forecaster, and may credit others. They own
  * what the Hub holds against it — the note, the links, the cover image — as
  * does an admin, and a manager whose verticals overlap the industries the

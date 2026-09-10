@@ -49,6 +49,8 @@ export interface ContentItem {
   details?: ForecastDetails | null;
   /** When the copy actually landed, where the sheet records it. */
   submittedOn?: string;
+  /** The sheet row it came from, when the source is one the Hub can write to. */
+  sourceRowId?: string;
 }
 
 export interface CalendarEvent {
@@ -568,4 +570,55 @@ export interface ProofPointDetail {
     publishedUrl?: string;
   } | null;
   tierMeaning: string;
+}
+
+/* ---- Changing the commissioning sheet ----------------------------------- */
+
+/** One cell that would change, in the words the confirmation shows. */
+export interface CellChange {
+  field: "status" | "submissionDate" | "publicationDate" | "submittedOn" | "notes";
+  /** The column's title in the sheet, so the confirmation names the real cell. */
+  column: string;
+  from: string;
+  to: string;
+}
+
+/** One recorded attempt, successful or refused. */
+export interface ScheduleWrite {
+  id: string;
+  contentId: string;
+  sourceRowId: string;
+  target: string;
+  changes: CellChange[];
+  byEmail: string;
+  byPersonId?: string;
+  at: string;
+  ok: boolean;
+  problem?: string;
+}
+
+/** Whether this account may change this row, and what it already changed. */
+export interface ScheduleState {
+  canWrite: boolean;
+  /** Why not, when it may not — a read-only Hub, or the wrong role. */
+  why: string | null;
+  target: string | null;
+  fields: CellChange["field"][];
+  history: ScheduleWrite[];
+}
+
+/**
+ * What a change would do, and nothing else. Asking for this writes nothing.
+ *
+ * `expect` goes back with the change unaltered: it is what the row held when
+ * this was worked out, so the server can refuse a write against a row
+ * somebody else has edited since.
+ */
+export interface SchedulePreview {
+  target: string;
+  row: string;
+  changes: CellChange[];
+  /** Fields the server would not accept, and why. */
+  refused: string[];
+  expect: Record<string, string>;
 }

@@ -10,6 +10,7 @@ import BackLink from "../components/BackLink";
 import DetailsPanel from "../components/DetailsPanel";
 import Notes from "../components/Notes";
 import PeerReviewPanel from "../components/PeerReviewPanel";
+import SchedulePanel from "../components/SchedulePanel";
 import ShareLink from "../components/ShareLink";
 
 export default function ContentDetail() {
@@ -163,6 +164,23 @@ export default function ContentDetail() {
                       people={team}
                       contentTypes={(taxonomy.data?.contentTypes ?? []).map((t) => t.name)}
                       headingSlot={slot.id}
+                    />
+                  </div>
+                );
+
+              /*
+               * The one place the Hub changes the managers' own sheet. The
+               * panel returns nothing at all for a forecaster, or in a Hub
+               * that only reads — so the section is simply absent rather
+               * than explaining a control that is not there.
+               */
+              case "content.section.schedule":
+                return (
+                  <div key={slot.id} style={{ marginTop: 28 }}>
+                    <SchedulePanel
+                      item={c}
+                      headingSlot={slot.id}
+                      onApplied={() => item.reload()}
                     />
                   </div>
                 );
