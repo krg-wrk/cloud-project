@@ -1006,6 +1006,27 @@ world with nobody pressing anything, and a proof of concept that mailed two
 hundred people because somebody ran it on a laptop would be the last time the
 team trusted it.
 
+### Trying it without emailing anybody
+
+`tools/stub-relay.mjs` is a relay that only prints:
+
+```bash
+node tools/stub-relay.mjs                              # listens on :4111
+NOTIFY_EMAIL_URL=http://localhost:4111 npm run dev     # in another terminal
+```
+
+Then run the notifier from `/studio/notifications` and press send. Every
+message is printed as it arrives, and `http://localhost:4111/sent` lists what
+it was given — the addresses, the subjects, the text. `/refuse` answers 403
+instead, which is how to see what the send log says when a relay says no.
+
+The one thing that cannot be tested against the real thing is "does it send",
+and the way to test it is not to send: this gives the whole path — the
+preferences, the key that stops a notice going twice, the log, the admin's
+view of what went — without a message leaving the building. It is a
+development tool, has no dependencies, and forgets everything when you stop
+it.
+
 `/studio/notifications` is the other half. **The preview is the default** —
 `POST /notifications/run` builds every notice, works out where each would go,
 and sends nothing; only `?send=1` sends. The wrong way round would mean one
@@ -1550,3 +1571,6 @@ where it matters.
 - `node tools/audit-a11y.mjs [--demo] [--dark]` — the accessibility audit over
   every page, in a real browser (needs `npm i -D playwright`, or `CHROMIUM=`
   pointing at one that is already installed)
+- `node tools/stub-relay.mjs` — a stand-in for the email relay that prints
+  what it was asked to send, so the notifier can be tried without emailing
+  anybody
