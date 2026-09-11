@@ -147,10 +147,10 @@ export default function NotifyAdmin() {
                   <table className="schedule">
                     <thead>
                       <tr>
-                        <th>Who</th>
-                        <th>What</th>
-                        <th>Where</th>
-                        <th>Outcome</th>
+                        <th scope="col">Who</th>
+                        <th scope="col">What</th>
+                        <th scope="col">Where</th>
+                        <th scope="col">Outcome</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -206,11 +206,11 @@ export default function NotifyAdmin() {
             <table className="schedule">
               <thead>
                 <tr>
-                  <th>When</th>
-                  <th>Who</th>
-                  <th>What</th>
-                  <th>Where</th>
-                  <th>Outcome</th>
+                  <th scope="col">When</th>
+                  <th scope="col">Who</th>
+                  <th scope="col">What</th>
+                  <th scope="col">Where</th>
+                  <th scope="col">Outcome</th>
                 </tr>
               </thead>
               <tbody>

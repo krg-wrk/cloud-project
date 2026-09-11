@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getJson, query } from "../lib/api";
+import { useDialog } from "../lib/dialog";
 import { Icon } from "../lib/icons";
 import type { SearchHit, SearchKind, SearchResult } from "../types";
 
@@ -11,10 +12,6 @@ import type { SearchHit, SearchKind, SearchResult } from "../types";
  * Enter to go. No page of its own: a search is a way to get somewhere rather
  * than a destination, and a results page that you then have to leave is one
  * step more than anybody wants.
- *
- * Grouped headings over a single ranked list, which is the arrangement that
- * lets the keyboard walk work: the headings are labels on a flat list, not
- * separate lists to tab between.
  */
 
 const ICON: Record<SearchKind, string> = {
@@ -29,6 +26,12 @@ const ICON: Record<SearchKind, string> = {
 /** Long enough that a keystroke does not cost a request, short enough to feel live. */
 const WAIT_MS = 160;
 
+/**
+ * Mounted only while open, which is what makes the rest simple: the state
+ * starts fresh every time, so the box cannot still hold the last search, and
+ * `useDialog` can do focus and Escape on mount and unmount as it does for
+ * every other dialog.
+ */
 export default function SearchPalette({
   open,
   onClose,
@@ -36,6 +39,10 @@ export default function SearchPalette({
   open: boolean;
   onClose: () => void;
 }) {
+  return open ? <Palette onClose={onClose} /> : null;
+}
+
+function Palette({ onClose }: { onClose: () => void }) {
   const [q, setQ] = useState("");
   const [result, setResult] = useState<SearchResult | null>(null);
   const [busy, setBusy] = useState(false);
@@ -43,33 +50,15 @@ export default function SearchPalette({
   const [at, setAt] = useState(0);
   const navigate = useNavigate();
   const box = useRef<HTMLInputElement | null>(null);
+  const shell = useRef<HTMLDivElement | null>(null);
   const list = useRef<HTMLDivElement | null>(null);
-  /** Where focus was before this opened, so Escape puts it back. */
-  const cameFrom = useRef<Element | null>(null);
 
-  useEffect(() => {
-    if (!open) return;
-    cameFrom.current = document.activeElement;
-    /*
-     * Opens empty, every time.
-     *
-     * The component stays mounted between openings, so without this the box
-     * still holds the last search and the next keystroke lands on the end of
-     * it — you press ⌘K, type "collagen", and search for "catwalkcollagen".
-     */
-    setQ("");
-    setResult(null);
-    setAt(0);
-    box.current?.focus();
-    return () => {
-      (cameFrom.current as HTMLElement | null)?.focus?.();
-    };
-  }, [open]);
+  // Escape closes, Tab stays inside, focus goes back where it came from.
+  useDialog(shell, onClose);
 
   // Debounced, and the older answer is dropped if a newer one has been asked
   // for — otherwise a slow request for "col" lands after "collagen".
   useEffect(() => {
-    if (!open) return;
     const asked = q.trim();
     if (asked.length < 2) {
       setResult(null);
@@ -96,7 +85,7 @@ export default function SearchPalette({
       alive = false;
       clearTimeout(timer);
     };
-  }, [q, open]);
+  }, [q]);
 
   const hits = result?.hits ?? [];
 
@@ -109,23 +98,14 @@ export default function SearchPalette({
   );
 
   /*
-   * The keys, on the dialog rather than the window: while this is open it
-   * owns the arrows and Enter, and when it is not there is nothing to
-   * listen for. Tab is trapped because a dialog that lets you tab into the
-   * page behind it is a dialog somebody will get lost in.
+   * The arrows and Enter, on the dialog itself.
+   *
+   * The list is walked rather than tabbed: focus stays in the box, and
+   * `aria-activedescendant` is what tells a screen reader which row is
+   * chosen. Tabbing through a hundred results to reach the fourth is not
+   * navigation.
    */
   function onKey(e: React.KeyboardEvent) {
-    if (e.key === "Escape") {
-      e.preventDefault();
-      onClose();
-      return;
-    }
-    if (e.key === "Tab") {
-      // One field and a list of links: nothing to move between.
-      e.preventDefault();
-      box.current?.focus();
-      return;
-    }
     if (e.key === "ArrowDown") {
       e.preventDefault();
       setAt((i) => Math.min(i + 1, Math.max(hits.length - 1, 0)));
@@ -149,17 +129,20 @@ export default function SearchPalette({
     list.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
   }, [at]);
 
-  if (!open) return null;
-
   /*
-   * Headings over a flat list.
+   * One group per kind, carrying its own heading.
    *
-   * A hit gets a heading when its kind differs from the one before it, which
-   * works because the list is already ranked and the ranking keeps kinds
-   * mostly together — and where it does not, a kind appearing twice is
-   * honest about what the ranking did.
+   * A listbox may only hold options and groups, so the headings cannot be
+   * loose children of it. The server already returns the hits in blocks of
+   * one kind, so walking them in order and starting a group whenever the
+   * kind changes reproduces those blocks exactly.
    */
-  let last: SearchKind | null = null;
+  const groups: { kind: SearchKind; from: number; hits: SearchHit[] }[] = [];
+  hits.forEach((hit, i) => {
+    const open = groups[groups.length - 1];
+    if (open && open.kind === hit.kind) open.hits.push(hit);
+    else groups.push({ kind: hit.kind, from: i, hits: [hit] });
+  });
 
   return (
     <>
@@ -169,6 +152,7 @@ export default function SearchPalette({
         role="dialog"
         aria-modal="true"
         aria-label="Search the Hub"
+        ref={shell}
         onKeyDown={onKey}
       >
         <div className="palette-box">
@@ -177,6 +161,12 @@ export default function SearchPalette({
             ref={box}
             type="search"
             value={q}
+            /*
+             * No autoFocus: React applies it during commit, before effects,
+             * so useDialog would then record the box itself as "where focus
+             * came from" and have nowhere to put it back. The hook focuses
+             * the first thing in here, which is this.
+             */
             placeholder="Forecasts, trends, people, sessions, proof points…"
             aria-label="Search the Hub"
             aria-autocomplete="list"
@@ -188,7 +178,13 @@ export default function SearchPalette({
           <kbd>Esc</kbd>
         </div>
 
-        <div className="palette-results" id="palette-results" role="listbox" ref={list}>
+        <div
+          className="palette-results"
+          id="palette-results"
+          role="listbox"
+          aria-label="Results"
+          ref={list}
+        >
           {error && <p className="palette-none">{error}</p>}
 
           {!error && q.trim().length < 2 && (
@@ -205,35 +201,40 @@ export default function SearchPalette({
             </p>
           )}
 
-          {hits.map((hit, i) => {
-            const heading = hit.kind !== last ? result?.labels[hit.kind] : null;
-            last = hit.kind;
-            const count = result?.counts[hit.kind] ?? 0;
-            const shown = hits.filter((h) => h.kind === hit.kind).length;
+          {groups.map((group) => {
+            const all = result?.counts[group.kind] ?? 0;
             return (
-              <div key={`${hit.kind}-${hit.to}-${i}`}>
-                {heading && (
-                  <div className="palette-group">
-                    {heading}
-                    {count > shown && <span className="muted"> · {count} in all</span>}
-                  </div>
-                )}
-                <button
-                  id={`hit-${i}`}
-                  role="option"
-                  aria-selected={i === at}
-                  className={i === at ? "palette-hit on" : "palette-hit"}
-                  onClick={() => go(hit)}
-                  onMouseMove={() => setAt(i)}
-                >
-                  <Icon name={ICON[hit.kind]} size={15} />
-                  <span className="palette-text">
-                    <b>{hit.title}</b>
-                    <span className="palette-sub">{hit.sub}</span>
-                    {hit.why && <span className="palette-why">{hit.why}</span>}
-                  </span>
-                  <Icon name="back" size={14} />
-                </button>
+              <div
+                key={group.kind}
+                role="group"
+                aria-labelledby={`palette-group-${group.kind}`}
+              >
+                <div className="palette-group" id={`palette-group-${group.kind}`}>
+                  {result?.labels[group.kind]}
+                  {all > group.hits.length && <span className="muted"> · {all} in all</span>}
+                </div>
+                {group.hits.map((hit, j) => {
+                  const i = group.from + j;
+                  return (
+                    <button
+                      key={`${hit.to}-${i}`}
+                      id={`hit-${i}`}
+                      role="option"
+                      aria-selected={i === at}
+                      className={i === at ? "palette-hit on" : "palette-hit"}
+                      onClick={() => go(hit)}
+                      onMouseMove={() => setAt(i)}
+                    >
+                      <Icon name={ICON[hit.kind]} size={15} />
+                      <span className="palette-text">
+                        <b>{hit.title}</b>
+                        <span className="palette-sub">{hit.sub}</span>
+                        {hit.why && <span className="palette-why">{hit.why}</span>}
+                      </span>
+                      <Icon name="back" size={14} />
+                    </button>
+                  );
+                })}
               </div>
             );
           })}

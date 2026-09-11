@@ -167,7 +167,7 @@ export default function Trends() {
 
       <div className="filters">
         <div className="field">
-          <Slot id="trends.filter.owner" as="label" />
+          <Slot id="trends.filter.owner" as="label" labels="owner" />
           <select id="owner" value={owner} onChange={(e) => setParam("owner", e.target.value)}>
             <option value="mine">Mine</option>
             <option value="all">Everyone</option>
@@ -179,7 +179,7 @@ export default function Trends() {
           </select>
         </div>
         <div className="field">
-          <Slot id="trends.filter.type" as="label" />
+          <Slot id="trends.filter.type" as="label" labels="type" />
           <select id="type" value={type} onChange={(e) => setParam("type", e.target.value)}>
             <option value="">All types</option>
             {TREND_TYPES.map((t) => (
@@ -190,7 +190,7 @@ export default function Trends() {
           </select>
         </div>
         <div className="field">
-          <Slot id="trends.filter.industry" as="label" />
+          <Slot id="trends.filter.industry" as="label" labels="industry" />
           <select
             id="industry"
             value={industry}
@@ -205,7 +205,7 @@ export default function Trends() {
           </select>
         </div>
         <div className="field">
-          <Slot id="trends.filter.state" as="label" />
+          <Slot id="trends.filter.state" as="label" labels="state" />
           <select id="state" value={state} onChange={(e) => setParam("state", e.target.value)}>
             <option value="">Any state</option>
             <option value="published">Live</option>
@@ -214,8 +214,13 @@ export default function Trends() {
           </select>
         </div>
         <div className="field">
-          <Slot id="trends.filter.call" as="label" />
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <Slot id="trends.filter.call" as="div" className="field-label" htmlId="trends-call" />
+          <div
+            className="chip-row"
+            role="group"
+            aria-labelledby="trends-call"
+            style={{ display: "flex", gap: 6, flexWrap: "wrap" }}
+          >
             <button className={call ? "btn" : "btn accent"} onClick={() => setParam("call", "")}>
               Any
             </button>
@@ -232,9 +237,11 @@ export default function Trends() {
           </div>
         </div>
         <div className="field">
-          <Slot id="trends.filter.scores" as="label" />
+          <Slot id="trends.filter.scores" as="div" className="field-label" htmlId="trends-scores" />
+          {/* One button, so the heading names the button rather than a group. */}
           <button
             className={needsScore ? "btn accent" : "btn"}
+            aria-pressed={needsScore}
             onClick={() => setParam("needsScore", needsScore ? "" : "1")}
             title="Profiles with an industry that has not been scored"
           >

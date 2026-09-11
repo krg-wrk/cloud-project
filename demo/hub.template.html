@@ -30,7 +30,15 @@
     --sunken: #ebebe8;
     --ink: #0e0e10;
     --ink-mid: #56565c;
-    --ink-soft: #8b8b91;
+    /*
+     * The de-emphasised ink, and the one number in this file with a rule
+     * behind it. #8b8b91 is 3.39:1 on paper and 3.08:1 on the ground, under
+     * the 4.5:1 body text needs — and it carries every eyebrow, count and
+     * muted line in the app. #69696f is the lightest grey on the same hue
+     * that clears 4.5 against all three grounds, so it is the smallest
+     * change to the look that is actually readable.
+     */
+    --ink-soft: #69696f;
     --line: #e2e2de;
     --line-firm: #c7c7c1;
     --accent: #4c5578;
@@ -39,7 +47,8 @@
     --accent-ink: #ffffff;
 
     --late: #b8341f;
-    --warn: #9c6b16;
+    /* 4.00:1 on the accent wash, where "2 of 12 places left" sits. */
+    --warn: #875d13;
     --warn-ink: #7d5511;
     --ok: #256b48;
     --info: #2f5f9e;
@@ -55,7 +64,7 @@
 
     /* Things only the signed-in person sees — kept clear of every shared hue. */
     --mine: #8e3b74;
-    --review: #c2571a;
+    --review: #a94c16;
 
     /* The strategic call on a trend is ordered by how much commitment it
        asks for, so it takes one hue in four steps rather than four
@@ -87,7 +96,8 @@
       --sunken: #1e1e23;
       --ink: #f1f1ef;
       --ink-mid: #a4a4ab;
-      --ink-soft: #7c7c84;
+      /* 4.36 on paper and 4.01 on the sunken ground; #86868e clears 4.5 on all three. */
+      --ink-soft: #8c8c94;
       --line: #2a2a30;
       --line-firm: #3c3c44;
       --accent: #9aa3cc;
@@ -129,7 +139,7 @@
     --sunken: #1e1e23;
     --ink: #f1f1ef;
     --ink-mid: #a4a4ab;
-    --ink-soft: #7c7c84;
+    --ink-soft: #8c8c94;
     --line: #2a2a30;
     --line-firm: #3c3c44;
     --accent: #9aa3cc;
@@ -5083,6 +5093,33 @@
      results page you then have to leave is one step more than anybody wants.
      ----------------------------------------------------------------------- */
 
+  /*
+   * Off screen until it has focus, which is the convention: it costs a mouse
+   * nothing and saves a keyboard fifteen tab stops on every page.
+   */
+  .skip {
+    position: fixed;
+    top: 8px;
+    left: 8px;
+    z-index: 100;
+    padding: 9px 14px;
+    border: 1px solid var(--ink);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 500;
+    transform: translateY(-200%);
+  }
+
+  .skip:focus-visible {
+    transform: translateY(0);
+  }
+
+  /* Landing there is a destination, not a control. */
+  #view:focus {
+    outline: none;
+  }
+
   .search-open {
     display: flex;
     align-items: center;
@@ -5318,6 +5355,16 @@
 
 </style>
 
+<!--
+  Straight to the page.
+
+  The rail is fifteen tab stops, on every page, before the content — which
+  is the single biggest thing standing between a keyboard and this app. Off
+  screen until it has focus, as the convention is, so it costs a mouse
+  nothing.
+-->
+<a class="skip" href="#view">Skip to the page</a>
+
 <div class="demo-note">
   <strong>Proof of concept</strong>
   <span
@@ -5364,7 +5411,7 @@
       </div>
     </div>
   </aside>
-  <main id="view"></main>
+  <main id="view" tabindex="-1"></main>
   <div id="edit-bar"></div>
 </div>
 
@@ -6940,7 +6987,7 @@
               <thead><tr>${columns
                 .map(
                   (col) =>
-                    `<th${numeric.has(col.id) ? ' class="num"' : ""}>${slot(col.id, {
+                    `<th scope="col"${numeric.has(col.id) ? ' class="num"' : ""}>${slot(col.id, {
                       tag: "",
                     })}</th>`,
                 )
@@ -10279,7 +10326,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
   function fieldTable(fields) {
     return `<div class="table-scroll" style="margin-top:12px"><table>
-      <thead><tr><th>Column</th><th>Reads as</th><th>Values</th></tr></thead>
+      <thead><tr><th scope="col">Column</th><th scope="col">Reads as</th><th scope="col">Values</th></tr></thead>
       <tbody>${fields
         .map(
           (f) => `<tr><td>${esc(f.name)}${
@@ -10791,7 +10838,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     const link = spec.fields.link;
     return `<div class="table-scroll"><table>
       <thead><tr>${columns
-        .map((c) => `<th${typeOf(c) === "number" ? ' class="num"' : ""}>${esc(titleOf(c))}</th>`)
+        .map((c) => `<th scope="col"${typeOf(c) === "number" ? ' class="num"' : ""}>${esc(titleOf(c))}</th>`)
         .join("")}</tr></thead>
       <tbody>${rows
         .map(
@@ -14229,6 +14276,16 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     }
     render();
   });
+  /*
+   * The document's language.
+   *
+   * Set from here because this file has no <html> of its own — published as
+   * an Artifact the host supplies the shell, and it does not declare one. A
+   * screen reader with no language falls back to the reader's own, which
+   * turns "S/S 28" and "A/W 27/28" into noise.
+   */
+  document.documentElement.lang = "en-GB";
+
   render();
   connectStore();
 </script>

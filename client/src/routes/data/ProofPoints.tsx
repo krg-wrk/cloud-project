@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { query, useApi } from "../../lib/api";
 import { Slot, useCustom } from "../../lib/custom";
+import { useDialog } from "../../lib/dialog";
 import { Icon } from "../../lib/icons";
 import { useRemembered } from "../../lib/remember";
 import { useViewer } from "../../lib/viewer";
@@ -187,18 +188,21 @@ function Card({ row, onOpen }: { row: ProofPointRow; onOpen: () => void }) {
 function Enlarged({ id, onClose }: { id: string; onClose: () => void }) {
   const { data, error, loading } = useApi<ProofPointDetail>(`/proof-points/${id}`);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
+  // Focus in, Tab trapped, Escape closes, focus back where it came from.
+  const box = useRef<HTMLDivElement | null>(null);
+  useDialog(box, onClose);
 
   return (
     <>
-      <button className="pp-scrim" onClick={onClose} aria-label="Close" />
-      <div className="pp-dialog" role="dialog" aria-label="Proof point" aria-modal="true">
+      <button className="pp-scrim" onClick={onClose} aria-label="Close" tabIndex={-1} />
+      <div
+        className="pp-dialog"
+        role="dialog"
+        aria-label="Proof point"
+        aria-modal="true"
+        ref={box}
+        tabIndex={-1}
+      >
         <div className="pp-dialog-head">
           <div>
             {data && (
@@ -531,7 +535,7 @@ export default function ProofPoints() {
       */}
       <div className="pp-controls">
         <div className="field">
-          <Slot id="proof.filter.owner" as="label" />
+          <Slot id="proof.filter.owner" as="label" labels="owner" />
           <select
             id="owner"
             className="pp-owner-select"
@@ -551,7 +555,7 @@ export default function ProofPoints() {
         </div>
 
         <div className="field">
-          <Slot id="proof.filter.trend" as="label" />
+          <Slot id="proof.filter.trend" as="label" labels="trend" />
           {/*
             Fixed width: a select sizes itself to its widest option, and the
             options change with the filters — so left to itself it resized on
@@ -573,7 +577,7 @@ export default function ProofPoints() {
         </div>
 
         <div className="field pp-search">
-          <Slot id="proof.filter.search" as="label" />
+          <Slot id="proof.filter.search" as="label" labels="pp-q" />
           <input
             id="pp-q"
             type="search"
@@ -584,8 +588,8 @@ export default function ProofPoints() {
         </div>
 
         <div className="field">
-          <Slot id="proof.filter.quality" as="label" />
-          <div className="chip-row">
+          <Slot id="proof.filter.quality" as="div" className="field-label" htmlId="pp-quality" />
+          <div className="chip-row" role="group" aria-labelledby="pp-quality">
             {QUALITIES.map((q) => (
               <button
                 key={q.id}
@@ -617,8 +621,8 @@ export default function ProofPoints() {
       {more && (
         <div className="pp-more" id="pp-more">
           <div className="field wide">
-            <Slot id="proof.filter.industry" as="label" />
-            <div className="chip-row">
+            <Slot id="proof.filter.industry" as="div" className="field-label" htmlId="pp-industry" />
+            <div className="chip-row" role="group" aria-labelledby="pp-industry">
               {(data?.industries ?? []).map((i) => (
                 <button
                   key={i.value}
@@ -641,8 +645,8 @@ export default function ProofPoints() {
           </div>
 
           <div className="field wide">
-            <Slot id="proof.filter.forecast" as="label" />
-            <div className="chip-row">
+            <Slot id="proof.filter.forecast" as="div" className="field-label" htmlId="pp-forecast" />
+            <div className="chip-row" role="group" aria-labelledby="pp-forecast">
               {(data?.forecasts ?? []).map((f) => (
                 <button
                   key={f.value}
@@ -663,8 +667,8 @@ export default function ProofPoints() {
           </div>
 
           <div className="field wide">
-            <Slot id="proof.filter.state" as="label" />
-            <div className="chip-row">
+            <Slot id="proof.filter.state" as="div" className="field-label" htmlId="pp-state" />
+            <div className="chip-row" role="group" aria-labelledby="pp-state">
               <button
                 className={approved ? "btn accent" : "btn"}
                 onClick={() => setParam("approved", approved ? "" : "1")}

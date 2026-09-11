@@ -169,6 +169,8 @@ export function Slot({
   fallback,
   prefix,
   suffix,
+  labels,
+  htmlId,
 }: {
   id: string;
   as?: keyof React.JSX.IntrinsicElements;
@@ -178,6 +180,23 @@ export function Slot({
   /** Rendered inside the element but not part of what is edited. */
   prefix?: ReactNode;
   suffix?: ReactNode;
+  /**
+   * The id of the field this names, when the slot is rendered `as="label"`.
+   *
+   * A `<label>` with no `for` and the field as a sibling labels nothing:
+   * clicking it does not focus the field and a screen reader announces the
+   * field as unnamed — which was true of every filter in the app, because
+   * the wording layer is what draws those labels. The slot stays editable;
+   * it just also does the one job a label exists for.
+   */
+  labels?: string;
+  /**
+   * An id on the element itself, so a group of buttons can name itself with
+   * `aria-labelledby`. A chip row is not a field, so a `<label>` over it is
+   * the wrong element — but it still needs a name, and the name is a slot an
+   * admin can rename.
+   */
+  htmlId?: string;
 }) {
   const { text, editing, save } = useCustom();
   const [open, setOpen] = useState(false);
@@ -205,9 +224,16 @@ export function Slot({
     }
   }
 
+  // `htmlFor` is React's name for the `for` attribute, and it belongs on a
+  // label and nowhere else.
+  const forField = {
+    ...(Tag === "label" && labels ? { htmlFor: labels } : {}),
+    ...(htmlId ? { id: htmlId } : {}),
+  };
+
   if (!editing) {
     return (
-      <Tag className={className}>
+      <Tag className={className} {...forField}>
         {prefix}
         {current}
         {suffix}
@@ -217,7 +243,7 @@ export function Slot({
 
   if (open) {
     return (
-      <Tag className={className}>
+      <Tag className={className} {...forField}>
         <input
           ref={input}
           className="slot-input"
@@ -237,7 +263,7 @@ export function Slot({
   }
 
   return (
-    <Tag className={className}>
+    <Tag className={className} {...forField}>
       {prefix}
       <button
         type="button"

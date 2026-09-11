@@ -1,10 +1,11 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { devViewer, setDevViewer, useApi } from "../lib/api";
 import { TODAY, monthKey } from "../lib/date";
 import { isOutstanding, isOverdue } from "../lib/domain";
 import { Icon } from "../lib/icons";
 import { CustomisationProvider, EditBar, Slot, useCustom } from "../lib/custom";
+import { useDialog } from "../lib/dialog";
 import { ViewerProvider, useViewer } from "../lib/viewer";
 import type { ContentItem, Inbox, Me, Person, SessionWithSignUps, ViewLink } from "../types";
 import { Avatar, ErrorNote, Loading } from "./bits";
@@ -364,6 +365,83 @@ function Sidebar({ content, onSearch }: { content: ContentItem[]; onSearch: () =
  * sections as icon-and-label tabs, and More for the rest — so the whole app
  * is reachable with a thumb.
  */
+/**
+ * The "More" sheet, as its own component.
+ *
+ * Separate so it mounts and unmounts with the sheet rather than living
+ * hidden in the tree, which is what lets `useDialog` do focus and Escape on
+ * the same terms as every other dialog: focus moves in, Tab stays inside,
+ * and closing it returns you to the tab you opened it from rather than to
+ * the top of the document.
+ */
+function NavSheet({
+  close,
+  rest,
+  onSearch,
+  me,
+  person,
+  people,
+}: {
+  close: () => void;
+  rest: Section[];
+  onSearch: () => void;
+  me: Me;
+  person: Person | null;
+  people: Person[];
+}) {
+  const box = useRef<HTMLDivElement | null>(null);
+  useDialog(box, close);
+
+  return (
+    <>
+      <button className="sheet-scrim" onClick={close} aria-label="Close menu" tabIndex={-1} />
+      <div
+        className="nav-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label="More sections"
+        ref={box}
+        tabIndex={-1}
+      >
+        <div className="nav-sheet-head">
+          <span className="who">
+            {person && <Avatar id={person.id} name={person.name} />}
+            <span>
+              {me.name}
+              <br />
+              {ROLE_LABELS[me.role]}
+            </span>
+          </span>
+          <button className="btn" onClick={close}>
+            Close
+          </button>
+        </div>
+        <div className="nav-sheet-links">
+          {rest.map((s) => (
+            <NavLink key={s.to} to={s.to} className="sheet-link" onClick={close}>
+              <Icon name={s.icon} size={18} />
+              {s.label}
+              {s.badge && <span className="count">{s.badge}</span>}
+            </NavLink>
+          ))}
+        </div>
+        {/* A phone has no ⌘K, so the sheet carries the way in. */}
+        <button
+          className="sheet-link"
+          onClick={() => {
+            close();
+            onSearch();
+          }}
+        >
+          <Icon name="search" size={18} />
+          Search everything
+        </button>
+        <AccountSwitch people={people} />
+      </div>
+    </>
+  );
+}
+
 function MobileNav({ content, onSearch }: { content: ContentItem[]; onSearch: () => void }) {
   const [sheet, setSheet] = useState(false);
   const { me, person, people } = useViewer();
@@ -377,50 +455,14 @@ function MobileNav({ content, onSearch }: { content: ContentItem[]; onSearch: ()
   return (
     <>
       {sheet && (
-        <>
-          <button className="sheet-scrim" onClick={() => setSheet(false)} aria-label="Close menu" />
-          <div className="nav-sheet" role="dialog" aria-label="More sections">
-            <div className="nav-sheet-head">
-              <span className="who">
-                {person && <Avatar id={person.id} name={person.name} />}
-                <span>
-                  {me.name}
-                  <br />
-                  {ROLE_LABELS[me.role]}
-                </span>
-              </span>
-              <button className="btn" onClick={() => setSheet(false)}>
-                Close
-              </button>
-            </div>
-            <div className="nav-sheet-links">
-              {rest.map((s) => (
-                <NavLink
-                  key={s.to}
-                  to={s.to}
-                  className="sheet-link"
-                  onClick={() => setSheet(false)}
-                >
-                  <Icon name={s.icon} size={18} />
-                  {s.label}
-                  {s.badge && <span className="count">{s.badge}</span>}
-                </NavLink>
-              ))}
-            </div>
-            {/* A phone has no ⌘K, so the sheet carries the way in. */}
-            <button
-              className="sheet-link"
-              onClick={() => {
-                setSheet(false);
-                onSearch();
-              }}
-            >
-              <Icon name="search" size={18} />
-              Search everything
-            </button>
-            <AccountSwitch people={people} />
-          </div>
-        </>
+        <NavSheet
+          close={() => setSheet(false)}
+          rest={rest}
+          onSearch={onSearch}
+          me={me}
+          person={person}
+          people={people}
+        />
       )}
 
       <nav className="tabbar" aria-label="Sections">
@@ -529,9 +571,20 @@ export default function Layout() {
         renamable as the pages are.
       */}
       <CustomisationProvider>
+        {/*
+          Straight to the page.
+          
+          The sidebar is fifteen tab stops, on every page, before the content
+          — which is the single biggest thing standing between a keyboard and
+          this app. Off screen until it has focus, as the convention is, so
+          it costs a mouse nothing.
+        */}
+        <a className="skip" href="#main">
+          Skip to the page
+        </a>
         <div className="shell">
           <Sidebar content={content.data} onSearch={openSearch} />
-          <main className="main">
+          <main className="main" id="main" tabIndex={-1}>
             <Outlet />
             {/*
               How old the schedule is. Present for an admin, and for everybody

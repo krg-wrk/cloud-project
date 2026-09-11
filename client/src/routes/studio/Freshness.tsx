@@ -103,10 +103,10 @@ export default function Freshness() {
             <table className="schedule">
               <thead>
                 <tr>
-                  <th>What</th>
-                  <th>Last read</th>
-                  <th>Cached for</th>
-                  <th>Due again</th>
+                  <th scope="col">What</th>
+                  <th scope="col">Last read</th>
+                  <th scope="col">Cached for</th>
+                  <th scope="col">Due again</th>
                 </tr>
               </thead>
               <tbody>

@@ -308,13 +308,13 @@ export function SeriesTable({ results }: { results: MetricResult[] }) {
       <table className="schedule">
         <thead>
           <tr>
-            <th>Metric</th>
+            <th scope="col">Metric</th>
             {periods.map((p) => (
-              <th key={p.period} style={{ textAlign: "right" }}>
+              <th scope="col" key={p.period} style={{ textAlign: "right" }}>
                 {p.label}
               </th>
             ))}
-            <th style={{ textAlign: "right" }}>Range</th>
+            <th scope="col" style={{ textAlign: "right" }}>Range</th>
           </tr>
         </thead>
         <tbody>

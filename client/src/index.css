@@ -14,7 +14,22 @@
   --sunken: #ebebe8;
   --ink: #0e0e10;
   --ink-70: #56565c;
-  --ink-45: #8b8b91;
+  /*
+   * The de-emphasised ink, and the one number in this file with a rule
+   * behind it.
+   *
+   * It was #8b8b91, which is 3.39:1 on white and 3.08:1 on the ground —
+   * under the 4.5:1 that body text needs, and it carries 221 pieces of text
+   * across the app: every eyebrow, every count, every muted line under a
+   * heading. Light grey on white reads as "less important" to somebody who
+   * can see it and as nothing at all to somebody who cannot.
+   *
+   * #69696f is the lightest grey on the same hue that clears 4.5:1 against
+   * all three grounds — paper 5.45, ground 4.95, sunken 4.57 — so it is the
+   * smallest change to the look that is actually readable. It stays well
+   * clear of --ink-70 at 7.29, so the hierarchy still reads.
+   */
+  --ink-45: #69696f;
   --rule: #e2e2de;
   --rule-strong: #c7c7c1;
 
@@ -28,7 +43,14 @@
   --status-not-started: #8b8b91;
   --status-in-progress: #2f5f9e;
   --status-submitted: #6b4fc0;
-  --status-in-review: #9c6b16;
+  /*
+   * Amber and orange, darkened until they clear 4.5:1 on the tinted grounds
+   * they are actually drawn on — not just on white. #9c6b16 was 4.64 on
+   * paper but 4.00 on the accent wash, which is where "2 of 12 places left"
+   * sits; #c2571a was 3.84 on its own tag wash. Both are small text, so
+   * both need the full 4.5.
+   */
+  --status-in-review: #875d13;
   --status-published: #256b48;
   --status-at-risk: #b8341f;
 
@@ -46,7 +68,7 @@
 
   /* Things only the signed-in person sees — kept clear of every shared hue. */
   --mine: #8e3b74;
-  --review: #c2571a;
+  --review: #a94c16;
 
   /* The strategic call on a trend is ordered by how much commitment it asks
      for, so it takes one hue in four steps rather than four unrelated
@@ -5686,4 +5708,50 @@ a.inbox-title:hover {
   .palette-box kbd {
     display: none;
   }
+}
+
+/*
+ * A heading over a group of buttons.
+ *
+ * Not a <label>: a label names one field, and a row of chips is a group. It
+ * reads exactly like a field label and is named by the same wording slot —
+ * the difference is in the markup, where it matters.
+ */
+.field-label {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-45);
+}
+
+/*
+ * Straight to the page.
+ *
+ * Off screen until it has focus, which is the convention: it costs a mouse
+ * nothing and saves a keyboard fifteen tab stops on every page.
+ */
+.skip {
+  position: fixed;
+  top: 8px;
+  left: 8px;
+  z-index: 100;
+  padding: 9px 14px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  transform: translateY(-200%);
+}
+
+.skip:focus-visible {
+  transform: translateY(0);
+}
+
+/* Landing there by way of the skip link should not draw a ring round the
+   whole page — it is a destination, not a control. */
+.main:focus {
+  outline: none;
 }

@@ -594,6 +594,78 @@ things that belong to the Hub rather than to a person. An untouched setting
 has no row, so the code's own default ships and adding one needs no migration
 — the same arrangement the page wording uses.
 
+## The keyboard, and being readable
+
+Audited rather than guessed at. `tools/audit-a11y.mjs` drives a real browser
+over every page of the app and the demo, and checks things you can act on
+rather than producing a score: a control with no accessible name, a field
+whose label labels nothing, a heading level skipped, a table header with no
+scope, text under 4.5:1 against the ground it is *actually drawn on*, and a
+real Tab walk that checks every stop is named, on screen and ringed.
+
+```bash
+npm i -D playwright && npx playwright install chromium   # not a Hub dependency
+node tools/audit-a11y.mjs              # the app, on :5173
+node tools/audit-a11y.mjs --demo       # the built demo
+node tools/audit-a11y.mjs --demo --dark
+```
+
+The first run found 225 things. What they were:
+
+**221 of them were one colour.** `--ink-45` was `#8b8b91`: 3.39:1 on paper,
+3.08:1 on the ground, under the 4.5:1 body text needs — and it carried every
+eyebrow, every count and every muted line in the app. Light grey on white
+reads as "less important" to somebody who can see it and as nothing at all
+to somebody who cannot. It is `#69696f` now, the lightest grey on the same
+hue that clears 4.5 against **all four** grounds it is drawn on — paper,
+ground, sunken and the accent wash. The amber and the orange moved for the
+same reason: `#9c6b16` passed on white at 4.64 and failed at 4.00 on the
+accent wash, which is exactly where "2 of 12 places left" sits.
+
+Checking against the real background is the point. A grey that passes on
+white and fails on the tinted panel it lives in passes most contrast
+checkers, because they read the element's own background and find it
+transparent.
+
+**Every filter label labelled nothing.** The wording layer draws them, and
+`Slot as="label"` rendered a `<label>` with no `for` and the field as a
+sibling — so clicking it did not focus the field and a screen reader
+announced the field as unnamed. `Slot` now takes `labels` for that, and
+`htmlId` for the other case: a heading over a *row of chips* is not a label
+at all, because a label names one field. Those are `role="group"` with
+`aria-labelledby` now.
+
+**17 table headers had no `scope`.** Swept.
+
+Three more things, which the audit could not have found:
+
+- **A skip link.** The sidebar is fifteen tab stops, on every page, before
+  the content — the single biggest thing standing between a keyboard and this
+  app. Off screen until focused, so it costs a mouse nothing.
+- **`useDialog`**, in `client/src/lib/dialog.ts`. The four things a modal owes
+  a keyboard: focus in when it opens, Tab kept inside, Escape closes, and
+  focus back where it came from. Miss the last one and somebody who opened a
+  dialog from the fortieth row of a table is returned to the top of the
+  document; miss the trap and they tab into a page they cannot see, which is
+  worse because nothing on screen tells them. All three dialogs — the
+  enlarged proof point, the search palette, the phone's More sheet — use it,
+  and each is verified by pressing forty real Tabs and checking focus never
+  left.
+- **The demo declares its language.** It has no `<html>` of its own — the
+  Artifact host supplies the shell and does not set one — so it sets
+  `documentElement.lang` from script. Without it a screen reader falls back
+  to the reader's own language and "S/S 28" becomes noise.
+
+The audit now reports **nothing** on the app, the demo, and the demo in dark.
+
+### Three findings that are not the Hub's
+
+Inside a rendered proof point, `#8b8b91` on `#ebebe8` at 8.5px is 2.84:1.
+That is the pipeline's own artwork, which the Hub reproduces *as it appears
+in the published forecast* — changing it here would mean showing something
+the forecast does not. The audit reports those three separately and does not
+fail on them. They are worth raising with whoever draws the callouts.
+
 ## One box over everything
 
 The Hub grew six places to look something up and no place to look everything
@@ -1201,3 +1273,5 @@ seed module as the app, so the two never drift apart.
 - `node demo/build.mjs` — rebuilds the shareable single-file demo
 - `python3 tools/extract-proof-points.py <workbook.xlsx>` — regenerates the
   proof point seed from the Proof Points Reviewer workbook
+- `node tools/audit-a11y.mjs [--demo] [--dark]` — the accessibility audit over
+  every page, in a real browser (needs `npm i -D playwright`)

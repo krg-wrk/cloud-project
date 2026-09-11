@@ -74,7 +74,7 @@ export default function Deadlines() {
 
       <div className="filters">
         <div className="field">
-          <Slot id="deadlines.filter.forecaster" as="label" />
+          <Slot id="deadlines.filter.forecaster" as="label" labels="f-who" />
           <select
             id="f-who"
             value={forecaster}
@@ -91,7 +91,7 @@ export default function Deadlines() {
           </select>
         </div>
         <div className="field">
-          <Slot id="deadlines.filter.vertical" as="label" />
+          <Slot id="deadlines.filter.vertical" as="label" labels="f-vertical" />
           <select
             id="f-vertical"
             value={params.get("vertical") ?? ""}
@@ -106,7 +106,7 @@ export default function Deadlines() {
           </select>
         </div>
         <div className="field">
-          <Slot id="deadlines.filter.type" as="label" />
+          <Slot id="deadlines.filter.type" as="label" labels="f-type" />
           <select
             id="f-type"
             value={params.get("type") ?? ""}
@@ -121,7 +121,7 @@ export default function Deadlines() {
           </select>
         </div>
         <div className="field">
-          <Slot id="deadlines.filter.status" as="label" />
+          <Slot id="deadlines.filter.status" as="label" labels="f-status" />
           <select
             id="f-status"
             value={params.get("status") ?? ""}
@@ -136,7 +136,7 @@ export default function Deadlines() {
           </select>
         </div>
         <div className="field">
-          <Slot id="deadlines.filter.search" as="label" />
+          <Slot id="deadlines.filter.search" as="label" labels="f-q" />
           <input
             id="f-q"
             type="search"
@@ -168,7 +168,7 @@ export default function Deadlines() {
             <thead>
               <tr>
                 {columns.map((slot) => (
-                  <th key={slot.id} className={NUMERIC.has(slot.id) ? "num" : undefined}>
+                  <th scope="col" key={slot.id} className={NUMERIC.has(slot.id) ? "num" : undefined}>
                     <Slot id={slot.id} />
                   </th>
                 ))}

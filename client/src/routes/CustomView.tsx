@@ -193,7 +193,7 @@ function Table({
         <thead>
           <tr>
             {columns.map((c) => (
-              <th key={c} className={typeOf(c) === "number" ? "num" : undefined}>
+              <th scope="col" key={c} className={typeOf(c) === "number" ? "num" : undefined}>
                 {titleOf(c)}
               </th>
             ))}

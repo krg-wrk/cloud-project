@@ -225,9 +225,9 @@ function FieldTable({ fields }: { fields: Field[] }) {
       <table className="schedule">
         <thead>
           <tr>
-            <th>Column</th>
-            <th>Reads as</th>
-            <th>Values</th>
+            <th scope="col">Column</th>
+            <th scope="col">Reads as</th>
+            <th scope="col">Values</th>
           </tr>
         </thead>
         <tbody>

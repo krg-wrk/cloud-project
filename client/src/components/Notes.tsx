@@ -130,6 +130,8 @@ export default function Notes({
           <textarea
             className="note-input"
             rows={isAiDraft ? 10 : 3}
+            /* The placeholder is a prompt, not a name: it goes as you type. */
+            aria-label="A note on this forecast"
             placeholder="What are you thinking about this forecast? Angles, evidence to chase, anything the deadline makes tight."
             value={draft}
             onChange={(e) => {
@@ -154,6 +156,7 @@ export default function Notes({
               <>
                 <input
                   className="steer"
+                  aria-label="Steer the AI draft (optional)"
                   placeholder="Steer the draft (optional) — e.g. focus on the colour story"
                   value={steer}
                   onChange={(e) => setSteer(e.target.value)}
@@ -239,6 +242,7 @@ export default function Notes({
                 <textarea
                   className="note-input"
                   rows={6}
+                  aria-label="Edit this note"
                   value={editBody}
                   onChange={(e) => setEditBody(e.target.value)}
                 />
