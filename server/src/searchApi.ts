@@ -50,7 +50,7 @@ export function createSearchRouter(
         people,
         sessions,
         trends,
-        views: studio.listViews().filter((v) => canSeeView(v.audience, v.state, viewer)),
+        views: (await studio.listViews()).filter((v) => canSeeView(v.audience, v.state, viewer)),
         library,
       });
 

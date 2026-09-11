@@ -11,6 +11,8 @@
  *
  *   npm i -D playwright && npx playwright install chromium
  *
+ * Or point it at a browser that is already there: `CHROMIUM=/path/to/chrome`.
+ *
  * Concrete, checkable things rather than a score, because a score tells you
  * nothing about what to change: a control with no accessible name, a field
  * whose label labels nothing, a heading level skipped, text under 4.5:1
@@ -318,7 +320,13 @@ async function walk(page) {
   return { stops, problems: [...new Set(problems)] };
 }
 
-const browser = await chromium.launch();
+/*
+ * `CHROMIUM=/path/to/chrome` for a machine that already has one — a CI image,
+ * or a container with a browser baked in. Without it, Playwright's own.
+ */
+const browser = await chromium.launch(
+  process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {},
+);
 const page = await browser.newPage({
   viewport: { width: 1440, height: 1000 },
   colorScheme: DARK ? "dark" : "light",

@@ -131,7 +131,7 @@ export function createApiRouter(
         seesWholeTeam: seesWholeTeam(viewer),
         aiNotes: aiNotesEnabled(),
         calendarFeed: viewer.personId
-          ? `/api/calendar/${store.calendarToken(viewer.personId)}.ics`
+          ? `/api/calendar/${(await store.calendarToken(viewer.personId))}.ics`
           : null,
       });
     } catch (err) {
@@ -169,7 +169,7 @@ export function createApiRouter(
   router.get("/freshness", async (req: ViewerRequest, res, next) => {
     try {
       const viewer = req.viewer!;
-      const forAll = store.flag(FRESHNESS_FOR_ALL);
+      const forAll = await store.flag(FRESHNESS_FOR_ALL);
       if (viewer.role !== "admin" && !forAll) {
         res.status(403).json({
           error: "Data freshness is shown to admins. An admin can turn it on for everybody.",
@@ -220,7 +220,7 @@ export function createApiRouter(
   });
 
   /** Show it to everybody, or put it back to admins only. */
-  router.put("/freshness/visibility", (req: ViewerRequest, res) => {
+  router.put("/freshness/visibility", async (req: ViewerRequest, res) => {
     const viewer = req.viewer!;
     if (viewer.role !== "admin") {
       res.status(403).json({ error: "Only an admin can change who sees this." });
@@ -231,7 +231,7 @@ export function createApiRouter(
       bad(res, "visibleToAll must be true or false.");
       return;
     }
-    store.setSetting(FRESHNESS_FOR_ALL, body.visibleToAll ? "1" : "0", viewer.email);
+    await store.setSetting(FRESHNESS_FOR_ALL, body.visibleToAll ? "1" : "0", viewer.email);
     res.json({ visibleToAll: body.visibleToAll });
   });
 
@@ -278,8 +278,8 @@ export function createApiRouter(
       const items = await data.listContent();
       const query = req.query as ContentQuery;
       const field = query.dateField === "submissionDate" ? "submissionDate" : "publicationDate";
-      const counts = store.noteCounts();
-      const reviews = new Map(store.allPeerReviews().map((r) => [r.contentId, r]));
+      const counts = await store.noteCounts();
+      const reviews = new Map((await store.allPeerReviews()).map((r) => [r.contentId, r]));
       const filtered = items
         .filter((item) => matchesContent(item, query))
         .sort((a, b) => a[field].localeCompare(b[field]))
@@ -304,9 +304,9 @@ export function createApiRouter(
       }
       res.json({
         ...item,
-        peerReview: store.peerReviewFor(item.id) ?? null,
-        noteCount: store.notesFor(item.id).length,
-        details: store.detailsFor(item.id) ?? null,
+        peerReview: (await store.peerReviewFor(item.id)) ?? null,
+        noteCount: (await store.notesFor(item.id)).length,
+        details: (await store.detailsFor(item.id)) ?? null,
       });
     } catch (err) {
       next(err);
@@ -532,7 +532,7 @@ export function createApiRouter(
         await data.writes!.apply(item.sourceRowId!, changes, expect);
       } catch (err) {
         const problem = err instanceof Error ? err.message : "The sheet refused the change.";
-        store.logScheduleWrite({
+        await store.logScheduleWrite({
           contentId: item.id,
           sourceRowId: item.sourceRowId!,
           target: data.writes!.target,
@@ -546,7 +546,7 @@ export function createApiRouter(
         return;
       }
 
-      const entry = store.logScheduleWrite({
+      const entry = (await store.logScheduleWrite({
         contentId: item.id,
         sourceRowId: item.sourceRowId!,
         target: data.writes!.target,
@@ -554,7 +554,7 @@ export function createApiRouter(
         byEmail: viewer.email,
         byPersonId: viewer.personId,
         ok: true,
-      });
+      }));
       // The cached read is now wrong, and the page is about to ask for it.
       data.forget?.("content");
       res.json({ applied: entry, item: items.find((c) => c.id === item!.id) });
@@ -578,7 +578,7 @@ export function createApiRouter(
         why: no,
         target: data.writes?.target ?? null,
         fields: WRITABLE_FIELDS,
-        history: store.scheduleWrites(item.id),
+        history: (await store.scheduleWrites(item.id)),
       });
     } catch (err) {
       next(err);
@@ -596,7 +596,7 @@ export function createApiRouter(
         return;
       }
       res.json({
-        notes: store.notesFor(item.id),
+        notes: (await store.notesFor(item.id)),
         canWrite: canWriteNote(req.viewer!, item),
         aiNotes: aiNotesEnabled(),
       });
@@ -625,7 +625,7 @@ export function createApiRouter(
 
       const source = req.body?.source === "ai" ? "ai" : "human";
       res.status(201).json(
-        store.addNote({
+        await store.addNote({
           contentId: item.id,
           authorId: personId,
           body,
@@ -642,7 +642,7 @@ export function createApiRouter(
     try {
       const personId = requirePerson(req, res);
       if (!personId) return;
-      const note = store.getNote(req.params.noteId);
+      const note = await store.getNote(req.params.noteId);
       if (!note) {
         res.status(404).json({ error: "That note no longer exists." });
         return;
@@ -655,7 +655,7 @@ export function createApiRouter(
       }
       const body = String(req.body?.body ?? "").trim();
       if (!body) return bad(res, "A note needs some text.");
-      res.json(store.updateNote(note.id, body));
+      res.json((await store.updateNote(note.id, body)));
     } catch (err) {
       next(err);
     }
@@ -665,7 +665,7 @@ export function createApiRouter(
     try {
       const personId = requirePerson(req, res);
       if (!personId) return;
-      const note = store.getNote(req.params.noteId);
+      const note = await store.getNote(req.params.noteId);
       if (!note) {
         res.status(204).end();
         return;
@@ -676,7 +676,7 @@ export function createApiRouter(
         res.status(403).json({ error: "You can only delete your own notes." });
         return;
       }
-      store.deleteNote(note.id);
+      await store.deleteNote(note.id);
       res.status(204).end();
     } catch (err) {
       next(err);
@@ -711,7 +711,7 @@ export function createApiRouter(
       const text = await drafter.draft({
         item,
         forecaster: people.find((p) => p.id === item.forecasterId),
-        existingNotes: store.notesFor(item.id).map((n) => n.body),
+        existingNotes: (await store.notesFor(item.id)).map((n) => n.body),
         siblings: items.filter((c) => c.vertical === item.vertical && c.id !== item.id).slice(0, 8),
         steer,
       });
@@ -756,8 +756,8 @@ export function createApiRouter(
    * owner has added on top. The Hub's cover image wins where both have one,
    * because the owner set it more recently than the sync.
    */
-  function trendView(trend: TrendProfile, viewer: Viewer, viewerName?: string) {
-    const extras = store.trendExtrasFor(trend.profileId);
+  async function trendView(trend: TrendProfile, viewer: Viewer, viewerName?: string) {
+    const extras = await store.trendExtrasFor(trend.profileId);
     return {
       ...trend,
       coverImageUrl: extras?.coverImageUrl ?? trend.coverImageUrl,
@@ -815,7 +815,7 @@ export function createApiRouter(
       if (state === "archived") rows = rows.filter((t) => t.editorStatus === "archived");
       if (needsScore) rows = rows.filter((t) => t.missingScore.length > 0);
 
-      const extras = store.allTrendExtras();
+      const extras = await store.allTrendExtras();
       // Owners as the sheet spells them, for the page's filter.
       const owners = [...new Map(all.filter((t) => t.ownerName).map((t) => [t.ownerId, t.ownerName]))]
         .map(([id, name]) => ({ id, name }))
@@ -871,7 +871,7 @@ export function createApiRouter(
         res.status(404).json({ error: `No trend profile with id "${req.params.id}"` });
         return;
       }
-      res.json(trendView(trend, req.viewer!, req.viewer?.name));
+      res.json(await trendView(trend, req.viewer!, req.viewer?.name));
     } catch (err) {
       next(err);
     }
@@ -907,14 +907,14 @@ export function createApiRouter(
         return bad(res, "The image address has to be an http or https address.");
       }
 
-      store.setTrendExtras({
+      await store.setTrendExtras({
         trendId: trend.profileId,
         coverImageUrl,
         links,
         note: req.body?.note ? String(req.body.note).trim().slice(0, 4000) : undefined,
         updatedBy: personId,
       });
-      res.json(trendView(trend, req.viewer!, req.viewer?.name));
+      res.json(await trendView(trend, req.viewer!, req.viewer?.name));
     } catch (err) {
       next(err);
     }
@@ -944,7 +944,7 @@ export function createApiRouter(
         return;
       }
       res.json({
-        details: store.detailsFor(item.id) ?? null,
+        details: (await store.detailsFor(item.id)) ?? null,
         canWrite: canWriteDetails(req.viewer!, item),
       });
     } catch (err) {
@@ -994,7 +994,7 @@ export function createApiRouter(
       }
 
       res.json(
-        store.setDetails({
+        (await store.setDetails({
           contentId: item.id,
           contentType: req.body?.contentType
             ? String(req.body.contentType).trim().slice(0, 80)
@@ -1005,7 +1005,7 @@ export function createApiRouter(
           editorUrl,
           researchLinks: links,
           updatedBy: personId,
-        }),
+        })),
       );
     } catch (err) {
       next(err);
@@ -1055,8 +1055,8 @@ export function createApiRouter(
         content,
         sessions,
         observations,
-        attended: signUps.forPerson(subject.id),
-        store,
+        attended: await signUps.forPerson(subject.id),
+        peerReviews: await store.allPeerReviews(),
       });
 
       res.json({
@@ -1097,6 +1097,18 @@ export function createApiRouter(
         (p) => p.role === "forecaster" && canViewKpis(viewer, p),
       );
 
+      /*
+       * The per-person reads happen once, up front, so the factory that
+       * builds each person's input stays a plain function — `compareTeam`
+       * calls it per person and there is nowhere to await inside it.
+       */
+      const peerReviews = await store.allPeerReviews();
+      const attendedBy = new Map(
+        await Promise.all(
+          subjects.map(async (p) => [p.id, await signUps.forPerson(p.id)] as const),
+        ),
+      );
+
       res.json({
         definition,
         range,
@@ -1112,8 +1124,8 @@ export function createApiRouter(
             content,
             sessions,
             observations,
-            attended: signUps.forPerson(personId),
-            store,
+            attended: attendedBy.get(personId) ?? new Set<string>(),
+            peerReviews,
           }),
         ).map((row) => ({
           ...row,
@@ -1137,7 +1149,7 @@ export function createApiRouter(
         res.status(404).json({ error: `No content item with id "${req.params.id}"` });
         return;
       }
-      const existing = store.peerReviewFor(item.id);
+      const existing = await store.peerReviewFor(item.id);
       if (!canWritePeerReview(req.viewer!, item, existing?.reviewerId)) {
         res.status(403).json({
           error: "Only the forecaster, their reviewer or a commissioning manager can change this.",
@@ -1159,13 +1171,13 @@ export function createApiRouter(
       }
 
       res.json(
-        store.setPeerReview({
+        (await store.setPeerReview({
           contentId: item.id,
           reviewerId,
           reviewDate,
           arrangedBy: personId,
           note: req.body?.note ? String(req.body.note).slice(0, 2000) : undefined,
-        }),
+        })),
       );
     } catch (err) {
       next(err);
@@ -1182,7 +1194,7 @@ export function createApiRouter(
         res.status(404).json({ error: `No content item with id "${req.params.id}"` });
         return;
       }
-      const existing = store.peerReviewFor(item.id);
+      const existing = await store.peerReviewFor(item.id);
       if (!existing) {
         res.status(204).end();
         return;
@@ -1193,7 +1205,7 @@ export function createApiRouter(
         });
         return;
       }
-      store.deletePeerReview(item.id);
+      await store.deletePeerReview(item.id);
       res.status(204).end();
     } catch (err) {
       next(err);
@@ -1207,7 +1219,7 @@ export function createApiRouter(
       if (!personId) return;
       const items = await data.listContent();
       const byId = new Map(items.map((i) => [i.id, i]));
-      const mine = store.allPeerReviews().filter((review) => {
+      const mine = (await store.allPeerReviews()).filter((review) => {
         const item = byId.get(review.contentId);
         return review.reviewerId === personId || item?.forecasterId === personId;
       });
@@ -1225,14 +1237,14 @@ export function createApiRouter(
 
   // --- Personal entries --------------------------------------------------
 
-  router.get("/my/entries", (req: ViewerRequest, res) => {
+  router.get("/my/entries", async (req: ViewerRequest, res) => {
     const personId = requirePerson(req, res);
     if (!personId) return;
     const { from, to } = req.query as Record<string, string | undefined>;
-    res.json(store.entriesFor(personId, from, to));
+    res.json((await store.entriesFor(personId, from, to)));
   });
 
-  router.post("/my/entries", (req: ViewerRequest, res) => {
+  router.post("/my/entries", async (req: ViewerRequest, res) => {
     const personId = requirePerson(req, res);
     if (!personId) return;
     const title = String(req.body?.title ?? "").trim();
@@ -1246,7 +1258,7 @@ export function createApiRouter(
     const entryKind: EntryKind = ENTRY_KINDS.includes(kind) ? kind : "reminder";
 
     res.status(201).json(
-      store.addEntry({
+      (await store.addEntry({
         personId,
         title: title.slice(0, 200),
         kind: entryKind,
@@ -1254,14 +1266,14 @@ export function createApiRouter(
         endDate: isDate(endDate) ? endDate : date,
         note: note ? String(note).slice(0, 4000) : undefined,
         contentId: contentId ? String(contentId) : undefined,
-      }),
+      })),
     );
   });
 
-  router.patch("/my/entries/:entryId", (req: ViewerRequest, res) => {
+  router.patch("/my/entries/:entryId", async (req: ViewerRequest, res) => {
     const personId = requirePerson(req, res);
     if (!personId) return;
-    const entry = store.getEntry(req.params.entryId);
+    const entry = await store.getEntry(req.params.entryId);
     if (!entry) {
       res.status(404).json({ error: "That entry no longer exists." });
       return;
@@ -1276,20 +1288,20 @@ export function createApiRouter(
       return bad(res, "The end date is not valid.");
     }
     res.json(
-      store.updateEntry(entry.id, {
+      (await store.updateEntry(entry.id, {
         ...(title !== undefined ? { title: String(title).trim().slice(0, 200) } : {}),
         ...(isDate(date) ? { date } : {}),
         ...(isDate(endDate) ? { endDate } : {}),
         ...(ENTRY_KINDS.includes(kind) ? { kind } : {}),
         ...(note !== undefined ? { note: String(note).slice(0, 4000) } : {}),
-      }),
+      })),
     );
   });
 
-  router.delete("/my/entries/:entryId", (req: ViewerRequest, res) => {
+  router.delete("/my/entries/:entryId", async (req: ViewerRequest, res) => {
     const personId = requirePerson(req, res);
     if (!personId) return;
-    const entry = store.getEntry(req.params.entryId);
+    const entry = await store.getEntry(req.params.entryId);
     if (!entry) {
       res.status(204).end();
       return;
@@ -1298,7 +1310,7 @@ export function createApiRouter(
       res.status(403).json({ error: "Personal entries can only be removed by the person who made them." });
       return;
     }
-    store.deleteEntry(entry.id);
+    await store.deleteEntry(entry.id);
     res.status(204).end();
   });
 
@@ -1335,7 +1347,7 @@ export function createApiRouter(
         data.listPeople(),
       ]);
       const forPerson = forecaster ? people.find((p) => p.id === forecaster) : undefined;
-      const reviews = new Map(store.allPeerReviews().map((r) => [r.contentId, r]));
+      const reviews = new Map((await store.allPeerReviews()).map((r) => [r.contentId, r]));
       const byId = new Map(items.map((i) => [i.id, i]));
 
       const myReviews = viewer.personId
@@ -1368,7 +1380,7 @@ export function createApiRouter(
           .filter((event) => eventAppliesTo(event, forPerson))
           .filter((event) => overlaps(event, from, to))
           .sort((a, b) => a.startDate.localeCompare(b.startDate)),
-        entries: viewer.personId ? store.entriesFor(viewer.personId, from, to) : [],
+        entries: viewer.personId ? (await store.entriesFor(viewer.personId, from, to)) : [],
         peerReviews: myReviews,
       });
     } catch (err) {
@@ -1383,7 +1395,7 @@ export function createApiRouter(
       const { kind, when, person } = req.query as Record<string, string | undefined>;
       const [sessions, people] = await Promise.all([data.listSessions(), data.listPeople()]);
       const known = new Set(people.map((p) => p.id));
-      const all = signUps.all();
+      const all = await signUps.all();
 
       const decorated = sessions
         .filter((s) => (kind ? s.kind === kind : true))
@@ -1422,7 +1434,7 @@ export function createApiRouter(
         res.status(404).json({ error: `No session with id "${req.params.id}"` });
         return;
       }
-      const seats = signUps.get(session.id);
+      const seats = await signUps.get(session.id);
       res.json({
         ...session,
         ...seats,
@@ -1450,12 +1462,12 @@ export function createApiRouter(
         res.status(404).json({ error: `No session with id "${req.params.id}"` });
         return;
       }
-      const outcome = signUps.add(session, personId);
+      const outcome = await signUps.add(session, personId);
       if (outcome.result === "closed") {
         res.status(409).json({ error: "This session is not taking sign-ups." });
         return;
       }
-      res.json({ ...outcome, signUps: signUps.get(session.id) });
+      res.json({ ...outcome, signUps: (await signUps.get(session.id)) });
     } catch (err) {
       next(err);
     }
@@ -1476,8 +1488,8 @@ export function createApiRouter(
         res.status(404).json({ error: `No session with id "${req.params.id}"` });
         return;
       }
-      const outcome = signUps.remove(session, personId);
-      res.json({ ...outcome, signUps: signUps.get(session.id) });
+      const outcome = await signUps.remove(session, personId);
+      res.json({ ...outcome, signUps: (await signUps.get(session.id)) });
     } catch (err) {
       next(err);
     }
@@ -1486,10 +1498,10 @@ export function createApiRouter(
   // --- Calendar feed -----------------------------------------------------
 
   /** Rotating the token invalidates any feed already subscribed elsewhere. */
-  router.post("/my/calendar/rotate", (req: ViewerRequest, res) => {
+  router.post("/my/calendar/rotate", async (req: ViewerRequest, res) => {
     const personId = requirePerson(req, res);
     if (!personId) return;
-    res.json({ calendarFeed: `/api/calendar/${store.rotateCalendarToken(personId)}.ics` });
+    res.json({ calendarFeed: `/api/calendar/${(await store.rotateCalendarToken(personId))}.ics` });
   });
 
   return router;
@@ -1596,7 +1608,7 @@ export function createFeedRouter(
   router.get("/calendar/:token.ics", async (req, res, next) => {
     try {
       const token = String(req.params.token ?? "").replace(/\.ics$/, "");
-      const personId = store.personForToken(token);
+      const personId = await store.personForToken(token);
       if (!personId) {
         res.status(404).type("text/plain").send("No calendar for that address.");
         return;
@@ -1613,8 +1625,7 @@ export function createFeedRouter(
         return;
       }
       const byId = new Map(content.map((c) => [c.id, c]));
-      const peerReviews = store
-        .allPeerReviews()
+      const peerReviews = (await store.allPeerReviews())
         .map((review) => ({ review, item: byId.get(review.contentId) }))
         .filter((row) => row.item)
         .filter(
@@ -1635,8 +1646,8 @@ export function createFeedRouter(
         content,
         events,
         sessions,
-        signedUpTo: signUps.forPerson(personId),
-        entries: store.entriesFor(personId),
+        signedUpTo: (await signUps.forPerson(personId)),
+        entries: (await store.entriesFor(personId)),
         peerReviews,
         baseUrl: process.env.PUBLIC_URL ?? `${req.protocol}://${req.get("host")}`,
       });

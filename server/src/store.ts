@@ -1,7 +1,5 @@
-import { DatabaseSync } from "node:sqlite";
 import { randomUUID } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import type { Db } from "./db.js";
 import type { CellChange, ForecastDetails, ResearchLink, TrendExtras } from "./types.js";
 import {
   CHANNELS,
@@ -21,9 +19,11 @@ import {
  * — hundreds of small writes a day across 200 people — which a sheet cannot
  * take, so they live here instead.
  *
- * SQLite is deliberate for the POC: it needs no service, it is a real
- * database with real indexes, and every query below is ordinary SQL that
- * moves to Postgres unchanged when the Hub is deployed for the whole team.
+ * Every query below is ordinary SQL that runs on both SQLite and Postgres —
+ * see db.ts for the two words of difference and why there is no ORM here.
+ * SQLite is what `npm run dev` uses, because it needs no service; Postgres
+ * is what a deployment for two hundred people uses, because more than one
+ * instance of the Hub has to be able to write.
  */
 
 export type NoteSource = "human" | "ai";
@@ -282,55 +282,59 @@ CREATE INDEX IF NOT EXISTS notification_sends_recent ON notification_sends (at D
 const now = () => new Date().toISOString();
 
 export class HubStore {
-  private db: DatabaseSync;
+  constructor(private db: Db) {}
 
-  constructor(file = process.env.HUB_DB ?? "./data/hub.db") {
-    if (file !== ":memory:") mkdirSync(dirname(file), { recursive: true });
-    this.db = new DatabaseSync(file);
-    this.db.exec("PRAGMA journal_mode = WAL");
-    this.db.exec("PRAGMA foreign_keys = ON");
-    this.db.exec(SCHEMA);
+  /**
+   * Create the tables, if they are not there.
+   *
+   * Separate from the constructor because it is I/O and this is asynchronous
+   * now — and because `CREATE TABLE IF NOT EXISTS` on every boot is the
+   * whole migration story the Hub has. It is enough while the schema only
+   * grows; the first column that has to change type is the day to put a
+   * migration tool in front of it.
+   */
+  async init(): Promise<void> {
+    await this.db.exec(SCHEMA);
   }
 
-  close(): void {
-    this.db.close();
+  async close(): Promise<void> {
+    await this.db.close();
+  }
+
+  /** Which database this is, for the boot banner. */
+  get kind(): string {
+    return `${this.db.kind} (${this.db.where})`;
   }
 
   /**
    * The studio's tables live in the same database and own their own SQL, so
    * they get the handle rather than another two hundred lines in here.
    */
-  get connection(): DatabaseSync {
+  get connection(): Db {
     return this.db;
   }
 
   // --- Notes -------------------------------------------------------------
 
-  notesFor(contentId: string): ContentNote[] {
-    const rows = this.db
-      .prepare(
-        `SELECT id, content_id, author_id, body, source, model, created_at, updated_at
-         FROM content_notes WHERE content_id = ? ORDER BY created_at DESC`,
-      )
-      .all(contentId) as Record<string, string>[];
+  async notesFor(contentId: string): Promise<ContentNote[]> {
+    const rows = await this.db.all(`SELECT id, content_id, author_id, body, source, model, created_at, updated_at
+         FROM content_notes WHERE content_id = ? ORDER BY created_at DESC`, [contentId]) as Record<string, string>[];
     return rows.map(toNote);
   }
 
   /** How many notes each piece has, for badging a list without N queries. */
-  noteCounts(): Record<string, number> {
-    const rows = this.db
-      .prepare(`SELECT content_id, COUNT(*) AS n FROM content_notes GROUP BY content_id`)
-      .all() as { content_id: string; n: number }[];
+  async noteCounts(): Promise<Record<string, number>> {
+    const rows = await this.db.all(`SELECT content_id, COUNT(*) AS n FROM content_notes GROUP BY content_id`) as { content_id: string; n: number }[];
     return Object.fromEntries(rows.map((r) => [r.content_id, Number(r.n)]));
   }
 
-  addNote(input: {
+  async addNote(input: {
     contentId: string;
     authorId: string;
     body: string;
     source?: NoteSource;
     model?: string;
-  }): ContentNote {
+  }): Promise<ContentNote> {
     const stamp = now();
     const note: ContentNote = {
       id: randomUUID(),
@@ -342,73 +346,73 @@ export class HubStore {
       createdAt: stamp,
       updatedAt: stamp,
     };
-    this.db
-      .prepare(
-        `INSERT INTO content_notes
+    await this.db.run(`INSERT INTO content_notes
            (id, content_id, author_id, body, source, model, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        note.id,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [note.id,
         note.contentId,
         note.authorId,
         note.body,
         note.source,
         note.model ?? null,
         note.createdAt,
-        note.updatedAt,
-      );
+        note.updatedAt]);
     return note;
   }
 
-  getNote(id: string): ContentNote | undefined {
-    const row = this.db
-      .prepare(
-        `SELECT id, content_id, author_id, body, source, model, created_at, updated_at
-         FROM content_notes WHERE id = ?`,
-      )
-      .get(id) as Record<string, string> | undefined;
+  async getNote(id: string): Promise<ContentNote | undefined> {
+    const row = await this.db.get(`SELECT id, content_id, author_id, body, source, model, created_at, updated_at
+         FROM content_notes WHERE id = ?`, [id]) as Record<string, string> | undefined;
     return row ? toNote(row) : undefined;
   }
 
-  updateNote(id: string, body: string): ContentNote | undefined {
-    this.db
-      .prepare(`UPDATE content_notes SET body = ?, updated_at = ? WHERE id = ?`)
-      .run(body, now(), id);
+  async updateNote(id: string, body: string): Promise<ContentNote | undefined> {
+    await this.db.run(`UPDATE content_notes SET body = ?, updated_at = ? WHERE id = ?`, [body, now(), id]);
     return this.getNote(id);
   }
 
-  deleteNote(id: string): void {
-    this.db.prepare(`DELETE FROM content_notes WHERE id = ?`).run(id);
+  async deleteNote(id: string): Promise<void> {
+    await this.db.run(`DELETE FROM content_notes WHERE id = ?`, [id]);
   }
 
   // --- Personal entries --------------------------------------------------
 
-  entriesFor(personId: string, from?: string, to?: string): PersonalEntry[] {
-    const rows = this.db
-      .prepare(
-        `SELECT id, person_id, title, kind, date, end_date, note, content_id, created_at, updated_at
+  async entriesFor(personId: string, from?: string, to?: string): Promise<PersonalEntry[]> {
+    /*
+     * The date bounds are built in rather than passed as nulls.
+     *
+     * `(? IS NULL OR end_date >= ?)` reads neatly and works on SQLite, but
+     * Postgres cannot infer the type of a parameter it only ever sees
+     * compared to NULL, and refuses the statement. An absent filter should
+     * be an absent clause anyway — it is also the query the planner can use
+     * an index on.
+     */
+    const where = ["person_id = ?"];
+    const params: unknown[] = [personId];
+    if (from) {
+      where.push("end_date >= ?");
+      params.push(from);
+    }
+    if (to) {
+      where.push("date <= ?");
+      params.push(to);
+    }
+    const rows = (await this.db.all(
+      `SELECT id, person_id, title, kind, date, end_date, note, content_id, created_at, updated_at
          FROM personal_entries
-         WHERE person_id = ?
-           AND (? IS NULL OR end_date >= ?)
-           AND (? IS NULL OR date <= ?)
-         ORDER BY date`,
-      )
-      .all(personId, from ?? null, from ?? null, to ?? null, to ?? null) as Record<string, string>[];
+        WHERE ${where.join(" AND ")}
+        ORDER BY date`,
+      params,
+    )) as Record<string, string>[];
     return rows.map(toEntry);
   }
 
-  getEntry(id: string): PersonalEntry | undefined {
-    const row = this.db
-      .prepare(
-        `SELECT id, person_id, title, kind, date, end_date, note, content_id, created_at, updated_at
-         FROM personal_entries WHERE id = ?`,
-      )
-      .get(id) as Record<string, string> | undefined;
+  async getEntry(id: string): Promise<PersonalEntry | undefined> {
+    const row = await this.db.get(`SELECT id, person_id, title, kind, date, end_date, note, content_id, created_at, updated_at
+         FROM personal_entries WHERE id = ?`, [id]) as Record<string, string> | undefined;
     return row ? toEntry(row) : undefined;
   }
 
-  addEntry(input: {
+  async addEntry(input: {
     personId: string;
     title: string;
     kind: EntryKind;
@@ -416,7 +420,7 @@ export class HubStore {
     endDate?: string;
     note?: string;
     contentId?: string;
-  }): PersonalEntry {
+  }): Promise<PersonalEntry> {
     const stamp = now();
     const entry: PersonalEntry = {
       id: randomUUID(),
@@ -430,14 +434,9 @@ export class HubStore {
       createdAt: stamp,
       updatedAt: stamp,
     };
-    this.db
-      .prepare(
-        `INSERT INTO personal_entries
+    await this.db.run(`INSERT INTO personal_entries
            (id, person_id, title, kind, date, end_date, note, content_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        entry.id,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [entry.id,
         entry.personId,
         entry.title,
         entry.kind,
@@ -446,172 +445,157 @@ export class HubStore {
         entry.note ?? null,
         entry.contentId ?? null,
         entry.createdAt,
-        entry.updatedAt,
-      );
+        entry.updatedAt]);
     return entry;
   }
 
-  updateEntry(
+  async updateEntry(
     id: string,
     patch: Partial<Pick<PersonalEntry, "title" | "kind" | "date" | "endDate" | "note">>,
-  ): PersonalEntry | undefined {
-    const current = this.getEntry(id);
+  ): Promise<PersonalEntry | undefined> {
+    const current = await this.getEntry(id);
     if (!current) return undefined;
     const next = { ...current, ...patch };
-    this.db
-      .prepare(
-        `UPDATE personal_entries
+    await this.db.run(`UPDATE personal_entries
          SET title = ?, kind = ?, date = ?, end_date = ?, note = ?, updated_at = ?
-         WHERE id = ?`,
-      )
-      .run(next.title, next.kind, next.date, next.endDate || next.date, next.note ?? null, now(), id);
+         WHERE id = ?`, [next.title, next.kind, next.date, next.endDate || next.date, next.note ?? null, now(), id]);
     return this.getEntry(id);
   }
 
-  deleteEntry(id: string): void {
-    this.db.prepare(`DELETE FROM personal_entries WHERE id = ?`).run(id);
+  async deleteEntry(id: string): Promise<void> {
+    await this.db.run(`DELETE FROM personal_entries WHERE id = ?`, [id]);
   }
 
   // --- Peer reviews ------------------------------------------------------
 
-  peerReviewFor(contentId: string): PeerReview | undefined {
-    const row = this.db
-      .prepare(
-        `SELECT content_id, reviewer_id, review_date, arranged_by, note, created_at, updated_at
-         FROM peer_reviews WHERE content_id = ?`,
-      )
-      .get(contentId) as Record<string, string> | undefined;
+  async peerReviewFor(contentId: string): Promise<PeerReview | undefined> {
+    const row = await this.db.get(`SELECT content_id, reviewer_id, review_date, arranged_by, note, created_at, updated_at
+         FROM peer_reviews WHERE content_id = ?`, [contentId]) as Record<string, string> | undefined;
     return row ? toPeerReview(row) : undefined;
   }
 
-  allPeerReviews(): PeerReview[] {
-    const rows = this.db
-      .prepare(
-        `SELECT content_id, reviewer_id, review_date, arranged_by, note, created_at, updated_at
-         FROM peer_reviews ORDER BY review_date`,
-      )
-      .all() as Record<string, string>[];
+  async allPeerReviews(): Promise<PeerReview[]> {
+    const rows = await this.db.all(`SELECT content_id, reviewer_id, review_date, arranged_by, note, created_at, updated_at
+         FROM peer_reviews ORDER BY review_date`) as Record<string, string>[];
     return rows.map(toPeerReview);
   }
 
   /** One review per piece, so setting it again amends the existing one. */
-  setPeerReview(input: {
+  async setPeerReview(input: {
     contentId: string;
     reviewerId: string;
     reviewDate: string;
     arrangedBy: string;
     note?: string;
-  }): PeerReview {
-    const existing = this.peerReviewFor(input.contentId);
+  }): Promise<PeerReview> {
+    const existing = await this.peerReviewFor(input.contentId);
     const stamp = now();
-    this.db
-      .prepare(
-        `INSERT INTO peer_reviews
+    await this.db.run(`INSERT INTO peer_reviews
            (content_id, reviewer_id, review_date, arranged_by, note, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT (content_id) DO UPDATE SET
            reviewer_id = excluded.reviewer_id,
            review_date = excluded.review_date,
            note = excluded.note,
-           updated_at = excluded.updated_at`,
-      )
-      .run(
-        input.contentId,
+           updated_at = excluded.updated_at`, [input.contentId,
         input.reviewerId,
         input.reviewDate,
         existing?.arrangedBy ?? input.arrangedBy,
         input.note ?? null,
         existing?.createdAt ?? stamp,
-        stamp,
-      );
-    return this.peerReviewFor(input.contentId)!;
+        stamp]);
+    return (await this.peerReviewFor(input.contentId))!;
   }
 
-  deletePeerReview(contentId: string): void {
-    this.db.prepare(`DELETE FROM peer_reviews WHERE content_id = ?`).run(contentId);
+  async deletePeerReview(contentId: string): Promise<void> {
+    await this.db.run(`DELETE FROM peer_reviews WHERE content_id = ?`, [contentId]);
   }
 
   // --- Session sign-ups --------------------------------------------------
 
-  signUpsFor(sessionId: string): SignUpRow[] {
-    const rows = this.db
-      .prepare(
-        `SELECT session_id, person_id, state, created_at
-         FROM session_signups WHERE session_id = ? ORDER BY created_at`,
-      )
-      .all(sessionId) as Record<string, string>[];
+  /*
+   * Ordered by when they signed up, then by who.
+   *
+   * The second half matters: the order of this list is the waiting list, so
+   * it has to be the same answer every time it is asked. Several people
+   * seeded in one go share a `created_at` to the millisecond, and a database
+   * is free to return tied rows in any order — SQLite happened to return
+   * them in insertion order and Postgres did not, which is how this was
+   * found. A tie-break makes it neither database's decision.
+   */
+  async signUpsFor(sessionId: string): Promise<SignUpRow[]> {
+    const rows = await this.db.all(`SELECT session_id, person_id, state, created_at
+         FROM session_signups WHERE session_id = ? ORDER BY created_at, person_id`, [sessionId]) as Record<string, string>[];
     return rows.map(toSignUp);
   }
 
-  allSignUps(): SignUpRow[] {
-    const rows = this.db
-      .prepare(
-        `SELECT session_id, person_id, state, created_at FROM session_signups ORDER BY created_at`,
-      )
-      .all() as Record<string, string>[];
+  async allSignUps(): Promise<SignUpRow[]> {
+    const rows = await this.db.all(`SELECT session_id, person_id, state, created_at FROM session_signups ORDER BY created_at, person_id`) as Record<string, string>[];
     return rows.map(toSignUp);
   }
 
-  addSignUp(sessionId: string, personId: string, state: "going" | "waiting"): void {
-    this.db
-      .prepare(
-        `INSERT INTO session_signups (session_id, person_id, state, created_at)
+  /** `at` is only for the seed, which is saying when these people signed up. */
+  async addSignUp(
+    sessionId: string,
+    personId: string,
+    state: "going" | "waiting",
+    at = now(),
+  ): Promise<void> {
+    await this.db.run(`INSERT INTO session_signups (session_id, person_id, state, created_at)
          VALUES (?, ?, ?, ?)
-         ON CONFLICT (session_id, person_id) DO UPDATE SET state = excluded.state`,
-      )
-      .run(sessionId, personId, state, now());
+         ON CONFLICT (session_id, person_id) DO UPDATE SET state = excluded.state`, [sessionId, personId, state, at]);
   }
 
-  removeSignUp(sessionId: string, personId: string): void {
-    this.db
-      .prepare(`DELETE FROM session_signups WHERE session_id = ? AND person_id = ?`)
-      .run(sessionId, personId);
+  async removeSignUp(sessionId: string, personId: string): Promise<void> {
+    await this.db.run(`DELETE FROM session_signups WHERE session_id = ? AND person_id = ?`, [sessionId, personId]);
   }
 
-  promoteSignUp(sessionId: string, personId: string): void {
-    this.db
-      .prepare(`UPDATE session_signups SET state = 'going' WHERE session_id = ? AND person_id = ?`)
-      .run(sessionId, personId);
+  async promoteSignUp(sessionId: string, personId: string): Promise<void> {
+    await this.db.run(`UPDATE session_signups SET state = 'going' WHERE session_id = ? AND person_id = ?`, [sessionId, personId]);
   }
 
-  /** Seeds sign-ups on an empty table so the POC starts with a realistic mix. */
-  seedSignUpsIfEmpty(seed: Record<string, { going: string[]; waiting: string[] }>): void {
-    const { n } = this.db.prepare(`SELECT COUNT(*) AS n FROM session_signups`).get() as {
+  /**
+   * Seeds sign-ups on an empty table so the POC starts with a realistic mix.
+   *
+   * A minute apart rather than all at the same instant, because the order of
+   * this list is the waiting list and the seed is saying who was first. Rows
+   * written in one loop share a millisecond, and then it is the database
+   * deciding the order — which is how the same seed produced two different
+   * lists on SQLite and Postgres.
+   */
+  async seedSignUpsIfEmpty(seed: Record<string, { going: string[]; waiting: string[] }>): Promise<void> {
+    const { n } = await this.db.get(`SELECT COUNT(*) AS n FROM session_signups`) as {
       n: number;
     };
     if (Number(n) > 0) return;
+    // Working up to now, so somebody signing up today still joins the back.
+    const rows = Object.values(seed).reduce((n, v) => n + v.going.length + v.waiting.length, 0);
+    let when = Date.now() - rows * 60_000;
+    const next = () => new Date((when += 60_000)).toISOString();
     for (const [sessionId, value] of Object.entries(seed)) {
-      for (const personId of value.going) this.addSignUp(sessionId, personId, "going");
-      for (const personId of value.waiting) this.addSignUp(sessionId, personId, "waiting");
+      for (const personId of value.going) await this.addSignUp(sessionId, personId, "going", next());
+      for (const personId of value.waiting) await this.addSignUp(sessionId, personId, "waiting", next());
     }
   }
 
   // --- Forecast details -------------------------------------------------
 
-  detailsFor(contentId: string): ForecastDetails | undefined {
-    const row = this.db
-      .prepare(
-        `SELECT content_id, content_type, year_from, year_to, editor_id, editor_url,
+  async detailsFor(contentId: string): Promise<ForecastDetails | undefined> {
+    const row = await this.db.get(`SELECT content_id, content_type, year_from, year_to, editor_id, editor_url,
                 research_links, updated_by, updated_at
-         FROM forecast_details WHERE content_id = ?`,
-      )
-      .get(contentId) as Record<string, unknown> | undefined;
+         FROM forecast_details WHERE content_id = ?`, [contentId]) as Record<string, unknown> | undefined;
     return row ? toDetails(row) : undefined;
   }
 
-  allDetails(): Record<string, ForecastDetails> {
-    const rows = this.db
-      .prepare(
-        `SELECT content_id, content_type, year_from, year_to, editor_id, editor_url,
+  async allDetails(): Promise<Record<string, ForecastDetails>> {
+    const rows = await this.db.all(`SELECT content_id, content_type, year_from, year_to, editor_id, editor_url,
                 research_links, updated_by, updated_at
-         FROM forecast_details`,
-      )
-      .all() as Record<string, unknown>[];
+         FROM forecast_details`) as Record<string, unknown>[];
     return Object.fromEntries(rows.map((row) => [String(row.content_id), toDetails(row)]));
   }
 
   /** One row per forecast, so saving again replaces what is there. */
-  setDetails(input: {
+  async setDetails(input: {
     contentId: string;
     contentType?: string;
     yearFrom?: number;
@@ -620,11 +604,9 @@ export class HubStore {
     editorUrl?: string;
     researchLinks: ResearchLink[];
     updatedBy: string;
-  }): ForecastDetails {
+  }): Promise<ForecastDetails> {
     const stamp = now();
-    this.db
-      .prepare(
-        `INSERT INTO forecast_details
+    await this.db.run(`INSERT INTO forecast_details
            (content_id, content_type, year_from, year_to, editor_id, editor_url,
             research_links, updated_by, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -636,10 +618,7 @@ export class HubStore {
            editor_url = excluded.editor_url,
            research_links = excluded.research_links,
            updated_by = excluded.updated_by,
-           updated_at = excluded.updated_at`,
-      )
-      .run(
-        input.contentId,
+           updated_at = excluded.updated_at`, [input.contentId,
         input.contentType ?? null,
         input.yearFrom ?? null,
         input.yearTo ?? null,
@@ -647,9 +626,8 @@ export class HubStore {
         input.editorUrl ?? null,
         JSON.stringify(input.researchLinks),
         input.updatedBy,
-        stamp,
-      );
-    return this.detailsFor(input.contentId)!;
+        stamp]);
+    return (await this.detailsFor(input.contentId))!;
   }
 
   // --- Trend profiles ---------------------------------------------------
@@ -658,37 +636,27 @@ export class HubStore {
    * What the Hub holds on top of the trends sheet. Only the fields the owner
    * filled in are stored, so an empty override never blanks a sheet value.
    */
-  trendExtrasFor(trendId: string): TrendExtras | undefined {
-    const row = this.db
-      .prepare(
-        `SELECT trend_id, cover_image_url, links, note, updated_by, updated_at
-         FROM trend_extras WHERE trend_id = ?`,
-      )
-      .get(trendId) as Record<string, unknown> | undefined;
+  async trendExtrasFor(trendId: string): Promise<TrendExtras | undefined> {
+    const row = await this.db.get(`SELECT trend_id, cover_image_url, links, note, updated_by, updated_at
+         FROM trend_extras WHERE trend_id = ?`, [trendId]) as Record<string, unknown> | undefined;
     return row ? toTrendExtras(row) : undefined;
   }
 
-  allTrendExtras(): Record<string, TrendExtras> {
-    const rows = this.db
-      .prepare(
-        `SELECT trend_id, cover_image_url, links, note, updated_by, updated_at
-         FROM trend_extras`,
-      )
-      .all() as Record<string, unknown>[];
+  async allTrendExtras(): Promise<Record<string, TrendExtras>> {
+    const rows = await this.db.all(`SELECT trend_id, cover_image_url, links, note, updated_by, updated_at
+         FROM trend_extras`) as Record<string, unknown>[];
     return Object.fromEntries(rows.map((row) => [String(row.trend_id), toTrendExtras(row)]));
   }
 
-  setTrendExtras(input: {
+  async setTrendExtras(input: {
     trendId: string;
     coverImageUrl?: string;
     links: ResearchLink[];
     note?: string;
     updatedBy: string;
-  }): TrendExtras {
+  }): Promise<TrendExtras> {
     const stamp = now();
-    this.db
-      .prepare(
-        `INSERT INTO trend_extras
+    await this.db.run(`INSERT INTO trend_extras
            (trend_id, cover_image_url, links, note, updated_by, updated_at)
          VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT (trend_id) DO UPDATE SET
@@ -696,17 +664,13 @@ export class HubStore {
            links = excluded.links,
            note = excluded.note,
            updated_by = excluded.updated_by,
-           updated_at = excluded.updated_at`,
-      )
-      .run(
-        input.trendId,
+           updated_at = excluded.updated_at`, [input.trendId,
         input.coverImageUrl ?? null,
         JSON.stringify(input.links),
         input.note ?? null,
         input.updatedBy,
-        stamp,
-      );
-    return this.trendExtrasFor(input.trendId)!;
+        stamp]);
+    return (await this.trendExtrasFor(input.trendId))!;
   }
 
   // --- Calendar feed tokens ---------------------------------------------
@@ -725,15 +689,13 @@ export class HubStore {
    * thousand rows on every request, and twenty-five thousand single-row
    * queries to do it would be the slowest thing in the Hub.
    */
-  proofPointDecisions(): Map<string, ProofPointDecision> {
-    const rows = this.db
-      .prepare(`SELECT * FROM proof_point_decisions`)
-      .all() as Record<string, unknown>[];
+  async proofPointDecisions(): Promise<Map<string, ProofPointDecision>> {
+    const rows = await this.db.all(`SELECT * FROM proof_point_decisions`) as Record<string, unknown>[];
     return new Map(rows.map((row) => [String(row.suggestion_id), toDecision(row)]));
   }
 
   /** One decision, replacing whatever was there. */
-  decideProofPoint(input: {
+  async decideProofPoint(input: {
     suggestionId: string;
     trendId: string;
     calloutId: string;
@@ -742,7 +704,7 @@ export class HubStore {
     byEmail: string;
     byPersonId?: string | null;
     byOwner: boolean;
-  }): ProofPointDecision {
+  }): Promise<ProofPointDecision> {
     const entry: ProofPointDecision = {
       suggestionId: input.suggestionId,
       trendId: input.trendId,
@@ -754,19 +716,14 @@ export class HubStore {
       byOwner: input.byOwner,
       decidedAt: now(),
     };
-    this.db
-      .prepare(
-        `INSERT INTO proof_point_decisions
+    await this.db.run(`INSERT INTO proof_point_decisions
            (suggestion_id, trend_id, callout_id, decision, reason,
             by_email, by_person_id, by_owner, decided_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(suggestion_id) DO UPDATE SET
            decision = excluded.decision, reason = excluded.reason,
            by_email = excluded.by_email, by_person_id = excluded.by_person_id,
-           by_owner = excluded.by_owner, decided_at = excluded.decided_at`,
-      )
-      .run(
-        entry.suggestionId,
+           by_owner = excluded.by_owner, decided_at = excluded.decided_at`, [entry.suggestionId,
         entry.trendId,
         entry.calloutId,
         entry.decision,
@@ -774,8 +731,7 @@ export class HubStore {
         entry.byEmail,
         entry.byPersonId ?? null,
         entry.byOwner ? 1 : 0,
-        entry.decidedAt,
-      );
+        entry.decidedAt]);
     return entry;
   }
 
@@ -785,22 +741,16 @@ export class HubStore {
    * Returns whether there was one to take back, so an undo on a suggestion
    * the extract itself decided can say so rather than appearing to work.
    */
-  undecideProofPoint(suggestionId: string): boolean {
-    const before = this.db
-      .prepare(`SELECT 1 FROM proof_point_decisions WHERE suggestion_id = ?`)
-      .get(suggestionId);
+  async undecideProofPoint(suggestionId: string): Promise<boolean> {
+    const before = await this.db.get(`SELECT 1 FROM proof_point_decisions WHERE suggestion_id = ?`, [suggestionId]);
     if (!before) return false;
-    this.db.prepare(`DELETE FROM proof_point_decisions WHERE suggestion_id = ?`).run(suggestionId);
+    await this.db.run(`DELETE FROM proof_point_decisions WHERE suggestion_id = ?`, [suggestionId]);
     return true;
   }
 
   /** What this person has decided lately, newest first. */
-  recentProofPointDecisions(byEmail: string, limit = 20): ProofPointDecision[] {
-    const rows = this.db
-      .prepare(
-        `SELECT * FROM proof_point_decisions WHERE by_email = ? ORDER BY decided_at DESC LIMIT ?`,
-      )
-      .all(byEmail, limit) as Record<string, unknown>[];
+  async recentProofPointDecisions(byEmail: string, limit = 20): Promise<ProofPointDecision[]> {
+    const rows = await this.db.all(`SELECT * FROM proof_point_decisions WHERE by_email = ? ORDER BY decided_at DESC LIMIT ?`, [byEmail, limit]) as Record<string, unknown>[];
     return rows.map(toDecision);
   }
 
@@ -812,26 +762,20 @@ export class HubStore {
    * An untouched setting has no row at all, so what ships is whatever the
    * code asks for — nothing to seed and nothing to migrate.
    */
-  setting(key: string, fallback = ""): string {
-    const row = this.db
-      .prepare(`SELECT value FROM hub_settings WHERE key = ?`)
-      .get(key) as { value: string } | undefined;
+  async setting(key: string, fallback = ""): Promise<string> {
+    const row = await this.db.get(`SELECT value FROM hub_settings WHERE key = ?`, [key]) as { value: string } | undefined;
     return row?.value ?? fallback;
   }
 
-  flag(key: string, fallback = false): boolean {
-    const value = this.setting(key, fallback ? "1" : "0");
+  async flag(key: string, fallback = false): Promise<boolean> {
+    const value = await this.setting(key, fallback ? "1" : "0");
     return value === "1" || value === "true";
   }
 
-  setSetting(key: string, value: string, by: string): void {
-    this.db
-      .prepare(
-        `INSERT INTO hub_settings (key, value, updated_by, updated_at) VALUES (?, ?, ?, ?)
+  async setSetting(key: string, value: string, by: string): Promise<void> {
+    await this.db.run(`INSERT INTO hub_settings (key, value, updated_by, updated_at) VALUES (?, ?, ?, ?)
          ON CONFLICT(key) DO UPDATE SET value = excluded.value,
-           updated_by = excluded.updated_by, updated_at = excluded.updated_at`,
-      )
-      .run(key, value, by, now());
+           updated_by = excluded.updated_by, updated_at = excluded.updated_at`, [key, value, by, now()]);
   }
 
   /* ---- The record of what the Hub changed in Smartsheet ----------------- */
@@ -843,7 +787,7 @@ export class HubStore {
    * caller passes the changes exactly as the confirmation showed them, which
    * is the point: the log says what somebody was told they were doing.
    */
-  logScheduleWrite(input: {
+  async logScheduleWrite(input: {
     contentId: string;
     sourceRowId: string;
     target: string;
@@ -852,7 +796,7 @@ export class HubStore {
     byPersonId?: string | null;
     ok: boolean;
     problem?: string;
-  }): ScheduleWrite {
+  }): Promise<ScheduleWrite> {
     const entry: ScheduleWrite = {
       id: randomUUID(),
       contentId: input.contentId,
@@ -865,14 +809,9 @@ export class HubStore {
       ok: input.ok,
       problem: input.problem,
     };
-    this.db
-      .prepare(
-        `INSERT INTO schedule_writes
+    await this.db.run(`INSERT INTO schedule_writes
            (id, content_id, source_row_id, target, changes, by_email, by_person_id, at, ok, problem)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        entry.id,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [entry.id,
         entry.contentId,
         entry.sourceRowId,
         entry.target,
@@ -881,36 +820,27 @@ export class HubStore {
         entry.byPersonId ?? null,
         entry.at,
         entry.ok ? 1 : 0,
-        entry.problem ?? null,
-      );
+        entry.problem ?? null]);
     return entry;
   }
 
   /** What the Hub has changed on one forecast, most recent first. */
-  scheduleWrites(contentId: string, limit = 20): ScheduleWrite[] {
-    const rows = this.db
-      .prepare(
-        `SELECT * FROM schedule_writes WHERE content_id = ? ORDER BY at DESC LIMIT ?`,
-      )
-      .all(contentId, limit) as Record<string, unknown>[];
+  async scheduleWrites(contentId: string, limit = 20): Promise<ScheduleWrite[]> {
+    const rows = await this.db.all(`SELECT * FROM schedule_writes WHERE content_id = ? ORDER BY at DESC, id LIMIT ?`, [contentId, limit]) as Record<string, unknown>[];
     return rows.map(toScheduleWrite);
   }
 
   /** The whole log, for an admin. */
-  allScheduleWrites(limit = 200): ScheduleWrite[] {
-    const rows = this.db
-      .prepare(`SELECT * FROM schedule_writes ORDER BY at DESC LIMIT ?`)
-      .all(limit) as Record<string, unknown>[];
+  async allScheduleWrites(limit = 200): Promise<ScheduleWrite[]> {
+    const rows = await this.db.all(`SELECT * FROM schedule_writes ORDER BY at DESC, id LIMIT ?`, [limit]) as Record<string, unknown>[];
     return rows.map(toScheduleWrite);
   }
 
   // --- Notifications -----------------------------------------------------
 
   /** What this person asked for, or nothing if they never said. */
-  notifyPrefs(personId: string): NotifyPrefs | undefined {
-    const row = this.db
-      .prepare(`SELECT * FROM notify_prefs WHERE person_id = ?`)
-      .get(personId) as Record<string, unknown> | undefined;
+  async notifyPrefs(personId: string): Promise<NotifyPrefs | undefined> {
+    const row = await this.db.get(`SELECT * FROM notify_prefs WHERE person_id = ?`, [personId]) as Record<string, unknown> | undefined;
     if (!row) return undefined;
     let on = { ...DEFAULT_ON };
     try {
@@ -936,27 +866,20 @@ export class HubStore {
   }
 
   /** Everyone who has said anything, for an admin reading the whole picture. */
-  allNotifyPrefs(): NotifyPrefs[] {
-    const rows = this.db
-      .prepare(`SELECT person_id FROM notify_prefs`)
-      .all() as { person_id: string }[];
-    return rows
-      .map((r) => this.notifyPrefs(String(r.person_id)))
-      .filter((p): p is NotifyPrefs => Boolean(p));
+  async allNotifyPrefs(): Promise<NotifyPrefs[]> {
+    const rows = await this.db.all(`SELECT person_id FROM notify_prefs`) as { person_id: string }[];
+    const each = await Promise.all(rows.map((r) => this.notifyPrefs(String(r.person_id))));
+    return each.filter((p): p is NotifyPrefs => Boolean(p));
   }
 
-  setNotifyPrefs(prefs: NotifyPrefs): NotifyPrefs {
-    this.db
-      .prepare(
-        `INSERT INTO notify_prefs (person_id, on_json, chat_webhook, updated_at)
+  async setNotifyPrefs(prefs: NotifyPrefs): Promise<NotifyPrefs> {
+    await this.db.run(`INSERT INTO notify_prefs (person_id, on_json, chat_webhook, updated_at)
          VALUES (?, ?, ?, ?)
          ON CONFLICT(person_id) DO UPDATE SET
            on_json = excluded.on_json,
            chat_webhook = excluded.chat_webhook,
-           updated_at = excluded.updated_at`,
-      )
-      .run(prefs.personId, JSON.stringify(prefs.on), prefs.chatWebhook ?? null, now());
-    return this.notifyPrefs(prefs.personId)!;
+           updated_at = excluded.updated_at`, [prefs.personId, JSON.stringify(prefs.on), prefs.chatWebhook ?? null, now()]);
+    return (await this.notifyPrefs(prefs.personId))!;
   }
 
   /**
@@ -965,8 +888,11 @@ export class HubStore {
    * Keyed on the notice rather than the moment, so a run that happens twice
    * leaves one row. The insert is a no-op the second time rather than an
    * error, because a duplicate is expected — that is the mechanism working.
+   *
+   * `ON CONFLICT … DO NOTHING` rather than SQLite's shorter `INSERT OR
+   * IGNORE`, because only one of the two is standard and both understand it.
    */
-  addNotification(notice: {
+  async addNotification(notice: {
     key: string;
     personId: string;
     kind: string;
@@ -974,15 +900,11 @@ export class HubStore {
     body: string;
     link?: string;
     urgency?: number;
-  }): void {
-    this.db
-      .prepare(
-        `INSERT OR IGNORE INTO notifications
+  }): Promise<void> {
+    await this.db.run(`INSERT INTO notifications
            (id, person_id, kind, notice_key, title, body, link, urgency, at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        randomUUID(),
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (notice_key) DO NOTHING`, [randomUUID(),
         notice.personId,
         notice.kind,
         notice.key,
@@ -990,55 +912,36 @@ export class HubStore {
         notice.body,
         notice.link ?? null,
         notice.urgency ?? 0,
-        now(),
-      );
+        now()]);
   }
 
   /** This person's inbox, newest first. */
-  notifications(personId: string, limit = 40): Inboxed[] {
-    const rows = this.db
-      .prepare(
-        `SELECT * FROM notifications WHERE person_id = ? ORDER BY at DESC LIMIT ?`,
-      )
-      .all(personId, limit) as Record<string, unknown>[];
+  async notifications(personId: string, limit = 40): Promise<Inboxed[]> {
+    const rows = await this.db.all(`SELECT * FROM notifications WHERE person_id = ? ORDER BY at DESC, id LIMIT ?`, [personId, limit]) as Record<string, unknown>[];
     return rows.map(toInboxed);
   }
 
-  unreadCount(personId: string): number {
-    const row = this.db
-      .prepare(`SELECT COUNT(*) AS n FROM notifications WHERE person_id = ? AND read_at IS NULL`)
-      .get(personId) as { n: number };
+  async unreadCount(personId: string): Promise<number> {
+    const row = await this.db.get(`SELECT COUNT(*) AS n FROM notifications WHERE person_id = ? AND read_at IS NULL`, [personId]) as { n: number };
     return Number(row?.n ?? 0);
   }
 
   /** Mark one as read. Scoped to the person, so nobody can read another's. */
-  markRead(personId: string, id: string): void {
-    this.db
-      .prepare(
-        `UPDATE notifications SET read_at = ? WHERE id = ? AND person_id = ? AND read_at IS NULL`,
-      )
-      .run(now(), id, personId);
+  async markRead(personId: string, id: string): Promise<void> {
+    await this.db.run(`UPDATE notifications SET read_at = ? WHERE id = ? AND person_id = ? AND read_at IS NULL`, [now(), id, personId]);
   }
 
-  markAllRead(personId: string): void {
-    this.db
-      .prepare(`UPDATE notifications SET read_at = ? WHERE person_id = ? AND read_at IS NULL`)
-      .run(now(), personId);
+  async markAllRead(personId: string): Promise<void> {
+    await this.db.run(`UPDATE notifications SET read_at = ? WHERE person_id = ? AND read_at IS NULL`, [now(), personId]);
   }
 
-  deleteNotification(personId: string, id: string): void {
-    this.db
-      .prepare(`DELETE FROM notifications WHERE id = ? AND person_id = ?`)
-      .run(id, personId);
+  async deleteNotification(personId: string, id: string): Promise<void> {
+    await this.db.run(`DELETE FROM notifications WHERE id = ? AND person_id = ?`, [id, personId]);
   }
 
   /** Has this exact notice already gone down this channel? */
-  alreadySent(key: string, channel: string): boolean {
-    const row = this.db
-      .prepare(
-        `SELECT ok FROM notification_sends WHERE notice_key = ? AND channel = ? AND ok = 1`,
-      )
-      .get(key, channel) as { ok: number } | undefined;
+  async alreadySent(key: string, channel: string): Promise<boolean> {
+    const row = await this.db.get(`SELECT ok FROM notification_sends WHERE notice_key = ? AND channel = ? AND ok = 1`, [key, channel]) as { ok: number } | undefined;
     return Boolean(row);
   }
 
@@ -1049,37 +952,29 @@ export class HubStore {
    * key and channel — so a webhook that comes back to life next week gets
    * another go, while one that succeeded is never asked again.
    */
-  logNotification(entry: {
+  async logNotification(entry: {
     key: string;
     personId: string;
     kind: string;
     channel: string;
     ok: boolean;
     problem?: string;
-  }): void {
-    this.db
-      .prepare(
-        `INSERT INTO notification_sends (notice_key, channel, person_id, kind, at, ok, problem)
+  }): Promise<void> {
+    await this.db.run(`INSERT INTO notification_sends (notice_key, channel, person_id, kind, at, ok, problem)
          VALUES (?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(notice_key, channel) DO UPDATE SET
-           at = excluded.at, ok = excluded.ok, problem = excluded.problem`,
-      )
-      .run(
-        entry.key,
+           at = excluded.at, ok = excluded.ok, problem = excluded.problem`, [entry.key,
         entry.channel,
         entry.personId,
         entry.kind,
         now(),
         entry.ok ? 1 : 0,
-        entry.problem ?? null,
-      );
+        entry.problem ?? null]);
   }
 
   /** The send log, newest first, for an admin. */
-  recentSends(limit = 100): NotificationSend[] {
-    const rows = this.db
-      .prepare(`SELECT * FROM notification_sends ORDER BY at DESC LIMIT ?`)
-      .all(limit) as Record<string, unknown>[];
+  async recentSends(limit = 100): Promise<NotificationSend[]> {
+    const rows = await this.db.all(`SELECT * FROM notification_sends ORDER BY at DESC, notice_key, channel LIMIT ?`, [limit]) as Record<string, unknown>[];
     return rows.map((row) => ({
       key: String(row.notice_key),
       channel: String(row.channel),
@@ -1091,27 +986,21 @@ export class HubStore {
     }));
   }
 
-  calendarToken(personId: string): string {
-    const row = this.db
-      .prepare(`SELECT token FROM calendar_tokens WHERE person_id = ?`)
-      .get(personId) as { token: string } | undefined;
+  async calendarToken(personId: string): Promise<string> {
+    const row = await this.db.get(`SELECT token FROM calendar_tokens WHERE person_id = ?`, [personId]) as { token: string } | undefined;
     if (row) return row.token;
     const token = randomUUID().replace(/-/g, "");
-    this.db
-      .prepare(`INSERT INTO calendar_tokens (person_id, token, created_at) VALUES (?, ?, ?)`)
-      .run(personId, token, now());
+    await this.db.run(`INSERT INTO calendar_tokens (person_id, token, created_at) VALUES (?, ?, ?)`, [personId, token, now()]);
     return token;
   }
 
-  rotateCalendarToken(personId: string): string {
-    this.db.prepare(`DELETE FROM calendar_tokens WHERE person_id = ?`).run(personId);
+  async rotateCalendarToken(personId: string): Promise<string> {
+    await this.db.run(`DELETE FROM calendar_tokens WHERE person_id = ?`, [personId]);
     return this.calendarToken(personId);
   }
 
-  personForToken(token: string): string | undefined {
-    const row = this.db
-      .prepare(`SELECT person_id FROM calendar_tokens WHERE token = ?`)
-      .get(token) as { person_id: string } | undefined;
+  async personForToken(token: string): Promise<string | undefined> {
+    const row = await this.db.get(`SELECT person_id FROM calendar_tokens WHERE token = ?`, [token]) as { person_id: string } | undefined;
     return row?.person_id;
   }
 }

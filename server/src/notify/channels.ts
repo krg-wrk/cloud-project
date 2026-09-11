@@ -100,7 +100,7 @@ export class Channels {
   ): Promise<string | undefined> {
     try {
       if (channel === "inApp") {
-        this.store.addNotification(notice);
+        await this.store.addNotification(notice);
         return undefined;
       }
       if (channel === "email") {

@@ -386,7 +386,8 @@ function NavSheet({
   rest: Section[];
   onSearch: () => void;
   me: Me;
-  person: Person | null;
+  /** Absent for somebody signed in who is not on the forecast team. */
+  person?: Person;
   people: Person[];
 }) {
   const box = useRef<HTMLDivElement | null>(null);

@@ -126,10 +126,10 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
   const reader = new DatasetReader(connectors, (id) => studio.secretFor(id));
 
   /** A dataset plus its connection, or a 404 written for a person. */
-  function resolve(datasetId: string) {
-    const dataset = studio.dataset(datasetId);
+  async function resolve(datasetId: string) {
+    const dataset = await studio.dataset(datasetId);
     if (!dataset) return { error: "No dataset with that id." } as const;
-    const connection = studio.connection(dataset.connectionId);
+    const connection = await studio.connection(dataset.connectionId);
     if (!connection) return { error: "That dataset's connection has been removed." } as const;
     return { dataset, connection } as const;
   }
@@ -140,15 +140,14 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
    * The custom views this viewer may open, for the sidebar. Drafts come back
    * for an admin and are marked as such, so a view can be built in place.
    */
-  router.get("/views", (req: ViewerRequest, res) => {
+  router.get("/views", async (req: ViewerRequest, res) => {
     const viewer = req.viewer;
     if (!viewer?.active) {
       res.json([]);
       return;
     }
     res.json(
-      studio
-        .listViews()
+      (await studio.listViews())
         .filter((v) => canSeeView(v.audience, v.state, viewer))
         .map((v) => ({
           slug: v.slug,
@@ -171,7 +170,7 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
   router.get("/views/:slug", async (req: ViewerRequest, res, next) => {
     try {
       const viewer = req.viewer;
-      const view = studio.viewBySlug(req.params.slug);
+      const view = await studio.viewBySlug(req.params.slug);
       if (!view || !viewer || !canSeeView(view.audience, view.state, viewer)) {
         res.status(404).json({ error: "No view at that address, or it is not yours to see." });
         return;
@@ -183,7 +182,7 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
   });
 
   async function pageFor(view: ViewDef, viewer: Viewer, viewerName?: string): Promise<ViewPage> {
-    const found = resolve(view.datasetId);
+    const found = await resolve(view.datasetId);
     const shell = {
       view: {
         slug: view.slug,
@@ -239,12 +238,12 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
    * only what an admin has changed, so the client falls back to the defaults
    * it already has in code.
    */
-  router.get("/customisation", (req: ViewerRequest, res) => {
+  router.get("/customisation", async (req: ViewerRequest, res) => {
     if (!req.viewer?.active) {
       res.json({ slots: {} });
       return;
     }
-    res.json({ slots: studio.listSlots() });
+    res.json({ slots: (await studio.listSlots()) });
   });
 
   /**
@@ -254,7 +253,7 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
    */
   const SLOT_ID = /^[a-z][a-z0-9]*(\.[a-z0-9-]+)*$/;
 
-  router.put("/studio/slots/:slot", (req: ViewerRequest, res) => {
+  router.put("/studio/slots/:slot", async (req: ViewerRequest, res) => {
     const viewer = requireAdmin(req, res);
     if (!viewer) return;
     const slot = req.params.slot;
@@ -281,26 +280,26 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
       res.status(400).json({ error: "Nothing to change." });
       return;
     }
-    studio.setSlot(slot, patch, viewer.email);
-    res.json({ slots: studio.listSlots() });
+    await studio.setSlot(slot, patch, viewer.email);
+    res.json({ slots: (await studio.listSlots()) });
   });
 
-  router.delete("/studio/slots/:slot", (req: ViewerRequest, res) => {
+  router.delete("/studio/slots/:slot", async (req: ViewerRequest, res) => {
     if (!requireAdmin(req, res)) return;
-    studio.resetSlot(req.params.slot);
-    res.json({ slots: studio.listSlots() });
+    await studio.resetSlot(req.params.slot);
+    res.json({ slots: (await studio.listSlots()) });
   });
 
   /** Reset a page, or the lot. The prefix is matched on the slot id. */
-  router.delete("/studio/slots", (req: ViewerRequest, res) => {
+  router.delete("/studio/slots", async (req: ViewerRequest, res) => {
     if (!requireAdmin(req, res)) return;
     const prefix = typeof req.query.prefix === "string" ? req.query.prefix : undefined;
     if (prefix && !/^[a-z][a-z0-9.-]{0,79}$/.test(prefix)) {
       res.status(400).json({ error: "That is not a slot prefix." });
       return;
     }
-    const cleared = studio.resetSlots(prefix);
-    res.json({ cleared, slots: studio.listSlots() });
+    const cleared = await studio.resetSlots(prefix);
+    res.json({ cleared, slots: (await studio.listSlots()) });
   });
 
   // --- Admin ------------------------------------------------------------
@@ -311,12 +310,12 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
     res.json(connectorCatalogue(connectors));
   });
 
-  router.get("/studio/connections", (req: ViewerRequest, res) => {
+  router.get("/studio/connections", async (req: ViewerRequest, res) => {
     if (!requireAdmin(req, res)) return;
-    res.json(studio.listConnections());
+    res.json((await studio.listConnections()));
   });
 
-  router.post("/studio/connections", (req: ViewerRequest, res) => {
+  router.post("/studio/connections", async (req: ViewerRequest, res) => {
     const viewer = requireAdmin(req, res);
     if (!viewer) return;
     const body = req.body ?? {};
@@ -331,7 +330,7 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
       return;
     }
     res.status(201).json(
-      studio.createConnection(
+      (await studio.createConnection(
         {
           label,
           kind,
@@ -340,15 +339,15 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
           secret: typeof body.secret === "string" ? body.secret.trim() : undefined,
         },
         viewer.email,
-      ),
+      )),
     );
   });
 
-  router.put("/studio/connections/:id", (req: ViewerRequest, res) => {
+  router.put("/studio/connections/:id", async (req: ViewerRequest, res) => {
     const viewer = requireAdmin(req, res);
     if (!viewer) return;
     const body = req.body ?? {};
-    const updated = studio.updateConnection(
+    const updated = (await studio.updateConnection(
       req.params.id,
       {
         label: typeof body.label === "string" ? body.label.trim() : undefined,
@@ -361,7 +360,7 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
         secret: typeof body.secret === "string" ? body.secret.trim() : undefined,
       },
       viewer.email,
-    );
+    ));
     if (!updated) {
       res.status(404).json({ error: "No connection with that id." });
       return;
@@ -370,9 +369,9 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
     res.json(updated);
   });
 
-  router.delete("/studio/connections/:id", (req: ViewerRequest, res) => {
+  router.delete("/studio/connections/:id", async (req: ViewerRequest, res) => {
     if (!requireAdmin(req, res)) return;
-    if (!studio.deleteConnection(req.params.id)) {
+    if (!(await studio.deleteConnection(req.params.id))) {
       res.status(404).json({ error: "No connection with that id." });
       return;
     }
@@ -384,14 +383,16 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
   router.post("/studio/connections/:id/test", async (req: ViewerRequest, res, next) => {
     try {
       if (!requireAdmin(req, res)) return;
-      const connection = studio.connection(req.params.id);
+      const connection = await studio.connection(req.params.id);
       if (!connection) {
         res.status(404).json({ error: "No connection with that id." });
         return;
       }
-      const result = await reader.connector(connection.kind).probe(reader.contextFor(connection));
-      studio.recordCheck(connection.id, result.ok, result.note);
-      res.json({ ...result, connection: studio.connection(connection.id) });
+      const result = await reader
+        .connector(connection.kind)
+        .probe(await reader.contextFor(connection));
+      await studio.recordCheck(connection.id, result.ok, result.note);
+      res.json({ ...result, connection: await studio.connection(connection.id) });
     } catch (err) {
       next(err);
     }
@@ -401,7 +402,7 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
   router.get("/studio/connections/:id/catalogue", async (req: ViewerRequest, res, next) => {
     try {
       if (!requireAdmin(req, res)) return;
-      const connection = studio.connection(req.params.id);
+      const connection = await studio.connection(req.params.id);
       if (!connection) {
         res.status(404).json({ error: "No connection with that id." });
         return;
@@ -411,7 +412,7 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
         res.json({ tables: [], note: `${connection.kind} cannot list its tables.` });
         return;
       }
-      res.json({ tables: await connector.catalogue(reader.contextFor(connection)) });
+      res.json({ tables: await connector.catalogue(await reader.contextFor(connection)) });
     } catch (err) {
       res.status(502).json({
         tables: [],
@@ -420,14 +421,14 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
     }
   });
 
-  router.get("/studio/datasets", (req: ViewerRequest, res) => {
+  router.get("/studio/datasets", async (req: ViewerRequest, res) => {
     if (!requireAdmin(req, res)) return;
     const connectionId =
       typeof req.query.connection === "string" ? req.query.connection : undefined;
-    res.json(studio.listDatasets(connectionId));
+    res.json((await studio.listDatasets(connectionId)));
   });
 
-  router.post("/studio/datasets", (req: ViewerRequest, res) => {
+  router.post("/studio/datasets", async (req: ViewerRequest, res) => {
     const viewer = requireAdmin(req, res);
     if (!viewer) return;
     const body = req.body ?? {};
@@ -438,23 +439,23 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
       res.status(400).json({ error: "A dataset needs a name, a connection and a table." });
       return;
     }
-    if (!studio.connection(connectionId)) {
+    if (!await studio.connection(connectionId)) {
       res.status(400).json({ error: "No connection with that id." });
       return;
     }
     res.status(201).json(
-      studio.createDataset(
+      (await studio.createDataset(
         { connectionId, label, ref, refreshSeconds: Number(body.refreshSeconds) || 60 },
         viewer.email,
-      ),
+      )),
     );
   });
 
-  router.put("/studio/datasets/:id", (req: ViewerRequest, res) => {
+  router.put("/studio/datasets/:id", async (req: ViewerRequest, res) => {
     const viewer = requireAdmin(req, res);
     if (!viewer) return;
     const body = req.body ?? {};
-    const updated = studio.updateDataset(
+    const updated = (await studio.updateDataset(
       req.params.id,
       {
         label: typeof body.label === "string" ? body.label.trim() : undefined,
@@ -462,7 +463,7 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
         refreshSeconds: body.refreshSeconds == null ? undefined : Number(body.refreshSeconds),
       },
       viewer.email,
-    );
+    ));
     if (!updated) {
       res.status(404).json({ error: "No dataset with that id." });
       return;
@@ -471,9 +472,9 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
     res.json(updated);
   });
 
-  router.delete("/studio/datasets/:id", (req: ViewerRequest, res) => {
+  router.delete("/studio/datasets/:id", async (req: ViewerRequest, res) => {
     if (!requireAdmin(req, res)) return;
-    if (!studio.deleteDataset(req.params.id)) {
+    if (!(await studio.deleteDataset(req.params.id))) {
       res.status(404).json({ error: "No dataset with that id." });
       return;
     }
@@ -490,24 +491,24 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
   router.post("/studio/datasets/:id/discover", async (req: ViewerRequest, res, next) => {
     try {
       if (!requireAdmin(req, res)) return;
-      const found = resolve(req.params.id);
+      const found = await resolve(req.params.id);
       if ("error" in found) {
         res.status(404).json({ error: found.error });
         return;
       }
       const { dataset, connection } = found;
       const described = await reader.connector(connection.kind).describe(
-        reader.contextFor(connection),
+        await reader.contextFor(connection),
         dataset.ref,
       );
       reader.forget(connection.id, dataset.ref);
       res.json(
-        studio.recordFields(
+        (await studio.recordFields(
           dataset.id,
           described.fields,
           described.rowCount,
           described.truncated ?? false,
-        ),
+        )),
       );
     } catch (err) {
       if (err instanceof Error) {
@@ -522,7 +523,7 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
   router.get("/studio/datasets/:id/sample", async (req: ViewerRequest, res, next) => {
     try {
       if (!requireAdmin(req, res)) return;
-      const found = resolve(req.params.id);
+      const found = await resolve(req.params.id);
       if ("error" in found) {
         res.status(404).json({ error: found.error });
         return;
@@ -539,12 +540,12 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
     }
   });
 
-  router.get("/studio/views", (req: ViewerRequest, res) => {
+  router.get("/studio/views", async (req: ViewerRequest, res) => {
     if (!requireAdmin(req, res)) return;
-    res.json(studio.listViews());
+    res.json((await studio.listViews()));
   });
 
-  router.post("/studio/views", (req: ViewerRequest, res) => {
+  router.post("/studio/views", async (req: ViewerRequest, res) => {
     const viewer = requireAdmin(req, res);
     if (!viewer) return;
     const body = req.body ?? {};
@@ -554,18 +555,18 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
       res.status(400).json({ error: "A view needs a name and a dataset." });
       return;
     }
-    if (!studio.dataset(datasetId)) {
+    if (!(await studio.dataset(datasetId))) {
       res.status(400).json({ error: "No dataset with that id." });
       return;
     }
     const slug = slugify(typeof body.slug === "string" && body.slug.trim() ? body.slug : label);
-    const bad = slugCheck(slug, undefined);
+    const bad = await slugCheck(slug, undefined);
     if (bad) {
       res.status(400).json({ error: bad });
       return;
     }
     res.status(201).json(
-      studio.createView(
+      (await studio.createView(
         {
           slug,
           label,
@@ -579,14 +580,14 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
           state: body.state === "live" ? "live" : "draft",
         },
         viewer.email,
-      ),
+      )),
     );
   });
 
-  router.put("/studio/views/:id", (req: ViewerRequest, res) => {
+  router.put("/studio/views/:id", async (req: ViewerRequest, res) => {
     const viewer = requireAdmin(req, res);
     if (!viewer) return;
-    const existing = studio.view(req.params.id);
+    const existing = await studio.view(req.params.id);
     if (!existing) {
       res.status(404).json({ error: "No view with that id." });
       return;
@@ -598,17 +599,17 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
         : typeof body.label === "string" && body.label.trim() && !body.slug
           ? existing.slug
           : existing.slug;
-    const bad = slugCheck(slug, existing.id);
+    const bad = await slugCheck(slug, existing.id);
     if (bad) {
       res.status(400).json({ error: bad });
       return;
     }
-    if (typeof body.datasetId === "string" && body.datasetId && !studio.dataset(body.datasetId)) {
+    if (typeof body.datasetId === "string" && body.datasetId && !(await studio.dataset(body.datasetId))) {
       res.status(400).json({ error: "No dataset with that id." });
       return;
     }
     res.json(
-      studio.updateView(
+      (await studio.updateView(
         req.params.id,
         {
           slug,
@@ -623,13 +624,13 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
           state: body.state === "live" ? "live" : body.state === "draft" ? "draft" : undefined,
         },
         viewer.email,
-      ),
+      )),
     );
   });
 
-  router.delete("/studio/views/:id", (req: ViewerRequest, res) => {
+  router.delete("/studio/views/:id", async (req: ViewerRequest, res) => {
     if (!requireAdmin(req, res)) return;
-    if (!studio.deleteView(req.params.id)) {
+    if (!(await studio.deleteView(req.params.id))) {
       res.status(404).json({ error: "No view with that id." });
       return;
     }
@@ -649,7 +650,7 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
       const viewer = requireAdmin(req, res);
       if (!viewer) return;
       const body = req.body ?? {};
-      const found = resolve(typeof body.datasetId === "string" ? body.datasetId : "");
+      const found = await resolve(typeof body.datasetId === "string" ? body.datasetId : "");
       if ("error" in found) {
         res.status(400).json({ error: found.error });
         return;
@@ -675,10 +676,10 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
     }
   });
 
-  function slugCheck(slug: string, exceptId: string | undefined): string | null {
+  async function slugCheck(slug: string, exceptId: string | undefined): Promise<string | null> {
     if (!slug) return "That name does not make a usable address.";
     if (RESERVED_SLUGS.has(slug)) return `"${slug}" is reserved — pick another name.`;
-    if (!studio.slugFree(slug, exceptId)) return `A view already lives at /v/${slug}.`;
+    if (!(await studio.slugFree(slug, exceptId))) return `A view already lives at /v/${slug}.`;
     return null;
   }
 

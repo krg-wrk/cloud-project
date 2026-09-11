@@ -59,7 +59,7 @@ export async function runNotifications(
   for (const notice of notices) {
     const person = people.get(notice.personId);
     if (!person) continue;
-    const prefs = store.notifyPrefs(notice.personId) ?? defaultPrefs(notice.personId);
+    const prefs = (await store.notifyPrefs(notice.personId)) ?? defaultPrefs(notice.personId);
     const wanted = prefs.on[notice.kind] ?? [];
 
     for (const channel of wanted) {
@@ -74,7 +74,7 @@ export async function runNotifications(
         });
       };
 
-      if (!options.again && store.alreadySent(notice.key, channel)) {
+      if (!options.again && (await store.alreadySent(notice.key, channel))) {
         record(false, "already sent");
         continue;
       }
@@ -96,7 +96,7 @@ export async function runNotifications(
 
       const problem = await channels.send(channel, notice, person, prefs);
       record(!problem, problem);
-      store.logNotification({
+      await store.logNotification({
         key: notice.key,
         personId: notice.personId,
         kind: notice.kind,

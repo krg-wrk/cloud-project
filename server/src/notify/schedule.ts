@@ -106,7 +106,7 @@ export async function gather(
     data.listTrends(),
   ]);
 
-  const waitingByTrend = library.waitingByTrend(new Set(store.proofPointDecisions().keys()));
+  const waitingByTrend = library.waitingByTrend(new Set((await store.proofPointDecisions()).keys()));
   const reviewWaiting: Record<string, number> = {};
   for (const trend of trends) {
     const waiting = waitingByTrend[trend.id] ?? 0;
@@ -117,7 +117,7 @@ export async function gather(
   }
 
   const goingBySession: Record<string, string[]> = {};
-  for (const [id, rows] of Object.entries(signUps.all())) goingBySession[id] = rows.going;
+  for (const [id, rows] of Object.entries((await signUps.all()))) goingBySession[id] = rows.going;
 
   return {
     today,
@@ -126,7 +126,7 @@ export async function gather(
     events,
     sessions,
     goingBySession,
-    peerReviews: store.allPeerReviews(),
+    peerReviews: (await store.allPeerReviews()),
     reviewWaiting,
   };
 }

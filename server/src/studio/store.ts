@@ -1,4 +1,4 @@
-import type { DatabaseSync } from "node:sqlite";
+import type { Db } from "../db.js";
 import { randomUUID } from "node:crypto";
 import type {
   Audience,
@@ -16,7 +16,7 @@ import { EVERYONE, withKeys } from "./types.js";
 /**
  * Where the studio's configuration lives.
  *
- * Three tables, all ordinary SQL that moves to Postgres unchanged. JSON goes
+ * Three tables, all ordinary SQL that runs on SQLite and Postgres. JSON goes
  * in TEXT columns because these are documents that are read whole and never
  * queried into — the settings on a connection, the field list on a dataset,
  * the spec on a view.
@@ -139,8 +139,11 @@ export interface ViewInput {
 }
 
 export class StudioStore {
-  constructor(private readonly db: DatabaseSync) {
-    this.db.exec(SCHEMA);
+  constructor(private readonly db: Db) {}
+
+  /** Create the tables, if they are not there. See HubStore.init. */
+  async init(): Promise<void> {
+    await this.db.exec(SCHEMA);
   }
 
   // --- Connections -------------------------------------------------------
@@ -149,47 +152,36 @@ export class StudioStore {
    * Every connection, without its credential. This is the only shape that
    * reaches a response, which is why `secret` is not in the select list.
    */
-  listConnections(): Connection[] {
-    const rows = this.db
-      .prepare(
-        `SELECT id, label, kind, settings, secret_env, secret_hint,
+  async listConnections(): Promise<Connection[]> {
+    const rows = await this.db.all(`SELECT id, label, kind, settings, secret_env, secret_hint,
                 secret IS NOT NULL AND secret != '' AS has_secret,
                 checked_at, check_ok, check_note, created_at, updated_at, updated_by
-         FROM studio_connections ORDER BY label`,
-      )
-      .all() as Record<string, unknown>[];
+         FROM studio_connections ORDER BY label`) as Record<string, unknown>[];
     return rows.map(toConnection);
   }
 
-  connection(id: string): Connection | undefined {
-    return this.listConnections().find((c) => c.id === id);
+  async connection(id: string): Promise<Connection | undefined> {
+    return (await this.listConnections()).find((c) => c.id === id);
   }
 
   /**
    * The credential for a connection: the environment variable it names, or
    * the one stored here. Called by the connectors and by nothing else.
    */
-  secretFor(id: string): string | undefined {
-    const row = this.db
-      .prepare(`SELECT secret_env, secret FROM studio_connections WHERE id = ?`)
-      .get(id) as { secret_env?: string; secret?: string } | undefined;
+  async secretFor(id: string): Promise<string | undefined> {
+    const row = await this.db.get(`SELECT secret_env, secret FROM studio_connections WHERE id = ?`, [id]) as { secret_env?: string; secret?: string } | undefined;
     if (!row) return undefined;
     if (row.secret_env) return process.env[row.secret_env] || undefined;
     return row.secret || undefined;
   }
 
-  createConnection(input: ConnectionInput, by: string): Connection {
+  async createConnection(input: ConnectionInput, by: string): Promise<Connection> {
     const id = randomUUID();
     const at = now();
-    this.db
-      .prepare(
-        `INSERT INTO studio_connections
+    await this.db.run(`INSERT INTO studio_connections
            (id, label, kind, settings, secret_env, secret, secret_hint,
             created_at, updated_at, updated_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        id,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [id,
         input.label,
         input.kind,
         JSON.stringify(input.settings ?? {}),
@@ -198,9 +190,8 @@ export class StudioStore {
         hintFor(input.secret),
         at,
         at,
-        by,
-      );
-    return this.connection(id)!;
+        by]);
+    return (await this.connection(id))!;
   }
 
   /**
@@ -208,21 +199,16 @@ export class StudioStore {
    * otherwise every edit of a label would wipe the credential; an empty
    * string clears it, which is how you remove one.
    */
-  updateConnection(id: string, input: Partial<ConnectionInput>, by: string): Connection | undefined {
-    const existing = this.connection(id);
+  async updateConnection(id: string, input: Partial<ConnectionInput>, by: string): Promise<Connection | undefined> {
+    const existing = await this.connection(id);
     if (!existing) return undefined;
     const clearSecret = input.secret === "";
-    this.db
-      .prepare(
-        `UPDATE studio_connections
+    await this.db.run(`UPDATE studio_connections
             SET label = ?, kind = ?, settings = ?, secret_env = ?,
                 secret = CASE WHEN ? THEN NULL WHEN ? IS NOT NULL THEN ? ELSE secret END,
                 secret_hint = CASE WHEN ? THEN NULL WHEN ? IS NOT NULL THEN ? ELSE secret_hint END,
                 updated_at = ?, updated_by = ?
-          WHERE id = ?`,
-      )
-      .run(
-        input.label ?? existing.label,
+          WHERE id = ?`, [input.label ?? existing.label,
         input.kind ?? existing.kind,
         JSON.stringify(input.settings ?? existing.settings),
         input.secretEnv === undefined ? (existing.secretEnv ?? null) : input.secretEnv || null,
@@ -234,83 +220,66 @@ export class StudioStore {
         hintFor(input.secret),
         now(),
         by,
-        id,
-      );
+        id]);
     return this.connection(id);
   }
 
   /** Record what a test came back with, so the list can show it. */
-  recordCheck(id: string, ok: boolean, note: string): void {
-    this.db
-      .prepare(`UPDATE studio_connections SET checked_at = ?, check_ok = ?, check_note = ? WHERE id = ?`)
-      .run(now(), ok ? 1 : 0, note, id);
+  async recordCheck(id: string, ok: boolean, note: string): Promise<void> {
+    await this.db.run(`UPDATE studio_connections SET checked_at = ?, check_ok = ?, check_note = ? WHERE id = ?`, [now(), ok ? 1 : 0, note, id]);
   }
 
-  deleteConnection(id: string): boolean {
-    const r = this.db.prepare(`DELETE FROM studio_connections WHERE id = ?`).run(id);
+  async deleteConnection(id: string): Promise<boolean> {
+    const r = await this.db.run(`DELETE FROM studio_connections WHERE id = ?`, [id]);
     return Number(r.changes) > 0;
   }
 
   // --- Datasets ----------------------------------------------------------
 
-  listDatasets(connectionId?: string): Dataset[] {
+  async listDatasets(connectionId?: string): Promise<Dataset[]> {
     const rows = connectionId
-      ? (this.db
-          .prepare(`SELECT * FROM studio_datasets WHERE connection_id = ? ORDER BY label`)
-          .all(connectionId) as Record<string, unknown>[])
-      : (this.db.prepare(`SELECT * FROM studio_datasets ORDER BY label`).all() as Record<
+      ? (await this.db.all(`SELECT * FROM studio_datasets WHERE connection_id = ? ORDER BY label`, [connectionId]) as Record<string, unknown>[])
+      : (await this.db.all(`SELECT * FROM studio_datasets ORDER BY label`) as Record<
           string,
           unknown
         >[]);
     return rows.map(toDataset);
   }
 
-  dataset(id: string): Dataset | undefined {
-    const row = this.db.prepare(`SELECT * FROM studio_datasets WHERE id = ?`).get(id) as
+  async dataset(id: string): Promise<Dataset | undefined> {
+    const row = await this.db.get(`SELECT * FROM studio_datasets WHERE id = ?`, [id]) as
       | Record<string, unknown>
       | undefined;
     return row ? toDataset(row) : undefined;
   }
 
-  createDataset(input: DatasetInput, by: string): Dataset {
+  async createDataset(input: DatasetInput, by: string): Promise<Dataset> {
     const id = randomUUID();
     const at = now();
-    this.db
-      .prepare(
-        `INSERT INTO studio_datasets
+    await this.db.run(`INSERT INTO studio_datasets
            (id, connection_id, label, ref, refresh_seconds, created_at, updated_at, updated_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        id,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`, [id,
         input.connectionId,
         input.label,
         input.ref,
         input.refreshSeconds ?? 60,
         at,
         at,
-        by,
-      );
-    return this.dataset(id)!;
+        by]);
+    return (await this.dataset(id))!;
   }
 
-  updateDataset(id: string, input: Partial<DatasetInput>, by: string): Dataset | undefined {
-    const existing = this.dataset(id);
+  async updateDataset(id: string, input: Partial<DatasetInput>, by: string): Promise<Dataset | undefined> {
+    const existing = await this.dataset(id);
     if (!existing) return undefined;
-    this.db
-      .prepare(
-        `UPDATE studio_datasets
+    await this.db.run(`UPDATE studio_datasets
             SET label = ?, ref = ?, refresh_seconds = ?, updated_at = ?, updated_by = ?
-          WHERE id = ?`,
-      )
-      .run(
-        input.label ?? existing.label,
+          WHERE id = ?`, [input.label ?? existing.label,
         input.ref ?? existing.ref,
         input.refreshSeconds ?? existing.refreshSeconds,
         now(),
         by,
-        id,
-      );
+        id]);
     return this.dataset(id);
   }
 
@@ -318,62 +287,51 @@ export class StudioStore {
    * Store what a describe found: the columns, how many rows there were, and
    * whether the read stopped short of all of them.
    */
-  recordFields(
+  async recordFields(
     id: string,
     fields: Field[],
     rowCount: number,
     truncated = false,
-  ): Dataset | undefined {
-    this.db
-      .prepare(
-        `UPDATE studio_datasets
+  ): Promise<Dataset | undefined> {
+    await this.db.run(`UPDATE studio_datasets
             SET fields = ?, row_count = ?, truncated = ?, described_at = ?
-          WHERE id = ?`,
-      )
-      .run(JSON.stringify(fields), rowCount, truncated ? 1 : 0, now(), id);
+          WHERE id = ?`, [JSON.stringify(fields), rowCount, truncated ? 1 : 0, now(), id]);
     return this.dataset(id);
   }
 
-  deleteDataset(id: string): boolean {
-    const r = this.db.prepare(`DELETE FROM studio_datasets WHERE id = ?`).run(id);
+  async deleteDataset(id: string): Promise<boolean> {
+    const r = await this.db.run(`DELETE FROM studio_datasets WHERE id = ?`, [id]);
     return Number(r.changes) > 0;
   }
 
   // --- Views -------------------------------------------------------------
 
-  listViews(): ViewDef[] {
-    const rows = this.db
-      .prepare(`SELECT * FROM studio_views ORDER BY section, sort_order, label`)
-      .all() as Record<string, unknown>[];
+  async listViews(): Promise<ViewDef[]> {
+    const rows = await this.db.all(`SELECT * FROM studio_views ORDER BY section, sort_order, label`) as Record<string, unknown>[];
     return rows.map(toView);
   }
 
-  view(id: string): ViewDef | undefined {
-    const row = this.db.prepare(`SELECT * FROM studio_views WHERE id = ?`).get(id) as
+  async view(id: string): Promise<ViewDef | undefined> {
+    const row = await this.db.get(`SELECT * FROM studio_views WHERE id = ?`, [id]) as
       | Record<string, unknown>
       | undefined;
     return row ? toView(row) : undefined;
   }
 
-  viewBySlug(slug: string): ViewDef | undefined {
-    const row = this.db.prepare(`SELECT * FROM studio_views WHERE slug = ?`).get(slug) as
+  async viewBySlug(slug: string): Promise<ViewDef | undefined> {
+    const row = await this.db.get(`SELECT * FROM studio_views WHERE slug = ?`, [slug]) as
       | Record<string, unknown>
       | undefined;
     return row ? toView(row) : undefined;
   }
 
-  createView(input: ViewInput, by: string): ViewDef {
+  async createView(input: ViewInput, by: string): Promise<ViewDef> {
     const id = randomUUID();
     const at = now();
-    this.db
-      .prepare(
-        `INSERT INTO studio_views
+    await this.db.run(`INSERT INTO studio_views
            (id, slug, label, icon, section, sort_order, dataset_id, description,
             spec, audience, state, created_at, updated_at, updated_by)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        id,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [id,
         input.slug,
         input.label,
         input.icon ?? "table",
@@ -386,23 +344,17 @@ export class StudioStore {
         input.state ?? "draft",
         at,
         at,
-        by,
-      );
-    return this.view(id)!;
+        by]);
+    return (await this.view(id))!;
   }
 
-  updateView(id: string, input: Partial<ViewInput>, by: string): ViewDef | undefined {
-    const existing = this.view(id);
+  async updateView(id: string, input: Partial<ViewInput>, by: string): Promise<ViewDef | undefined> {
+    const existing = await this.view(id);
     if (!existing) return undefined;
-    this.db
-      .prepare(
-        `UPDATE studio_views
+    await this.db.run(`UPDATE studio_views
             SET slug = ?, label = ?, icon = ?, section = ?, sort_order = ?, dataset_id = ?,
                 description = ?, spec = ?, audience = ?, state = ?, updated_at = ?, updated_by = ?
-          WHERE id = ?`,
-      )
-      .run(
-        input.slug ?? existing.slug,
+          WHERE id = ?`, [input.slug ?? existing.slug,
         input.label ?? existing.label,
         input.icon ?? existing.icon,
         input.section ?? existing.section,
@@ -414,13 +366,12 @@ export class StudioStore {
         input.state ?? existing.state,
         now(),
         by,
-        id,
-      );
+        id]);
     return this.view(id);
   }
 
-  deleteView(id: string): boolean {
-    const r = this.db.prepare(`DELETE FROM studio_views WHERE id = ?`).run(id);
+  async deleteView(id: string): Promise<boolean> {
+    const r = await this.db.run(`DELETE FROM studio_views WHERE id = ?`, [id]);
     return Number(r.changes) > 0;
   }
 
@@ -432,10 +383,8 @@ export class StudioStore {
    * Read by any signed-in viewer, because a page cannot render without it.
    * There is nothing sensitive here — it is the wording of the app.
    */
-  listSlots(): Record<string, SlotOverride> {
-    const rows = this.db
-      .prepare(`SELECT slot, label, hidden, sort_order FROM studio_slots`)
-      .all() as Record<string, unknown>[];
+  async listSlots(): Promise<Record<string, SlotOverride>> {
+    const rows = await this.db.all(`SELECT slot, label, hidden, sort_order FROM studio_slots`) as Record<string, unknown>[];
     const out: Record<string, SlotOverride> = {};
     for (const row of rows) {
       const override: SlotOverride = {};
@@ -456,10 +405,8 @@ export class StudioStore {
    * it and reordering does not wipe a rename. `null` clears one field;
    * `resetSlot` drops the row and puts the default back.
    */
-  setSlot(slot: string, patch: SlotPatch, by: string): void {
-    const existing = this.db
-      .prepare(`SELECT label, hidden, sort_order FROM studio_slots WHERE slot = ?`)
-      .get(slot) as Record<string, unknown> | undefined;
+  async setSlot(slot: string, patch: SlotPatch, by: string): Promise<void> {
+    const existing = await this.db.get(`SELECT label, hidden, sort_order FROM studio_slots WHERE slot = ?`, [slot]) as Record<string, unknown> | undefined;
 
     const label =
       patch.label === undefined ? (existing ? opt(existing.label) : undefined) : (patch.label ?? undefined);
@@ -472,39 +419,35 @@ export class StudioStore {
           : Number(existing.sort_order)
         : (patch.order ?? null);
 
-    this.db
-      .prepare(
-        `INSERT INTO studio_slots (slot, label, hidden, sort_order, updated_at, updated_by)
+    await this.db.run(`INSERT INTO studio_slots (slot, label, hidden, sort_order, updated_at, updated_by)
          VALUES (?, ?, ?, ?, ?, ?)
          ON CONFLICT (slot) DO UPDATE SET
            label = excluded.label,
            hidden = excluded.hidden,
            sort_order = excluded.sort_order,
            updated_at = excluded.updated_at,
-           updated_by = excluded.updated_by`,
-      )
-      .run(slot, label ?? null, hidden ? 1 : 0, order, now(), by);
+           updated_by = excluded.updated_by`, [slot, label ?? null, hidden ? 1 : 0, order, now(), by]);
   }
 
   /** Put one slot back to what the code says. */
-  resetSlot(slot: string): void {
-    this.db.prepare(`DELETE FROM studio_slots WHERE slot = ?`).run(slot);
+  async resetSlot(slot: string): Promise<void> {
+    await this.db.run(`DELETE FROM studio_slots WHERE slot = ?`, [slot]);
   }
 
   /**
    * Put a whole page, or everything, back to the defaults. The prefix is
    * matched on the dotted slot id, so "content." resets that page alone.
    */
-  resetSlots(prefix?: string): number {
+  async resetSlots(prefix?: string): Promise<number> {
     const r = prefix
-      ? this.db.prepare(`DELETE FROM studio_slots WHERE slot LIKE ? || '%'`).run(prefix)
-      : this.db.prepare(`DELETE FROM studio_slots`).run();
+      ? await this.db.run(`DELETE FROM studio_slots WHERE slot LIKE ? || '%'`, [prefix])
+      : await this.db.run(`DELETE FROM studio_slots`);
     return Number(r.changes);
   }
 
   /** Whether a slug is free, ignoring the view being edited. */
-  slugFree(slug: string, exceptId?: string): boolean {
-    const row = this.db.prepare(`SELECT id FROM studio_views WHERE slug = ?`).get(slug) as
+  async slugFree(slug: string, exceptId?: string): Promise<boolean> {
+    const row = await this.db.get(`SELECT id FROM studio_views WHERE slug = ?`, [slug]) as
       | { id: string }
       | undefined;
     return !row || row.id === exceptId;

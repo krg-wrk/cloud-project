@@ -589,15 +589,15 @@ export class DatasetReader {
 
   constructor(
     private readonly connectors: Record<ConnectorKind, Connector>,
-    private readonly secretFor: (connectionId: string) => string | undefined,
+    private readonly secretFor: (connectionId: string) => Promise<string | undefined>,
   ) {}
 
   connector(kind: ConnectorKind): Connector {
     return this.connectors[kind];
   }
 
-  contextFor(connection: Connection): ConnectorContext {
-    return { settings: connection.settings, secret: this.secretFor(connection.id) };
+  async contextFor(connection: Connection): Promise<ConnectorContext> {
+    return { settings: connection.settings, secret: await this.secretFor(connection.id) };
   }
 
   async rows(
@@ -608,7 +608,7 @@ export class DatasetReader {
     const key = `${connection.id}:${ref}`;
     const hit = this.cache.get(key);
     if (hit && Date.now() - hit.at < ttlSeconds * 1000) return hit.rows;
-    const rows = await this.connector(connection.kind).read(this.contextFor(connection), ref);
+    const rows = await this.connector(connection.kind).read(await this.contextFor(connection), ref);
     this.cache.set(key, { at: Date.now(), rows });
     return rows;
   }

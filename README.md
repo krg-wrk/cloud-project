@@ -18,8 +18,10 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173. It runs on built-in sample data, so there are no
-credentials to set up first.
+Open http://localhost:5173. It runs on built-in sample data and its own SQLite
+file, so there are no credentials to set up first and no database to install.
+Set `HUB_DB_URL` when it is time for Postgres — see
+[the database](#the-database-sqlite-to-try-it-postgres-to-run-it).
 
 ## What's in it
 
@@ -119,12 +121,102 @@ people adding notes and moving reminders is thousands of small writes; a
 spreadsheet is the wrong shape for that, and Smartsheet's API rate limits
 would make it the bottleneck rather than the source of truth.
 
-The POC uses SQLite through Node's built-in `node:sqlite` — no service to run,
-a real database with real indexes, and it persists across restarts (`HUB_DB`,
-default `./data/hub.db`). Every query in `server/src/store.ts` is ordinary SQL
-that moves to Postgres unchanged when the Hub is deployed for the whole team.
-That is the one change I would make before rollout: Postgres, so more than one
-app instance can serve the team.
+That database is SQLite by default and Postgres when a deployment says so —
+see below.
+
+## The database: SQLite to try it, Postgres to run it
+
+Both, with the same SQL. Nothing in `server/src/store.ts` knows which one it
+is talking to.
+
+```bash
+npm run dev                                            # SQLite: ./data/hub.db
+HUB_DB=/var/lib/hub/hub.db npm start                   # SQLite, somewhere else
+HUB_DB_URL=postgres://user:pass@host:5432/hub npm start # Postgres
+```
+
+SQLite is right for trying the Hub out: no service to install, a real database
+with real indexes, and it survives a restart. It is wrong for two hundred
+people, because only one process can write to the file — so the day the Hub
+runs behind a load balancer, or an admin's report runs while the team is
+writing notes, is the day to set `HUB_DB_URL`. Nothing else changes: the
+tables, the queries and the code are the same, and the boot banner says which
+one it opened.
+
+`server/src/db.ts` is the whole of the difference, and it is deliberately not
+an ORM. Every query in the Hub is ordinary SQL and stays that way, because SQL
+is the part worth being able to read. What actually differs between the two is
+small enough to name:
+
+- **Placeholders.** SQLite takes `?`, Postgres takes `$1`. The queries are
+  written with `?` and translated on the way out — outside string literals, so
+  a query containing `'Why?'` keeps its question mark.
+- **Asynchrony.** Every Postgres driver is asynchronous and `node:sqlite` is
+  not, so the interface is asynchronous and SQLite is wrapped. That costs a
+  microtask per query and makes the store one shape on both.
+- **Types.** SQLite has no boolean and returns integers; `COUNT(*)` comes back
+  a number from one and a string from the other. The row readers normalise it,
+  because they are what knows which column is what.
+- **A handful of DDL words.** `AUTOINCREMENT`, `PRAGMA`, `INSERT OR IGNORE`.
+  The schema and the queries avoid them; `ON CONFLICT … DO NOTHING` and
+  `ON CONFLICT … DO UPDATE SET x = excluded.x` are standard and both
+  understand them.
+
+### Proving it, rather than asserting it
+
+"The SQL is portable" is easy to say and easy to be wrong about, so the two
+were run side by side: one script that exercises every write the Hub does —
+notes, entries, peer reviews, sign-ups, forecast details, settings,
+notification preferences and a send run, the inbox, proof point decisions, the
+studio's connection → dataset → view lifecycle, page wording, calendar tokens,
+search — against each database in turn, and the output diffed. The rule is
+that the same sequence of calls has to produce the same answers.
+
+It did not, at first, and the three differences were worth having:
+
+1. **`INSERT OR IGNORE` is SQLite's own.** Postgres refused it, so every
+   notification failed to reach an inbox while the run still reported itself
+   as having happened. Now `ON CONFLICT (notice_key) DO NOTHING`.
+2. **A parameter only ever compared to NULL has no type.** `(? IS NULL OR
+   end_date >= ?)` reads neatly and works on SQLite; Postgres cannot infer
+   what `?` is and refuses the statement. An absent filter should be an absent
+   clause anyway — it is also the query that can use an index.
+3. **Tied rows come back in whatever order the database likes.** The seeded
+   sign-ups were all written in the same millisecond, so `ORDER BY created_at`
+   was not an order at all, and the two databases put the waiting list in
+   different orders. The seed now spaces them out, and the lists that are read
+   newest-first carry a tie-break, because a waiting list that reshuffles is a
+   bug whichever database it happens on.
+
+The same run now matches line for line on both.
+
+### What making the store asynchronous cost
+
+Worth writing down, because it is the part that does not show up in a diff.
+Every store method became `async`, and the compiler is almost no help: a call
+you forgot to `await` still typechecks, because a `Promise` is a perfectly
+good value to hold. It is only wrong when something *uses* it.
+
+The ones that had to be found by running it:
+
+- `const forAll = store.flag("freshness.visibleToAll")` without `await`. A
+  Promise is always truthy, so the check that keeps the freshness page to
+  admins would have let everybody in. This is the reason the whole surface was
+  re-run rather than spot-checked.
+- `CHANNELS.filter(async (c) => …)` — `.filter` does not await its predicate,
+  so every channel passed and the notification settings ignored what was
+  saved. Two of those, in different files.
+- Four more of the same family: a validation whose answer was a Promise, so
+  every studio view came back `{"error":{}}`; a delete that read the row it
+  was about to change without waiting for it; a seed that fired writes it
+  never waited on.
+
+None of them threw. All of them were found by exercising the surface and
+reading the answers, which is the argument for having written that script.
+
+The migration story is `CREATE TABLE IF NOT EXISTS` on every boot, which is
+enough while the schema only grows. The first column that has to change type
+is the day to put a migration tool in front of it.
 
 ## Pointing it at Smartsheet
 
@@ -162,6 +254,8 @@ NOTIFY_HOUR=8                     # the hour they go, local time
 NOTIFY_EMAIL_URL=...              # a Workspace relay taking {to, subject, text}
 NOTIFY_CHAT_WEBHOOK=...           # the team's Google Chat space
 HUB_URL=https://forecasters...    # so a notice can carry a link people can click
+HUB_DB_URL=postgres://...         # Postgres instead of the SQLite file
+HUB_DB_POOL=10                    # how many Postgres connections, if 10 is wrong
 ```
 
 Column titles are mapped in one place — the `COLUMNS` object at the top of
@@ -1268,10 +1362,12 @@ seed module as the app, so the two never drift apart.
 - `npm run build` — builds both
 - `npm start` — runs the built server; with `NODE_ENV=production` it also
   serves the built client, with a catch-all so deep links survive a refresh
-- `npm test -w server` — the Smartsheet reader against a stubbed API, and the
-  proof point library and its sanitiser
+- `npm test -w server` — 107 tests: the Smartsheet reader against a stubbed
+  API, the proof point library and its sanitiser, what the notifier says and
+  when, how search ranks, and the `?` → `$1` translation both databases rely on
 - `node demo/build.mjs` — rebuilds the shareable single-file demo
 - `python3 tools/extract-proof-points.py <workbook.xlsx>` — regenerates the
   proof point seed from the Proof Points Reviewer workbook
 - `node tools/audit-a11y.mjs [--demo] [--dark]` — the accessibility audit over
-  every page, in a real browser (needs `npm i -D playwright`)
+  every page, in a real browser (needs `npm i -D playwright`, or `CHROMIUM=`
+  pointing at one that is already installed)

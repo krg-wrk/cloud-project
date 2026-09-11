@@ -5,6 +5,7 @@ import { createNoteDrafter } from "./ai.js";
 import { createApiRouter, createFeedRouter } from "./api.js";
 import { readAuthConfig, viewerMiddleware } from "./auth.js";
 import { CachedDataSource, createDataSource } from "./data/index.js";
+import { openDb } from "./db.js";
 import { SmartsheetSource } from "./data/smartsheetSource.js";
 import { createNotifyRouter } from "./notify/api.js";
 import { startSchedule } from "./notify/schedule.js";
@@ -25,16 +26,25 @@ const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
  */
 const source = createDataSource();
 const data = new CachedDataSource(source);
-const store = new HubStore();
+/*
+ * SQLite by default; Postgres when HUB_DB_URL says so. The same SQL runs on
+ * both — see db.ts for the two words of difference.
+ */
+const db = openDb();
+const store = new HubStore(db);
 // Connections, datasets and views: configuration, in the same database.
-const studio = new StudioStore(store.connection);
+const studio = new StudioStore(db);
 const signUps = new SignUps(store);
 const drafter = createNoteDrafter();
 const auth = readAuthConfig();
 // Read once at boot: the pipeline writes it weekly and nothing edits it here.
 const proofPoints = new ProofPointLibrary();
 
-store.seedSignUpsIfEmpty(await data.listSignUps());
+// The tables, if they are not there yet. Both stores share one database.
+await store.init();
+await studio.init();
+
+await store.seedSignUpsIfEmpty(await data.listSignUps());
 
 /*
  * Turn writing on, if this deployment asked for it.
@@ -109,14 +119,15 @@ app.use(
   },
 );
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(
     `Forecasters Hub API on http://localhost:${PORT}\n` +
       `  schedule:  ${data.name}\n` +
+      `  database:  ${store.kind}\n` +
       `  auth:      ${auth.mode}${auth.mode === "proxy" ? ` (${auth.emailHeader})` : " — switcher enabled"}\n` +
       `  AI notes:  ${drafter.model === "none" ? "off (no GEMINI_API_KEY)" : drafter.model}\n` +
-      `  studio:    ${studio.listConnections().length} connections, ` +
-      `${studio.listDatasets().length} datasets, ${studio.listViews().length} views\n` +
+      `  studio:    ${(await studio.listConnections()).length} connections, ` +
+      `${(await studio.listDatasets()).length} datasets, ${(await studio.listViews()).length} views\n` +
       `  proof pts: ${proofPoints.size.toLocaleString()} across ${proofPoints.trendCount} trends\n` +
       `  writes:    ${writeTarget === "off" ? "off — the Hub only reads the schedule" : writeTarget}\n` +
       `  notify:    ${schedule.note}`,

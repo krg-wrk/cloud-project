@@ -48,9 +48,9 @@ export function createProofPointRouter(
    * over ten thousand suggestions — and doing it per request is what makes a
    * decision take effect everywhere the moment it is made.
    */
-  function held(): HeldDecisions {
+  async function held(): Promise<HeldDecisions> {
     const out: HeldDecisions = new Map();
-    for (const [id, d] of store.proofPointDecisions()) {
+    for (const [id, d] of (await store.proofPointDecisions())) {
       out.set(id, {
         decision: d.decision,
         reason: d.reason,
@@ -145,7 +145,7 @@ export function createProofPointRouter(
         pageSize: Number(q.pageSize) > 0 ? Math.floor(Number(q.pageSize)) : 24,
       };
 
-      res.json(library.query(query, viewer, viewer.name, await hubTrends(viewer), held()));
+      res.json(library.query(query, viewer, viewer.name, await hubTrends(viewer), await held()));
     } catch (err) {
       next(err);
     }
@@ -212,7 +212,7 @@ export function createProofPointRouter(
         viewer,
         viewer.name,
         hub,
-        held(),
+        await held(),
       );
 
       /*
@@ -233,7 +233,7 @@ export function createProofPointRouter(
         })),
         reasons: REJECTION_REASONS,
         /** How many the person has decided in the Hub, ever. */
-        yours: store.recentProofPointDecisions(viewer.email, 200).length,
+        yours: (await store.recentProofPointDecisions(viewer.email, 200)).length,
       });
     } catch (err) {
       next(err);
@@ -273,7 +273,7 @@ export function createProofPointRouter(
       const trend = await trendFor(point.trendId);
       const mine = new Set([viewer.personId, nameId(viewer.name)].filter(Boolean));
       res.json(
-        store.decideProofPoint({
+        (await store.decideProofPoint({
           suggestionId: point.id,
           trendId: point.trendId,
           calloutId: point.calloutId,
@@ -282,7 +282,7 @@ export function createProofPointRouter(
           byEmail: viewer.email,
           byPersonId: viewer.personId,
           byOwner: Boolean(trend && mine.has(trend.ownerId)),
-        }),
+        })),
       );
     } catch (err) {
       next(err);
@@ -303,7 +303,7 @@ export function createProofPointRouter(
         res.status(403).json({ error: no });
         return;
       }
-      if (!store.undecideProofPoint(point.id)) {
+      if (!(await store.undecideProofPoint(point.id))) {
         /*
          * The extract carries decisions of its own, made before the Hub
          * existed. There is nothing here to take back, and quietly appearing
@@ -327,7 +327,7 @@ export function createProofPointRouter(
     try {
       const viewer = req.viewer!;
       const hub = await hubTrends(viewer);
-      const row = library.find(req.params.id, viewer, viewer.name, hub, held());
+      const row = library.find(req.params.id, viewer, viewer.name, hub, await held());
       if (!row) {
         res.status(404).json({ error: "No proof point with that id." });
         return;

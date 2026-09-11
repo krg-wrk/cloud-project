@@ -47,29 +47,29 @@ export function createNotifyRouter(
    * Polled by the client, so it is deliberately cheap — two indexed queries
    * against the Hub's own database and nothing from the sheets.
    */
-  router.get("/notifications", (req: ViewerRequest, res) => {
+  router.get("/notifications", async (req: ViewerRequest, res) => {
     const person = requirePerson(req, res);
     if (!person) return;
     res.json({
-      unread: store.unreadCount(person),
-      rows: store.notifications(person, 40),
+      unread: (await store.unreadCount(person)),
+      rows: (await store.notifications(person, 40)),
     });
   });
 
-  router.post("/notifications/read", (req: ViewerRequest, res) => {
+  router.post("/notifications/read", async (req: ViewerRequest, res) => {
     const person = requirePerson(req, res);
     if (!person) return;
     const id = typeof req.body?.id === "string" ? req.body.id : undefined;
-    if (id) store.markRead(person, id);
-    else store.markAllRead(person);
-    res.json({ unread: store.unreadCount(person) });
+    if (id) (await store.markRead(person, id));
+    else (await store.markAllRead(person));
+    res.json({ unread: (await store.unreadCount(person)) });
   });
 
-  router.delete("/notifications/:id", (req: ViewerRequest, res) => {
+  router.delete("/notifications/:id", async (req: ViewerRequest, res) => {
     const person = requirePerson(req, res);
     if (!person) return;
-    store.deleteNotification(person, req.params.id);
-    res.json({ unread: store.unreadCount(person) });
+    await store.deleteNotification(person, req.params.id);
+    res.json({ unread: (await store.unreadCount(person)) });
   });
 
   /**
@@ -80,10 +80,10 @@ export function createNotifyRouter(
    * "email me" without saying whether anything is sending email is a page
    * that produces a support request a fortnight later.
    */
-  router.get("/notifications/settings", (req: ViewerRequest, res) => {
+  router.get("/notifications/settings", async (req: ViewerRequest, res) => {
     const person = requirePerson(req, res);
     if (!person) return;
-    const prefs = store.notifyPrefs(person) ?? defaultPrefs(person);
+    const prefs = (await store.notifyPrefs(person)) ?? defaultPrefs(person);
     res.json({
       prefs,
       /** Whether anything has been saved, so the page can say "the default". */
@@ -98,7 +98,7 @@ export function createNotifyRouter(
     });
   });
 
-  router.put("/notifications/settings", (req: ViewerRequest, res) => {
+  router.put("/notifications/settings", async (req: ViewerRequest, res) => {
     const person = requirePerson(req, res);
     if (!person) return;
     const body = (req.body ?? {}) as { on?: Record<string, unknown>; chatWebhook?: unknown };
@@ -129,7 +129,7 @@ export function createNotifyRouter(
       chatWebhook = url;
     }
 
-    const saved = store.setNotifyPrefs({ personId: person, on, chatWebhook });
+    const saved = await store.setNotifyPrefs({ personId: person, on, chatWebhook });
     res.json({ prefs: saved, saved: true, channels: channels.states() });
   });
 
@@ -202,8 +202,8 @@ export function createNotifyRouter(
       res.json({
         channels: channels.states(),
         scheduled: process.env.NOTIFY_SCHEDULE === "1",
-        sends: store.recentSends(100),
-        chose: store.allNotifyPrefs().length,
+        sends: (await store.recentSends(100)),
+        chose: (await store.allNotifyPrefs()).length,
         team: people.length,
         names: Object.fromEntries(people.map((p: Person) => [p.id, p.name])),
       });

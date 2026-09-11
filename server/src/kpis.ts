@@ -1,4 +1,4 @@
-import type { HubStore } from "./store.js";
+import type { PeerReview } from "./store.js";
 import { benchmarkFor, scaleBenchmark, tierFor, type Tier } from "./taxonomy.js";
 import type {
   ContentItem,
@@ -59,7 +59,8 @@ export interface KpiInput {
   observations: MetricObservation[];
   /** Session ids this person had a place on. */
   attended: Set<string>;
-  store: HubStore;
+  /** The peer reviews, read once by the caller — see "peer-reviews-given". */
+  peerReviews: PeerReview[];
 }
 
 const inRange = (date: string | undefined, from: string, to: string): boolean =>
@@ -153,10 +154,16 @@ const DERIVED: Record<string, (input: KpiInput, from: string, to: string) => num
   "late-submissions": (input, from, to) =>
     submissions(input, from, to).filter((c) => c.submittedOn! > c.submissionDate).length,
 
+  /*
+   * The one measure that reads the Hub's own database rather than the
+   * schedule, so it is handed the rows rather than the store: everything in
+   * this table is a pure function of what it is given, and one asynchronous
+   * entry would make the whole table asynchronous for no reason.
+   */
   "peer-reviews-given": (input, from, to) =>
-    input.store
-      .allPeerReviews()
-      .filter((r) => r.reviewerId === input.personId && inRange(r.reviewDate, from, to)).length,
+    input.peerReviews.filter(
+      (r: PeerReview) => r.reviewerId === input.personId && inRange(r.reviewDate, from, to),
+    ).length,
 
   "sessions-attended": (input, from, to) =>
     input.sessions.filter((s) => input.attended.has(s.id) && inRange(s.date, from, to)).length,
