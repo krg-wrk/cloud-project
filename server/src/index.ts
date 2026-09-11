@@ -6,6 +6,8 @@ import { createApiRouter, createFeedRouter } from "./api.js";
 import { readAuthConfig, viewerMiddleware } from "./auth.js";
 import { CachedDataSource, createDataSource } from "./data/index.js";
 import { SmartsheetSource } from "./data/smartsheetSource.js";
+import { createNotifyRouter } from "./notify/api.js";
+import { startSchedule } from "./notify/schedule.js";
 import { createProofPointRouter } from "./proofPoints/api.js";
 import { ProofPointLibrary } from "./proofPoints/library.js";
 import { SignUps } from "./signUps.js";
@@ -69,7 +71,18 @@ app.use(
   createApiRouter(data, store, signUps, drafter, proofPoints),
   createStudioRouter(studio, data),
   createProofPointRouter(proofPoints, data, store),
+  createNotifyRouter(data, store, signUps, proofPoints),
 );
+
+/*
+ * The schedule that sends them, off unless this deployment asked for it.
+ *
+ * Off by default for the same reason writing to Smartsheet is: it acts on
+ * the world without anybody pressing anything, and a POC that mails two
+ * hundred people because somebody ran it locally would be the last time the
+ * team trusted it. An admin can always run it by hand, dry first.
+ */
+const schedule = startSchedule(data, store, signUps, proofPoints);
 
 // In production the built client is served from the same origin, and every
 // unknown path falls through to index.html so deep links like
@@ -103,6 +116,7 @@ app.listen(PORT, () => {
       `  studio:    ${studio.listConnections().length} connections, ` +
       `${studio.listDatasets().length} datasets, ${studio.listViews().length} views\n` +
       `  proof pts: ${proofPoints.size.toLocaleString()} across ${proofPoints.trendCount} trends\n` +
-      `  writes:    ${writeTarget === "off" ? "off — the Hub only reads the schedule" : writeTarget}`,
+      `  writes:    ${writeTarget === "off" ? "off — the Hub only reads the schedule" : writeTarget}\n` +
+      `  notify:    ${schedule.note}`,
   );
 });

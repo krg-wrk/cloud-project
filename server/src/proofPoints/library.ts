@@ -102,6 +102,31 @@ export class ProofPointLibrary {
   }
 
   /**
+   * How many suggestions each trend has waiting on a decision.
+   *
+   * Keyed on the trend rather than on a person, because the library has no
+   * idea who owns anything — the Hub's own trend database does, and the
+   * caller joins the two. `decided` is the set of suggestion ids the Hub
+   * holds a decision for, which outranks the extract's own.
+   *
+   * Counts what the review queue would actually offer: top tiers only,
+   * nothing already cited in the profile. A figure counted over the whole
+   * extract would tell somebody they had four hundred to get through when
+   * the queue will show them twelve.
+   */
+  waitingByTrend(decided: Set<string>): Record<string, number> {
+    const tiers = new Set(QUALITY_TIERS.top);
+    const out: Record<string, number> = {};
+    for (const p of this.points) {
+      if (!tiers.has(p.tier)) continue;
+      if (p.alreadyKnown) continue;
+      if (decided.has(p.id) || p.decision) continue;
+      out[p.trendId] = (out[p.trendId] ?? 0) + 1;
+    }
+    return out;
+  }
+
+  /**
    * A trend as the Hub knows it, falling back to the pipeline's snapshot.
    *
    * The Hub is the authority when it has the trend: its title is current, its

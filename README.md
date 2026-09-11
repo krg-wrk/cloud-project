@@ -35,6 +35,7 @@ credentials to set up first.
 | Data | `/data` | The analysis that sits beside the schedule rather than in it |
 | Proof Point Library | `/data/proof-points` | 10,235 data callouts matched against every trend profile, with the reasoning and the owner's decision |
 | Review proof points | `/data/review` | The deciding half of the same thing: one card at a time, arrow keys, rejection reasons |
+| What the Hub tells you | `/notifications` | Your inbox, and which notices reach you by which channel |
 | Learning | `/workshops`, `/workshops/ws-201` | The workshop and knowledge-sharing programme, with sign-ups |
 | What's on | `/whats-on` | Leave, public holidays, shows |
 | Studio | `/studio` | Admin: connect a data source, build views of it, choose who sees them, and change the wording of the built-in pages |
@@ -147,6 +148,20 @@ SMARTSHEET_ACCESS_SHEET_ID=...    # who may sign in, and their rights
 SMARTSHEET_TRENDS_SHEET_ID=...    # TFDB published trend profiles
 SMARTSHEET_METRICS_SHEET_ID=...   # the KPIs being tracked
 SMARTSHEET_KPI_SHEET_ID=...       # readings: Metric ID, Person, Date, Value
+```
+
+Everything that reaches the outside world is off unless a variable turns it
+on, and each one is described where it belongs:
+
+```bash
+SMARTSHEET_WRITE=1                # let a manager change the sheet (below)
+SMARTSHEET_API=...                # Smartsheet's EU region, or a stub, if needed
+GEMINI_API_KEY=...                # AI note drafting; without it the button says so
+NOTIFY_SCHEDULE=1                 # let notifications send themselves
+NOTIFY_HOUR=8                     # the hour they go, local time
+NOTIFY_EMAIL_URL=...              # a Workspace relay taking {to, subject, text}
+NOTIFY_CHAT_WEBHOOK=...           # the team's Google Chat space
+HUB_URL=https://forecasters...    # so a notice can carry a link people can click
 ```
 
 Column titles are mapped in one place — the `COLUMNS` object at the top of
@@ -578,6 +593,101 @@ The switch lives in `hub_settings`, a key/value table for the handful of
 things that belong to the Hub rather than to a person. An untouched setting
 has no row, so the code's own default ships and adding one needs no migration
 — the same arrangement the page wording uses.
+
+## Telling people things
+
+The Hub is a website, and a website only tells you something while you are
+looking at it. The two things this team actually misses are a deadline
+creeping up and the week starting without a plan, and both of those are known
+on the server days in advance.
+
+So there are three kinds of notice, and no more — every extra one is another
+reason for somebody to turn the whole thing off:
+
+| Kind | When | What it says |
+| --- | --- | --- |
+| The week ahead | Monday morning | What is due from you this week, what publishes, who you are peer reviewing, what you signed up for, what is already overdue |
+| Deadlines coming up | Three days out, on the day, then daily | One forecast, its status, and its publication date |
+| Proof points waiting on you | Weekly, above five | How many suggestions your trends have waiting |
+
+### The forecaster chooses
+
+Not an admin, and not a global switch. Some of this team lives in Google
+Chat, some in email, and some want the bell in the corner and nothing else.
+`/notifications` is a grid — the three kinds down the side, three channels
+across — because "email me about deadlines but leave the digest in the Hub"
+is the preference most people actually have, and one switch per channel
+cannot express it.
+
+**The default is the bell and nothing that leaves the building.** Somebody who
+has never opened the settings gets the in-app notices, which cost them
+nothing and cannot arrive at 3am. Email and chat are opt-in, both because
+they interrupt and because they are the two that send WGSN's schedule to a
+third party.
+
+Each channel says, in words, what it can do:
+
+- **In the Hub** always works. It is a row in the Hub's own database, shown on
+  the bell beside the wordmark and in full on the page.
+- **Email** goes through an HTTP endpoint — `NOTIFY_EMAIL_URL` — that takes
+  `{to, subject, text}`. Not SMTP: WGSN runs on Google Workspace, so the short
+  path to an address that will not be marked as spam is a ten-line Apps Script
+  web app calling `MailApp.sendEmail`. That also keeps the mail credentials
+  out of the Hub entirely — the Hub holds a URL, the script holds the right to
+  send as WGSN.
+- **Google Chat** posts to an incoming webhook, which is how Chat works.
+  `NOTIFY_CHAT_WEBHOOK` is the team's space; a forecaster can paste their own
+  space's webhook instead, and it is **checked against
+  `https://chat.googleapis.com/`** before it is stored. Without that check the
+  field would be a way to have the server POST the team's schedule anywhere.
+
+Unconfigured is said rather than hidden. A forecaster who ticks email before
+an admin has wired the relay up gets nothing, and the reason is on their own
+settings page — which is the difference between a setting and a promise.
+
+### Nothing is said twice
+
+Every notice carries a stable **key**: `ao:deadline:ss-4013:today` is the same
+notice whether the run happens at 8am or at noon, and a digest keys on the
+week rather than the day. `notification_sends` is unique on key plus channel,
+so a schedule that fires twice on a Monday sends one digest. A *failure* is
+recorded too and replaces an earlier failure, so a webhook that comes back to
+life next week gets another go while one that succeeded is never asked again.
+
+Overdue is the exception: the key carries the date, because being a week late
+is a different fact from being a day late — one notice a day, each said once.
+
+Nobody is nudged while they are on leave, or on a public holiday for their
+own region. A nudge you cannot act on teaches you the Hub knows nothing about
+you.
+
+### It sends nothing unless told to
+
+`NOTIFY_SCHEDULE=1` turns on a check every fifteen minutes against the wall
+clock — deadline notices daily at `NOTIFY_HOUR` (8 by default), the digest on
+Mondays. No cron, no queue, no dependency, and the send log makes it safe to
+re-run. A wall-clock check rather than a timer counting from boot, because a
+service that restarts at 08:55 every morning would otherwise never send the
+9am digest.
+
+Off by default, for the same reason writing to Smartsheet is: it acts on the
+world with nobody pressing anything, and a proof of concept that mailed two
+hundred people because somebody ran it on a laptop would be the last time the
+team trusted it.
+
+`/studio/notifications` is the other half. **The preview is the default** —
+`POST /notifications/run` builds every notice, works out where each would go,
+and sends nothing; only `?send=1` sends. The wrong way round would mean one
+mistyped URL mailing the team. An admin can also run it as if it were another
+date, which is how you look at a Monday digest on a Wednesday. Under it is the
+log, which answers the question an admin actually gets: "I ticked Google Chat
+and nothing arrived."
+
+The rules live in `server/src/notify/build.ts` and are pure — `World` in,
+notices out — so what gets said is tested without a database, a clock or a
+webhook. Twenty-eight tests cover it, including the two mistakes that matter:
+telling somebody about a deadline twice, and telling them about one that is
+not theirs.
 
 ## Scoring a trend
 

@@ -6,9 +6,10 @@ import { isOutstanding, isOverdue } from "../lib/domain";
 import { Icon } from "../lib/icons";
 import { CustomisationProvider, EditBar, Slot, useCustom } from "../lib/custom";
 import { ViewerProvider, useViewer } from "../lib/viewer";
-import type { ContentItem, Me, Person, SessionWithSignUps, ViewLink } from "../types";
+import type { ContentItem, Inbox, Me, Person, SessionWithSignUps, ViewLink } from "../types";
 import { Avatar, ErrorNote, Loading } from "./bits";
 import FreshnessNote from "./FreshnessNote";
+import NotificationBell from "./NotificationBell";
 
 const ROLE_LABELS: Record<Me["role"], string> = {
   forecaster: "Forecaster",
@@ -85,11 +86,13 @@ function sections({
   outstanding,
   mySessions,
   forecasters,
+  unread,
 }: {
   overdue: number;
   outstanding: number;
   mySessions: number;
   forecasters: number;
+  unread: number;
 }): Section[] {
   return [
     {
@@ -173,6 +176,21 @@ function sections({
       group: "team",
       slot: "nav.item.subscribe",
     },
+    /*
+     * In the sidebar as well as on the bell. The bell hangs off the sidebar,
+     * which a phone does not have — so the page needs a way in that survives
+     * the layout, and "what am I being emailed about" is a thing people look
+     * for in a menu rather than by clicking a bell.
+     */
+    {
+      to: "/notifications",
+      label: "What the Hub tells you",
+      short: "Notices",
+      icon: "bell",
+      group: "team",
+      slot: "nav.item.notifications",
+      badge: unread > 0 ? String(unread) : undefined,
+    },
   ];
 }
 
@@ -223,12 +241,16 @@ function useSections(content: ContentItem[]): Section[] {
   // The server decides which views this account may see, including whether
   // drafts are among them.
   const views = useApi<ViewLink[]>("/views");
+  // An account with no forecaster record has no inbox, which is a 403 — so
+  // the count is simply nought rather than an error in the sidebar.
+  const inbox = useApi<Inbox>("/notifications");
 
   const fixed = sections({
     overdue: scope.filter((c) => isOverdue(c)).length,
     outstanding: scope.filter(isOutstanding).length,
     mySessions: person ? (sessions.data?.length ?? 0) : 0,
     forecasters: new Set(content.map((c) => c.forecasterId)).size,
+    unread: inbox.data?.unread ?? 0,
   });
 
   const built = [...(views.data ?? [])]
@@ -248,11 +270,16 @@ function Sidebar({ content }: { content: ContentItem[] }) {
 
   return (
     <aside className="sidebar">
-      <NavLink to="/" className="brand">
-        <div className="brand-mark">WGSN</div>
-        <div className="brand-sub">Forecasters Hub</div>
-        <div className="brand-kicker">Content Calendar</div>
-      </NavLink>
+      <div className="brand-row">
+        <NavLink to="/" className="brand">
+          <div className="brand-mark">WGSN</div>
+          <div className="brand-sub">Forecasters Hub</div>
+          <div className="brand-kicker">Content Calendar</div>
+        </NavLink>
+        {/* The bell sits with the identity rather than in the nav: it is
+            about you, not about a section of the app. */}
+        <NotificationBell />
+      </div>
 
       <nav className="nav">
         <Slot id="nav.group.work" as="div" className="nav-label" />

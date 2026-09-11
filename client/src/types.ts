@@ -672,3 +672,89 @@ export interface ReviewQueue {
   /** How many this person has decided in the Hub. */
   yours: number;
 }
+
+/* ---- Notifications ------------------------------------------------------- */
+
+export type NoticeChannel = "inApp" | "email" | "chat";
+export type NoticeKind = "digest" | "deadline" | "review";
+
+/** One notice in the bell's inbox. */
+export interface Inboxed {
+  id: string;
+  key: string;
+  personId: string;
+  kind: NoticeKind;
+  title: string;
+  body: string;
+  link?: string;
+  /** 0 ordinary, 1 wants attention, 2 late. */
+  urgency: 0 | 1 | 2;
+  at: string;
+  readAt?: string;
+}
+
+export interface Inbox {
+  unread: number;
+  rows: Inboxed[];
+}
+
+/** Whether a channel can send at all, and what to say when it cannot. */
+export interface ChannelState {
+  channel: NoticeChannel;
+  ready: boolean;
+  note: string;
+}
+
+export interface NotifyPrefs {
+  personId: string;
+  on: Record<NoticeKind, NoticeChannel[]>;
+  chatWebhook?: string;
+  updatedAt?: string;
+}
+
+export interface NotifySettings {
+  prefs: NotifyPrefs;
+  /** False when nothing has been saved, so the page can say "the default". */
+  saved: boolean;
+  channels: ChannelState[];
+  kinds: { kind: NoticeKind; label: string; hint: string }[];
+  channelLabels: Record<NoticeChannel, string>;
+}
+
+/** What one channel did with one notice, in a run or a dry run. */
+export interface Delivery {
+  personId: string;
+  kind: NoticeKind;
+  channel: NoticeChannel;
+  key: string;
+  ok: boolean;
+  problem?: string;
+}
+
+export interface RunResult {
+  today: string;
+  built: number;
+  deliveries: Delivery[];
+  dry: boolean;
+  summary: string;
+  names?: Record<string, string>;
+}
+
+export interface NotifyLog {
+  channels: ChannelState[];
+  /** Whether anything sends itself, or only an admin pressing the button. */
+  scheduled: boolean;
+  sends: {
+    key: string;
+    channel: string;
+    personId: string;
+    kind: string;
+    at: string;
+    ok: boolean;
+    problem?: string;
+  }[];
+  /** How many of the team have chosen, against how many there are. */
+  chose: number;
+  team: number;
+  names: Record<string, string>;
+}

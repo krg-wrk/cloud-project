@@ -20,7 +20,10 @@ export default function Studio() {
 
   if (!isAdmin) {
     return (
-      <ErrorNote message="The studio is open to Hub admins only." />
+      <ErrorNote
+        heading="Not for this account."
+        message="The studio is open to Hub admins only."
+      />
     );
   }
 
@@ -68,6 +71,13 @@ export default function Studio() {
           <span>
             <b>Freshness</b>
             <em>How old is what the team is looking at</em>
+          </span>
+        </NavLink>
+        <NavLink to="/studio/notifications" className="studio-tab">
+          <Icon name="bell" size={15} />
+          <span>
+            <b>Notifications</b>
+            <em>What goes out, and what went</em>
           </span>
         </NavLink>
         <NavLink to="/studio/pages" className="studio-tab">

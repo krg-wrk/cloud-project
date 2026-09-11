@@ -4716,6 +4716,358 @@
     text-align: center;
   }
 
+  /* -----------------------------------------------------------------------
+     Notifications: the bell in the rail, and the settings grid.
+     ----------------------------------------------------------------------- */
+
+  .brand-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .bell-wrap {
+    position: relative;
+    flex: none;
+  }
+
+  .bell {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--line);
+    background: var(--paper);
+    color: var(--ink-mid);
+  }
+
+  .bell:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+
+  .bell.has-unread {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* Absolutely positioned, so a two-digit count cannot resize the button. */
+  .bell-count {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 17px;
+    padding: 0 4px;
+    border-radius: 9px;
+    background: var(--late);
+    color: #ffffff;
+    font-family: var(--mono);
+    font-size: 9.5px;
+    line-height: 17px;
+    text-align: center;
+  }
+
+  .bell-panel {
+    position: absolute;
+    top: 38px;
+    left: 0;
+    z-index: 40;
+    width: 340px;
+    max-height: min(70vh, 560px);
+    overflow-y: auto;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    box-shadow: 0 10px 30px rgb(0 0 0 / 14%);
+  }
+
+  .bell-head {
+    position: sticky;
+    top: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 11px 13px;
+    border-bottom: 1px solid var(--line);
+    background: var(--ground);
+    font-size: 13px;
+  }
+
+  .bell-head-actions {
+    display: flex;
+    gap: 6px;
+  }
+
+  .bell-none {
+    margin: 0;
+    padding: 18px 14px;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+
+  .bell-none a {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .bell-list,
+  .inbox {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .bell-item,
+  .inbox-item {
+    padding: 12px 13px;
+    border-top: 1px solid var(--line);
+    border-left: 3px solid transparent;
+    font-size: 12.5px;
+  }
+
+  .bell-list .bell-item:first-child {
+    border-top: none;
+  }
+
+  /* Read is the quiet state, so unread is the one that gets a mark. */
+  .bell-item.unread,
+  .inbox-item.unread {
+    background: var(--accent-wash);
+    border-left-color: var(--accent);
+  }
+
+  .bell-item.u2,
+  .inbox-item.u2 {
+    border-left-color: var(--late);
+  }
+
+  .bell-item.u1,
+  .inbox-item.u1 {
+    border-left-color: var(--warn);
+  }
+
+  .bell-item-head,
+  .inbox-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .bell-title,
+  .inbox-title {
+    font-weight: 500;
+    color: var(--ink);
+  }
+
+  a.bell-title:hover,
+  a.inbox-title:hover {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* The body is built as lines of plain text, so the newlines are the layout. */
+  .bell-body,
+  .inbox-body {
+    margin: 5px 0 0;
+    white-space: pre-wrap;
+    line-height: 1.5;
+    color: var(--ink-mid);
+  }
+
+  .bell-item-actions,
+  .inbox-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 7px;
+  }
+
+  .link-button {
+    padding: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .link-button:hover {
+    color: var(--accent);
+  }
+
+  /* The full-page inbox, which is how a phone reads the same thing. */
+  .inbox-item {
+    border: 1px solid var(--line);
+    border-left-width: 3px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+
+  .inbox-item:last-child {
+    margin-bottom: 0;
+  }
+
+  /*
+   * The settings grid: kinds down the side, channels across.
+   *
+   * A real grid rather than three rows of checkboxes, so the column a tick
+   * is in is what says which channel it means — and the headings stay put
+   * while the rows below them differ in height.
+   */
+  .notify-grid {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+  }
+
+  .notify-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) repeat(3, 92px);
+    align-items: stretch;
+    border-top: 1px solid var(--line);
+  }
+
+  .notify-row:first-child {
+    border-top: none;
+  }
+
+  .notify-head {
+    background: var(--ground);
+  }
+
+  .notify-channel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 10px 6px;
+    border-left: 1px solid var(--line);
+    font-size: 11.5px;
+    text-align: center;
+    color: var(--ink-mid);
+  }
+
+  .notify-channel .icon {
+    color: var(--ink-soft);
+  }
+
+  .notify-off {
+    font-family: var(--mono);
+    font-size: 9px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--warn-ink);
+  }
+
+  .notify-kind {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 13px 15px;
+    min-width: 0;
+  }
+
+  .notify-kind .body {
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+
+  /* The whole cell is the target, not a 13px box in the middle of it. */
+  .notify-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-left: 1px solid var(--line);
+    background: transparent;
+  }
+
+  .notify-cell:hover {
+    background: var(--ground);
+  }
+
+  .notify-cell.on {
+    background: color-mix(in srgb, var(--ok) 10%, transparent);
+  }
+
+  .notify-tick {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    color: var(--ok);
+  }
+
+  .notify-cell.on .notify-tick {
+    border-color: var(--ok);
+  }
+
+  .notify-notes {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .notify-notes p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+
+  .notify-warn {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--warn-ink);
+  }
+
+  .notify-webhook input {
+    width: 100%;
+    max-width: 560px;
+    margin-top: 10px;
+    padding: 8px 10px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  @media (max-width: 900px) {
+    /* The rail is gone at this width, so the panel anchors to the screen. */
+    .bell-panel {
+      position: fixed;
+      top: 56px;
+      left: 12px;
+      right: 12px;
+      width: auto;
+    }
+
+    .notify-row {
+      grid-template-columns: minmax(0, 1fr) repeat(3, 64px);
+    }
+
+    .notify-channel b {
+      font-size: 10.5px;
+    }
+  }
+
   /* Naming keys to somebody holding a phone is no help to them. */
   @media (pointer: coarse) {
     .rv-keys,
@@ -4779,11 +5131,16 @@
 
 <div class="shell">
   <aside class="rail">
-    <a class="brand" href="#/">
-      <span class="brand-mark">WGSN</span>
-      <span class="brand-sub">Forecasters Hub</span>
-      <em>Content calendar</em>
-    </a>
+    <div class="brand-row">
+      <a class="brand" href="#/">
+        <span class="brand-mark">WGSN</span>
+        <span class="brand-sub">Forecasters Hub</span>
+        <em>Content calendar</em>
+      </a>
+      <!-- The bell sits with the identity rather than in the nav: it is
+           about you, not about a section of the app. -->
+      <div class="bell-wrap" id="bell-wrap"></div>
+    </div>
     <nav id="nav"></nav>
     <div class="rail-foot">
       <div class="as-label">Signed in as (demo)</div>
@@ -4849,6 +5206,9 @@
   const ICONS = {
     today: "M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM12 2v2.5M12 19.5V22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2 12h2.5M19.5 12H22M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8",
     deadlines: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
+    bell: "M18 9a6 6 0 0 0-12 0c0 5-2 6.5-2 6.5h16S18 14 18 9ZM13.7 19a2 2 0 0 1-3.4 0",
+    mail: "M3.5 6h17a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-17a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1ZM3 7l9 6 9-6",
+    chat: "M21 12a8 8 0 0 1-8 8H8l-5 3 1.3-4.4A8 8 0 0 1 13 4a8 8 0 0 1 8 8ZM9 11h.01M13 11h.01M17 11h.01",
     calendar: "M3 9h18M7 3v3M17 3v3M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z",
     performance: "M4 20V10M10 20V4M16 20v-7M22 20H2",
     trends: "M3 17l5-6 4 3 5-7M14 7h4v4",
@@ -5680,6 +6040,20 @@
       else ppDecisions.delete(id);
     });
 
+    // Notification settings, and what each person has read or dismissed.
+    watch("notifyPrefs", (id, body) => {
+      const on = { ...DEFAULT_ON };
+      for (const [kind] of NOTICE_KINDS) {
+        const asked = body.on?.[kind];
+        if (Array.isArray(asked)) on[kind] = NOTICE_CHANNELS.map(([c]) => c).filter((c) => asked.includes(c));
+      }
+      notifyPrefs.set(id, { on, chatWebhook: body.chatWebhook || undefined });
+    });
+    watch("noticeState", (id, body) => {
+      noticeRead.set(id, new Set(Array.isArray(body.read) ? body.read : []));
+      noticeGone.set(id, new Set(Array.isArray(body.gone) ? body.gone : []));
+    });
+
     // The studio's own configuration, shared like everything else — so a view
     // built here is a view everyone on this page has.
     watch("studioConnections", (id, body) => connections.set(id, { ...body, id }));
@@ -5884,6 +6258,20 @@
       ],
       "nav.item.whats-on": ["#/whats-on", "whats-on", "", "whats-on", false, "team"],
       "nav.item.subscribe": ["#/subscribe", "subscribe", "", "subscribe", false, "team"],
+      /*
+       * In the rail as well as on the bell. The bell hangs off the rail,
+       * which a phone does not have — so the page needs a way in that
+       * survives the layout, and "what am I being emailed about" is a thing
+       * people look for in a menu rather than by clicking a bell.
+       */
+      "nav.item.notifications": [
+        "#/notifications",
+        "notifications",
+        unreadCount(me.id) || "",
+        "bell",
+        false,
+        "team",
+      ],
     };
     const ordered = slotGroup("nav.item").filter((x) => fixed[x.id]);
     const inGroup = (which) =>
@@ -8638,6 +9026,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             slotNav("nav.item.team", "Forecasters"),
             slotNav("nav.item.whats-on", "What’s on"),
             slotNav("nav.item.subscribe", "Add to your calendar"),
+            slotNav("nav.item.notifications", "What the Hub tells you"),
           ],
         },
       ],
@@ -8841,6 +9230,21 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           slots: [
             slotTitle("review.eyebrow", "Data"),
             slotTitle("review.title", "Review proof points"),
+          ],
+        },
+      ],
+    },
+    {
+      id: "notifications",
+      label: "Notification settings",
+      path: "/notifications",
+      groups: [
+        {
+          id: "notifications.head",
+          label: "Page heading",
+          slots: [
+            slotTitle("notifications.eyebrow", "You"),
+            slotTitle("notifications.title", "What the Hub tells you"),
           ],
         },
       ],
@@ -10760,6 +11164,506 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
    * arrow keys because a reviewer doing forty of these should not be moving
    * a mouse.
    */
+  /* ---- Notifications ---------------------------------------------------
+   *
+   * The Hub is a website, so it can only tell you something while you are
+   * looking at it. These are the things worth knowing when you are not.
+   *
+   * In the deployed Hub a scheduled run on the server builds these and sends
+   * them down whichever channels each person chose. Here there is no server,
+   * so the same rules run in the page against the same data — which makes
+   * the bell, the inbox and the settings all real, and makes the two
+   * outgoing channels honestly unavailable rather than pretend buttons.
+   */
+
+  const NOTICE_KINDS = [
+    [
+      "digest",
+      "The week ahead",
+      "Monday morning: what is due from you this week, who you are reviewing, what you signed up for",
+    ],
+    ["deadline", "Deadlines coming up", "A forecast of yours due in three days, due today, or overdue"],
+    ["review", "Proof points waiting on you", "When suggestions are waiting on a decision for a trend you own"],
+  ];
+
+  const NOTICE_CHANNELS = [
+    ["inApp", "In the Hub", "bell"],
+    ["email", "Email", "mail"],
+    ["chat", "Google Chat", "chat"],
+  ];
+
+  /** The bell, and nothing that leaves the building. */
+  const DEFAULT_ON = { digest: ["inApp"], deadline: ["inApp"], review: ["inApp"] };
+
+  /** Per person: what they asked for, and what they have read or dismissed. */
+  const notifyPrefs = new Map();
+  const noticeRead = new Map();
+  const noticeGone = new Map();
+
+  const prefsFor = (personId) => notifyPrefs.get(personId) ?? { on: DEFAULT_ON };
+  const readSet = (personId) => noticeRead.get(personId) ?? new Set();
+  const goneSet = (personId) => noticeGone.get(personId) ?? new Set();
+
+  /** Monday of the week containing a date, so a digest keys on the week. */
+  function weekOf(date) {
+    const at = new Date(`${date}T00:00:00Z`);
+    const back = (at.getUTCDay() + 6) % 7;
+    return new Date(at.getTime() - back * 864e5).toISOString().slice(0, 10);
+  }
+
+  const noticePlural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+
+  /** Statuses in the words a person says them in, not the hyphenated keys. */
+  const STATUS_WORDS = {
+    "not-started": "not started",
+    "in-progress": "in progress",
+    submitted: "submitted",
+    "in-review": "in review",
+    published: "published",
+    "at-risk": "at risk",
+  };
+
+  /** Everyone credited, not only whoever the sheet calls the owner. */
+  const workingOn = (c) => [...new Set([c.forecasterId, ...(c.contributorIds ?? [])])].filter(Boolean);
+
+  /**
+   * Away on this date?
+   *
+   * A nudge that lands in the middle of somebody's leave is worse than none:
+   * they cannot act on it, and it teaches them the Hub knows nothing about
+   * them. A public holiday is regional — a UK bank holiday is a working day
+   * in New York.
+   */
+  function awayOn(personId, date) {
+    const who = person(personId);
+    return events.some((e) => {
+      if (e.startDate > date || date > e.endDate) return false;
+      if (e.type === "leave") return e.personId === personId;
+      if (e.type !== "public-holiday") return false;
+      return !e.region || e.region === "All" || e.region === who.region;
+    });
+  }
+
+  /** How many proof point suggestions wait on this person's trends. */
+  function reviewWaitingFor(personId) {
+    const tiers = new Set(QUALITY_TIERS.top);
+    let n = 0;
+    for (const p of PROOF.points) {
+      if (!tiers.has(p.tier) || p.alreadyKnown) continue;
+      if (ppDecisionOf(p)) continue;
+      const t =
+        TRENDS.find((x) => x.id === p.trendId && x.editorStatus !== "archived") ??
+        TRENDS.find((x) => x.id === p.trendId);
+      if (!t) continue;
+      const own = new Set([personId, nameId(person(personId).name)].filter(Boolean));
+      if (own.has(t.ownerId) || (t.authorIds ?? []).some((a) => own.has(a))) n++;
+    }
+    return n;
+  }
+
+  const REVIEW_FLOOR = 5;
+
+  /**
+   * Everything worth telling one person today, most urgent first.
+   *
+   * Each notice carries a stable key — the same thing being said, not the
+   * moment of saying it — which is how the real Hub avoids telling somebody
+   * twice, and here is what "read" and "dismissed" hang off.
+   */
+  function noticesFor(personId, today = TODAY) {
+    const out = [];
+    const mine = content.filter((c) => workingOn(c).includes(personId));
+    const week = weekOf(today);
+    const end = new Date(Date.parse(`${week}T00:00:00Z`) + 6 * 864e5).toISOString().slice(0, 10);
+
+    // Deadlines: three days out, on the day, then once a day while it is late.
+    if (!awayOn(personId, today)) {
+      for (const c of mine) {
+        if (!isOpen(c) || !c.submissionDate) continue;
+        const days = diffDays(today, c.submissionDate);
+        const when = medium(c.submissionDate);
+        let slug = null;
+        let urgency = 0;
+        let says = "";
+        if (days === 3) {
+          slug = "in-3";
+          says = `due ${when} — three days from now`;
+        } else if (days === 0) {
+          slug = "today";
+          urgency = 1;
+          says = "due today";
+        } else if (days < 0) {
+          slug = `late-${today}`;
+          urgency = 2;
+          says = `overdue: it was due ${when} — ${noticePlural(-days, "day")} ago`;
+        }
+        if (!slug) continue;
+        out.push({
+          key: `${personId}:deadline:${c.id}:${slug}`,
+          kind: "deadline",
+          urgency,
+          title:
+            days < 0
+              ? `Overdue: ${c.title}`
+              : days === 0
+                ? `Due today: ${c.title}`
+                : `Due ${when}: ${c.title}`,
+          body: [
+            `${c.title} (${c.type}, ${c.vertical}) is ${says}.`,
+            days < 0
+              ? `It still reads "${STATUS_WORDS[c.status] ?? c.status}". Publication is ${medium(
+                  c.publicationDate,
+                )}.`
+              : `Publication is ${medium(c.publicationDate)}.`,
+          ].join("\n"),
+          link: `#/content/${c.id}`,
+        });
+      }
+    }
+
+    const waiting = reviewWaitingFor(personId);
+    if (waiting >= REVIEW_FLOOR) {
+      out.push({
+        key: `${personId}:review:${week}`,
+        kind: "review",
+        urgency: 0,
+        title: `${noticePlural(waiting, "proof point")} waiting on you`,
+        body: [
+          `${waiting} suggested proof points are waiting on a decision for trends you own.`,
+          "The queue takes them best match first, and the arrow keys do the work.",
+        ].join("\n"),
+        link: "#/data/review",
+      });
+    }
+
+    // The digest: Mondays only, and only when there is something in it.
+    if (today === week) {
+      const lines = [];
+      const overdue = mine
+        .filter((c) => isOpen(c) && c.submissionDate && c.submissionDate < week)
+        .sort((a, b) => a.submissionDate.localeCompare(b.submissionDate));
+      const due = mine
+        .filter((c) => isOpen(c) && c.submissionDate >= week && c.submissionDate <= end)
+        .sort((a, b) => a.submissionDate.localeCompare(b.submissionDate));
+      const publishing = mine
+        .filter((c) => c.publicationDate >= week && c.publicationDate <= end)
+        .sort((a, b) => a.publicationDate.localeCompare(b.publicationDate));
+      if (overdue.length)
+        lines.push(
+          `Overdue (${overdue.length}):`,
+          ...overdue.map((c) => `  · ${c.title} — was due ${medium(c.submissionDate)}`),
+        );
+      if (due.length)
+        lines.push(
+          `Due with your commissioning manager this week (${due.length}):`,
+          ...due.map((c) => `  · ${medium(c.submissionDate)} — ${c.title}`),
+        );
+      if (publishing.length)
+        lines.push(
+          `Publishing this week (${publishing.length}):`,
+          ...publishing.map((c) => `  · ${medium(c.publicationDate)} — ${c.title}`),
+        );
+
+      const reviewing = [...reviews.entries()]
+        .filter(([, r]) => r.reviewerId === personId && r.reviewDate >= week && r.reviewDate <= end)
+        .sort((a, b) => a[1].reviewDate.localeCompare(b[1].reviewDate));
+      if (reviewing.length)
+        lines.push(
+          `Peer reviews you are doing (${reviewing.length}):`,
+          ...reviewing.map(
+            ([id, r]) =>
+              `  · ${medium(r.reviewDate)} — ${content.find((c) => c.id === id)?.title ?? id}`,
+          ),
+        );
+
+      const going = sessions
+        .filter((s) => s.date >= week && s.date <= end)
+        .filter((s) => (signUps.get(s.id)?.going ?? []).includes(personId))
+        .sort((a, b) => a.date.localeCompare(b.date));
+      if (going.length)
+        lines.push(
+          `You are signed up for (${going.length}):`,
+          ...going.map((s) => `  · ${medium(s.date)} — ${s.title}`),
+        );
+
+      if (waiting >= REVIEW_FLOOR)
+        lines.push(`${noticePlural(waiting, "proof point")} waiting on a decision for your trends.`);
+
+      if (lines.length)
+        out.push({
+          key: `${personId}:digest:${week}`,
+          kind: "digest",
+          urgency: overdue.length ? 2 : 0,
+          title: `Your week: ${medium(week)} to ${medium(end)}`,
+          body: lines.join("\n"),
+          link: "#/",
+        });
+    }
+
+    const gone = goneSet(personId);
+    const chosen = prefsFor(personId).on;
+    return out
+      .filter((n) => !gone.has(n.key))
+      // A notice only reaches the bell if this person asked for it there.
+      .filter((n) => (chosen[n.kind] ?? []).includes("inApp"))
+      .sort((a, b) => b.urgency - a.urgency || a.key.localeCompare(b.key));
+  }
+
+  const unreadCount = (personId) => {
+    const read = readSet(personId);
+    return noticesFor(personId).filter((n) => !read.has(n.key)).length;
+  };
+
+  function saveNotifyPrefs(personId, on, webhook) {
+    const entry = { on, chatWebhook: webhook || undefined, updatedAt: new Date().toISOString() };
+    notifyPrefs.set(personId, entry);
+    store?.collection("notifyPrefs").doc(personId).set(entry).catch(() => {});
+    render();
+  }
+
+  function markNoticeRead(personId, key) {
+    const set = new Set(readSet(personId));
+    if (key) set.add(key);
+    else for (const n of noticesFor(personId)) set.add(n.key);
+    noticeRead.set(personId, set);
+    store
+      ?.collection("noticeState")
+      .doc(personId)
+      .set({ read: [...set], gone: [...goneSet(personId)] })
+      .catch(() => {});
+    render();
+  }
+
+  function dismissNotice(personId, key) {
+    const gone = new Set(goneSet(personId));
+    gone.add(key);
+    noticeGone.set(personId, gone);
+    store
+      ?.collection("noticeState")
+      .doc(personId)
+      .set({ read: [...readSet(personId)], gone: [...gone] })
+      .catch(() => {});
+    render();
+  }
+
+  /**
+   * What the Hub tells you, and where.
+   *
+   * The grid is kinds down the side, channels across. Tick the cells you
+   * want — "email me about deadlines but leave the digest in the Hub" is the
+   * preference most people actually have, and a single switch per channel
+   * cannot express it.
+   *
+   * In this demo the two outgoing channels say so plainly rather than
+   * pretending: there is no server here to send from. The settings
+   * themselves are real, and shared with everyone else on the page.
+   */
+  function pageNotifications() {
+    const v = viewer();
+    const me = v.person.id;
+    const prefs = prefsFor(me);
+    const saved = notifyPrefs.has(me);
+    const read = readSet(me);
+    const rows = noticesFor(me);
+    const unread = rows.filter((n) => !read.has(n.key)).length;
+    const anythingOn = NOTICE_KINDS.some(([kind]) => (prefs.on[kind] ?? []).length > 0);
+
+    const ready = {
+      inApp: [true, "Always on. Notices appear on the bell beside the WGSN mark, and in full on this page."],
+      email: [
+        false,
+        "This demo is one file with no server, so nothing can send email from it. In the deployed Hub an admin points it at a Workspace relay and this turns on — your choice here is still recorded.",
+      ],
+      chat: [
+        false,
+        "Same: no server here to post to a Chat space. The deployed Hub sends to the team space, or to your own if you give it a webhook.",
+      ],
+    };
+
+    return `
+      <div class="head">
+        <div>
+          ${slot("notifications.eyebrow", { tag: "div", cls: "eyebrow" })}
+          ${slot("notifications.title", { tag: "h1" })}
+          <p class="lede">The Hub is a website, so it can only tell you something while you are
+            looking at it. These are the things worth knowing when you are not — and you choose
+            which of them reach you, and how.</p>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-bottom:14px">
+        <div class="sec-head" style="margin-bottom:11px">
+          <h2>What you have been told${unread ? ` <span class="mono-tag">${unread} new</span>` : ""}</h2>
+          ${unread ? `<button class="toggle small" data-nt-read="">Mark all read</button>` : ""}
+        </div>
+        ${
+          rows.length === 0
+            ? `<div class="none">${icon("bell", 20)}<p>Nothing waiting. A deadline three days out,
+                the Monday digest, and a review queue with something in it all appear here.</p></div>`
+            : `<ul class="inbox">${rows
+                .map(
+                  (n) => `
+                  <li class="inbox-item u${n.urgency}${read.has(n.key) ? "" : " unread"}">
+                    <div class="inbox-head">
+                      <a class="inbox-title" href="${esc(n.link)}" data-nt-read="${esc(
+                        n.key,
+                      )}">${esc(n.title)}</a>
+                      <span class="mono-tag">${esc(NOTICE_KINDS.find((k) => k[0] === n.kind)[1])}</span>
+                    </div>
+                    <p class="inbox-body">${esc(n.body)}</p>
+                    <div class="inbox-actions">
+                      ${
+                        read.has(n.key)
+                          ? ""
+                          : `<button class="link-button" data-nt-read="${esc(
+                              n.key,
+                            )}">Mark read</button>`
+                      }
+                      <button class="link-button" data-nt-drop="${esc(n.key)}">Dismiss</button>
+                    </div>
+                  </li>`,
+                )
+                .join("")}</ul>`
+        }
+      </div>
+
+      <div class="panel" style="margin-bottom:14px">
+        <div class="sec-head" style="margin-bottom:11px">
+          <h2>Where to send what</h2>
+          <span class="mono-tag">${
+            saved ? "Your own settings" : "Nobody has changed these yet — this is the default"
+          }</span>
+        </div>
+
+        <div class="notify-grid">
+          <div class="notify-row notify-head">
+            <div></div>
+            ${NOTICE_CHANNELS.map(
+              ([id, label, ico]) => `
+              <div class="notify-channel">${icon(ico, 15)}<b>${esc(label)}</b>${
+                ready[id][0] ? "" : `<span class="notify-off">not here</span>`
+              }</div>`,
+            ).join("")}
+          </div>
+          ${NOTICE_KINDS.map(
+            ([kind, label, hint]) => `
+            <div class="notify-row">
+              <div class="notify-kind"><b>${esc(label)}</b><span class="body">${esc(
+                hint,
+              )}</span></div>
+              ${NOTICE_CHANNELS.map(([ch]) => {
+                const on = (prefs.on[kind] ?? []).includes(ch);
+                return `<button class="notify-cell${on ? " on" : ""}"
+                  data-nt-cell="${kind}:${ch}"
+                  aria-pressed="${on}"
+                  title="${esc(label)} — ${esc(
+                    NOTICE_CHANNELS.find((c) => c[0] === ch)[1],
+                  )}"><span class="notify-tick">${on ? icon("published", 14) : ""}</span></button>`;
+              }).join("")}
+            </div>`,
+          ).join("")}
+        </div>
+
+        <div class="notify-notes">
+          ${NOTICE_CHANNELS.map(
+            ([id, label]) =>
+              `<p class="${ready[id][0] ? "body" : "notify-warn"}"><b>${esc(label)}.</b> ${esc(
+                ready[id][1],
+              )}</p>`,
+          ).join("")}
+        </div>
+
+        ${
+          anythingOn
+            ? ""
+            : `<div class="none" style="text-align:left;margin-top:12px">Everything is off. Nothing
+                will reach you, including the bell — which is a perfectly reasonable choice, and
+                this is the only place that will mention it.</div>`
+        }
+      </div>
+
+      <div class="panel">
+        <div class="panel-label">Your own Google Chat space</div>
+        <p class="body">Chat&rsquo;s webhooks belong to a space rather than to a person, so a notice
+          goes to whichever space the webhook came from. Leave this empty to use the team&rsquo;s
+          space; fill it in to have yours arrive somewhere only you read. In the space, open
+          <b>Apps &amp; integrations &rarr; Webhooks</b> and copy the URL.</p>
+        <div class="notify-webhook">
+          <input id="nt-hook" type="url" value="${esc(prefs.chatWebhook ?? "")}"
+            placeholder="https://chat.googleapis.com/v1/spaces/…"
+            aria-label="Your Google Chat webhook" />
+        </div>
+        ${
+          prefs.chatWebhook && !prefs.chatWebhook.startsWith("https://chat.googleapis.com/")
+            ? `<p class="notify-warn">That is not a Google Chat webhook. It should start
+                https://chat.googleapis.com/ — the Hub will not keep anything else, because this
+                field decides where your team&rsquo;s schedule gets posted.</p>`
+            : ""
+        }
+        <div style="margin-top:10px"><button class="toggle solid" data-nt-hook>Save the webhook</button></div>
+      </div>`;
+  }
+
+  /** The bell in the rail: how much is new, and the panel behind it. */
+  function bellHtml() {
+    const me = viewer().person.id;
+    const n = unreadCount(me);
+    return `
+      <button class="bell${n ? " has-unread" : ""}" id="bell"
+        aria-expanded="${bellOpen}"
+        aria-label="${n ? `Notifications, ${n} unread` : "Notifications"}">
+        ${icon("bell", 17)}${n ? `<span class="bell-count">${n > 9 ? "9+" : n}</span>` : ""}
+      </button>
+      ${bellOpen ? bellPanel(me) : ""}`;
+  }
+
+  function bellPanel(me) {
+    const read = readSet(me);
+    const rows = noticesFor(me);
+    const unread = rows.filter((x) => !read.has(x.key)).length;
+    return `
+      <div class="bell-panel" id="bell-panel" role="dialog" aria-label="Notifications">
+        <div class="bell-head">
+          <b>Notifications</b>
+          <div class="bell-head-actions">
+            ${unread ? `<button class="toggle small" data-nt-read="">Mark all read</button>` : ""}
+            <a class="toggle small" href="#/notifications" data-nt-close>Settings</a>
+          </div>
+        </div>
+        ${
+          rows.length === 0
+            ? `<p class="bell-none">Nothing yet. Deadlines and the Monday digest appear here — and
+                by email or Google Chat if you ask for them in
+                <a href="#/notifications" data-nt-close>settings</a>.</p>`
+            : `<ul class="bell-list">${rows
+                .map(
+                  (n) => `
+                  <li class="bell-item u${n.urgency}${read.has(n.key) ? "" : " unread"}">
+                    <div class="bell-item-head">
+                      <a class="bell-title" href="${esc(n.link)}" data-nt-read="${esc(
+                        n.key,
+                      )}" data-nt-close>${esc(n.title)}</a>
+                    </div>
+                    <p class="bell-body">${esc(n.body)}</p>
+                    <div class="bell-item-actions">
+                      ${
+                        read.has(n.key)
+                          ? ""
+                          : `<button class="link-button" data-nt-read="${esc(
+                              n.key,
+                            )}">Mark read</button>`
+                      }
+                      <button class="link-button" data-nt-drop="${esc(n.key)}">Dismiss</button>
+                    </div>
+                  </li>`,
+                )
+                .join("")}</ul>`
+        }
+      </div>`;
+  }
+
+  let bellOpen = false;
+
   function pageReview(params) {
     const v = viewer();
     const owner = params.get("owner") === "all" ? "all" : "mine";
@@ -11611,6 +12515,9 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       case "subscribe":
         html = pageSubscribe();
         break;
+      case "notifications":
+        html = pageNotifications();
+        break;
       case "studio":
         html = pageStudio(parts[1] ?? "connections", params);
         break;
@@ -11626,6 +12533,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
     view.innerHTML = html;
     document.getElementById("edit-bar").innerHTML = editBar();
+    document.getElementById("bell-wrap").innerHTML = bellHtml();
     renderNav();
     renderUrl();
 
@@ -12445,6 +13353,75 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       renderNav();
       return;
     }
+
+    /*
+     * The bell and its panel.
+     *
+     * Delegated at the document rather than inside the view, because the
+     * bell lives in the rail — outside the element every page render
+     * replaces — and the same buttons appear in both places.
+     */
+    const me = viewer().person.id;
+    if (e.target.closest("#bell")) {
+      bellOpen = !bellOpen;
+      document.getElementById("bell-wrap").innerHTML = bellHtml();
+      return;
+    }
+    const read = e.target.closest("[data-nt-read]");
+    if (read) {
+      // A link that is also a "mark read" follows through: reading it is
+      // what you did with it.
+      markNoticeRead(me, read.dataset.ntRead || null);
+      if (e.target.closest("[data-nt-close]")) bellOpen = false;
+      document.getElementById("bell-wrap").innerHTML = bellHtml();
+      return;
+    }
+    const drop = e.target.closest("[data-nt-drop]");
+    if (drop) {
+      dismissNotice(me, drop.dataset.ntDrop);
+      document.getElementById("bell-wrap").innerHTML = bellHtml();
+      return;
+    }
+    if (e.target.closest("[data-nt-close]")) {
+      bellOpen = false;
+      document.getElementById("bell-wrap").innerHTML = bellHtml();
+      return;
+    }
+    const cell = e.target.closest("[data-nt-cell]");
+    if (cell) {
+      const [kind, channel] = cell.dataset.ntCell.split(":");
+      const prefs = prefsFor(me);
+      const had = prefs.on[kind] ?? [];
+      saveNotifyPrefs(
+        me,
+        {
+          ...prefs.on,
+          [kind]: had.includes(channel) ? had.filter((c) => c !== channel) : [...had, channel],
+        },
+        prefs.chatWebhook,
+      );
+      return;
+    }
+    if (e.target.closest("[data-nt-hook]")) {
+      const typed = (document.getElementById("nt-hook")?.value ?? "").trim();
+      /*
+       * The Hub would POST the team's schedule to whatever is in this box,
+       * so it is checked against Google's own webhook host rather than
+       * trusted. Without that, the field is a way to send internal data
+       * anywhere.
+       */
+      saveNotifyPrefs(
+        me,
+        prefsFor(me).on,
+        typed && typed.startsWith("https://chat.googleapis.com/") ? typed : "",
+      );
+      return;
+    }
+    // A click anywhere else closes the panel, as it does any menu.
+    if (bellOpen && !e.target.closest("#bell-panel")) {
+      bellOpen = false;
+      document.getElementById("bell-wrap").innerHTML = bellHtml();
+    }
     if (e.target.closest("[data-sheet-go]") || e.target.closest("#scrim")) {
       sheetOpen = false;
       renderNav();
@@ -12481,6 +13458,13 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
   // Enter saves, Escape abandons — the same keys as the studio's own boxes.
   document.addEventListener("keydown", (e) => {
+    // Escape closes the bell, as it does any menu.
+    if (e.key === "Escape" && bellOpen) {
+      bellOpen = false;
+      document.getElementById("bell-wrap").innerHTML = bellHtml();
+      document.getElementById("bell")?.focus();
+      return;
+    }
     // Escape closes an enlarged proof point, as it does any dialog.
     if (e.key === "Escape" && document.querySelector(".pp-dialog")) {
       const { params } = route();

@@ -118,6 +118,7 @@ export const SLOT_PAGES: SlotPage[] = [
           nav("nav.item.team", "Forecasters"),
           nav("nav.item.whats-on", "What’s on"),
           nav("nav.item.subscribe", "Add to your calendar"),
+          nav("nav.item.notifications", "What the Hub tells you"),
         ],
       },
     ],
@@ -412,6 +413,22 @@ export const SLOT_PAGES: SlotPage[] = [
             kind: "sub",
             hint: "The line under the title",
           },
+        ],
+      },
+    ],
+  },
+
+  {
+    id: "notifications",
+    label: "Notification settings",
+    path: "/notifications",
+    groups: [
+      {
+        id: "notifications.head",
+        label: "Page heading",
+        slots: [
+          t("notifications.eyebrow", "You"),
+          t("notifications.title", "What the Hub tells you"),
         ],
       },
     ],

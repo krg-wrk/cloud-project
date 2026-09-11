@@ -60,10 +60,24 @@ export function Loading({ what = "the schedule" }: { what?: string }) {
   return <div className="loading">Loading {what}…</div>;
 }
 
-export function ErrorNote({ message }: { message: string }) {
+/**
+ * Something went wrong, with the server's own words under it.
+ *
+ * `heading` exists because most of these are a failed read, but some are a
+ * refused write — and telling somebody "could not load the data" when what
+ * actually happened is that their setting was rejected sends them looking
+ * for a fault that is not there.
+ */
+export function ErrorNote({
+  message,
+  heading = "Could not load the data.",
+}: {
+  message: string;
+  heading?: string;
+}) {
   return (
-    <div className="callout">
-      <strong>Could not load the data.</strong>
+    <div className="callout" role="alert">
+      <strong>{heading}</strong>
       <div style={{ marginTop: 4 }}>{message}</div>
     </div>
   );

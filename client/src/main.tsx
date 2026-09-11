@@ -10,11 +10,13 @@ import ProofPoints from "./routes/data/ProofPoints";
 import Review from "./routes/data/Review";
 import Deadlines from "./routes/Deadlines";
 import Kpis from "./routes/Kpis";
+import Notifications from "./routes/Notifications";
 import SessionDetail from "./routes/SessionDetail";
 import Studio from "./routes/studio/Studio";
 import Connections from "./routes/studio/Connections";
 import Datasets from "./routes/studio/Datasets";
 import Freshness from "./routes/studio/Freshness";
+import NotifyAdmin from "./routes/studio/NotifyAdmin";
 import Views from "./routes/studio/Views";
 import Pages from "./routes/studio/Pages";
 import Subscribe from "./routes/Subscribe";
@@ -50,6 +52,7 @@ const router = createBrowserRouter([
       { path: "trends", element: <Trends /> },
       { path: "trends/:id", element: <TrendDetail /> },
       { path: "subscribe", element: <Subscribe /> },
+      { path: "notifications", element: <Notifications /> },
 
       // Data: the analysis that sits beside the schedule. The library's
       // filters — and which proof point is enlarged — are all in the query
@@ -71,6 +74,7 @@ const router = createBrowserRouter([
           { path: "datasets", element: <Datasets /> },
           { path: "views", element: <Views /> },
           { path: "freshness", element: <Freshness /> },
+          { path: "notifications", element: <NotifyAdmin /> },
           { path: "pages", element: <Pages /> },
         ],
       },

@@ -3,6 +3,15 @@ import { randomUUID } from "node:crypto";
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import type { CellChange, ForecastDetails, ResearchLink, TrendExtras } from "./types.js";
+import {
+  CHANNELS,
+  DEFAULT_ON,
+  NOTICE_KINDS,
+  type Channel,
+  type Inboxed,
+  type NoticeKind,
+  type NotifyPrefs,
+} from "./notify/types.js";
 
 /**
  * Everything the Hub owns rather than reads.
@@ -165,14 +174,6 @@ CREATE TABLE IF NOT EXISTS schedule_writes (
 CREATE INDEX IF NOT EXISTS schedule_writes_content ON schedule_writes (content_id, at DESC);
 
 /*
- * Settings that belong to the Hub rather than to a person.
- *
- * One row per switch, so adding one needs no migration, and the code's own
- * default stands until somebody changes it — the same arrangement the page
- * wording uses. Not for credentials: those go in an environment variable or
- * the studio's own secret column.
- */
-/*
  * What a trend's owner decided about a suggested proof point.
  *
  * The library itself is a read-only extract — a pipeline writes it weekly and
@@ -201,12 +202,81 @@ CREATE TABLE IF NOT EXISTS proof_point_decisions (
 CREATE INDEX IF NOT EXISTS proof_point_decisions_trend
   ON proof_point_decisions (trend_id, decided_at DESC);
 
+/*
+ * Settings that belong to the Hub rather than to a person.
+ *
+ * One row per switch, so adding one needs no migration, and the code's own
+ * default stands until somebody changes it — the same arrangement the page
+ * wording uses. Not for credentials: those go in an environment variable or
+ * the studio's own secret column.
+ */
 CREATE TABLE IF NOT EXISTS hub_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
   updated_by TEXT NOT NULL,
   updated_at TEXT NOT NULL
 );
+
+/*
+ * Which notices each person wants, and where.
+ *
+ * No row means the defaults in notify/types.ts, which are the bell and
+ * nothing that leaves the building. The grid of kinds against channels is
+ * one small JSON column rather than three, because the kinds will change and
+ * the channels might, and a migration per notification type is not a trade
+ * worth making for something nothing queries across.
+ */
+CREATE TABLE IF NOT EXISTS notify_prefs (
+  person_id TEXT PRIMARY KEY,
+  on_json TEXT NOT NULL,
+  /** This person's own Google Chat space, when they gave one. */
+  chat_webhook TEXT,
+  updated_at TEXT NOT NULL
+);
+
+/*
+ * The in-app inbox: one row per notice shown on the bell.
+ *
+ * Held rather than recomputed, so "you were told about this" survives the
+ * thing itself changing — a deadline notice stays readable after the
+ * forecast is submitted, which is exactly when somebody wants to check what
+ * they were told and when.
+ */
+CREATE TABLE IF NOT EXISTS notifications (
+  id TEXT PRIMARY KEY,
+  person_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  /** The notice's stable key, so the same thing is never inboxed twice. */
+  notice_key TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT NOT NULL,
+  link TEXT,
+  urgency INTEGER NOT NULL DEFAULT 0,
+  at TEXT NOT NULL,
+  read_at TEXT
+);
+CREATE UNIQUE INDEX IF NOT EXISTS notifications_key ON notifications (notice_key);
+CREATE INDEX IF NOT EXISTS notifications_by_person ON notifications (person_id, at DESC);
+
+/*
+ * Every send attempt, so nothing is said twice and a silence can be explained.
+ *
+ * This is the record that makes the schedule safe to re-run: a notice's key
+ * plus a channel is unique, so a run that fires twice on a Monday sends one
+ * digest. Failures are kept too — a webhook that 403s every week is a thing
+ * an admin should be able to see rather than guess at.
+ */
+CREATE TABLE IF NOT EXISTS notification_sends (
+  notice_key TEXT NOT NULL,
+  channel TEXT NOT NULL,
+  person_id TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  at TEXT NOT NULL,
+  ok INTEGER NOT NULL,
+  problem TEXT,
+  PRIMARY KEY (notice_key, channel)
+);
+CREATE INDEX IF NOT EXISTS notification_sends_recent ON notification_sends (at DESC);
 `;
 
 const now = () => new Date().toISOString();
@@ -834,6 +904,193 @@ export class HubStore {
     return rows.map(toScheduleWrite);
   }
 
+  // --- Notifications -----------------------------------------------------
+
+  /** What this person asked for, or nothing if they never said. */
+  notifyPrefs(personId: string): NotifyPrefs | undefined {
+    const row = this.db
+      .prepare(`SELECT * FROM notify_prefs WHERE person_id = ?`)
+      .get(personId) as Record<string, unknown> | undefined;
+    if (!row) return undefined;
+    let on = { ...DEFAULT_ON };
+    try {
+      const parsed = JSON.parse(String(row.on_json)) as Record<string, unknown>;
+      on = Object.fromEntries(
+        NOTICE_KINDS.map((kind) => {
+          const asked = parsed[kind];
+          const clean = Array.isArray(asked)
+            ? CHANNELS.filter((c) => asked.includes(c))
+            : DEFAULT_ON[kind];
+          return [kind, clean];
+        }),
+      ) as Record<NoticeKind, Channel[]>;
+    } catch {
+      // A malformed row falls back to the defaults rather than failing.
+    }
+    return {
+      personId,
+      on,
+      chatWebhook: row.chat_webhook ? String(row.chat_webhook) : undefined,
+      updatedAt: String(row.updated_at),
+    };
+  }
+
+  /** Everyone who has said anything, for an admin reading the whole picture. */
+  allNotifyPrefs(): NotifyPrefs[] {
+    const rows = this.db
+      .prepare(`SELECT person_id FROM notify_prefs`)
+      .all() as { person_id: string }[];
+    return rows
+      .map((r) => this.notifyPrefs(String(r.person_id)))
+      .filter((p): p is NotifyPrefs => Boolean(p));
+  }
+
+  setNotifyPrefs(prefs: NotifyPrefs): NotifyPrefs {
+    this.db
+      .prepare(
+        `INSERT INTO notify_prefs (person_id, on_json, chat_webhook, updated_at)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(person_id) DO UPDATE SET
+           on_json = excluded.on_json,
+           chat_webhook = excluded.chat_webhook,
+           updated_at = excluded.updated_at`,
+      )
+      .run(prefs.personId, JSON.stringify(prefs.on), prefs.chatWebhook ?? null, now());
+    return this.notifyPrefs(prefs.personId)!;
+  }
+
+  /**
+   * Put a notice in somebody's inbox.
+   *
+   * Keyed on the notice rather than the moment, so a run that happens twice
+   * leaves one row. The insert is a no-op the second time rather than an
+   * error, because a duplicate is expected — that is the mechanism working.
+   */
+  addNotification(notice: {
+    key: string;
+    personId: string;
+    kind: string;
+    title: string;
+    body: string;
+    link?: string;
+    urgency?: number;
+  }): void {
+    this.db
+      .prepare(
+        `INSERT OR IGNORE INTO notifications
+           (id, person_id, kind, notice_key, title, body, link, urgency, at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        randomUUID(),
+        notice.personId,
+        notice.kind,
+        notice.key,
+        notice.title,
+        notice.body,
+        notice.link ?? null,
+        notice.urgency ?? 0,
+        now(),
+      );
+  }
+
+  /** This person's inbox, newest first. */
+  notifications(personId: string, limit = 40): Inboxed[] {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM notifications WHERE person_id = ? ORDER BY at DESC LIMIT ?`,
+      )
+      .all(personId, limit) as Record<string, unknown>[];
+    return rows.map(toInboxed);
+  }
+
+  unreadCount(personId: string): number {
+    const row = this.db
+      .prepare(`SELECT COUNT(*) AS n FROM notifications WHERE person_id = ? AND read_at IS NULL`)
+      .get(personId) as { n: number };
+    return Number(row?.n ?? 0);
+  }
+
+  /** Mark one as read. Scoped to the person, so nobody can read another's. */
+  markRead(personId: string, id: string): void {
+    this.db
+      .prepare(
+        `UPDATE notifications SET read_at = ? WHERE id = ? AND person_id = ? AND read_at IS NULL`,
+      )
+      .run(now(), id, personId);
+  }
+
+  markAllRead(personId: string): void {
+    this.db
+      .prepare(`UPDATE notifications SET read_at = ? WHERE person_id = ? AND read_at IS NULL`)
+      .run(now(), personId);
+  }
+
+  deleteNotification(personId: string, id: string): void {
+    this.db
+      .prepare(`DELETE FROM notifications WHERE id = ? AND person_id = ?`)
+      .run(id, personId);
+  }
+
+  /** Has this exact notice already gone down this channel? */
+  alreadySent(key: string, channel: string): boolean {
+    const row = this.db
+      .prepare(
+        `SELECT ok FROM notification_sends WHERE notice_key = ? AND channel = ? AND ok = 1`,
+      )
+      .get(key, channel) as { ok: number } | undefined;
+    return Boolean(row);
+  }
+
+  /**
+   * Record an attempt.
+   *
+   * A failure is written too, and replaces an earlier failure for the same
+   * key and channel — so a webhook that comes back to life next week gets
+   * another go, while one that succeeded is never asked again.
+   */
+  logNotification(entry: {
+    key: string;
+    personId: string;
+    kind: string;
+    channel: string;
+    ok: boolean;
+    problem?: string;
+  }): void {
+    this.db
+      .prepare(
+        `INSERT INTO notification_sends (notice_key, channel, person_id, kind, at, ok, problem)
+         VALUES (?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(notice_key, channel) DO UPDATE SET
+           at = excluded.at, ok = excluded.ok, problem = excluded.problem`,
+      )
+      .run(
+        entry.key,
+        entry.channel,
+        entry.personId,
+        entry.kind,
+        now(),
+        entry.ok ? 1 : 0,
+        entry.problem ?? null,
+      );
+  }
+
+  /** The send log, newest first, for an admin. */
+  recentSends(limit = 100): NotificationSend[] {
+    const rows = this.db
+      .prepare(`SELECT * FROM notification_sends ORDER BY at DESC LIMIT ?`)
+      .all(limit) as Record<string, unknown>[];
+    return rows.map((row) => ({
+      key: String(row.notice_key),
+      channel: String(row.channel),
+      personId: String(row.person_id),
+      kind: String(row.kind),
+      at: String(row.at),
+      ok: row.ok === 1 || row.ok === true,
+      problem: row.problem ? String(row.problem) : undefined,
+    }));
+  }
+
   calendarToken(personId: string): string {
     const row = this.db
       .prepare(`SELECT token FROM calendar_tokens WHERE person_id = ?`)
@@ -1005,6 +1262,33 @@ export interface ProofPointDecision {
   byPersonId?: string;
   byOwner: boolean;
   decidedAt: string;
+}
+
+/** One recorded send attempt, for the admin's log. */
+export interface NotificationSend {
+  key: string;
+  channel: string;
+  personId: string;
+  kind: string;
+  at: string;
+  ok: boolean;
+  problem?: string;
+}
+
+function toInboxed(row: Record<string, unknown>): Inboxed {
+  const urgency = Number(row.urgency ?? 0);
+  return {
+    id: String(row.id),
+    key: String(row.notice_key),
+    personId: String(row.person_id),
+    kind: String(row.kind) as NoticeKind,
+    title: String(row.title),
+    body: String(row.body),
+    link: row.link ? String(row.link) : undefined,
+    urgency: (urgency === 2 ? 2 : urgency === 1 ? 1 : 0) as 0 | 1 | 2,
+    at: String(row.at),
+    readAt: row.read_at ? String(row.read_at) : undefined,
+  };
 }
 
 function toDecision(row: Record<string, unknown>): ProofPointDecision {

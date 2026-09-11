@@ -31,7 +31,15 @@ function headers(extra?: HeadersInit): HeadersInit {
   };
 }
 
-async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
+/**
+ * One read, with the server's own message on a failure.
+ *
+ * Exported because not every read belongs to a component's lifetime: the
+ * bell polls on a timer of its own, and going through `useApi` for that
+ * would mean a changing path or a nonce in a dependency array to make it
+ * refetch — mechanism in place of a plain call.
+ */
+export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   const res = await fetch(`/api${path}`, { signal, headers: headers() });
   if (!res.ok) {
     const body = (await res.json().catch(() => null)) as { error?: string } | null;
