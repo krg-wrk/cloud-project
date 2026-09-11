@@ -34,6 +34,7 @@ credentials to set up first.
 | Trends | `/trends`, `/trends/:id` | All 446 TFDB trend profiles: which are yours, the call on each, which industries still need a score |
 | Data | `/data` | The analysis that sits beside the schedule rather than in it |
 | Proof Point Library | `/data/proof-points` | 10,235 data callouts matched against every trend profile, with the reasoning and the owner's decision |
+| Review proof points | `/data/review` | The deciding half of the same thing: one card at a time, arrow keys, rejection reasons |
 | Learning | `/workshops`, `/workshops/ws-201` | The workshop and knowledge-sharing programme, with sign-ups |
 | What's on | `/whats-on` | Leave, public holidays, shows |
 | Studio | `/studio` | Admin: connect a data source, build views of it, choose who sees them, and change the wording of the built-in pages |
@@ -502,6 +503,53 @@ The proof points do not follow the demo's dark theme. The pipeline draws its
 donuts and gauges with colours baked into the SVG, so on a dark ground the
 figures would disappear; a proof point is an artefact made for a white slide
 and is shown as one in both themes, like an image.
+
+### Deciding: the review queue
+
+The library is the read side. Without the other half every suggestion reads
+"in review" for ever, and the 10,235 never go down. `/data/review` is that
+other half, and it is deliberately not a table:
+
+**One card at a time, best match first.** The figure as it will appear, both
+models' reasoning beside it, the tags, the other trends it matched, and links
+to the forecast it came from and to the trend in the Hub. Everything needed to
+decide, and nothing needed to decide about anything else.
+
+**Two keys.** Right approves, left rejects, `U` takes back the last one. A
+reviewer doing forty of these is looking at one place on the screen and
+pressing one of two keys, so the actions sit at the same spot whatever the
+card holds. The keys are ignored while a box has focus — the trend picker's
+own arrows still change the trend — ignored with a modifier, ignored on a
+card that is not yours to decide, and not named at all on a touch screen.
+
+**Left asks why.** Rejecting offers six reasons, the ones the proof of concept
+used, plus *skip the reason*. It is optional because asking twice for
+something optional is how a queue stops being used, but it is worth having:
+"too weak or vague" and "better for another trend" are different problems and
+only one of them is the matching's fault.
+
+**Undo, singular.** The last decision only. Undo is for the card you have this
+second got wrong; a stack of them would need a history the reviewer cannot
+see. It survives being asked why about the *next* card, because being asked a
+question should not cost you the answer to the last one.
+
+Already-cited suggestions never enter the queue. A queue that opens with two
+hundred things a profile already says teaches a reviewer to ignore it.
+
+#### Who may decide, and where it is kept
+
+The same rule as writing anything else against a trend profile: its owner,
+anyone credited on it, an admin, or a manager whose verticals overlap its
+industries — `canWriteTrend`, reused rather than reinvented. The page hides
+the buttons and says whose trend it is; the server refuses in words and writes
+nothing, because a hidden button is not a permission check.
+
+Decisions are held in the Hub's own store, **laid over** the extract rather
+than written into it. The extract carries the state as of the last pipeline
+run and is replaced wholesale every week; where both have an opinion the Hub's
+wins. That is the point — nobody wants to review ten thousand suggestions
+again because a pipeline ran. An undo can only take back a decision the Hub
+holds, which is also why the row says which it is.
 
 ## How fresh is any of this
 

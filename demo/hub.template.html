@@ -4570,6 +4570,192 @@
     height: auto;
   }
 
+  /*
+   * The review queue: one card, the reasoning beside it, two buttons.
+   *
+   * A reviewer doing forty of these is looking at one place on the screen and
+   * pressing one of two keys, so the layout does not move between cards — the
+   * actions sit at the same spot whatever the card holds.
+   */
+  .rv-card {
+    border: 1px solid var(--line);
+    background: var(--paper);
+    overflow: hidden;
+  }
+
+  .rv-head {
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+    background: var(--ground);
+  }
+
+  .rv-position {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+
+  .rv-match {
+    font-size: 26px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .rv-trend {
+    margin-left: auto;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .rv-body {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+    gap: 26px;
+    padding: 22px 20px;
+    align-items: start;
+  }
+
+  /* The proof point on its own white panel, as it is everywhere else — the
+     pipeline bakes colours into its SVG and it is an artefact made for a
+     white slide. */
+  .rv-figure .pp-render {
+    padding: 18px 18px 20px;
+    background: #ffffff;
+    border: 1px solid #e2e2de;
+    border-radius: var(--radius-card);
+  }
+
+  .rv-side {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  /*
+   * The two decisions. Coloured so the one that needs more thought is not the
+   * one the hand lands on: approve is the solid one, and rejecting asks why
+   * before it does anything.
+   */
+  .rv-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-top: 4px;
+  }
+
+  .toggle.approve {
+    border-color: var(--ok);
+    background: var(--ok);
+    color: var(--paper);
+  }
+
+  .toggle.approve:hover {
+    border-color: var(--ok);
+    color: var(--paper);
+    filter: brightness(1.12);
+  }
+
+  .toggle.reject {
+    border-color: var(--late);
+    color: var(--late);
+  }
+
+  .toggle.reject:hover {
+    border-color: var(--late);
+    color: var(--late);
+    background: color-mix(in srgb, var(--late) 8%, transparent);
+  }
+
+  .toggle.approve .icon,
+  .toggle.reject .icon {
+    color: currentColor;
+  }
+
+  .rv-reasons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 13px;
+    border: 1px solid var(--line-firm);
+    background: var(--ground);
+  }
+
+  /* What was just decided, and the way back from it. */
+  .rv-undo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+    border: 1px solid var(--line-firm);
+    border-left: 3px solid var(--accent);
+    background: var(--paper);
+    font-size: 13px;
+  }
+
+  .rv-undo span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .rv-keys {
+    margin: 14px 0 0;
+    text-align: center;
+  }
+
+  /* Naming keys to somebody holding a phone is no help to them. */
+  @media (pointer: coarse) {
+    .rv-keys,
+    .rv-actions kbd,
+    .rv-reasons kbd {
+      display: none;
+    }
+  }
+
+  /* The keys, where a control names one. */
+  kbd {
+    padding: 1px 5px;
+    border: 1px solid var(--line-firm);
+    border-bottom-width: 2px;
+    border-radius: 3px;
+    background: var(--paper);
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-mid);
+  }
+
+  .toggle.approve kbd,
+  .toggle.reject kbd {
+    border-color: currentColor;
+    background: transparent;
+    color: inherit;
+    opacity: 0.8;
+  }
+
+  @media (max-width: 860px) {
+    .rv-body {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .rv-trend {
+      margin-left: 0;
+    }
+  }
+
 </style>
 
 <div class="demo-note">
@@ -5489,6 +5675,10 @@
     watch("trends", (id, body) =>
       trendExtras.set(id, { ...body, links: Array.isArray(body.links) ? body.links : [] }),
     );
+    watch("proofDecisions", (id, body) => {
+      if (body.decision === "approve" || body.decision === "reject") ppDecisions.set(id, body);
+      else ppDecisions.delete(id);
+    });
 
     // The studio's own configuration, shared like everything else — so a view
     // built here is a view everyone on this page has.
@@ -5665,6 +5855,14 @@
         "data/proof-points",
         "",
         "proof",
+        false,
+        "data",
+      ],
+      "nav.item.proof-review": [
+        "#/data/review",
+        "data/review",
+        "",
+        "review",
         false,
         "data",
       ],
@@ -8435,6 +8633,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             slotNav("nav.item.trends", "Trends"),
             slotNav("nav.item.performance", "Performance"),
             slotNav("nav.item.proof-points", "Proof Point Library"),
+            slotNav("nav.item.proof-review", "Review proof points"),
             slotNav("nav.item.learning", "Learning"),
             slotNav("nav.item.team", "Forecasters"),
             slotNav("nav.item.whats-on", "What’s on"),
@@ -8627,6 +8826,21 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             slotField("proof.filter.state", "Show"),
             slotField("proof.filter.industry", "Industry"),
             slotField("proof.filter.forecast", "Forecast"),
+          ],
+        },
+      ],
+    },
+    {
+      id: "review",
+      label: "Reviewing proof points",
+      path: "/data/review",
+      groups: [
+        {
+          id: "review.head",
+          label: "Page heading",
+          slots: [
+            slotTitle("review.eyebrow", "Data"),
+            slotTitle("review.title", "Review proof points"),
           ],
         },
       ],
@@ -10280,6 +10494,114 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
   const PROOF = DATA.proofPoints ?? { points: [], trends: [], total: 0, trendTotal: 0, tiers: {} };
   const PROOF_TRENDS = new Map((PROOF.trends ?? []).map((t) => [t.id, t]));
 
+  /*
+   * Decisions made here, laid over the extract's own.
+   *
+   * The extract is what the pipeline last wrote; these are what somebody
+   * decided since. Shared through the same store as notes and sign-ups, so a
+   * decision one person makes on this page is a decision everyone looking at
+   * it sees — and in the deployed Hub it goes to the database, which is the
+   * whole point: it survives the next extract.
+   */
+  const ppDecisions = new Map();
+
+  /**
+   * What was just decided, so it can be taken back.
+   *
+   * Only the last one, on purpose: undo is for the card you have this second
+   * got wrong, and a stack of them would need a history the reviewer cannot
+   * see.
+   */
+  let ppLast = null;
+
+  /** Why a suggestion was turned down. A shortcut, not a vocabulary. */
+  const REJECTION_REASONS = [
+    "Not evidence for this trend",
+    "Right topic, wrong claim",
+    "Too weak or vague",
+    "Out of date",
+    "Better for another trend",
+    "Duplicate",
+  ];
+
+  /** The decision that stands: the Hub's if there is one, else the extract's. */
+  const ppDecisionOf = (p) => ppDecisions.get(p.id)?.decision ?? p.decision;
+
+  /** The card at the front of the queue, as the page works it out. */
+  function currentReviewCard() {
+    const { params } = route();
+    const owner = params.get("owner") === "all" ? "all" : "mine";
+    const trendId = params.get("trend") ?? "";
+    const quality = QUALITY_TIERS[params.get("quality")] ? params.get("quality") : "top";
+    const tiers = new Set(QUALITY_TIERS[quality]);
+    return PROOF.points
+      .map(proofRow)
+      .filter((r) => {
+        if (!tiers.has(r.tier)) return false;
+        if (trendId && r.trendId !== trendId) return false;
+        if (owner === "mine" && !r.mine) return false;
+        if (r.alreadyKnown) return false;
+        return !ppDecisionOf(r);
+      })
+      .sort(
+        (a, b) => b.match - a.match || a.trendId.localeCompare(b.trendId) || a.id.localeCompare(b.id),
+      )[0];
+  }
+
+  function decideProofPoint(decision, reason) {
+    const card = currentReviewCard();
+    if (!card || !mayDecide(card.trendId)) return;
+    const v = viewer();
+    const entry = {
+      decision,
+      reason: reason || undefined,
+      byEmail: v.person.email,
+      byOwner: proofTrend(card.trendId).ownerName === v.person.name,
+      decidedAt: new Date().toISOString(),
+    };
+    ppDecisions.set(card.id, entry);
+    ppLast = { id: card.id, decision, title: card.trendTitle };
+    // Shared like everything else this page writes, so a decision one person
+    // makes is a decision everyone looking at it sees.
+    store?.collection("proofDecisions").doc(card.id).set(entry).catch(() => {});
+    const { params } = route();
+    const next = new URLSearchParams(params);
+    next.delete("why");
+    const qs = next.toString();
+    location.hash = `#/data/review${qs ? `?${qs}` : ""}`;
+    render();
+  }
+
+  function undoProofPoint() {
+    if (!ppLast) return;
+    const id = ppLast.id;
+    ppDecisions.delete(id);
+    ppLast = null;
+    store?.collection("proofDecisions").doc(id).delete().catch(() => {});
+    render();
+  }
+
+  /**
+   * Whether this viewer may decide about a trend's suggestions.
+   *
+   * The same rule as writing anything else against a trend profile — the
+   * owner, anyone credited on it, an admin, or a manager whose verticals
+   * overlap its industries.
+   */
+  function mayDecide(trendId) {
+    const v = viewer();
+    if (v.isAdmin) return true;
+    const t = TRENDS.find((x) => x.id === trendId && x.editorStatus !== "archived")
+      ?? TRENDS.find((x) => x.id === trendId);
+    if (!t) return false;
+    const own = new Set([v.person.id, nameId(v.person.name)].filter(Boolean));
+    if (own.has(t.ownerId) || (t.authorIds ?? []).some((a) => own.has(a))) return true;
+    if (!v.isManager) return false;
+    const scope = v.verticals;
+    if (scope === "all") return true;
+    return (t.industries ?? []).some((i) => scope.includes(i));
+  }
+
   const QUALITY_TIERS = { top: ["A", "D"], mid: ["A", "B", "D"], all: ["A", "B", "C", "D"] };
 
   /**
@@ -10427,6 +10749,253 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             }</p>
         </a>
       </div>`;
+  }
+
+  /**
+   * Deciding about suggested proof points, one at a time.
+   *
+   * The other half of the proof of concept, and the half that makes the
+   * library mean anything: without it every suggestion reads "In review" for
+   * ever. One card, the reasoning beside it, approve or reject, and the
+   * arrow keys because a reviewer doing forty of these should not be moving
+   * a mouse.
+   */
+  function pageReview(params) {
+    const v = viewer();
+    const owner = params.get("owner") === "all" ? "all" : "mine";
+    const trendId = params.get("trend") ?? "";
+    const quality = QUALITY_TIERS[params.get("quality")] ? params.get("quality") : "top";
+    const asking = params.get("why") === "1";
+    const tiers = new Set(QUALITY_TIERS[quality]);
+
+    const rows = PROOF.points.map(proofRow);
+    const inScope = rows.filter((r) => {
+      if (!tiers.has(r.tier)) return false;
+      if (trendId && r.trendId !== trendId) return false;
+      if (owner === "mine" && !r.mine) return false;
+      // Already cited in the profile: nothing to decide, and a queue that
+      // opens with two hundred of those teaches a reviewer to ignore it.
+      if (r.alreadyKnown) return false;
+      return true;
+    });
+    const waiting = inScope
+      .filter((r) => !ppDecisionOf(r))
+      .sort(
+        (a, b) => b.match - a.match || a.trendId.localeCompare(b.trendId) || a.id.localeCompare(b.id),
+      );
+    const card = waiting[0];
+    const approved = inScope.filter((r) => ppDecisionOf(r) === "approve").length;
+    const rejected = inScope.filter((r) => ppDecisionOf(r) === "reject").length;
+
+    // The trend picker, from what has anything waiting.
+    const perTrend = new Map();
+    for (const r of rows.filter((x) => tiers.has(x.tier) && !x.alreadyKnown && !ppDecisionOf(x))) {
+      if (owner === "mine" && !r.mine) continue;
+      perTrend.set(r.trendId, (perTrend.get(r.trendId) ?? 0) + 1);
+    }
+    const trendOptions = [...perTrend.entries()]
+      .map(([id, n]) => ({ id, title: proofTrend(id).title, total: n }))
+      .sort((a, b) => a.title.localeCompare(b.title));
+
+    const can = card ? mayDecide(card.trendId) : false;
+
+    return `
+      <div class="head">
+        <div>
+          ${slot("review.eyebrow", { tag: "div", cls: "eyebrow" })}
+          ${slot("review.title", { tag: "h1" })}
+          <p class="lede">Suggestions waiting on a decision for the trends you own, best
+            match first. Left is not for this trend, right approves, U undoes.</p>
+        </div>
+        <div class="figures inline">
+          <div class="figure"><b>${waiting.length.toLocaleString()}</b><span>Waiting</span></div>
+          <div class="figure"><b>${approved.toLocaleString()}</b><span>Approved</span></div>
+          <div class="figure"><b>${rejected.toLocaleString()}</b><span>Not used</span></div>
+        </div>
+      </div>
+
+      <div class="pp-controls">
+        <label class="field"><span>Whose trends</span>
+          <select class="pp-owner-select" data-rv-filter="owner">
+            <option value="mine"${owner === "mine" ? " selected" : ""}>Mine</option>
+            <option value="all"${owner === "all" ? " selected" : ""}>Everyone&rsquo;s</option>
+          </select></label>
+        <label class="field"><span>Trend</span>
+          <select class="pp-trend-select" data-rv-filter="trend">
+            <option value="">All trends</option>${trendOptions
+              .map(
+                (t) =>
+                  `<option value="${esc(t.id)}"${t.id === trendId ? " selected" : ""}>${esc(
+                    t.title,
+                  )} (${t.total})</option>`,
+              )
+              .join("")}</select></label>
+        <div class="field"><span>Match quality</span>
+          <div class="toggles">${QUALITIES.map(
+            ([id, label, hint]) =>
+              `<button class="toggle${id === quality ? " on" : ""}" data-rv-quality="${id}"
+                 title="${esc(hint)}">${esc(label)}</button>`,
+          ).join("")}</div>
+        </div>
+        <div class="pp-controls-end">
+          <a class="toggle" href="#/data/proof-points?quality=${quality}">${icon(
+            "proof",
+            14,
+          )}The library</a>
+        </div>
+      </div>
+
+      ${
+        ppLast
+          ? `<div class="rv-undo">
+              <span>${icon(
+                ppLast.decision === "approve" ? "submitted" : "at-risk",
+                14,
+              )}${ppLast.decision === "approve" ? "Approved" : "Not used"} for ${esc(
+                ppLast.title,
+              )}.</span>
+              <button class="toggle small" data-rv-undo>Undo <kbd>U</kbd></button>
+            </div>`
+          : ""
+      }
+
+      ${
+        !card
+          ? `<div class="none">${icon("submitted", 20)}<p>${
+              owner === "mine"
+                ? "Nothing waiting on you. Either every suggestion for your trends has been decided, or none of the library&rsquo;s trends are yours — switch to everyone&rsquo;s above to see."
+                : "Nothing left in this queue. Widen the match quality, or pick another trend."
+            }</p></div>`
+          : `<div class="rv-card">
+              <div class="rv-head">
+                <span class="rv-position">${waiting.length.toLocaleString()} waiting</span>
+                <span class="rv-match">${card.match}%</span>
+                <span class="eyebrow">match</span>
+                ${
+                  card.claudeScore != null && card.geminiScore != null
+                    ? `<span class="muted small">${card.claudeScore} · ${card.geminiScore}${
+                        card.agreed ? " — both models agreed" : " — one model only"
+                      }</span>`
+                    : ""
+                }
+                <a class="rv-trend" href="#/data/proof-points?trend=${esc(
+                  card.trendId,
+                )}">${esc(card.trendTitle)}</a>
+              </div>
+              <div class="rv-body">
+                <div class="rv-figure"><div class="pp-render">${card.html}</div></div>
+                <div class="rv-side">
+                  ${
+                    card.whyClaude || card.whyGemini
+                      ? `<div class="pp-dialog-block">
+                          <div class="eyebrow">Why it was suggested</div>
+                          ${
+                            card.whyClaude
+                              ? `<p class="pp-why"><b class="pp-why-who">First model</b>${esc(
+                                  card.whyClaude,
+                                )}</p>`
+                              : ""
+                          }
+                          ${
+                            card.whyGemini && card.whyGemini !== card.whyClaude
+                              ? `<p class="pp-why second"><b class="pp-why-who">Second model</b>${esc(
+                                  card.whyGemini,
+                                )}</p>`
+                              : ""
+                          }
+                        </div>`
+                      : ""
+                  }
+                  <div class="pp-dialog-block">
+                    <div class="eyebrow">Tags</div>${proofTags(card)}
+                  </div>
+                  ${
+                    (card.alsoMatches ?? []).length
+                      ? `<div class="pp-dialog-block">
+                          <div class="eyebrow">Also matches</div>
+                          <ul class="pp-list">${card.alsoMatches
+                            .map((a) => ({ ...a, title: proofTrend(a.trendId).title }))
+                            .sort((a, b) => b.match - a.match)
+                            .slice(0, 4)
+                            .map(
+                              (a) =>
+                                `<li>${esc(a.title)} <span class="muted small">${a.match}%</span></li>`,
+                            )
+                            .join("")}</ul>
+                        </div>`
+                      : ""
+                  }
+                  <div class="pp-dialog-block">
+                    <div class="eyebrow">Links</div>
+                    <ul class="pp-list">
+                      ${
+                        card.forecastUrl
+                          ? `<li><a href="${esc(
+                              card.forecastUrl,
+                            )}" target="_blank" rel="noopener noreferrer">${esc(
+                              card.forecastTitle ?? "The forecast it came from",
+                            )}</a></li>`
+                          : ""
+                      }
+                      ${
+                        card.sourceUrl
+                          ? `<li><a href="${esc(
+                              card.sourceUrl,
+                            )}" target="_blank" rel="noopener noreferrer">Original source</a></li>`
+                          : ""
+                      }
+                      ${
+                        card.profileId
+                          ? `<li><a href="#/trends/${esc(card.profileId)}">${esc(
+                              card.trendTitle,
+                            )} in the Hub</a></li>`
+                          : ""
+                      }
+                    </ul>
+                  </div>
+                  ${
+                    !can
+                      ? `<p class="none" style="text-align:left">${icon("lock", 14)} ${esc(
+                          card.trendTitle,
+                        )} belongs to ${esc(
+                          card.ownerName || "somebody else",
+                        )}. Its owner, anyone credited on it, a manager for its industries or an
+                          admin can decide.</p>`
+                      : asking
+                        ? `<div class="rv-reasons">
+                            <div class="eyebrow">Why not? (optional)</div>
+                            <div class="toggles">${REJECTION_REASONS.map(
+                              (reason) =>
+                                `<button class="toggle small" data-rv-reject="${esc(
+                                  reason,
+                                )}">${esc(reason)}</button>`,
+                            ).join("")}</div>
+                            <div class="rv-actions">
+                              <button class="toggle" data-rv-reject="">Skip the reason</button>
+                              <button class="toggle" data-rv-cancel>Cancel <kbd>Esc</kbd></button>
+                            </div>
+                          </div>`
+                        : `<div class="rv-actions">
+                            <button class="toggle reject" data-rv-why>${icon(
+                              "at-risk",
+                              14,
+                            )}Not for this trend <kbd>&larr;</kbd></button>
+                            <button class="toggle approve" data-rv-approve>${icon(
+                              "submitted",
+                              14,
+                            )}Approve <kbd>&rarr;</kbd></button>
+                          </div>`
+                  }
+                </div>
+              </div>
+            </div>
+            ${
+              can
+                ? `<p class="rv-keys muted small"><kbd>&larr;</kbd> not for this trend ·
+                    <kbd>&rarr;</kbd> approve · <kbd>U</kbd> undo</p>`
+                : ""
+            }`
+      }`;
   }
 
   function pageProofPoints(params) {
@@ -11029,7 +11598,12 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         html = parts[1] ? pageTrend(parts[1]) : pageTrends(params);
         break;
       case "data":
-        html = parts[1] === "proof-points" ? pageProofPoints(params) : pageData();
+        html =
+          parts[1] === "proof-points"
+            ? pageProofPoints(params)
+            : parts[1] === "review"
+              ? pageReview(params)
+              : pageData();
         break;
       case "whats-on":
         html = pageWhatsOn(params);
@@ -11107,6 +11681,44 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     view.querySelectorAll("[data-pp-filter]").forEach((el) =>
       el.addEventListener("change", () => ppSet(el.dataset.ppFilter, el.value)),
     );
+    // Reviewing ------------------------------------------------------------
+    const rvSet = (name, value) => {
+      const { params } = route();
+      const next = new URLSearchParams(params);
+      if (value) next.set(name, value);
+      else next.delete(name);
+      // A change of filter is a change of queue, so nothing carries over —
+      // but opening the reason panel is still the same card, and the undo of
+      // the one before it should survive being asked why.
+      if (name !== "why") {
+        next.delete("why");
+        ppLast = null;
+      }
+      const qs = next.toString();
+      location.hash = `#/data/review${qs ? `?${qs}` : ""}`;
+    };
+    view.querySelectorAll("[data-rv-filter]").forEach((el) =>
+      el.addEventListener("change", () => rvSet(el.dataset.rvFilter, el.value)),
+    );
+    view.querySelectorAll("[data-rv-quality]").forEach((el) =>
+      el.addEventListener("click", () => rvSet("quality", el.dataset.rvQuality)),
+    );
+    view.querySelectorAll("[data-rv-why]").forEach((el) =>
+      el.addEventListener("click", () => rvSet("why", "1")),
+    );
+    view.querySelectorAll("[data-rv-cancel]").forEach((el) =>
+      el.addEventListener("click", () => rvSet("why", "")),
+    );
+    view.querySelectorAll("[data-rv-approve]").forEach((el) =>
+      el.addEventListener("click", () => decideProofPoint("approve")),
+    );
+    view.querySelectorAll("[data-rv-reject]").forEach((el) =>
+      el.addEventListener("click", () => decideProofPoint("reject", el.dataset.rvReject)),
+    );
+    view.querySelectorAll("[data-rv-undo]").forEach((el) =>
+      el.addEventListener("click", () => undoProofPoint()),
+    );
+
     view.querySelectorAll("[data-pp-more]").forEach((el) =>
       el.addEventListener("click", () => {
         moreOpen = !moreOpen;
@@ -11878,6 +12490,65 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       location.hash = `#/data/proof-points${query ? `?${query}` : ""}`;
       return;
     }
+
+    /*
+     * The review queue's keys: left rejects, right approves, U undoes.
+     *
+     * Ignored while a box has focus, so the trend picker's own arrow keys
+     * still change the trend rather than deciding about a proof point, and
+     * ignored with a modifier so the browser's shortcuts still work. Ignored
+     * too when the card in front of you is not yours to decide, since the
+     * page offers no buttons then and the keys should not offer more.
+     */
+    const { parts, params } = route();
+    const on = e.target;
+    const typing = on?.tagName && /^(INPUT|TEXTAREA|SELECT)$/.test(on.tagName);
+    const ours = ["ArrowRight", "ArrowLeft", "Escape", "u", "U"].includes(e.key);
+    if (
+      parts[0] === "data" &&
+      parts[1] === "review" &&
+      ours &&
+      !typing &&
+      !e.metaKey &&
+      !e.ctrlKey &&
+      !e.altKey &&
+      (ppLast || (() => {
+        const card = currentReviewCard();
+        return !!card && mayDecide(card.trendId);
+      })())
+    ) {
+      const asking = params.get("why") === "1";
+      const rvSet = (value) => {
+        const next = new URLSearchParams(params);
+        if (value) next.set("why", value);
+        else next.delete("why");
+        const qs = next.toString();
+        location.hash = `#/data/review${qs ? `?${qs}` : ""}`;
+      };
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        decideProofPoint("approve");
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        // Left asks for a reason rather than rejecting outright: the reason is
+        // the useful half of a rejection, and one keypress is too cheap.
+        if (asking) decideProofPoint("reject");
+        else rvSet("1");
+        return;
+      }
+      if (e.key.toLowerCase() === "u") {
+        e.preventDefault();
+        undoProofPoint();
+        return;
+      }
+      if (e.key === "Escape" && asking) {
+        rvSet("");
+        return;
+      }
+    }
+
     const input = e.target.closest("[data-slot-input]");
     if (!input) return;
     if (e.key === "Enter") {

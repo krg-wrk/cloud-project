@@ -141,6 +141,14 @@ function sections({
       group: "data",
     },
     {
+      to: "/data/review",
+      label: "Review proof points",
+      short: "Review",
+      icon: "review",
+      slot: "nav.item.proof-review",
+      group: "data",
+    },
+    {
       to: "/workshops",
       label: "Learning",
       icon: "learning",

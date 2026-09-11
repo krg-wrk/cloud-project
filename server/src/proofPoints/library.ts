@@ -6,6 +6,7 @@ import { sanitiseProofPointHtml } from "./sanitise.js";
 import {
   QUALITY_TIERS,
   type AlsoMatch,
+  type HeldDecisions,
   type HubTrend,
   type HubTrends,
   type LibraryPage,
@@ -135,14 +136,31 @@ export class ProofPointLibrary {
   }
 
   /** A point with its trend's details, and the also-matches given their titles. */
-  private row(point: ProofPoint, viewer: Viewer, name?: string, hub?: HubTrends): ProofPointRow {
+  private row(
+    point: ProofPoint,
+    viewer: Viewer,
+    name?: string,
+    hub?: HubTrends,
+    held?: HeldDecisions,
+  ): ProofPointRow {
     const trend = this.facts(point.trendId, viewer, name, hub);
     const also: AlsoMatch[] | undefined = point.alsoMatches?.map((a) => {
       const other = this.facts(a.trendId, viewer, name, hub);
       return { ...a, title: other.title, url: other.publishedUrl };
     });
+    // A decision made in the Hub replaces whatever the extract was carrying.
+    const mine = held?.get(point.id);
     return {
       ...point,
+      ...(mine
+        ? {
+            decision: mine.decision,
+            decidedAt: mine.decidedAt,
+            decidedByOwner: mine.byOwner,
+            reason: mine.reason,
+            decidedHere: true,
+          }
+        : {}),
       alsoMatches: also,
       trendTitle: trend.title,
       industries: trend.industries,
@@ -153,9 +171,83 @@ export class ProofPointLibrary {
   }
 
   /** One suggestion, for the enlarged view. */
-  find(id: string, viewer: Viewer, name?: string, hub?: HubTrends): ProofPointRow | undefined {
+  find(
+    id: string,
+    viewer: Viewer,
+    name?: string,
+    hub?: HubTrends,
+    held?: HeldDecisions,
+  ): ProofPointRow | undefined {
     const point = this.points.find((p) => p.id === id);
-    return point ? this.row(point, viewer, name, hub) : undefined;
+    return point ? this.row(point, viewer, name, hub, held) : undefined;
+  }
+
+  /** The extract's own record of a suggestion, for the decide route. */
+  point(id: string): ProofPoint | undefined {
+    return this.points.find((p) => p.id === id);
+  }
+
+  /**
+   * The next few suggestions waiting on a decision.
+   *
+   * Deliberately a short window rather than the whole queue. A reviewer is
+   * looking at one card and about to look at the next, so the client wants
+   * the one it is showing plus enough to make the arrow keys feel instant —
+   * not two hundred cards of rendered markup it will mostly never draw.
+   *
+   * Ordered best match first, which is the order worth spending attention
+   * in: a reviewer who does ten of these has done the ten that mattered.
+   */
+  queue(
+    q: { trend?: string; owner?: string; quality?: Quality; take?: number },
+    viewer: Viewer,
+    name?: string,
+    hub?: HubTrends,
+    held?: HeldDecisions,
+  ): { total: number; rows: ProofPointRow[]; decided: { approved: number; rejected: number } } {
+    const tiers = new Set(QUALITY_TIERS[(q.quality ?? "top") as Quality] ?? QUALITY_TIERS.top);
+    const take = Math.min(Math.max(q.take ?? 6, 1), 24);
+
+    const known = new Map<string, HubTrend>();
+    const about = (trendId: string) => {
+      let hit = known.get(trendId);
+      if (!hit) {
+        hit = this.facts(trendId, viewer, name, hub);
+        known.set(trendId, hit);
+      }
+      return hit;
+    };
+    const decisionOf = (p: ProofPoint) => held?.get(p.id)?.decision ?? p.decision;
+
+    const inScope = this.points.filter((p) => {
+      if (!tiers.has(p.tier)) return false;
+      if (q.trend && p.trendId !== q.trend) return false;
+      if (q.owner === "mine" && !about(p.trendId).mine) return false;
+      /*
+       * Already cited in the profile, so there is nothing to decide: the
+       * answer is yes and has been for a while. Reviewing them would be the
+       * first couple of hundred cards of the queue, and would teach a
+       * reviewer that the queue wastes their time.
+       */
+      if (p.alreadyKnown) return false;
+      return true;
+    });
+
+    const waiting = inScope
+      .filter((p) => !decisionOf(p))
+      .sort(
+        (a, b) =>
+          b.match - a.match || a.trendId.localeCompare(b.trendId) || a.id.localeCompare(b.id),
+      );
+
+    return {
+      total: waiting.length,
+      rows: waiting.slice(0, take).map((p) => this.row(p, viewer, name, hub, held)),
+      decided: {
+        approved: inScope.filter((p) => decisionOf(p) === "approve").length,
+        rejected: inScope.filter((p) => decisionOf(p) === "reject").length,
+      },
+    };
   }
 
   /** The trend a suggestion belongs to, for the detail panel. */
@@ -171,7 +263,13 @@ export class ProofPointLibrary {
    * that helps and one that dead-ends: the industry chips stay clickable
    * when a forecast year is already chosen.
    */
-  query(q: LibraryQuery, viewer: Viewer, name?: string, hub?: HubTrends): LibraryPage {
+  query(
+    q: LibraryQuery,
+    viewer: Viewer,
+    name?: string,
+    hub?: HubTrends,
+    held?: HeldDecisions,
+  ): LibraryPage {
     const pageSize = Math.min(Math.max(q.pageSize ?? 24, 1), 96);
     const page = Math.max(q.page ?? 1, 1);
     const tiers = new Set(QUALITY_TIERS[(q.quality ?? "top") as Quality] ?? QUALITY_TIERS.top);
@@ -189,6 +287,13 @@ export class ProofPointLibrary {
       return hit;
     };
     const isMine = (p: ProofPoint) => about(p.trendId).mine;
+    /*
+     * Where the Hub holds a decision it is the decision. Everything that
+     * reads one goes through here — the approved filter, the counts, the
+     * review queue — so a decision made in the Hub takes effect everywhere
+     * at once rather than only where somebody remembered to look for it.
+     */
+    const decisionOf = (p: ProofPoint) => held?.get(p.id)?.decision ?? p.decision;
 
     /*
      * Whether "my trends" can match anything at all.
@@ -208,7 +313,7 @@ export class ProofPointLibrary {
       if (skip !== "quality" && !tiers.has(p.tier)) return false;
       if (skip !== "trend" && q.trend && p.trendId !== q.trend) return false;
       if (owner === "mine" && !isMine(p)) return false;
-      if (q.approved && p.decision !== "approve") return false;
+      if (q.approved && decisionOf(p) !== "approve") return false;
       if (q.wgsnData && !p.wgsnData) return false;
       if (q.fresh && p.alreadyKnown) return false;
       if (skip !== "forecast" && q.forecast && p.forecastTag !== q.forecast) return false;
@@ -228,7 +333,9 @@ export class ProofPointLibrary {
     );
 
     const start = (page - 1) * pageSize;
-    const rows = matched.slice(start, start + pageSize).map((p) => this.row(p, viewer, name, hub));
+    const rows = matched
+      .slice(start, start + pageSize)
+      .map((p) => this.row(p, viewer, name, hub, held));
 
     /*
      * The chip filters.
@@ -269,7 +376,7 @@ export class ProofPointLibrary {
       owner,
       counts: {
         all: this.points.length,
-        approved: matched.filter((p) => p.decision === "approve").length,
+        approved: matched.filter((p) => decisionOf(p) === "approve").length,
         wgsnData: matched.filter((p) => p.wgsnData).length,
         mine: matched.filter(isMine).length,
         mineAll,

@@ -113,6 +113,7 @@ export const SLOT_PAGES: SlotPage[] = [
           nav("nav.item.trends", "Trends"),
           nav("nav.item.performance", "Performance"),
           nav("nav.item.proof-points", "Proof Point Library"),
+          nav("nav.item.proof-review", "Review proof points"),
           nav("nav.item.workshops", "Learning"),
           nav("nav.item.team", "Forecasters"),
           nav("nav.item.whats-on", "What’s on"),
@@ -388,6 +389,29 @@ export const SLOT_PAGES: SlotPage[] = [
           field("proof.filter.state", "Show"),
           field("proof.filter.industry", "Industry"),
           field("proof.filter.forecast", "Forecast"),
+        ],
+      },
+    ],
+  },
+
+  {
+    id: "review",
+    label: "Reviewing proof points",
+    path: "/data/review",
+    groups: [
+      {
+        id: "review.head",
+        label: "Page heading",
+        slots: [
+          t("review.eyebrow", "Data"),
+          t("review.title", "Review proof points"),
+          {
+            id: "review.sub",
+            label:
+              "Suggestions waiting on a decision for the trends you own, best match first. Left is not for this trend, right approves, U undoes.",
+            kind: "sub",
+            hint: "The line under the title",
+          },
         ],
       },
     ],

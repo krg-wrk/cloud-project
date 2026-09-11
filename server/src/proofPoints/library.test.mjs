@@ -380,3 +380,122 @@ test("the real library: ten thousand proof points, paged", () => {
   assert.ok(lib.query({ page: last }, AMARA).rows.length > 0);
   assert.equal(lib.query({ page: last + 1 }, AMARA).rows.length, 0);
 });
+
+/* ---- The review queue ---------------------------------------------------- */
+
+/** A decision the Hub holds, as the store hands them over. */
+const heldMap = (entries) =>
+  new Map(
+    Object.entries(entries).map(([id, d]) => [
+      id,
+      typeof d === "string"
+        ? { decision: d, byEmail: "someone@wgsn.com", byOwner: true, decidedAt: "2026-09-10T00:00:00Z" }
+        : d,
+    ]),
+  );
+
+test("a decision made in the Hub outranks the one the extract carried", () => {
+  const lib = fixture({
+    ...SEED,
+    points: [
+      point("a", { decision: "approve", decidedAt: "2026-01-01T00:00:00Z" }),
+      point("b"),
+    ],
+  });
+
+  // With nothing held, the extract's own answer stands.
+  assert.equal(lib.find("a", AMARA).decision, "approve");
+  assert.equal(lib.find("a", AMARA).decidedHere, undefined);
+
+  // The Hub's answer replaces it, and says it was made here.
+  const held = heldMap({ a: "reject", b: { decision: "approve", reason: "", byEmail: "x@wgsn.com", byOwner: false, decidedAt: "2026-09-10T00:00:00Z" } });
+  const now = lib.find("a", AMARA, undefined, undefined, held);
+  assert.equal(now.decision, "reject");
+  assert.equal(now.decidedHere, true, "so an undo knows there is something to take back");
+  assert.equal(now.decidedAt, "2026-09-10T00:00:00Z");
+  assert.equal(lib.find("b", AMARA, undefined, undefined, held).decision, "approve");
+});
+
+test("the approved filter and the counts read the Hub's decisions", () => {
+  const lib = fixture(SEED);
+  // The fixture's "a" is approved in the extract.
+  assert.equal(lib.query({ quality: "all", approved: true }, AMARA).total, 1);
+
+  // Taking that back in the Hub takes it out of the filter, and approving
+  // another puts it in — without touching the extract.
+  const held = heldMap({ a: "reject", e: "approve" });
+  const page = lib.query({ quality: "all", approved: true }, AMARA, undefined, undefined, held);
+  assert.deepEqual(ids(page), ["e"]);
+  assert.equal(page.counts.approved, 1);
+});
+
+test("the queue is what is waiting, best match first", () => {
+  const lib = fixture(SEED);
+  const q = lib.queue({ quality: "all", owner: "all" }, AMARA);
+  // Everything in the fixture is undecided except "a", which the extract
+  // approved — and "f", which the profile already cites.
+  assert.deepEqual(
+    q.rows.map((r) => r.id),
+    ["d", "e", "b", "c"],
+  );
+  assert.equal(q.total, 4);
+  assert.equal(q.decided.approved, 1);
+  assert.equal(q.decided.rejected, 0);
+  // Descending by match all the way down.
+  for (let i = 1; i < q.rows.length; i++) {
+    assert.ok(q.rows[i - 1].match >= q.rows[i].match);
+  }
+});
+
+test("what the profile already cites is not in the queue", () => {
+  /*
+   * "f" is alreadyKnown. There is nothing to decide about it — the answer is
+   * yes and has been for a while — and a queue that opens with two hundred of
+   * those teaches a reviewer that the queue wastes their time.
+   */
+  const lib = fixture(SEED);
+  const q = lib.queue({ quality: "all", owner: "all" }, AMARA);
+  assert.ok(!q.rows.some((r) => r.id === "f"));
+  assert.ok(!q.rows.some((r) => r.alreadyKnown));
+});
+
+test("deciding one takes it out of the queue", () => {
+  const lib = fixture(SEED);
+  const before = lib.queue({ quality: "all", owner: "all" }, AMARA);
+  const held = heldMap({ d: "approve", e: "reject" });
+  const after = lib.queue({ quality: "all", owner: "all" }, AMARA, undefined, undefined, held);
+
+  assert.equal(before.total, 4);
+  assert.equal(after.total, 2, "two fewer waiting");
+  assert.deepEqual(after.rows.map((r) => r.id), ["b", "c"]);
+  assert.equal(after.decided.approved, 2, "the extract's one plus the new one");
+  assert.equal(after.decided.rejected, 1);
+});
+
+test("the queue narrows to your own trends and to a quality band", () => {
+  const lib = fixture(SEED);
+  // Amara owns trend 1 in the fixture; trend 2 is somebody else's.
+  assert.deepEqual(
+    lib.queue({ quality: "all", owner: "mine" }, AMARA).rows.map((r) => r.trendId),
+    ["1", "1", "1"],
+  );
+  assert.deepEqual(
+    lib.queue({ quality: "all", owner: "all", trend: "2" }, AMARA).rows.map((r) => r.id),
+    ["e"],
+  );
+  // Top is tiers A and D; "a" is decided, so only "d" and "e" are left.
+  assert.deepEqual(
+    lib.queue({ owner: "all" }, AMARA).rows.map((r) => r.id),
+    ["d", "e"],
+  );
+});
+
+test("the window is a window, not the whole queue", () => {
+  const lib = fixture(SEED);
+  const q = lib.queue({ quality: "all", owner: "all", take: 2 }, AMARA);
+  assert.equal(q.rows.length, 2, "only what the client asked for");
+  assert.equal(q.total, 4, "but it still says how many are waiting");
+  // A silly take is clamped rather than honoured.
+  assert.equal(lib.queue({ quality: "all", owner: "all", take: 500 }, AMARA).rows.length, 4);
+  assert.equal(lib.queue({ quality: "all", owner: "all", take: 0 }, AMARA).rows.length, 1);
+});

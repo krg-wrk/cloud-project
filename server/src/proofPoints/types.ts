@@ -81,6 +81,13 @@ export interface ProofPoint {
   decidedAt?: string;
   /** Whether the person who decided owns the trend. */
   decidedByOwner?: boolean;
+  /** Why it was turned down, where a reason was given. */
+  reason?: string;
+  /**
+   * Whether the decision was made in the Hub rather than carried by the
+   * extract. An undo can only take back one the Hub holds.
+   */
+  decidedHere?: boolean;
 }
 
 /** A trend, as the matching pipeline sees it. */
@@ -133,6 +140,43 @@ export interface HubTrend {
 }
 
 export type HubTrends = Map<string, HubTrend>;
+
+/**
+ * A decision the Hub holds, laid over the extract's own.
+ *
+ * The extract carries the state as of the last time the pipeline ran; this is
+ * what somebody decided in the Hub since. Where both exist the Hub's wins,
+ * and a decision made here survives the next extract — which is the point,
+ * because nobody wants to review ten thousand suggestions again because a
+ * pipeline ran.
+ */
+export interface HeldDecision {
+  decision: ProofPointDecision;
+  reason?: string;
+  byEmail: string;
+  byOwner: boolean;
+  decidedAt: string;
+}
+
+export type HeldDecisions = Map<string, HeldDecision>;
+
+/**
+ * Why a suggestion was turned down.
+ *
+ * The list the reviewer in the proof of concept offered, which is the list
+ * the team has already used. Optional — asking twice for something optional
+ * is how a queue stops being used — but worth having, because "too weak or
+ * vague" and "better for another trend" are different problems and only one
+ * of them is the matching's fault.
+ */
+export const REJECTION_REASONS = [
+  "Not evidence for this trend",
+  "Right topic, wrong claim",
+  "Too weak or vague",
+  "Out of date",
+  "Better for another trend",
+  "Duplicate",
+];
 
 /**
  * Match quality, as the three-way control on the page offers it.

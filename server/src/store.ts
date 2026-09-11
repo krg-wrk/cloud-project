@@ -172,6 +172,35 @@ CREATE INDEX IF NOT EXISTS schedule_writes_content ON schedule_writes (content_i
  * wording uses. Not for credentials: those go in an environment variable or
  * the studio's own secret column.
  */
+/*
+ * What a trend's owner decided about a suggested proof point.
+ *
+ * The library itself is a read-only extract — a pipeline writes it weekly and
+ * nothing here edits it — so decisions live in the Hub instead and are laid
+ * over the extract when it is read. That also means a decision survives the
+ * next extract, which is the whole point: nobody wants to review the same
+ * ten thousand suggestions again because the pipeline ran.
+ *
+ * One row per suggestion, replaced when somebody changes their mind, deleted
+ * by an undo. The reason is optional because the reviewer can skip it, and
+ * asking twice for something optional is how a queue stops being used.
+ */
+CREATE TABLE IF NOT EXISTS proof_point_decisions (
+  suggestion_id TEXT PRIMARY KEY,
+  trend_id TEXT NOT NULL,
+  callout_id TEXT NOT NULL,
+  decision TEXT NOT NULL,
+  reason TEXT,
+  by_email TEXT NOT NULL,
+  by_person_id TEXT,
+  /** Whether the person deciding owns the trend, as the pipeline records it. */
+  by_owner INTEGER NOT NULL DEFAULT 0,
+  decided_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS proof_point_decisions_trend
+  ON proof_point_decisions (trend_id, decided_at DESC);
+
 CREATE TABLE IF NOT EXISTS hub_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
@@ -617,6 +646,94 @@ export class HubStore {
    * person's calendar, which is how subscribable feeds work — so it is
    * rotatable, and rotating invalidates the old one immediately.
    */
+  /* ---- Proof point decisions --------------------------------------------- */
+
+  /**
+   * Every decision the Hub holds, keyed by suggestion.
+   *
+   * Read whole rather than per suggestion: the library lays them over ten
+   * thousand rows on every request, and twenty-five thousand single-row
+   * queries to do it would be the slowest thing in the Hub.
+   */
+  proofPointDecisions(): Map<string, ProofPointDecision> {
+    const rows = this.db
+      .prepare(`SELECT * FROM proof_point_decisions`)
+      .all() as Record<string, unknown>[];
+    return new Map(rows.map((row) => [String(row.suggestion_id), toDecision(row)]));
+  }
+
+  /** One decision, replacing whatever was there. */
+  decideProofPoint(input: {
+    suggestionId: string;
+    trendId: string;
+    calloutId: string;
+    decision: "approve" | "reject";
+    reason?: string;
+    byEmail: string;
+    byPersonId?: string | null;
+    byOwner: boolean;
+  }): ProofPointDecision {
+    const entry: ProofPointDecision = {
+      suggestionId: input.suggestionId,
+      trendId: input.trendId,
+      calloutId: input.calloutId,
+      decision: input.decision,
+      reason: input.reason || undefined,
+      byEmail: input.byEmail,
+      byPersonId: input.byPersonId ?? undefined,
+      byOwner: input.byOwner,
+      decidedAt: now(),
+    };
+    this.db
+      .prepare(
+        `INSERT INTO proof_point_decisions
+           (suggestion_id, trend_id, callout_id, decision, reason,
+            by_email, by_person_id, by_owner, decided_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT(suggestion_id) DO UPDATE SET
+           decision = excluded.decision, reason = excluded.reason,
+           by_email = excluded.by_email, by_person_id = excluded.by_person_id,
+           by_owner = excluded.by_owner, decided_at = excluded.decided_at`,
+      )
+      .run(
+        entry.suggestionId,
+        entry.trendId,
+        entry.calloutId,
+        entry.decision,
+        entry.reason ?? null,
+        entry.byEmail,
+        entry.byPersonId ?? null,
+        entry.byOwner ? 1 : 0,
+        entry.decidedAt,
+      );
+    return entry;
+  }
+
+  /**
+   * Take a decision back.
+   *
+   * Returns whether there was one to take back, so an undo on a suggestion
+   * the extract itself decided can say so rather than appearing to work.
+   */
+  undecideProofPoint(suggestionId: string): boolean {
+    const before = this.db
+      .prepare(`SELECT 1 FROM proof_point_decisions WHERE suggestion_id = ?`)
+      .get(suggestionId);
+    if (!before) return false;
+    this.db.prepare(`DELETE FROM proof_point_decisions WHERE suggestion_id = ?`).run(suggestionId);
+    return true;
+  }
+
+  /** What this person has decided lately, newest first. */
+  recentProofPointDecisions(byEmail: string, limit = 20): ProofPointDecision[] {
+    const rows = this.db
+      .prepare(
+        `SELECT * FROM proof_point_decisions WHERE by_email = ? ORDER BY decided_at DESC LIMIT ?`,
+      )
+      .all(byEmail, limit) as Record<string, unknown>[];
+    return rows.map(toDecision);
+  }
+
   /* ---- Settings that belong to the Hub ---------------------------------- */
 
   /**
@@ -868,5 +985,38 @@ function toScheduleWrite(row: Record<string, unknown>): ScheduleWrite {
     at: String(row.at),
     ok: row.ok === 1 || row.ok === true,
     problem: row.problem ? String(row.problem) : undefined,
+  };
+}
+
+/**
+ * A decision the Hub holds about a suggested proof point.
+ *
+ * Separate from the extract's own `decision` field, which is the state as of
+ * the last time the pipeline ran. Where both exist the Hub's wins, because it
+ * is the one somebody made here.
+ */
+export interface ProofPointDecision {
+  suggestionId: string;
+  trendId: string;
+  calloutId: string;
+  decision: "approve" | "reject";
+  reason?: string;
+  byEmail: string;
+  byPersonId?: string;
+  byOwner: boolean;
+  decidedAt: string;
+}
+
+function toDecision(row: Record<string, unknown>): ProofPointDecision {
+  return {
+    suggestionId: String(row.suggestion_id),
+    trendId: String(row.trend_id),
+    calloutId: String(row.callout_id),
+    decision: row.decision === "reject" ? "reject" : "approve",
+    reason: row.reason ? String(row.reason) : undefined,
+    byEmail: String(row.by_email),
+    byPersonId: row.by_person_id ? String(row.by_person_id) : undefined,
+    byOwner: row.by_owner === 1 || row.by_owner === true,
+    decidedAt: String(row.decided_at),
   };
 }

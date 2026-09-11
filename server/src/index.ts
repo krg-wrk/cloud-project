@@ -68,7 +68,7 @@ app.use(
   })),
   createApiRouter(data, store, signUps, drafter, proofPoints),
   createStudioRouter(studio, data),
-  createProofPointRouter(proofPoints, data),
+  createProofPointRouter(proofPoints, data, store),
 );
 
 // In production the built client is served from the same origin, and every

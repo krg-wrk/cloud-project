@@ -7,6 +7,7 @@ import ContentDetail from "./routes/ContentDetail";
 import CustomView from "./routes/CustomView";
 import Data from "./routes/data/Data";
 import ProofPoints from "./routes/data/ProofPoints";
+import Review from "./routes/data/Review";
 import Deadlines from "./routes/Deadlines";
 import Kpis from "./routes/Kpis";
 import SessionDetail from "./routes/SessionDetail";
@@ -55,6 +56,7 @@ const router = createBrowserRouter([
       // string, so any state of it is a link.
       { path: "data", element: <Data /> },
       { path: "data/proof-points", element: <ProofPoints /> },
+      { path: "data/review", element: <Review /> },
 
       // Views built in the studio. One route, one renderer, any layout — a
       // custom view is as linkable as a hand-written page.

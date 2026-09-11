@@ -4803,3 +4803,191 @@ a.view-row:hover {
 .score.quiet em {
   color: var(--ink-45);
 }
+
+/* --- Reviewing proof points ---------------------------------------------- */
+
+/*
+ * One card, the reasoning beside it, and two buttons.
+ *
+ * A reviewer doing forty of these is looking at one place on the screen and
+ * pressing one of two keys, so the layout does not move between cards: the
+ * figure column is a fixed height and the actions sit at the same spot
+ * whatever the card holds.
+ */
+.rv-card {
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  overflow: hidden;
+}
+
+.rv-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--ground);
+}
+
+.rv-position {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--ink-45);
+}
+
+.rv-match {
+  font-size: 26px;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.rv-trend {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.rv-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 26px;
+  padding: 22px 20px;
+  align-items: start;
+}
+
+/* The proof point on its own white panel, as it is everywhere else — the
+   pipeline bakes colours into its SVG and it is an artefact made for a
+   white slide. */
+.rv-figure .pp-render {
+  padding: 18px 18px 20px;
+  background: #ffffff;
+  border: 1px solid #e2e2de;
+  border-radius: var(--radius-card);
+}
+
+.rv-side {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/*
+ * The two decisions. Sized and coloured so the one that needs more thought
+ * is not the one the hand lands on: approve is the solid one, and rejecting
+ * asks why before it does anything.
+ */
+.rv-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+}
+
+.btn.approve {
+  border-color: var(--status-published);
+  background: var(--status-published);
+  color: var(--paper);
+}
+
+.btn.approve:hover {
+  filter: brightness(1.08);
+}
+
+.btn.reject {
+  border-color: var(--status-at-risk);
+  color: var(--status-at-risk);
+}
+
+.btn.reject:hover {
+  background: color-mix(in srgb, var(--status-at-risk) 8%, transparent);
+}
+
+.btn.approve .icon,
+.btn.reject .icon {
+  color: currentColor;
+}
+
+.rv-reasons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 13px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--ground);
+}
+
+/* What was just decided, and the way back from it. */
+.rv-undo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border: 1px solid var(--rule-strong);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font-size: 13px;
+}
+
+.rv-undo span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.rv-keys {
+  margin: 14px 0 0;
+  text-align: center;
+}
+
+/* Naming keys to somebody holding a phone is no help to them. */
+@media (pointer: coarse) {
+  .rv-keys,
+  .rv-actions kbd,
+  .rv-reasons kbd {
+    display: none;
+  }
+}
+
+/* The keys, where a control names one. */
+kbd {
+  padding: 1px 5px;
+  border: 1px solid var(--rule-strong);
+  border-bottom-width: 2px;
+  border-radius: 3px;
+  background: var(--paper);
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-70);
+}
+
+.btn.approve kbd,
+.btn.reject kbd {
+  border-color: currentColor;
+  background: transparent;
+  color: inherit;
+  opacity: 0.8;
+}
+
+@media (max-width: 860px) {
+  .rv-body {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+
+  .rv-trend {
+    margin-left: 0;
+  }
+}

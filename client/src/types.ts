@@ -522,6 +522,10 @@ export interface ProofPointRow {
   mine: boolean;
   /** The Hub's own profile id, so a proof point links to the profile. */
   profileId?: string;
+  /** Why it was turned down, where a reason was given. */
+  reason?: string;
+  /** Whether the decision was made in the Hub, so an undo can take it back. */
+  decidedHere?: boolean;
 }
 
 export type Quality = "top" | "mid" | "all";
@@ -650,4 +654,21 @@ export interface FreshnessReport {
   extracts: FreshnessExtract[];
   /** Where a write would go, or null in a Hub that only reads. */
   writes: string | null;
+}
+
+/* ---- The review queue ---------------------------------------------------- */
+
+/** A suggestion waiting on a decision, with whether you may make it. */
+export interface ReviewRow extends ProofPointRow {
+  canDecide: boolean;
+}
+
+export interface ReviewQueue {
+  total: number;
+  rows: ReviewRow[];
+  decided: { approved: number; rejected: number };
+  /** The offered rejection reasons — a shortcut, not a vocabulary. */
+  reasons: string[];
+  /** How many this person has decided in the Hub. */
+  yours: number;
 }
