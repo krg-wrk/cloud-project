@@ -22,6 +22,7 @@ import Freshness from "./routes/studio/Freshness";
 import NotifyAdmin from "./routes/studio/NotifyAdmin";
 import Views from "./routes/studio/Views";
 import Pages from "./routes/studio/Pages";
+import Look from "./routes/studio/Look";
 import Resources from "./routes/studio/Resources";
 import Subscribe from "./routes/Subscribe";
 import { TeamList, TeamMember } from "./routes/Team";
@@ -88,6 +89,7 @@ const router = createBrowserRouter([
           { path: "notifications", element: <NotifyAdmin /> },
           { path: "pages", element: <Pages /> },
           { path: "resources", element: <Resources /> },
+          { path: "look", element: <Look /> },
         ],
       },
 

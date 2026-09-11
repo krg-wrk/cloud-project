@@ -87,6 +87,13 @@ export default function Studio() {
             <em>Rename, hide, reorder</em>
           </span>
         </NavLink>
+        <NavLink to="/studio/look" className="studio-tab">
+          <Icon name="image" size={15} />
+          <span>
+            <b>The look</b>
+            <em>Colours and icons</em>
+          </span>
+        </NavLink>
         <NavLink to="/studio/resources" className="studio-tab">
           <Icon name="link" size={15} />
           <span>

@@ -451,15 +451,43 @@ whether any of it is findable a year later.
 
 ### The brief builder works
 
-Picking a forecast writes the brief around it: title, type, vertical, season,
-publication date, the research links already attached, and a deadline worked
-back a week from the submission date rather than left as "asap". What it asks
-for is only what the Hub cannot know — who the freelancer is, what they are
-being asked to make, and anything particular about how.
+Picking a forecast writes the brief around it: title, format, vertical, season,
+publication date, and a deadline worked back a week from the submission date
+rather than left as "asap". What it asks for is only what the Hub cannot know.
+
+The shape of the rest is the freelance framework, and one line of it changes
+the whole design: **since 4 September 2026 freelancers reach Report Editor and
+Workspace II and nothing else**. A brief can no longer carry links to reports,
+because the person receiving it cannot open them. So the page is built around
+attachments instead:
+
+- **Up to five report pages, as PDFs**, from separate pieces where possible —
+  a mix gives a freelancer the trend's history rather than one snapshot. The
+  page counts them, says when you are over five, and says when two come from
+  the same piece.
+- **A Miro board**, which is where the interactive briefing happens.
+- **Screenshots, research and data**, dropped in to be listed in the brief.
+  They stay on your machine: there is nowhere to upload them to yet, and a page
+  that pretended otherwise would lose somebody's research. The Hub lists them
+  so the brief says what is coming, and you attach them to the email.
+- **The research links already on the forecast** are shown beside the page —
+  not to paste in, but as the list of what is worth PDF-ing.
+
+Then the standing housekeeping, which is the same every time and so is worth
+having written down: the agreed date (you submit on the freelancer's behalf),
+the PO number, areas of focus (job function, end consumer, categories),
+sustainability, DEI — the eight elements, with the two-element minimum checked
+rather than hoped for — and data requirements, including the unique data point
+per Proof Points page.
+
+The house rules at the foot say the two things that follow from the access
+change: no internal links or cross-references, because red-threading is
+in-house work now, and everything sourced.
 
 The output is plain text, deliberately. It goes to somebody outside the company
 who will never have a Hub account, so a page they cannot open would be the
-wrong deliverable. Copy it, paste it into an email. Nothing is sent from here.
+wrong deliverable. Copy it, attach the files, send it. Nothing is sent from
+here.
 
 ## Resources, and the two databases under Data
 
@@ -1271,6 +1299,65 @@ Two ways in, because they suit different moments:
   list, and the only place things are hidden, reordered, or reset — per page or
   altogether.
 
+### What can be moved, and what cannot
+
+The **Sidebar items** group is reorderable: drag Today below Deadlines and it
+stays there for everybody. The order is stored per slot, so it survives new
+items being added in code.
+
+What reordering cannot do is move an item between groups — Forecast Builder
+lives in the Forecast Lab because the code says so, and a drag would not change
+that. Group *headings* are renameable ("Forecast Lab" can become anything you
+like), and an item can be hidden from the sidebar entirely, but which group an
+item belongs to is a code change. That is the one place this stops being
+configuration, and it is deliberate: which section a page lives in is a
+statement about the work rather than a preference.
+
+## The look: colours and icons
+
+Every colour in the Hub comes from a CSS custom property, so changing one is an
+override and a `setProperty` rather than an edit to the stylesheet. **The look**
+tab in the studio is that: the colours that carry meaning, and the icon on any
+sidebar item.
+
+What is in it:
+
+- **The accent** — the house colour, which carries links, the active nav item
+  and every primary button.
+- **The statuses** — not started, in progress, submitted, in review, published,
+  at risk.
+- **The diary** — leave, public holidays, workshops, training, shows.
+- **Learning sessions** — workshop, masterclass, lunch and learn, critique,
+  training.
+- **The marks** — "yours", and "waiting on a review".
+- **Sidebar icons** — any item, any glyph from the Hub's own set, so a changed
+  icon is still drawn in the same weight as the rest.
+
+What is deliberately not in it: the paper, the ink, the hairline rules. Those
+are the house style, and changing them is a redesign rather than a setting.
+
+Three things make it safe to hand over:
+
+**It previews on the real thing.** The editor paints the whole app as you
+choose, because a colour can only be judged on what it colours — a swatch in a
+form tells you nothing about whether "in review" now reads as "late". Leave
+without saving and it puts back what was stored.
+
+**It says the contrast.** Every swatch carries its ratio against white and says
+so plainly when a colour drops under 3:1, which is the floor for a small mark
+to be visible at all. The accessibility work is worth nothing if the first
+person with an admin login can undo it by choosing a pale yellow.
+
+**Only hex is stored**, checked on the server. This value becomes a CSS
+property on everybody's page; `red` and `color-mix(…)` would both work, but a
+picker and a contrast check both want six digits, and refusing everything else
+keeps one representation end to end. An unknown token or an unparseable colour
+is dropped — the rest of the save stands, and the response says how many went.
+
+Setting a colour back to the one the code ships with stores nothing at all, so
+"put it back" leaves no row behind, and the dark theme's own values come back
+with it.
+
 ### How it holds together
 
 `client/src/lib/slots.ts` declares every slot with its default wording. The
@@ -1453,10 +1540,10 @@ where it matters.
 - `npm run build` — builds both
 - `npm start` — runs the built server; with `NODE_ENV=production` it also
   serves the built client, with a catch-all so deep links survive a refresh
-- `npm test -w server` — 116 tests: the Smartsheet reader against a stubbed
+- `npm test -w server` — 124 tests: the Smartsheet reader against a stubbed
   API, the proof point library and its sanitiser, what the notifier says and
-  when, how search ranks, what a resource link is allowed to be, and the
-  `?` → `$1` translation both databases rely on
+  when, how search ranks, what a resource link and a colour are allowed to be,
+  and the `?` → `$1` translation both databases rely on
 - `node demo/build.mjs` — rebuilds the shareable single-file demo
 - `python3 tools/extract-proof-points.py <workbook.xlsx>` — regenerates the
   proof point seed from the Proof Points Reviewer workbook

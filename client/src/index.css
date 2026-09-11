@@ -6120,3 +6120,276 @@ a.inbox-title:hover {
     padding-top: 0;
   }
 }
+
+/* --- The brief builder's own bits ---------------------------------------- */
+
+/*
+ * The access rule, at the top of the page. Marked like a warning rather than
+ * a note: it is the difference between a brief that works and one that sends
+ * a freelancer links they cannot open.
+ */
+.access-note {
+  border-left: 3px solid var(--status-at-risk);
+}
+
+.access-note strong {
+  font-weight: 500;
+}
+
+.brief-out {
+  position: sticky;
+  top: 20px;
+}
+
+.pages-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 0 8px;
+}
+
+.count-over {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--status-at-risk);
+}
+
+/* Which report, which page, and why — one row, and narrow enough to stack. */
+.page-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) 70px minmax(0, 1.6fr) auto;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.page-row input {
+  min-width: 0;
+  padding: 7px 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.research-hint {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--ground);
+}
+
+.research-hint ul {
+  margin: 6px 0 6px;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.field-label.spaced {
+  display: block;
+  margin-top: 18px;
+  margin-bottom: 4px;
+}
+
+.attachments {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.attachments li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  font-size: 13px;
+}
+
+.attachments .icon {
+  color: var(--ink-45);
+}
+
+.attachments em {
+  margin-left: auto;
+  font-style: normal;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--ink-45);
+}
+
+.attachments button {
+  border: 0;
+  background: none;
+  color: var(--ink-45);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.attachments button:hover {
+  color: var(--status-at-risk);
+}
+
+/* The DEI elements: a set to choose from, so they read as a group of toggles
+   rather than as a list of tags. */
+.dei-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.pick {
+  padding: 6px 11px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink-70);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.pick:hover {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.pick.on {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 13.5px;
+}
+
+.check input {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--accent);
+}
+
+.drop-zone.over {
+  border-color: var(--accent);
+  background: var(--paper);
+}
+
+.drop-zone .btn {
+  margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+  .page-row {
+    grid-template-columns: minmax(0, 1fr) 70px auto;
+  }
+
+  .page-row input:nth-child(3) {
+    grid-column: 1 / -1;
+  }
+
+  .brief-out {
+    position: static;
+  }
+}
+
+/* --- The look, in the studio --------------------------------------------- */
+
+.swatch-rows,
+.icon-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.swatch-row,
+.icon-row {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 120px 150px auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.icon-row {
+  grid-template-columns: 36px minmax(0, 1fr) 220px;
+}
+
+/* The native picker, squared off to match everything else. */
+.swatch input[type="color"] {
+  width: 34px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+}
+
+.swatch-name b {
+  display: block;
+  font-weight: 500;
+}
+
+.swatch-hex {
+  padding: 6px 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.swatch-faint {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--status-at-risk);
+}
+
+.icon-preview {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 30px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--ground);
+  color: var(--ink-70);
+}
+
+.icon-row select {
+  padding: 6px 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+@media (max-width: 900px) {
+  .swatch-row,
+  .icon-row {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+  }
+
+  .swatch-row .swatch-hex,
+  .swatch-row span:nth-of-type(1) {
+    grid-column: 2 / -1;
+  }
+}

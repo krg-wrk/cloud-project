@@ -1066,6 +1066,179 @@
     overflow-x: auto;
   }
 
+  /* The brief builder's own bits. The access rule is marked like a warning
+     rather than a note: it is the difference between a brief that works and
+     one that sends a freelancer links they cannot open. */
+
+  .access-note {
+    border-left-color: var(--late);
+  }
+
+  .pages-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 18px 0 8px;
+  }
+
+  .count-over {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--late);
+  }
+
+  .page-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1.4fr) 70px minmax(0, 1.6fr) auto;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .page-row input {
+    min-width: 0;
+    padding: 7px 9px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+  }
+
+  .research-hint {
+    margin-top: 14px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    background: var(--ground);
+  }
+
+  .research-hint ul {
+    margin: 6px 0;
+    padding-left: 18px;
+    font-size: 13px;
+  }
+
+  .lab-field-label.spaced {
+    display: block;
+    margin-top: 18px;
+    margin-bottom: 4px;
+  }
+
+  .dei-picker {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .pick {
+    padding: 6px 11px;
+    border: 1px solid var(--line-firm);
+    border-radius: 999px;
+    background: var(--paper);
+    color: var(--ink-mid);
+    font: inherit;
+    font-size: 12.5px;
+    cursor: pointer;
+  }
+
+  .pick:hover {
+    border-color: var(--ink);
+    color: var(--ink);
+  }
+
+  .pick.on {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+
+  .check {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 13.5px;
+  }
+
+  .check input {
+    width: 15px;
+    height: 15px;
+    accent-color: var(--accent);
+  }
+
+  /* --- The look, in the studio --------------------------------------------- */
+
+  .swatch-rows,
+  .icon-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .swatch-row {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 120px 150px auto;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .icon-row {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 220px;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .swatch input[type="color"] {
+    width: 34px;
+    height: 30px;
+    padding: 0;
+    border: 1px solid var(--line-firm);
+    background: none;
+    cursor: pointer;
+  }
+
+  .swatch-name b {
+    display: block;
+    font-weight: 500;
+  }
+
+  .swatch-hex {
+    padding: 6px 9px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+
+  .swatch-faint {
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--late);
+  }
+
+  .icon-preview {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 30px;
+    border: 1px solid var(--line);
+    background: var(--ground);
+    color: var(--ink-mid);
+  }
+
+  .icon-row select {
+    padding: 6px 9px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    font-size: 13px;
+  }
+
   /* ---- Filters ----------------------------------------------------------- */
 
   .filters {
@@ -6830,24 +7003,19 @@
     return n ? String(n) : "";
   }
 
-  function renderNav() {
-    const { parts } = route();
-    // A custom view lives at /v/<slug> and a Data sub-view at /data/<name>,
-    // so "here" has to carry both segments or every one of them would
-    // highlight at once.
-    const here =
-      parts[0] === "v" || parts[0] === "data" || parts[0] === "lab"
-        ? `${parts[0]}/${parts[1] ?? ""}`
-        : (parts[0] ?? "");
+  /**
+   * The fixed sections, each named by the slot an admin can rename.
+   *
+   * [href, key, badge, iconName, primary, group, external?] — one list, so
+   * the rail and the phone bar cannot drift apart, and so the studio's icon
+   * picker can show what an item actually ships with.
+   */
+  function navFixed() {
     const me = person(viewerId);
     const scope = me.role === "forecaster" ? content.filter((c) => c.forecasterId === me.id) : content;
     const open = scope.filter(isOpen).length;
     const late = scope.filter(isLate).length;
-    // One list of sections, so the rail and the phone bar cannot drift apart.
-    // [label, href, key, badge, iconName, primary]
-    // The fixed sections, each named by the slot an admin can rename. Order
-    // and visibility come from the same registry group.
-    const fixed = {
+    return {
       "nav.item.today": ["#/", "", late ? `${late} late` : "", "today", true, "work"],
       "nav.item.deadlines": ["#/deadlines", "deadlines", String(open), "deadlines", true, "work"],
       "nav.item.calendar": [
@@ -6966,6 +7134,21 @@
         "team",
       ],
     };
+  }
+
+  /** What a sidebar item ships with, for the studio's icon picker. */
+  const navIconOf = (id) => navFixed()[id]?.[3];
+
+  function renderNav() {
+    const { parts } = route();
+    // A custom view lives at /v/<slug> and a Data sub-view at /data/<name>,
+    // so "here" has to carry both segments or every one of them would
+    // highlight at once.
+    const here =
+      parts[0] === "v" || parts[0] === "data" || parts[0] === "lab"
+        ? `${parts[0]}/${parts[1] ?? ""}`
+        : (parts[0] ?? "");
+    const fixed = navFixed();
     const ordered = slotGroup("nav.item").filter((x) => fixed[x.id]);
     const inGroup = (which) =>
       ordered
@@ -6975,7 +7158,16 @@
           // A label is typed by an admin and is interpolated into the rail
           // and the phone bar as HTML, so it is escaped here. The group
           // headings go through slot(), which escapes its own text.
-          return [esc(slotText(x.id)), href, key, badge, iconName, primary, away];
+          // The icon is an admin's too, where they chose one in the studio.
+          return [
+            esc(slotText(x.id)),
+            href,
+            key,
+            badge,
+            lookIcons[x.id] ?? iconName,
+            primary,
+            away,
+          ];
         });
 
     /*
@@ -9732,8 +9924,8 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             slotNav("nav.item.lab-feed", "The Feed"),
             slotNav("nav.item.lab-brief", "Freelance Brief Builder"),
             slotNav("nav.item.proof-points", "Proof Point Library"),
-            slotNav("nav.item.proof-review", "Review proof points"),
-            slotNav("nav.item.stepic", "STEPIC Driver Database"),
+            slotNav("nav.item.proof-review", "Review Proof Points"),
+            slotNav("nav.item.stepic", "STEPIC Drivers"),
             slotNav("nav.item.score", "WGSN Score"),
             slotNav("nav.item.learning", "Learning"),
             slotNav("nav.item.team", "Forecasters"),
@@ -9937,6 +10129,11 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             slotTitle("brief.title", "Freelance Brief Builder"),
             slotSection("brief.about", "The forecast"),
             slotSection("brief.work", "The work"),
+            slotSection("brief.context", "What they have to work from"),
+            slotSection("brief.why", "The opportunity"),
+            slotSection("brief.focus", "Areas of focus"),
+            slotSection("brief.dei", "DEI"),
+            slotSection("brief.data", "Data"),
             slotSection("brief.preview", "The brief"),
           ],
         },
@@ -10003,7 +10200,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           label: "Page heading",
           slots: [
             slotTitle("review.eyebrow", "Data"),
-            slotTitle("review.title", "Review proof points"),
+            slotTitle("review.title", "Review Proof Points"),
           ],
         },
       ],
@@ -10619,6 +10816,124 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
   /* ---- studio pages ------------------------------------------------------ */
 
+  /*
+   * The look: what colour means what, and which glyph a sidebar item carries.
+   *
+   * Not the whole palette — the paper, the ink and the hairline rules are the
+   * house style, and changing those is a redesign rather than a setting. What
+   * is here is the colours that carry meaning, because those are the ones a
+   * team argues about, usually while looking at them.
+   *
+   * In the running Hub this is stored and everybody gets it; here it lasts as
+   * long as the page does. Either way the mechanism is the same: every colour
+   * in the app comes from a CSS variable, so a change is one setProperty
+   * rather than a stylesheet of its own.
+   */
+  const LOOK_TOKENS = [
+    ["accent", "--accent", "Accent", "The house colour", "#4c5578"],
+    ["late", "--late", "Late, and at risk", "Status", "#b8341f"],
+    ["warn", "--warn", "In review, and nearly full", "Status", "#875d13"],
+    ["ok", "--ok", "Published, and going", "Status", "#256b48"],
+    ["info", "--info", "In progress, and training", "Status", "#2f5f9e"],
+    ["violet", "--violet", "Submitted, and leave", "Status", "#6b4fc0"],
+    ["teal", "--teal", "Public holidays, and lunch and learns", "The diary", "#17706c"],
+    ["rose", "--rose", "Shows, and masterclasses", "The diary", "#a33a60"],
+    ["mine", "--mine", "Yours, and nobody else’s", "Marks", "#8e3b74"],
+    ["review", "--review", "Waiting on a review", "Marks", "#a94c16"],
+  ];
+
+  const lookColours = {};
+  const lookIcons = {};
+
+  /** WCAG relative luminance, for the contrast figure beside each swatch. */
+  function lookContrast(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const parts = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map((v) => {
+      const c = v / 255;
+      return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+    });
+    const l = 0.2126 * parts[0] + 0.7152 * parts[1] + 0.0722 * parts[2];
+    return 1.05 / (l + 0.05);
+  }
+
+  function applyLook() {
+    for (const [id, css] of LOOK_TOKENS) {
+      if (lookColours[id]) document.documentElement.style.setProperty(css, lookColours[id]);
+      else document.documentElement.style.removeProperty(css);
+    }
+  }
+
+  function studioLook() {
+    const groups = [...new Set(LOOK_TOKENS.map((t) => t[3]))];
+    const navItems = slotGroup("nav.item");
+    return `
+      <div class="studio-bar">
+        <p class="signup-note" style="margin:0">The colours that carry meaning, and the icon
+          on any sidebar item. The paper, the ink and the rules are the house style and are
+          not here — changing those is a redesign rather than a setting. In the running Hub
+          this is saved for the whole team; on this page it lasts until you reload.</p>
+      </div>
+      ${groups
+        .map(
+          (group) => `
+        <div class="studio-item">
+          <div class="studio-item-head"><h2>${esc(group)}</h2></div>
+          <div class="swatch-rows">
+            ${LOOK_TOKENS.filter((t) => t[3] === group)
+              .map(([id, css, label, , fallback]) => {
+                const value = lookColours[id] ?? fallback;
+                const ratio = lookContrast(value);
+                return `<div class="swatch-row">
+                  <label class="swatch"><input type="color" value="${value}"
+                    data-look="${id}" aria-label="Colour for ${esc(label)}" /></label>
+                  <div class="swatch-name"><b>${esc(label)}</b>
+                    <span class="signup-note">${css}</span></div>
+                  <input class="swatch-hex" value="${value}" data-look="${id}"
+                    aria-label="Hex code for ${esc(label)}" />
+                  <span class="${ratio < 3 ? "swatch-faint" : "signup-note"}">${ratio.toFixed(
+                    2,
+                  )}:1${ratio < 3 ? " — too faint on white" : ""}</span>
+                  <button class="toggle" data-look-reset="${id}">Reset</button>
+                </div>`;
+              })
+              .join("")}
+          </div>
+        </div>`,
+        )
+        .join("")}
+      <div class="studio-item">
+        <div class="studio-item-head"><div><h2>Sidebar icons</h2>
+          <p class="signup-note">One glyph per item, from the Hub's own set.</p></div></div>
+        <div class="icon-rows">
+          ${navItems
+            .map((slot) => {
+              const chosen = lookIcons[slot.id] ?? "";
+              const shipped = navIconOf(slot.id) ?? "list";
+              return `<div class="icon-row">
+                <span class="icon-preview">${icon(chosen || shipped, 18)}</span>
+                <div class="swatch-name"><b>${esc(slotText(slot.id))}</b>
+                  <span class="signup-note">${slot.id}</span></div>
+                <select data-look-icon="${slot.id}" aria-label="Icon for ${esc(
+                  slotText(slot.id),
+                )}">
+                  <option value="">Whatever it ships with</option>
+                  ${Object.keys(ICONS)
+                    .sort()
+                    .map(
+                      (name) =>
+                        `<option value="${name}"${
+                          name === chosen ? " selected" : ""
+                        }>${name}</option>`,
+                    )
+                    .join("")}
+                </select>
+              </div>`;
+            })
+            .join("")}
+        </div>
+      </div>`;
+  }
+
   /**
    * The Resources drawer, edited where it is used.
    *
@@ -10681,6 +10996,10 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         "edit",
         15,
       )}<span><b>The built-in pages</b><em>Rename, hide, reorder</em></span></a>
+      <a class="studio-tab${here === "look" ? " on" : ""}" href="#/studio/look">${icon(
+        "image",
+        15,
+      )}<span><b>The look</b><em>Colours and icons</em></span></a>
       <a class="studio-tab${here === "resources" ? " on" : ""}" href="#/studio/resources">${icon(
         "link",
         15,
@@ -10700,8 +11019,10 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         ? studioDatasets()
         : tab === "pages"
           ? studioPages()
-          : tab === "resources"
-            ? studioResources()
+          : tab === "look"
+            ? studioLook()
+            : tab === "resources"
+              ? studioResources()
             : tab === "views"
             ? params.get("build")
               ? studioBuilder(params.get("build"))
@@ -12128,6 +12449,16 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       </ul>`;
   }
 
+  /*
+   * Briefing a freelancer, under the rules that came in on 4 September 2026.
+   *
+   * Freelancers reach Report Editor and Workspace II and nothing else, so a
+   * brief cannot carry links to reports: up to five pages go as PDFs, from
+   * separate pieces where possible, and red-threading is in-house work now.
+   * The page is built around that rather than mentioning it in a footnote,
+   * because a rule nobody sees is a rule somebody breaks with a pasted URL.
+   */
+
   const BRIEF_KINDS = [
     "Image research",
     "Trend research",
@@ -12135,25 +12466,61 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     "Data gathering",
     "Photography",
     "Illustration",
+    "A full report build",
   ];
 
   /** Days before the forecast is due that the freelance work should land. */
   const BRIEF_LEAD = 7;
 
-  const brief = { who: "", kind: BRIEF_KINDS[0], needs: "", extra: "" };
+  /** The framework's cap: five report pages per brief. */
+  const BRIEF_MAX_PAGES = 5;
+
+  const DEI_ELEMENTS = [
+    "Age",
+    "Body shape and size",
+    "Belief and faith sensitivity",
+    "Cultural sensitivity",
+    "Accessibility, including neurodiversity",
+    "Ethnicity, including race",
+    "Gender expression",
+    "Socio-economic situation",
+  ];
+
+  const DEI_MINIMUM = 2;
+
+  const brief = {
+    who: "",
+    kind: BRIEF_KINDS[0],
+    needs: "",
+    title: "",
+    due: "",
+    po: "",
+    miro: "",
+    why: "",
+    audience: "",
+    consumer: "",
+    categories: "",
+    sustainability: "",
+    sources: "",
+    avoid: "",
+    unique: true,
+  };
+
+  let briefPages = [];
+  let briefDei = [];
 
   function briefText(item, me) {
-    const due = addDays(item.submissionDate, -BRIEF_LEAD);
-    const links = detailsFor(item.id)?.researchLinks ?? [];
+    const due = brief.due || addDays(item.submissionDate, -BRIEF_LEAD);
+    const title = brief.title.trim() || item.title;
     const lines = [
-      `Brief: ${brief.kind} for \u201c${item.title}\u201d`,
+      `Brief: ${brief.kind} for “${title}”`,
       "",
       `For: ${brief.who.trim() || "[freelancer]"}`,
       `From: ${me.name} (${me.email})`,
       "",
-      "THE FORECAST",
-      `Title: ${item.title}`,
-      `Type: ${detailsFor(item.id)?.contentType ?? item.type}`,
+      "THE REPORT",
+      `Working title: ${title}`,
+      `Format: ${detailsFor(item.id)?.contentType ?? item.type}`,
       `Vertical: ${item.vertical}`,
       `Season: ${item.season}`,
       `Publishes: ${long(item.publicationDate)}`,
@@ -12162,19 +12529,55 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       `${brief.kind}${brief.needs.trim() ? `: ${brief.needs.trim()}` : ""}`,
       `Back to me by: ${long(due)} — the forecast itself is due ${long(
         item.submissionDate,
-      )}, so this needs to land a week before.`,
+      )}. I submit on your behalf, so that is the date that matters.`,
+      brief.po.trim()
+        ? `PO number: ${brief.po.trim()}`
+        : "PO number: [to be confirmed before you start]",
+      "Invoice on completion, once we have agreed the work is finished.",
       "",
+      "WHAT YOU HAVE TO WORK FROM",
     ];
-    if (links.length) {
-      lines.push("CONTEXT ALREADY GATHERED");
-      for (const l of links) lines.push(`- ${l.label}: ${l.url}`);
-      lines.push("");
+    if (brief.miro.trim()) lines.push(`Miro board: ${brief.miro.trim()}`);
+    if (briefPages.length) {
+      lines.push(`Report pages attached as PDFs (${briefPages.length} of ${BRIEF_MAX_PAGES}):`);
+      for (const p of briefPages) {
+        lines.push(
+          `- ${p.from.trim() || "[which report]"}${p.pages.trim() ? `, p${p.pages.trim()}` : ""}${
+            p.why.trim() ? ` — ${p.why.trim()}` : ""
+          }`,
+        );
+      }
     }
-    if (brief.extra.trim()) lines.push("ANYTHING ELSE", brief.extra.trim(), "");
     lines.push(
+      "You will not be able to open links to WGSN reports — freelance access is",
+      "Report Editor and Workspace II only — so everything you need is attached",
+      "rather than linked. Ask me for anything else and I will PDF it.",
+      "",
+      "THE OPPORTUNITY — WHY THIS REPORT",
+      brief.why.trim() || "[what we want this to say, and where you should push further]",
+      "",
+      "AREAS OF FOCUS",
+    );
+    if (brief.audience.trim()) lines.push(`Who it is for: ${brief.audience.trim()}`);
+    lines.push(`Season: ${item.season}`);
+    if (brief.consumer.trim()) lines.push(`End consumer: ${brief.consumer.trim()}`);
+    if (brief.categories.trim()) lines.push(`Categories: ${brief.categories.trim()}`);
+    lines.push("");
+    if (brief.sustainability.trim()) {
+      lines.push("SUSTAINABILITY", brief.sustainability.trim(), "");
+    }
+    lines.push("DEI", `At least ${DEI_MINIMUM} of these elements should be visible in the work:`);
+    for (const d of briefDei.length ? briefDei : DEI_ELEMENTS) lines.push(`- ${d}`);
+    lines.push("Ask me if you want guidance on any of them.", "", "DATA");
+    if (brief.sources.trim()) lines.push(`Suggested sources: ${brief.sources.trim()}`);
+    if (brief.avoid.trim()) lines.push(`Do not use: ${brief.avoid.trim()}`);
+    if (brief.unique) lines.push("Every Proof Points page needs its own unique data point.");
+    lines.push(
+      "Everything sourced: a figure without a source cannot be used.",
+      "",
       "HOUSE RULES",
-      "- Everything sourced: a figure without a source cannot be used.",
       "- Images need rights cleared for WGSN publication, with the credit as it should appear.",
+      "- Do not add internal links or cross-references; we red-thread in-house now.",
       "- Flag anything you think contradicts the brief rather than quietly resolving it.",
     );
     return lines.join("\n");
@@ -12183,22 +12586,44 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
   function pageBrief(params) {
     const me = person(viewerId);
     const chosen = params.get("for") ?? "";
-    const mine = content.filter((c) => c.status !== "published");
+    const open = content.filter((c) => c.status !== "published");
     const ordered = [
-      ...mine.filter((c) => c.forecasterId === me.id),
-      ...mine.filter((c) => c.forecasterId !== me.id),
+      ...open.filter((c) => c.forecasterId === me.id),
+      ...open.filter((c) => c.forecasterId !== me.id),
     ];
     const item = ordered.find((c) => c.id === chosen);
     const links = item ? (detailsFor(item.id)?.researchLinks ?? []) : [];
+    const due = item ? brief.due || addDays(item.submissionDate, -BRIEF_LEAD) : "";
+    const clash =
+      new Set(briefPages.map((p) => p.from.trim().toLowerCase()).filter(Boolean)).size <
+      briefPages.length;
+
+    const field = (label, id, value, placeholder, rows) =>
+      `<label class="lab-field"><span class="lab-field-label">${label}</span>${
+        rows
+          ? `<textarea id="${id}" data-brief="${id.replace("brief-", "")}" rows="${rows}"
+               placeholder="${placeholder}">${esc(value)}</textarea>`
+          : `<input id="${id}" data-brief="${id.replace("brief-", "")}" value="${esc(value)}"
+               placeholder="${placeholder}" />`
+      }</label>`;
 
     return `
       <div class="head">
         <div>
           ${slot("brief.eyebrow", { tag: "div", cls: "eyebrow" })}
           ${slot("brief.title", { tag: "h1" })}
-          <p class="lede">Pick a forecast and the Hub writes the brief around it — the
-            context a freelancer needs is already here, so nobody types it out again.</p>
+          <p class="lede">Pick a forecast and the Hub writes the brief around it. Freelancers
+            reach Report Editor and Workspace II only, so a brief carries attachments rather
+            than links.</p>
         </div>
+      </div>
+
+      <div class="concept-note access-note">
+        <strong>Freelancers cannot open our reports.</strong>
+        <p>Since 4 September 2026 freelance access is Report Editor and Workspace II only. A
+          brief carries attachments, not links: up to ${BRIEF_MAX_PAGES} report pages as PDFs,
+          from separate pieces where you can. Red-threading and back-links are in-house work
+          now.</p>
       </div>
 
       <div class="lab-layout brief-layout">
@@ -12223,36 +12648,182 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             ${
               item
                 ? `<div class="brief-context">
-                     <span>${icon("calendar", 14)} Due ${long(item.submissionDate)}</span>
+                     <span>${icon("calendar", 14)} Forecast due ${long(item.submissionDate)}</span>
                      <span>${icon("published", 14)} Publishes ${long(item.publicationDate)}</span>
-                     <span>${icon("link", 14)} ${links.length} research link${
-                       links.length === 1 ? "" : "s"
-                     } attached</span>
+                     <span>${icon("tier", 14)} ${esc(
+                       detailsFor(item.id)?.contentType ?? item.type,
+                     )}</span>
                    </div>`
                 : ""
             }
+            ${field(
+              "Working title — blank uses the forecast’s",
+              "brief-title",
+              brief.title,
+              item ? esc(item.title) : "The title, formatted as it should be",
+            )}
           </section>
 
           <section>
             ${slot("brief.work", { tag: "h2", cls: "lab-h2" })}
-            <label class="lab-field"><span class="lab-field-label">Who is it for?</span>
-              <input id="brief-who" data-brief="who" value="${esc(brief.who)}"
-                placeholder="The freelancer’s name" />
-            </label>
+            ${field("Who is it for?", "brief-who", brief.who, "The freelancer’s name")}
             <label class="lab-field"><span class="lab-field-label">What kind of work?</span>
               <select id="brief-kind" data-brief="kind">${BRIEF_KINDS.map(
                 (k) => `<option${k === brief.kind ? " selected" : ""}>${esc(k)}</option>`,
               ).join("")}</select>
             </label>
-            <label class="lab-field"><span class="lab-field-label">What exactly do you need?</span>
-              <textarea id="brief-needs" data-brief="needs" rows="3"
-                placeholder="30 images of workwear detailing from independent retail, Berlin and Copenhagen">${esc(
-                  brief.needs,
-                )}</textarea>
+            ${field(
+              "What exactly do you need?",
+              "brief-needs",
+              brief.needs,
+              "30 images of workwear detailing from independent retail, Berlin and Copenhagen",
+              3,
+            )}
+            <label class="lab-field"><span class="lab-field-label">Back to you by</span>
+              <input type="date" id="brief-due" data-brief="due" value="${due}" />
             </label>
-            <label class="lab-field"><span class="lab-field-label">Anything else they should know</span>
-              <textarea id="brief-extra" data-brief="extra" rows="3"
-                placeholder="Avoid anything we ran in the S/S 27 update.">${esc(brief.extra)}</textarea>
+            ${
+              item
+                ? `<p class="muted">A week before your own submission date unless you change
+                    it. You submit on the freelancer’s behalf, so leave room to read it first.</p>`
+                : ""
+            }
+            ${field(
+              "PO number",
+              "brief-po",
+              brief.po,
+              "From your CM — agreed before the work starts",
+            )}
+          </section>
+
+          <section>
+            ${slot("brief.context", { tag: "h2", cls: "lab-h2" })}
+            ${field("Miro board", "brief-miro", brief.miro, "https://miro.com/app/board/…")}
+            <div class="pages-head">
+              <span class="lab-field-label">Report pages to PDF</span>
+              <span class="${
+                briefPages.length > BRIEF_MAX_PAGES ? "count-over" : "muted"
+              }">${briefPages.length} of ${BRIEF_MAX_PAGES}</span>
+            </div>
+            ${briefPages
+              .map(
+                (p, i) => `
+              <div class="page-row">
+                <input data-page="${i}" data-page-field="from" value="${esc(p.from)}"
+                  placeholder="Which report" aria-label="Report for page ${i + 1}" />
+                <input data-page="${i}" data-page-field="pages" value="${esc(p.pages)}"
+                  placeholder="Page" aria-label="Page number for page ${i + 1}" />
+                <input data-page="${i}" data-page-field="why" value="${esc(p.why)}"
+                  placeholder="Why it is useful" aria-label="Reason for page ${i + 1}" />
+                <button class="toggle" data-page-drop="${i}"
+                  aria-label="Remove page ${i + 1}">${icon("trash", 14)}</button>
+              </div>`,
+              )
+              .join("")}
+            <button class="toggle" data-page-add>${icon("plus", 15)}Add a page</button>
+            ${
+              briefPages.length > BRIEF_MAX_PAGES
+                ? `<div class="concept-note access-note" role="alert"><strong>That is more than
+                     the ${BRIEF_MAX_PAGES} pages a brief is allowed.</strong>
+                     <p>Take one out, or ask your CM before sending.</p></div>`
+                : ""
+            }
+            ${
+              clash && briefPages.length > 1
+                ? `<p class="muted">Two of those are from the same piece. A mix gives a
+                    freelancer the trend’s history rather than one snapshot of it.</p>`
+                : ""
+            }
+            ${
+              links.length
+                ? `<div class="research-hint">
+                     <span class="lab-field-label">Already on this forecast</span>
+                     <ul>${links.map((l) => `<li>${esc(l.label)}</li>`).join("")}</ul>
+                     <p class="muted">Worth PDF-ing rather than linking — a freelancer cannot
+                       open these.</p>
+                   </div>`
+                : ""
+            }
+            <span class="lab-field-label spaced">Screenshots, research, data</span>
+            <div class="drop-zone">
+              ${icon("image", 22)}
+              <p>Drop files here to list them in the brief</p>
+              <small>In the running Hub they stay on your machine and the brief says what is
+                coming; this page has no file picker to give you.</small>
+            </div>
+          </section>
+
+          <section>
+            ${slot("brief.why", { tag: "h2", cls: "lab-h2" })}
+            ${field(
+              "The opportunity, and where to push further",
+              "brief-why",
+              brief.why,
+              "Why this report, now. What we think is happening, what we are not sure about, and what you want them to go and find out.",
+              4,
+            )}
+          </section>
+
+          <section>
+            ${slot("brief.focus", { tag: "h2", cls: "lab-h2" })}
+            ${field(
+              "Who is the content for?",
+              "brief-audience",
+              brief.audience,
+              "Job function — buyers, designers, product developers",
+            )}
+            ${field(
+              "End consumer",
+              "brief-consumer",
+              brief.consumer,
+              "The group or demographic the forecast speaks to",
+            )}
+            ${field(
+              "Categories to include or leave out",
+              "brief-categories",
+              brief.categories,
+              "Outerwear and knitwear; no footwear",
+            )}
+            ${field(
+              "Sustainability",
+              "brief-sustainability",
+              brief.sustainability,
+              "Key topics and materials to cover",
+              2,
+            )}
+          </section>
+
+          <section>
+            ${slot("brief.dei", { tag: "h2", cls: "lab-h2" })}
+            <p class="muted">At least ${DEI_MINIMUM} elements in every forecast. Choose the
+              ones this piece should carry; leaving them all unpicked sends the whole list.</p>
+            <div class="dei-picker">${DEI_ELEMENTS.map(
+              (d) =>
+                `<button class="pick${briefDei.includes(d) ? " on" : ""}" data-dei="${esc(d)}"
+                   aria-pressed="${briefDei.includes(d)}">${esc(d)}</button>`,
+            ).join("")}</div>
+            ${
+              briefDei.length > 0 && briefDei.length < DEI_MINIMUM
+                ? `<div class="concept-note access-note" role="alert"><strong>Two is the
+                     minimum.</strong><p>Pick one more, or leave them all unpicked to send the
+                     whole list.</p></div>`
+                : ""
+            }
+          </section>
+
+          <section>
+            ${slot("brief.data", { tag: "h2", cls: "lab-h2" })}
+            ${field(
+              "Suggested sources",
+              "brief-sources",
+              brief.sources,
+              "Where the numbers should come from",
+              2,
+            )}
+            ${field("Do not use", "brief-avoid", brief.avoid, "Sources we do not cite", 2)}
+            <label class="check">
+              <input type="checkbox" data-brief-unique ${brief.unique ? "checked" : ""} />
+              <span>Every Proof Points page needs its own unique data point</span>
             </label>
           </section>
         </div>
@@ -12264,13 +12835,14 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
               ? `<pre class="brief-preview" id="brief-text">${esc(briefText(item, me))}</pre>
                  <div class="lab-actions">
                    <button class="toggle" data-brief-copy>${icon("copy", 15)}Copy the brief</button>
-                   <span>Paste it into an email. Nothing is sent from here.</span>
+                   <span>Paste it into an email and attach the files. Nothing is sent from here.</span>
                  </div>`
               : `<p class="muted">Choose a forecast and the brief writes itself from here.</p>`
           }
         </div>
       </div>`;
   }
+
 
   function pageData() {
     return `
@@ -14069,6 +14641,44 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     );
 
     /*
+     * The look. Colours apply to the page as they are chosen, because a
+     * colour can only be judged on the thing it colours — a swatch in a form
+     * says nothing about whether "in review" now reads as "late".
+     */
+    view.querySelectorAll("[data-look]").forEach((el) =>
+      el.addEventListener("input", () => {
+        const id = el.dataset.look;
+        const value = el.value.trim().toLowerCase();
+        if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/.test(value)) {
+          lookColours[id] = value;
+          applyLook();
+          // Only the other control for this token is redrawn, so typing a hex
+          // code does not lose the cursor.
+          view
+            .querySelectorAll(`[data-look="${id}"]`)
+            .forEach((other) => {
+              if (other !== el) other.value = value;
+            });
+        }
+      }),
+    );
+    view.querySelectorAll("[data-look-reset]").forEach((el) =>
+      el.addEventListener("click", () => {
+        delete lookColours[el.dataset.lookReset];
+        applyLook();
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-look-icon]").forEach((el) =>
+      el.addEventListener("change", () => {
+        const slot = el.dataset.lookIcon;
+        if (el.value) lookIcons[slot] = el.value;
+        else delete lookIcons[slot];
+        render();
+      }),
+    );
+
+    /*
      * The resources editor. The address is checked before it is stored for
      * the same reason the Hub checks it: this becomes the href of something
      * everybody is invited to click, and only http and https belong there.
@@ -14184,6 +14794,38 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     view.querySelectorAll("[data-brief]").forEach((el) =>
       el.addEventListener("input", () => {
         brief[el.dataset.brief] = el.value;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-brief-unique]").forEach((el) =>
+      el.addEventListener("change", () => {
+        brief.unique = el.checked;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-page]").forEach((el) =>
+      el.addEventListener("input", () => {
+        briefPages[Number(el.dataset.page)][el.dataset.pageField] = el.value;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-page-add]").forEach((el) =>
+      el.addEventListener("click", () => {
+        briefPages = [...briefPages, { from: "", pages: "", why: "" }];
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-page-drop]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const at = Number(el.dataset.pageDrop);
+        briefPages = briefPages.filter((_, i) => i !== at);
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-dei]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const d = el.dataset.dei;
+        briefDei = briefDei.includes(d) ? briefDei.filter((x) => x !== d) : [...briefDei, d];
         render();
       }),
     );

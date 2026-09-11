@@ -5,6 +5,7 @@ import { TODAY, monthKey } from "../lib/date";
 import { isOutstanding, isOverdue } from "../lib/domain";
 import { Icon } from "../lib/icons";
 import { CustomisationProvider, EditBar, Slot, useCustom } from "../lib/custom";
+import { useAppearance } from "../lib/appearance";
 import { useDialog } from "../lib/dialog";
 import { ViewerProvider, useViewer } from "../lib/viewer";
 import type {
@@ -231,7 +232,7 @@ function sections({
     },
     {
       to: "/data/review",
-      label: "Review proof points",
+      label: "Review Proof Points",
       short: "Review",
       icon: "review",
       slot: "nav.item.proof-review",
@@ -245,8 +246,7 @@ function sections({
     {
       to: "https://stepic-ssft.wgsndev.com/",
       href: "https://stepic-ssft.wgsndev.com/",
-      label: "STEPIC Driver Database",
-      short: "STEPIC",
+      label: "STEPIC Drivers",
       icon: "driver",
       slot: "nav.item.stepic",
       group: "data",
@@ -302,6 +302,19 @@ function sections({
     },
   ];
 }
+
+/**
+ * The glyph each sidebar item ships with, keyed by its slot.
+ *
+ * Derived from the list above rather than written out again, so the studio's
+ * icon picker shows what an item actually looks like today and cannot drift
+ * from it. The counts are nought because only the icons are wanted.
+ */
+export const NAV_ICONS: Record<string, string> = Object.fromEntries(
+  sections({ overdue: 0, outstanding: 0, mySessions: 0, forecasters: 0, unread: 0 })
+    .filter((s) => s.slot)
+    .map((s) => [s.slot as string, s.icon]),
+);
 
 /**
  * One item, whether it is a page of ours or somewhere else.
@@ -407,6 +420,9 @@ function useSections(content: ContentItem[]): Section[] {
   // The Resources drawer, which an admin fills in from the studio rather
   // than by asking for a deploy.
   const resources = useApi<{ links: ResourceLink[] }>("/resources");
+  // The colours are applied by this hook; what is wanted here is the icons,
+  // where an admin has chosen a different glyph for a sidebar item.
+  const look = useAppearance();
 
   const fixed = sections({
     overdue: scope.filter((c) => isOverdue(c)).length,
@@ -436,7 +452,15 @@ function useSections(content: ContentItem[]): Section[] {
     group: "resources",
   }));
 
-  return [...customise(fixed, custom), ...built, ...studio, ...links];
+  /*
+   * An admin's icon, where they chose one. Unknown names fall through to the
+   * built-in, because a menu item with no icon looks broken and one with the
+   * wrong icon does not.
+   */
+  const withIcons = (items: Section[]): Section[] =>
+    items.map((s) => (s.slot && look.icons[s.slot] ? { ...s, icon: look.icons[s.slot] } : s));
+
+  return [...withIcons(customise(fixed, custom)), ...built, ...studio, ...links];
 }
 
 function Sidebar({ content, onSearch }: { content: ContentItem[]; onSearch: () => void }) {

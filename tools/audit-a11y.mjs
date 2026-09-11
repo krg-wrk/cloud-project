@@ -55,6 +55,7 @@ const PAGES = [
   ["Freshness", "/studio/freshness", "#/studio/freshness"],
   ["Notify admin", "/studio/notifications", "#/studio/notifications"],
   ["Studio resources", "/studio/resources", "#/studio/resources"],
+  ["Studio look", "/studio/look", "#/studio/look"],
 ];
 
 const APP = "http://localhost:5173";

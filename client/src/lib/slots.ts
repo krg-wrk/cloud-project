@@ -120,8 +120,8 @@ export const SLOT_PAGES: SlotPage[] = [
           nav("nav.item.lab-feed", "The Feed"),
           nav("nav.item.lab-brief", "Freelance Brief Builder"),
           nav("nav.item.proof-points", "Proof Point Library"),
-          nav("nav.item.proof-review", "Review proof points"),
-          nav("nav.item.stepic", "STEPIC Driver Database"),
+          nav("nav.item.proof-review", "Review Proof Points"),
+          nav("nav.item.stepic", "STEPIC Drivers"),
           nav("nav.item.score", "WGSN Score"),
           nav("nav.item.workshops", "Learning"),
           nav("nav.item.team", "Forecasters"),
@@ -406,12 +406,17 @@ export const SLOT_PAGES: SlotPage[] = [
           {
             id: "brief.sub",
             label:
-              "Pick a forecast and the Hub writes the brief around it — the context a freelancer needs is already here, so nobody types it out again.",
+              "Pick a forecast and the Hub writes the brief around it. Freelancers reach Report Editor and Workspace II only, so a brief carries attachments rather than links.",
             kind: "sub",
             hint: "The line under the title",
           },
           section("brief.about", "The forecast"),
           section("brief.work", "The work"),
+          section("brief.context", "What they have to work from"),
+          section("brief.why", "The opportunity"),
+          section("brief.focus", "Areas of focus"),
+          section("brief.dei", "DEI"),
+          section("brief.data", "Data"),
           section("brief.preview", "The brief"),
         ],
       },
@@ -498,7 +503,7 @@ export const SLOT_PAGES: SlotPage[] = [
         label: "Page heading",
         slots: [
           t("review.eyebrow", "Data"),
-          t("review.title", "Review proof points"),
+          t("review.title", "Review Proof Points"),
           {
             id: "review.sub",
             label:
