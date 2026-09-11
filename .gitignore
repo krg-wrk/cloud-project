@@ -17,3 +17,9 @@ demo/forecasters-hub.html
 hub.db
 hub.db-shm
 hub.db-wal
+
+# The real Content Directory, imported with tools/import-directory.mjs. It is
+# a hundred and fifty colleagues and their addresses: it belongs on a machine
+# somebody deliberately put it on, not in a repository or the shared demo.
+# Named rather than the whole directory, for the reason above.
+directory.json

@@ -9,6 +9,7 @@ import Data from "./routes/data/Data";
 import ProofPoints from "./routes/data/ProofPoints";
 import Review from "./routes/data/Review";
 import Deadlines from "./routes/Deadlines";
+import Directory from "./routes/Directory";
 import Kpis from "./routes/Kpis";
 import Atoms from "./routes/lab/Atoms";
 import Brief from "./routes/lab/Brief";
@@ -25,7 +26,7 @@ import Pages from "./routes/studio/Pages";
 import Look from "./routes/studio/Look";
 import Resources from "./routes/studio/Resources";
 import Subscribe from "./routes/Subscribe";
-import { TeamList, TeamMember } from "./routes/Team";
+import { TeamMember } from "./routes/Team";
 import Today from "./routes/Today";
 import TrendDetail from "./routes/TrendDetail";
 import Trends from "./routes/Trends";
@@ -48,7 +49,7 @@ const router = createBrowserRouter([
       { path: "calendar", element: <Navigate to={`/calendar/${monthKey(TODAY)}`} replace /> },
       { path: "calendar/:month", element: <CalendarView /> },
       { path: "content/:id", element: <ContentDetail /> },
-      { path: "team", element: <TeamList /> },
+      { path: "team", element: <Directory /> },
       { path: "team/:id", element: <TeamMember /> },
       { path: "workshops", element: <Workshops /> },
       { path: "workshops/:id", element: <SessionDetail /> },

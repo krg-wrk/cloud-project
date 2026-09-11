@@ -374,6 +374,39 @@ export interface ContentWriter {
   ): Promise<void>;
 }
 
+export type Availability = "here" | "away" | "gone";
+
+export interface DirectoryPerson {
+  id: string;
+  name: string;
+  /** Absent for the rows that carry no address. */
+  email?: string;
+  /** Strategist, Senior, Head Of, Director, Data Analyst, CM… */
+  role?: string;
+  /** The industry team: Fashion Design, Interiors, Beauty, Insight… */
+  team?: string;
+  /** The categories they cover — the sheet's Secondary Team Tags. */
+  tags: string[];
+  /** The knowledge networks they sit on — Signals, Macro, Sustainability… */
+  knowledge: string[];
+  region?: string;
+  country?: string;
+  /** Whether they run their team's feed. */
+  feedLead: boolean;
+  /** Whether they sit on the DEI board. */
+  deiBoard: boolean;
+  /** Senior and above, as the sheet marks it. */
+  senior: boolean;
+  /** Their commissioning manager, by name as the sheet holds it. */
+  cm?: string;
+  /** Their manager's address, for a question that needs escalating. */
+  managerEmail?: string;
+  /** Here, away, or no longer with us — never why. */
+  availability: Availability;
+  /** Other names they are known by, so search finds them. */
+  aliases: string[];
+}
+
 export interface DataSource {
   readonly name: string;
   /** Set only on a source that accepts writes. See ContentWriter. */
@@ -392,6 +425,8 @@ export interface DataSource {
   listMetricObservations(): Promise<MetricObservation[]>;
   /** Trend profiles, owned one apiece. */
   listTrends(): Promise<TrendProfile[]>;
+  /** The content directory: who is on which team, and what they know about. */
+  listDirectory(): Promise<DirectoryPerson[]>;
   /**
    * Drop a cached read, where the source caches.
    *

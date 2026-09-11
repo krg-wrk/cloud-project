@@ -11,6 +11,7 @@ import { createNotifyRouter } from "./notify/api.js";
 import { startSchedule } from "./notify/schedule.js";
 import { createProofPointRouter } from "./proofPoints/api.js";
 import { createAppearanceRouter } from "./appearance.js";
+import { createDirectoryRouter } from "./directory.js";
 import { createResourcesRouter } from "./resources.js";
 import { createSearchRouter } from "./searchApi.js";
 import { ProofPointLibrary } from "./proofPoints/library.js";
@@ -88,6 +89,7 @@ app.use(
   createSearchRouter(data, studio, proofPoints),
   createResourcesRouter(store),
   createAppearanceRouter(store),
+  createDirectoryRouter(data),
 );
 
 /*

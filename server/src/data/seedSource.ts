@@ -1,6 +1,8 @@
 import type { AccessRow } from "../auth.js";
+import { fileRows, readDirectory } from "../directory.js";
 import type {
   CalendarEvent,
+  DirectoryPerson,
   ContentItem,
   DataSource,
   KnowledgeSession,
@@ -10,6 +12,7 @@ import type {
   SessionSignUps,
   TrendProfile,
 } from "../types.js";
+import { directoryRows } from "./directory.js";
 import {
   access,
   content,
@@ -51,6 +54,17 @@ export class SeedSource implements DataSource {
 
   async listAccess(): Promise<AccessRow[]> {
     return access;
+  }
+
+  /*
+   * Read once: the rows never change while the process is up, and the reader
+   * does real work — splitting multi-value cells, making ids, deciding who is
+   * away — that there is no reason to repeat on every request.
+   */
+  private directory = readDirectory(fileRows() ?? directoryRows);
+
+  async listDirectory(): Promise<DirectoryPerson[]> {
+    return this.directory;
   }
 
   async listMetrics(): Promise<MetricDefinition[]> {

@@ -22,6 +22,12 @@ const {
   metricObservations,
   trends,
 } = await import(join(here, "../server/dist/data/seed.js"));
+/*
+ * The directory: the invented rows, read by the Hub's own reader, so the demo
+ * carries people rather than rows and the parsing is not written twice.
+ */
+const { directoryRows } = await import(join(here, "../server/dist/data/directory.js"));
+const { readDirectory } = await import(join(here, "../server/dist/directory.js"));
 const { CONTENT_TYPES, TIER_MEANINGS, ROLE_BENCHMARKS } = await import(
   join(here, "../server/dist/taxonomy.js")
 );
@@ -110,6 +116,7 @@ const html = readFileSync(join(here, "hub.template.html"), "utf8").replace(
     metrics,
     trends,
     observations: metricObservations,
+    directory: readDirectory(directoryRows),
     taxonomy: { contentTypes: CONTENT_TYPES, tiers: TIER_MEANINGS, roles: ROLE_BENCHMARKS },
     proofPoints,
   }),

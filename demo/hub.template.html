@@ -1239,6 +1239,164 @@
     font-size: 13px;
   }
 
+  /* ---- The directory ------------------------------------------------------
+   *
+   * A team of a hundred and fifty is a scrolling problem, so a person is a
+   * row rather than a card. Everything in the middle is a button, because the
+   * tag you can see is the tag you want to group by.
+   * ------------------------------------------------------------------------- */
+
+  .dir-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 26px;
+  }
+
+  .dir-group-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--ink);
+  }
+
+  .dir-group-head h2 {
+    font-size: 17px;
+  }
+
+  .dir-group-head .count {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+
+  .dir-rows {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dir-row {
+    display: grid;
+    grid-template-columns: minmax(200px, 260px) minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 14px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .dir-who {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .dir-name {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dir-name a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* Away, and never why. */
+  .dir-away {
+    flex: none;
+    padding: 1px 6px;
+    border: 1px solid var(--line-firm);
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .dir-meta {
+    font-size: 12px;
+    color: var(--ink-soft);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dir-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    min-width: 0;
+  }
+
+  .dir-tag {
+    padding: 3px 8px;
+    border: 1px solid var(--line);
+    background: var(--ground);
+    color: var(--ink-mid);
+    font: inherit;
+    font-size: 11.5px;
+    cursor: pointer;
+  }
+
+  .dir-tag:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .dir-tag.know {
+    border-style: dashed;
+    background: none;
+  }
+
+  .dir-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    background: var(--accent-wash);
+    color: var(--accent);
+    font-size: 11.5px;
+    font-weight: 500;
+  }
+
+  .dir-work {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    justify-content: flex-end;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .dir-open {
+    color: var(--ink-soft);
+  }
+
+  .dir-open:hover {
+    color: var(--accent);
+  }
+
+  .dir-open b {
+    color: var(--late);
+    font-weight: 500;
+  }
+
+  .dir-mail {
+    display: inline-flex;
+    color: var(--ink-soft);
+  }
+
+  .dir-mail:hover {
+    color: var(--accent);
+  }
+
   /* ---- Filters ----------------------------------------------------------- */
 
   .filters {
@@ -5952,6 +6110,7 @@
 <script>
   const DATA = JSON.parse(document.getElementById("seed").textContent);
   const { people, content, events, sessions } = DATA;
+  const directory = DATA.directory ?? [];
   const TODAY = new Date().toISOString().slice(0, 10);
 
   const KINDS = {
@@ -8276,39 +8435,140 @@
       </div>`;
   }
 
-  function pageTeam() {
+  /* ---- The directory ----------------------------------------------------
+   *
+   * The team, as the Content Directory holds it: who is on which team, what
+   * they cover, which knowledge networks they sit on. The questions it
+   * answers are the ones a schedule cannot — who covers menswear in APAC, who
+   * the feed lead for Beauty is, who to ask about modestwear.
+   *
+   * One search box and one grouping rather than tabs and two search modes:
+   * the grouping is how the answer is stacked, not a mode you are in, so
+   * there is nothing to switch. Every cut has an address.
+   *
+   * Why somebody is away is not here and never was: the server keeps the
+   * reason and sends "away", which is all anybody looking for a person needs.
+   */
+
+  const DIR_FACETS = [
+    ["team", "Team", (p) => (p.team ? [p.team] : [])],
+    ["tag", "What they cover", (p) => p.tags],
+    ["knowledge", "Knowledge network", (p) => p.knowledge],
+    ["region", "Region", (p) => (p.region ? [p.region] : [])],
+    ["role", "Role", (p) => (p.role ? [p.role] : [])],
+  ];
+
+  const dirMatches = (p, q) => {
+    const hay = [p.name, p.email, p.role, p.team, p.region, p.country, p.cm, ...p.tags,
+      ...p.knowledge, ...(p.aliases ?? [])].filter(Boolean).join(" ").toLowerCase();
+    return q.trim().toLowerCase().split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
+  };
+
+  function pageTeam(params) {
+    const by = params.get("by") ?? "team";
+    const q = params.get("q") ?? "";
+    const facet = DIR_FACETS.find((f) => f[0] === by) ?? DIR_FACETS[0];
+    const here = directory.filter((p) => p.availability !== "gone");
+    const found = here.filter((p) => dirMatches(p, q));
+
+    const by_ = new Map();
+    const missing = [];
+    for (const p of found) {
+      const values = facet[2](p);
+      if (!values.length) missing.push(p);
+      for (const v of values) by_.set(v, [...(by_.get(v) ?? []), p]);
+    }
+    const groups = [...by_.entries()]
+      .map(([name, list]) => [name, list])
+      .sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+    if (missing.length) groups.push(["Not recorded", missing]);
+
+    const teams = new Set(found.map((p) => p.team).filter(Boolean)).size;
+    const networks = new Set(found.flatMap((p) => p.knowledge)).size;
+    const leads = found.filter((p) => p.feedLead).length;
+
+    const row = (p) => {
+      const hub = people.find((x) => x.email && p.email && x.email.toLowerCase() === p.email.toLowerCase());
+      const theirs = hub ? content.filter((c) => c.forecasterId === hub.id) : [];
+      const open = theirs.filter(isOpen).length;
+      const late = theirs.filter(isLate).length;
+      const place = [by === "region" ? null : p.region, p.country].filter(Boolean).join(" · ");
+      return `
+        <div class="dir-row">
+          <div class="dir-who">${faceFor(p.name, hub ? hub.id : p.id)}
+            <div style="min-width:0">
+              <div class="dir-name">${
+                hub ? `<a href="#/team/${hub.id}">${esc(p.name)}</a>` : esc(p.name)
+              }${p.availability === "away" ? `<span class="dir-away">Away</span>` : ""}</div>
+              <div class="dir-meta">${esc(
+                [p.role, by === "team" ? null : p.team, place].filter(Boolean).join(" · "),
+              )}</div>
+            </div>
+          </div>
+          <div class="dir-tags">
+            ${p.tags.map((t) => `<button class="dir-tag" data-dir-facet="tag" data-dir-value="${esc(t)}">${esc(t)}</button>`).join("")}
+            ${p.knowledge.map((k) => `<button class="dir-tag know" data-dir-facet="knowledge" data-dir-value="${esc(k)}">${esc(k)}</button>`).join("")}
+            ${p.feedLead ? `<span class="dir-badge">${icon("feed", 12)}Feed lead</span>` : ""}
+            ${
+              p.deiBoard && !p.knowledge.some((k) => /dei/i.test(k))
+                ? `<span class="dir-badge">${icon("people", 12)}DEI board</span>`
+                : ""
+            }
+          </div>
+          <div class="dir-work">
+            ${open ? `<a class="dir-open" href="#/deadlines?forecaster=${hub.id}">${open} open${
+              late ? `<b> · ${late} late</b>` : ""
+            }</a>` : ""}
+            ${p.email ? `<a class="dir-mail" href="mailto:${esc(p.email)}">${icon("mail", 14)}<span class="sr-only">Email ${esc(p.name)}</span></a>` : ""}
+          </div>
+        </div>`;
+    };
+
     return `
       <div class="head">
         <div>
-          <div class="eyebrow">${people.filter((p) => p.role === "forecaster").length} forecasters</div>
-          <h1>The team</h1>
-          <p class="lede">Each forecaster has their own page — their deadlines, their leave, and a
-            link they can bookmark.</p>
+          ${slot("team.eyebrow", { tag: "div", cls: "eyebrow" })}
+          ${slot("team.title", { tag: "h1" })}
+          <p class="lede">Who is on which team, what they cover, and which knowledge
+            networks they sit on. Search it, group it, and send the link.</p>
+        </div>
+        <div class="figures inline">
+          <div class="figure"><b>${found.length}</b><span>${
+            q ? `of ${here.length}` : "people"
+          }</span></div>
+          <div class="figure"><b>${teams}</b><span>teams</span></div>
+          <div class="figure"><b>${networks}</b><span>networks</span></div>
+          <div class="figure"><b>${leads}</b><span>feed leads</span></div>
         </div>
       </div>
-      <div class="cards">${people
-        .filter((p) => p.role === "forecaster")
-        .map((p) => {
-          const theirs = content.filter((c) => c.forecasterId === p.id);
-          const late = theirs.filter(isLate).length;
-          const next = theirs
-            .filter((c) => isOpen(c) && c.submissionDate >= TODAY)
-            .sort((a, b) => a.submissionDate.localeCompare(b.submissionDate))[0];
-          return `<a class="person" href="#/team/${p.id}">${face(p.id, true)}
-            <span style="min-width:0"><b>${esc(p.name)}</b>
-              <span class="person-line">${esc(p.vertical)} · ${esc(p.region)}</span>
-              <span class="tallies"><span><em>${theirs.filter(isOpen).length}</em> open</span>
-                <span><em>${theirs.length}</em> commissioned</span>
-                ${late ? `<span class="bad">${late} late</span>` : ""}</span>
-              ${
-                next
-                  ? `<span class="person-line" style="margin-top:7px">Next: ${short(
-                      next.submissionDate,
-                    )} · ${rel(next.submissionDate)}</span>`
-                  : ""
-              }</span></a>`;
-        })
-        .join("")}</div>`;
+
+      <div class="filters">
+        <label class="field"><span>Search</span>
+          <input id="dir-q" data-dir-q value="${esc(q)}" style="min-width:300px"
+            placeholder="A name, a category, a knowledge network, a region" /></label>
+        <div class="field"><span>Group by</span>
+          <div class="toggles">${DIR_FACETS.map(
+            ([key, label]) =>
+              `<button class="toggle${by === key ? " on" : ""}" data-dir-by="${key}">${label}</button>`,
+          ).join("")}</div>
+        </div>
+      </div>
+
+      ${
+        groups.length
+          ? `<div class="dir-groups">${groups
+              .map(
+                ([name, list]) => `
+            <section class="dir-group">
+              <div class="dir-group-head"><h2>${esc(name)}</h2>
+                <span class="count">${list.length}</span></div>
+              <div class="dir-rows">${list.map(row).join("")}</div>
+            </section>`,
+              )
+              .join("")}</div>`
+          : `<p class="none">Nobody matches “${esc(q)}”. The directory covers names, teams,
+              the categories people cover, knowledge networks and regions.</p>`
+      }`;
   }
 
   function pageMember(id) {
@@ -10135,6 +10395,21 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             slotSection("brief.dei", "DEI"),
             slotSection("brief.data", "Data"),
             slotSection("brief.preview", "The brief"),
+          ],
+        },
+      ],
+    },
+    {
+      id: "team",
+      label: "The team",
+      path: "/team",
+      groups: [
+        {
+          id: "team.head",
+          label: "Page heading",
+          slots: [
+            slotTitle("team.eyebrow", "Content directory"),
+            slotTitle("team.title", "The team"),
           ],
         },
       ],
@@ -14547,7 +14822,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         html = pageContent(parts[1]);
         break;
       case "team":
-        html = parts[1] ? pageMember(parts[1]) : pageTeam();
+        html = parts[1] ? pageMember(parts[1]) : pageTeam(params);
         break;
       case "learning":
         html = parts[1] ? pageSession(parts[1]) : pageLearning(params);
@@ -14708,6 +14983,22 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         }
         resources.push({ label: label.slice(0, 80), url, ...(note ? { note: note.slice(0, 200) } : {}) });
         render();
+      }),
+    );
+
+    /* The directory: the grouping, and a tag as a way to regroup. */
+    view.querySelectorAll("[data-dir-q]").forEach((el) =>
+      el.addEventListener("input", () => setParam("q", el.value)),
+    );
+    view.querySelectorAll("[data-dir-by]").forEach((el) =>
+      el.addEventListener("click", () => setParam("by", el.dataset.dirBy)),
+    );
+    view.querySelectorAll("[data-dir-facet]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const { parts, params } = route();
+        params.set("by", el.dataset.dirFacet);
+        params.set("q", el.dataset.dirValue);
+        go("/" + parts.join("/") + "?" + params.toString());
       }),
     );
 

@@ -440,6 +440,47 @@ export interface ViewDef {
 
 /** A custom view in the sidebar. */
 /**
+ * Somebody in the Content Directory.
+ *
+ * The sheet's own shape, minus the one thing the server keeps back: why
+ * somebody is away. See server/src/directory.ts.
+ */
+export interface DirectoryPerson {
+  id: string;
+  name: string;
+  email?: string;
+  role?: string;
+  team?: string;
+  tags: string[];
+  knowledge: string[];
+  region?: string;
+  country?: string;
+  feedLead: boolean;
+  deiBoard: boolean;
+  senior: boolean;
+  cm?: string;
+  managerEmail?: string;
+  availability: "here" | "away" | "gone";
+  aliases: string[];
+}
+
+export interface DirectoryPage {
+  by: string;
+  q: string;
+  facets: { key: string; label: string }[];
+  counts: {
+    people: number;
+    feedLeads: number;
+    deiBoard: number;
+    teams: number;
+    knowledge: number;
+    away: number;
+  };
+  total: number;
+  groups: { name: string; people: DirectoryPerson[] }[];
+}
+
+/**
  * A link in the Resources drawer: a tool or a document that is not ours to
  * hold, kept in the menu so nobody has to ask for it in chat again.
  */

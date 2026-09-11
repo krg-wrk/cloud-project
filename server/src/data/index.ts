@@ -41,6 +41,7 @@ export function createDataSource(): DataSource {
       allowWrites: process.env.SMARTSHEET_WRITE === "1",
       eventsSheetId: process.env.SMARTSHEET_EVENTS_SHEET_ID,
       peopleSheetId: process.env.SMARTSHEET_PEOPLE_SHEET_ID,
+      directorySheetId: process.env.SMARTSHEET_DIRECTORY_SHEET_ID,
       sessionsSheetId: process.env.SMARTSHEET_SESSIONS_SHEET_ID,
       signUpsSheetId: process.env.SMARTSHEET_SIGNUPS_SHEET_ID,
       accessSheetId: process.env.SMARTSHEET_ACCESS_SHEET_ID,
@@ -135,6 +136,10 @@ export class CachedDataSource implements DataSource {
 
   listMetrics() {
     return this.through("metrics", () => this.inner.listMetrics());
+  }
+
+  listDirectory() {
+    return this.through("directory", () => this.inner.listDirectory());
   }
 
   listTrends() {

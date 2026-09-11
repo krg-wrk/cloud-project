@@ -5,8 +5,10 @@ import {
   TREND_TYPES,
   metrics as seedMetrics,
 } from "./seed.js";
+import { readDirectory } from "../directory.js";
 import type {
   CalendarEvent,
+  DirectoryPerson,
   CellChange,
   ContentItem,
   ContentType,
@@ -230,6 +232,8 @@ export interface SmartsheetConfig {
   metricsSheetId?: string;
   observationsSheetId?: string;
   trendsSheetId?: string;
+  /** The Content Directory: who is on which team, and what they know about. */
+  directorySheetId?: string;
 }
 
 /**
@@ -462,6 +466,19 @@ export class SmartsheetSource implements DataSource {
         department: row[c.department] || undefined,
         region: row[c.region] || "UK",
       }));
+  }
+
+  /**
+   * The Content Directory, straight off its own sheet.
+   *
+   * The rows arrive keyed by column title, which is exactly what the
+   * directory's reader takes — so the sheet, the spreadsheet export and the
+   * invented seed all go through one piece of code, and a column renamed in
+   * Smartsheet is a one-line change in directory.ts rather than three.
+   */
+  async listDirectory(): Promise<DirectoryPerson[]> {
+    if (!this.config.directorySheetId) return [];
+    return readDirectory(await this.fetchRows(this.config.directorySheetId));
   }
 
   async listContent(): Promise<ContentItem[]> {

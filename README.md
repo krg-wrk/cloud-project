@@ -31,7 +31,7 @@ Set `HUB_DB_URL` when it is time for Postgres — see
 | Deadlines | `/deadlines` | Filterable table of every commissioned forecast |
 | Calendar | `/calendar/2026-09` | Month grid of submissions, publications, sessions and the diary |
 | Forecast | `/content/ss-4013` | One forecast: dates, status, details, notes, peer review |
-| Team | `/team`, `/team/ao` | Per-forecaster pages |
+| The team | `/team`, `/team/ao` | The content directory: who covers what, who to ask, and what they are carrying |
 | Performance | `/performance` | KPIs per forecaster and across the team, over any time range |
 | Trends | `/trends`, `/trends/:id` | All 446 TFDB trend profiles: which are yours, the call on each, which industries still need a score |
 | Forecast Builder | `/lab/builder` | A concept: drag atoms onto a canvas and have the Hub cross-reference them against everything already forecast |
@@ -488,6 +488,74 @@ The output is plain text, deliberately. It goes to somebody outside the company
 who will never have a Hub account, so a page they cannot open would be the
 wrong deliverable. Copy it, attach the files, send it. Nothing is sent from
 here.
+
+## The team: the content directory
+
+`/team` is the Content Directory — who is on which team, what they cover, and
+which knowledge networks they sit on. It answers the questions a schedule
+cannot and a spreadsheet answers only for the person who knows where it is:
+who covers menswear in APAC, who the Feed Lead for Beauty is, who to ask about
+modestwear, who else is on the sustainability network.
+
+The team already built a canvas over the same sheet, and this takes its shape —
+group people by a facet, badge the roles, count the totals. Four things are
+different, and each one comes from the Hub rather than from taste:
+
+- **One box, not two modes.** The canvas has "search within teams" and "search
+  the people directory" as a switch, because its grouping is a mode you are in.
+  Here the grouping is only how the answer is stacked and the search narrows
+  whatever is on screen, so there is nothing to choose between.
+- **Every cut has an address.** `/team?by=knowledge&q=modestwear` is a link you
+  can paste into Slack, and whoever opens it sees what you saw. That is the
+  whole argument for this being in the Hub rather than being a dashboard.
+- **A person is joined to their work.** The directory says who somebody is; the
+  Hub knows what they are carrying and when it is due. So a row says "6 open ·
+  1 late", links to their deadlines, and their name goes to their page.
+- **It is denser.** The canvas gives a whole card to a name and a region; at a
+  hundred and fifty people that is a scrolling problem. A person is a row.
+
+Every tag on a row is a button: clicking "Womenswear" regroups the page by what
+people cover and filters to it, which is how you get from "who is this person"
+to "who else does this" without going back to the top.
+
+### Why somebody is away is not in it
+
+The sheet's Status column carries "Maternity Leave" and "Medical Leave" beside
+"Full-Time". That is health and family information about a colleague, and a
+directory that prints it to two hundred people has taken something somebody
+told HR and published it.
+
+So the reason never leaves the server. `availabilityOf` in
+`server/src/directory.ts` turns every status into one of three words — here,
+away, gone — and the away badge says "Away" and nothing else. There is a test
+asserting that neither "maternity" nor "medical" appears anywhere in what is
+served. Somebody marked inactive has left and is off the list altogether,
+because a leaver in a directory is how a forecaster ends up emailing a dead
+address.
+
+### Where the data comes from
+
+Three ways in, one reader:
+
+| | |
+| --- | --- |
+| `SMARTSHEET_DIRECTORY_SHEET_ID` | The sheet itself. This is the answer. |
+| `node tools/import-directory.mjs <export.xlsx>` | The stop-gap: writes `data/directory.json`, which the server reads if it is there |
+| neither | The invented directory in `server/src/data/directory.ts` |
+
+All three go through `readDirectory`, so a column renamed in Smartsheet is a
+one-line change in `COLUMNS` rather than three, and the invented seed exercises
+the same parsing as the real thing — cells holding several values separated by
+line breaks, spacer rows, tick boxes typed five different ways, two people with
+the same name.
+
+**The real directory is never committed.** `data/directory.json` is
+git-ignored, and the shareable demo ships the invented people. A hundred and
+fifty colleagues and their addresses belong on a machine somebody deliberately
+put them on, not in a repository and not in a single file that gets emailed
+around. The import prints what it read and which columns the sheet has left
+empty, because "is the directory right" is usually answered by a column nobody
+has filled in.
 
 ## Resources, and the two databases under Data
 
@@ -1561,10 +1629,11 @@ where it matters.
 - `npm run build` — builds both
 - `npm start` — runs the built server; with `NODE_ENV=production` it also
   serves the built client, with a catch-all so deep links survive a refresh
-- `npm test -w server` — 124 tests: the Smartsheet reader against a stubbed
+- `npm test -w server` — 138 tests: the Smartsheet reader against a stubbed
   API, the proof point library and its sanitiser, what the notifier says and
   when, how search ranks, what a resource link and a colour are allowed to be,
-  and the `?` → `$1` translation both databases rely on
+  the `?` → `$1` translation both databases rely on, and that a leave reason
+  never reaches the directory
 - `node demo/build.mjs` — rebuilds the shareable single-file demo
 - `python3 tools/extract-proof-points.py <workbook.xlsx>` — regenerates the
   proof point seed from the Proof Points Reviewer workbook
@@ -1574,3 +1643,5 @@ where it matters.
 - `node tools/stub-relay.mjs` — a stand-in for the email relay that prints
   what it was asked to send, so the notifier can be tried without emailing
   anybody
+- `node tools/import-directory.mjs <export.xlsx>` — turns a Content Directory
+  export into the file the Hub reads, which git ignores

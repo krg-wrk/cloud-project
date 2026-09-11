@@ -2,75 +2,10 @@ import { Link, useParams } from "react-router-dom";
 import { query, useApi } from "../lib/api";
 import { TODAY, formatLong, formatShort, monthKey, relativeDays } from "../lib/date";
 import { isOutstanding, isOverdue } from "../lib/domain";
-import type { ContentItem, Person, Schedule } from "../types";
+import type { Person, Schedule } from "../types";
 import { Avatar, ErrorNote, EventPill, Loading, StatusPill } from "../components/bits";
 import ShareLink from "../components/ShareLink";
 import BackLink from "../components/BackLink";
-
-export function TeamList() {
-  const people = useApi<Person[]>("/people");
-  const content = useApi<ContentItem[]>("/content");
-
-  if (people.error) return <ErrorNote message={people.error} />;
-  if (!people.data || !content.data) return <Loading what="the team" />;
-
-  const forecasters = people.data.filter((p) => p.role === "forecaster");
-
-  return (
-    <>
-      <div className="page-head">
-        <div>
-          <div className="eyebrow">{forecasters.length} forecasters</div>
-          <h1 className="page-title">The team</h1>
-          <p className="page-sub">
-            Each forecaster has their own page — their deadlines, their leave,
-            and a link they can bookmark.
-          </p>
-        </div>
-      </div>
-
-      <div className="people-grid">
-        {forecasters.map((p) => {
-          const theirs = content.data!.filter((c) => c.forecasterId === p.id);
-          const open = theirs.filter(isOutstanding);
-          const late = theirs.filter((c) => isOverdue(c));
-          const next = open
-            .filter((c) => c.submissionDate >= TODAY)
-            .sort((a, b) => a.submissionDate.localeCompare(b.submissionDate))[0];
-          return (
-            <Link key={p.id} to={`/team/${p.id}`} className="person-card">
-              <Avatar id={p.id} name={p.name} size="lg" />
-              <div style={{ minWidth: 0 }}>
-                <div className="person-name">{p.name}</div>
-                <div className="person-meta">
-                  {p.vertical} · {p.region}
-                </div>
-                <div className="person-counts">
-                  <span>
-                    <b>{open.length}</b> open
-                  </span>
-                  <span>
-                    <b>{theirs.length}</b> commissioned
-                  </span>
-                  {late.length > 0 && (
-                    <span style={{ color: "var(--accent)", fontWeight: 600 }}>
-                      {late.length} late
-                    </span>
-                  )}
-                </div>
-                {next && (
-                  <div className="person-meta" style={{ marginTop: 8 }}>
-                    Next: {formatShort(next.submissionDate)} · {relativeDays(next.submissionDate)}
-                  </div>
-                )}
-              </div>
-            </Link>
-          );
-        })}
-      </div>
-    </>
-  );
-}
 
 export function TeamMember() {
   const { id } = useParams<{ id: string }>();

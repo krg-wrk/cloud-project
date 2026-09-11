@@ -424,6 +424,29 @@ export const SLOT_PAGES: SlotPage[] = [
   },
 
   {
+    id: "team",
+    label: "The team",
+    path: "/team",
+    groups: [
+      {
+        id: "team.head",
+        label: "Page heading",
+        slots: [
+          t("team.eyebrow", "Content directory"),
+          t("team.title", "The team"),
+          {
+            id: "team.sub",
+            label:
+              "Who is on which team, what they cover, and which knowledge networks they sit on. Search it, group it, and send the link.",
+            kind: "sub",
+            hint: "The line under the title",
+          },
+        ],
+      },
+    ],
+  },
+
+  {
     id: "data",
     label: "Data",
     path: "/data",
