@@ -262,7 +262,13 @@ export class ProofPointLibrary {
     name?: string,
     hub?: HubTrends,
     held?: HeldDecisions,
-  ): { total: number; rows: ProofPointRow[]; decided: { approved: number; rejected: number } } {
+  ): {
+    total: number;
+    rows: ProofPointRow[];
+    decided: { approved: number; rejected: number };
+    /** Already cited in the profile, so there is nothing to decide. */
+    cited: number;
+  } {
     const tiers = new Set(QUALITY_TIERS[(q.quality ?? "top") as Quality] ?? QUALITY_TIERS.top);
     const take = Math.min(Math.max(q.take ?? 6, 1), 24);
 
@@ -277,19 +283,23 @@ export class ProofPointLibrary {
     };
     const decisionOf = (p: ProofPoint) => held?.get(p.id)?.decision ?? p.decision;
 
-    const inScope = this.points.filter((p) => {
+    /** In the filters, whatever their state — the denominator. */
+    const considered = this.points.filter((p) => {
       if (!tiers.has(p.tier)) return false;
       if (q.trend && p.trendId !== q.trend) return false;
       if (q.owner === "mine" && !about(p.trendId).mine) return false;
-      /*
-       * Already cited in the profile, so there is nothing to decide: the
-       * answer is yes and has been for a while. Reviewing them would be the
-       * first couple of hundred cards of the queue, and would teach a
-       * reviewer that the queue wastes their time.
-       */
-      if (p.alreadyKnown) return false;
       return true;
     });
+
+    /*
+     * Already cited in the profile, so there is nothing to decide: the answer
+     * is yes and has been for a while. Reviewing them would be the first
+     * couple of hundred cards of the queue, and would teach a reviewer that
+     * the queue wastes their time. Narrowed from `considered` rather than
+     * filtered again, so the two cannot drift apart and the page's arithmetic
+     * — waiting plus cited plus decided — holds by construction.
+     */
+    const inScope = considered.filter((p) => !p.alreadyKnown);
 
     const waiting = inScope
       .filter((p) => !decisionOf(p))
@@ -301,6 +311,7 @@ export class ProofPointLibrary {
     return {
       total: waiting.length,
       rows: waiting.slice(0, take).map((p) => this.row(p, viewer, name, hub, held)),
+      cited: considered.filter((p) => p.alreadyKnown).length,
       decided: {
         approved: inScope.filter((p) => decisionOf(p) === "approve").length,
         rejected: inScope.filter((p) => decisionOf(p) === "reject").length,

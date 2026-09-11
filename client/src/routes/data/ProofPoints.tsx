@@ -137,7 +137,7 @@ function Rendered({ html, scale }: { html: string; scale?: boolean }) {
   return (
     <div
       className={scale ? "pp-render scaled" : "pp-render"}
-      // eslint-disable-next-line react/no-danger
+      // Safe because the server sanitises it on the way out — see above.
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -509,10 +509,20 @@ export default function ProofPoints() {
             };
             const figure = figures[slot.id];
             if (!figure || figure.when === false) return null;
+            /*
+             * "5,246" on its own reads as "that is all there is", and the
+             * default quality band hides half the library — so the figure
+             * says what it is a part of. The question it answers is the one
+             * that gets asked: where are the other five thousand.
+             */
+            const whole = slot.id === "proof.figure.showing" ? (data?.counts.all ?? 0) : 0;
             return (
               <div className="figure" key={slot.id}>
                 <b>{figure.n.toLocaleString()}</b>
                 <Slot id={slot.id} />
+                {whole > figure.n && (
+                  <em className="figure-of">of {whole.toLocaleString()}</em>
+                )}
               </div>
             );
           })}
@@ -570,7 +580,7 @@ export default function ProofPoints() {
             <option value="">All trends</option>
             {(data?.trends ?? []).map((t) => (
               <option key={t.id} value={t.id}>
-                {t.title} ({t.total})
+                {t.title}
               </option>
             ))}
           </select>

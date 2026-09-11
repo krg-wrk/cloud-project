@@ -457,6 +457,29 @@ test("what the profile already cites is not in the queue", () => {
   const q = lib.queue({ quality: "all", owner: "all" }, AMARA);
   assert.ok(!q.rows.some((r) => r.id === "f"));
   assert.ok(!q.rows.some((r) => r.alreadyKnown));
+  // Counted rather than silently dropped, because the page says so: a queue
+  // of four against a library of six needs the missing two accounted for.
+  assert.equal(q.cited, 1);
+});
+
+test("the queue's figures account for everything in the filters", () => {
+  /*
+   * The page puts waiting, already cited and decided side by side, which is a
+   * claim that they add up to the library under the same filters. If they ever
+   * do not, one of the three is quietly hiding suggestions from a reviewer.
+   */
+  const lib = fixture(SEED);
+  for (const owner of ["mine", "all"]) {
+    for (const quality of ["top", "mid", "all"]) {
+      const q = lib.queue({ quality, owner }, AMARA);
+      const library = lib.query({ quality, owner, pageSize: 1 }, AMARA).total;
+      assert.equal(
+        q.total + q.cited + q.decided.approved + q.decided.rejected,
+        library,
+        `${owner}/${quality}: the queue does not account for the whole library`,
+      );
+    }
+  }
 });
 
 test("deciding one takes it out of the queue", () => {

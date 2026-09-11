@@ -719,6 +719,8 @@ export interface ReviewQueue {
   total: number;
   rows: ReviewRow[];
   decided: { approved: number; rejected: number };
+  /** Already cited in the profile, so there is nothing to decide about them. */
+  cited: number;
   /** The offered rejection reasons — a shortcut, not a vocabulary. */
   reasons: string[];
   /** How many this person has decided in the Hub. */

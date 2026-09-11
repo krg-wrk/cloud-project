@@ -6572,3 +6572,20 @@ a.inbox-title:hover {
     grid-column: 1 / -1;
   }
 }
+
+/* A headline figure that is part of a bigger number says so under itself,
+   rather than reading as the whole thing. */
+/*
+ * The whole total under a filtered figure. Sized and coloured like the label
+ * beneath it rather than like the number above it — it is context for the
+ * figure, not a second figure — but left in sentence case, because "OF 10,235"
+ * in the label's letterspaced capitals reads as a heading of its own.
+ */
+.figure-of {
+  display: block;
+  margin-top: 4px;
+  font-size: 10.5px;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-45);
+}

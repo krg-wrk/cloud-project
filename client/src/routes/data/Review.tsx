@@ -38,7 +38,7 @@ function Rendered({ html }: { html: string }) {
   return (
     <div
       className="pp-render"
-      // eslint-disable-next-line react/no-danger
+      // Safe because the server sanitises it on the way out — see above.
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
@@ -166,6 +166,7 @@ export default function Review() {
   if (queue.error) return <ErrorNote message={queue.error} />;
 
   const total = queue.data?.total ?? 0;
+  const cited = queue.data?.cited ?? 0;
   const decided = queue.data?.decided;
 
   return (
@@ -189,6 +190,19 @@ export default function Review() {
             <b>{(decided?.rejected ?? 0).toLocaleString()}</b>
             <span>Not used</span>
           </div>
+          {cited > 0 && (
+            /*
+             * The queue is smaller than the library and it is worth saying
+             * why: these are already cited in the profile, so the answer is
+             * yes and has been for a while. Reviewing them would be the first
+             * couple of hundred cards and would teach a reviewer that the
+             * queue wastes their time.
+             */
+            <div className="figure" title="Already cited in the trend profile, so there is nothing to decide">
+              <b>{cited.toLocaleString()}</b>
+              <span>Already cited</span>
+            </div>
+          )}
         </div>
       </div>
 
@@ -216,7 +230,7 @@ export default function Review() {
             <option value="">All trends</option>
             {(trends.data?.trends ?? []).map((t) => (
               <option key={t.id} value={t.id}>
-                {t.title} ({t.total})
+                {t.title}
               </option>
             ))}
           </select>

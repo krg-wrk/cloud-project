@@ -826,6 +826,26 @@ question should not cost you the answer to the last one.
 Already-cited suggestions never enter the queue. A queue that opens with two
 hundred things a profile already says teaches a reviewer to ignore it.
 
+**Counted, though, rather than silently dropped.** A queue of 9,946 against a
+library of 10,235 invites the obvious question, so the page answers it
+before it is asked: *waiting*, *already cited*, *approved* and *not used* sit
+side by side and add up to the library under the same filters. That is a
+claim, so a test makes it across every owner and quality combination — if the
+four ever stop adding up, something is hiding suggestions from a reviewer.
+The queue's `cited` is counted off the same filtered set the rest is narrowed
+from, so the two cannot drift apart.
+
+The library's headline figure does the same thing for the same reason. The
+default quality band shows about half of what is held, and **5,246** on its
+own reads as *that is all there is* — so it says **of 10,235** underneath.
+The way to actually see all of them is the *All matches* control, which has
+always been there; the figure is what makes it findable.
+
+Neither page puts a count beside a trend in its dropdown. Three hundred and
+fifty options reading "Quiet Luxury (46)" is three hundred and fifty numbers
+nobody is choosing on, and the parentheses make the titles harder to scan for
+the one thing they are for — finding a trend by name.
+
 #### Who may decide, and where it is kept
 
 The same rule as writing anything else against a trend profile: its owner,

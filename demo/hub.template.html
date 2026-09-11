@@ -1239,6 +1239,17 @@
     font-size: 13px;
   }
 
+  /* A headline figure that is part of a bigger number says so under itself,
+     rather than reading as the whole thing. */
+  .figure-of {
+    display: block;
+    margin-top: 4px;
+    font-size: 10.5px;
+    font-style: normal;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+  }
+
   /* ---- The directory ------------------------------------------------------
    *
    * A team of a hundred and fifty is a scrolling problem, so a person is a
@@ -14022,6 +14033,15 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     const card = waiting[0];
     const approved = inScope.filter((r) => ppDecisionOf(r) === "approve").length;
     const rejected = inScope.filter((r) => ppDecisionOf(r) === "reject").length;
+    // In the same filters but already cited, which is why the queue is
+    // smaller than the library. Worth saying rather than leaving as a gap.
+    const cited = rows.filter(
+      (r) =>
+        tiers.has(r.tier) &&
+        (!trendId || r.trendId === trendId) &&
+        (owner !== "mine" || r.mine) &&
+        r.alreadyKnown,
+    ).length;
 
     // The trend picker, from what has anything waiting.
     const perTrend = new Map();
@@ -14047,6 +14067,11 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           <div class="figure"><b>${waiting.length.toLocaleString()}</b><span>Waiting</span></div>
           <div class="figure"><b>${approved.toLocaleString()}</b><span>Approved</span></div>
           <div class="figure"><b>${rejected.toLocaleString()}</b><span>Not used</span></div>
+          ${
+            cited
+              ? `<div class="figure" title="Already cited in the trend profile, so there is nothing to decide"><b>${cited.toLocaleString()}</b><span>Already cited</span></div>`
+              : ""
+          }
         </div>
       </div>
 
@@ -14063,7 +14088,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                 (t) =>
                   `<option value="${esc(t.id)}"${t.id === trendId ? " selected" : ""}>${esc(
                     t.title,
-                  )} (${t.total})</option>`,
+                  )}</option>`,
               )
               .join("")}</select></label>
         <div class="field"><span>Match quality</span>
@@ -14397,9 +14422,19 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           .map((f) => {
             const figure = figures[f.id];
             if (!figure || figure.when === false) return "";
+            /*
+             * "5,246" on its own reads as "that is all there is", and the
+             * default quality band hides half the library — so the figure
+             * says what it is a part of.
+             */
+            const whole = f.id === "proof.figure.showing" ? PROOF.points.length : 0;
             return `<div class="figure"><b>${figure.n.toLocaleString()}</b>${slot(f.id, {
               tag: "span",
-            })}</div>`;
+            })}${
+              whole > figure.n
+                ? `<em class="figure-of">of ${whole.toLocaleString()}</em>`
+                : ""
+            }</div>`;
           })
           .join("")}</div>
       </div>
@@ -14438,7 +14473,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                 (t) =>
                   `<option value="${esc(t.id)}"${t.id === trendId ? " selected" : ""}>${esc(
                     t.title,
-                  )} (${t.total})</option>`,
+                  )}</option>`,
               )
               .join("")}</select></label>
         <label class="field pp-search"><span>${esc(slotText("proof.filter.search"))}</span>
