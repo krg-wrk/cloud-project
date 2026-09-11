@@ -41,6 +41,9 @@ const PAGES = [
   ["Calendar", "/calendar/2026-09", "#/calendar/2026-09"],
   ["Trends", "/trends", "#/trends"],
   ["Performance", "/performance", "#/performance"],
+  ["Forecast Builder", "/lab/builder", "#/lab/builder"],
+  ["Add Atoms", "/lab/atoms", "#/lab/atoms"],
+  ["Brief Builder", "/lab/brief", "#/lab/brief"],
   ["Proof points", "/data/proof-points", "#/data/proof-points"],
   ["Review", "/data/review?owner=all&quality=all", "#/data/review?owner=all&quality=all"],
   ["Team", "/team", "#/team"],
@@ -51,6 +54,7 @@ const PAGES = [
   ["Studio", "/studio/connections", "#/studio/connections"],
   ["Freshness", "/studio/freshness", "#/studio/freshness"],
   ["Notify admin", "/studio/notifications", "#/studio/notifications"],
+  ["Studio resources", "/studio/resources", "#/studio/resources"],
 ];
 
 const APP = "http://localhost:5173";

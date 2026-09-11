@@ -10,6 +10,7 @@ import { SmartsheetSource } from "./data/smartsheetSource.js";
 import { createNotifyRouter } from "./notify/api.js";
 import { startSchedule } from "./notify/schedule.js";
 import { createProofPointRouter } from "./proofPoints/api.js";
+import { createResourcesRouter } from "./resources.js";
 import { createSearchRouter } from "./searchApi.js";
 import { ProofPointLibrary } from "./proofPoints/library.js";
 import { SignUps } from "./signUps.js";
@@ -84,6 +85,7 @@ app.use(
   createProofPointRouter(proofPoints, data, store),
   createNotifyRouter(data, store, signUps, proofPoints),
   createSearchRouter(data, studio, proofPoints),
+  createResourcesRouter(store),
 );
 
 /*

@@ -239,6 +239,26 @@ button {
   color: var(--accent);
 }
 
+/* The groups are wrappers rather than siblings, so a heading and its items
+   cannot be separated by anything. They lay out as the flex column did. */
+.nav-group {
+  display: flex;
+  flex-direction: column;
+}
+
+/* The marker on a link that leaves the Hub. Quiet: it is a fact about the
+   destination, not a call to press it. */
+.nav-out,
+.sheet-link .nav-out {
+  margin-left: 5px;
+  color: var(--ink-45);
+  flex: none;
+}
+
+.nav-link:hover .nav-out {
+  color: var(--accent);
+}
+
 .sidebar-foot {
   margin-top: auto;
   font-size: 11px;
@@ -5754,4 +5774,349 @@ a.inbox-title:hover {
    whole page — it is a destination, not a control. */
 .main:focus {
   outline: none;
+}
+
+/* --- The Forecast Lab ----------------------------------------------------
+ *
+ * Two of these pages are concepts and one is a first cut, so the furniture is
+ * deliberately the same as everywhere else: a concept that looks like a
+ * different product is a concept nobody can judge. What marks them out is the
+ * banner at the top saying so, not a different visual language.
+ * ------------------------------------------------------------------------- */
+
+.concept-note {
+  border-left: 3px solid var(--review);
+}
+
+/* The palette beside the canvas, and the form beside the brief. Two columns
+   on a desktop, stacked on anything narrower — the order in the markup is
+   the order that reads on a phone. */
+.lab-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+  gap: 24px;
+  margin-top: 20px;
+  align-items: start;
+}
+
+.brief-layout {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.atom-palette {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.atom,
+.library {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  text-align: left;
+  cursor: grab;
+}
+
+.library {
+  cursor: pointer;
+}
+
+.atom:hover,
+.library:hover {
+  border-color: var(--accent);
+}
+
+.library.on {
+  border-color: var(--accent);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+
+.atom .icon,
+.library .icon {
+  margin-top: 2px;
+  color: var(--ink-45);
+  flex: none;
+}
+
+.atom.on .icon,
+.library.on .icon {
+  color: var(--accent);
+}
+
+.atom b,
+.library b {
+  display: block;
+  font-weight: 500;
+}
+
+.atom small,
+.library small {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink-45);
+  line-height: 1.5;
+}
+
+.library-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+/* The canvas, and the dashed outline that is the whole of the concept. */
+.canvas {
+  min-height: 320px;
+  padding: 16px;
+  border: 1.5px dashed var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--ground);
+}
+
+.canvas.over {
+  border-color: var(--accent);
+  background: var(--paper);
+}
+
+.canvas-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 288px;
+  color: var(--ink-45);
+  text-align: center;
+}
+
+.canvas-empty .icon {
+  color: var(--rule-strong);
+}
+
+.canvas-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.canvas-atoms {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.canvas-atom {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  font-size: 12.5px;
+}
+
+.canvas-atom .icon {
+  color: var(--ink-45);
+}
+
+.canvas-atom-x {
+  margin-left: 2px;
+  padding: 0 2px;
+  border: 0;
+  background: none;
+  color: var(--ink-45);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.canvas-atom-x:hover {
+  color: var(--status-at-risk);
+}
+
+.canvas-foot {
+  margin-top: 16px;
+  max-width: 60ch;
+}
+
+.lab-form {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  margin-top: 20px;
+}
+
+.lab-form .field {
+  margin-top: 12px;
+  max-width: 52ch;
+}
+
+.lab-form textarea {
+  padding: 7px 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+
+.lab-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  padding: 28px 16px;
+  border: 1.5px dashed var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--ground);
+  text-align: center;
+}
+
+.drop-zone .icon {
+  color: var(--rule-strong);
+}
+
+.tag-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid var(--rule-strong);
+  border-radius: 999px;
+  font-size: 11.5px;
+}
+
+.tag button {
+  border: 0;
+  background: none;
+  color: var(--ink-45);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.plan-list {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  max-width: 72ch;
+}
+
+.plan-list li {
+  padding: 9px 0;
+  border-bottom: 1px solid var(--rule);
+  color: var(--ink-70);
+  line-height: 1.6;
+}
+
+.plan-list b {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.brief-context {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--ink-45);
+}
+
+.brief-context span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* The brief itself: monospaced because it is text to be copied, not a page
+   to be read — what you see is exactly what lands in the email. */
+.brief-preview {
+  margin-top: 12px;
+  padding: 16px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+/* --- The resources editor, in the studio --------------------------------- */
+
+.resource-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.resource-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+
+.resource-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1.4fr);
+  gap: 12px;
+  flex: 1;
+}
+
+.resource-fields .field input {
+  min-width: 0;
+  width: 100%;
+}
+
+.resource-controls {
+  display: flex;
+  gap: 4px;
+  padding-top: 18px;
+}
+
+@media (max-width: 900px) {
+  .lab-layout,
+  .brief-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .resource-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .resource-controls {
+    padding-top: 0;
+  }
 }

@@ -34,6 +34,9 @@ Set `HUB_DB_URL` when it is time for Postgres — see
 | Team | `/team`, `/team/ao` | Per-forecaster pages |
 | Performance | `/performance` | KPIs per forecaster and across the team, over any time range |
 | Trends | `/trends`, `/trends/:id` | All 446 TFDB trend profiles: which are yours, the call on each, which industries still need a score |
+| Forecast Builder | `/lab/builder` | A concept: drag atoms onto a canvas and have the Hub cross-reference them against everything already forecast |
+| Add Atoms | `/lab/atoms` | A concept: upload research once, say what it could be useful for, have it filed and tagged |
+| Freelance Brief Builder | `/lab/brief` | Pick a forecast and the Hub writes the brief around it, dates and context included |
 | Data | `/data` | The analysis that sits beside the schedule rather than in it |
 | Proof Point Library | `/data/proof-points` | 10,235 data callouts matched against every trend profile, with the reasoning and the owner's decision |
 | Review proof points | `/data/review` | The deciding half of the same thing: one card at a time, arrow keys, rejection reasons |
@@ -400,6 +403,88 @@ commissioning manager for that vertical can set them:
 
 Only `http(s)` links are stored, checked server-side: these render as anchors,
 so `javascript:` and `data:` are a way in and are refused with a plain message.
+
+## The Forecast Lab
+
+The rest of the Hub is about tracking a forecast. This section is about making
+one, and it is the part that is furthest from finished — two of its five items
+are concepts with a page that says so, and two are tools of ours that live on
+their own domains.
+
+| Item | Where it goes | State |
+| --- | --- | --- |
+| Forecast Builder | `/lab/builder` | Concept |
+| Add Atoms | `/lab/atoms` | Concept |
+| Workspace 2 | medialibrary.wgsn.com | An existing tool, linked |
+| The Feed | wgsn.com/trend-tag | An existing tool, linked |
+| Freelance Brief Builder | `/lab/brief` | A working first cut |
+
+They are one group because that is how the work feels from the inside: you are
+building, and which of our systems serves the thing you reach for is our
+problem rather than the forecaster's. An item that leaves the Hub opens in a
+new tab, carries a small arrow, and says "opens in a new tab" for anyone who
+cannot see the arrow — losing your place in the Hub because a menu item was a
+different kind of link is the thing to avoid.
+
+### The concept pages run
+
+Both concepts are honest about being concepts — a banner at the top, before the
+first control that looks like it works — and both actually work as far as they
+go. That is the point rather than a shortcut: a picture of a canvas answers no
+questions, while a canvas you can drag things onto answers "is this how I would
+actually work?", which is the only question worth asking of something unbuilt.
+Nothing is saved and both pages say so.
+
+**Forecast Builder** has the five kinds of atom — data, driver, image, media,
+research — and a canvas to drag them onto. What it would eventually do is
+cross-reference what you dropped against everything we have already published:
+not autocomplete, but being told "three forecasts already argue this, and one
+argues the opposite". Alignment is as much the point as speed.
+
+**Add Atoms** is the other end of the same idea: upload research once, say
+which libraries it belongs in and tag it, and have it findable by a forecaster
+who was not in the room. The filing is the hard part, which is why it belongs
+to the Hub rather than to a shared drive — a folder structure is a filing
+system only for the person who made it. The questions on that page are the
+thing being tried out, because what is asked at the moment of upload decides
+whether any of it is findable a year later.
+
+### The brief builder works
+
+Picking a forecast writes the brief around it: title, type, vertical, season,
+publication date, the research links already attached, and a deadline worked
+back a week from the submission date rather than left as "asap". What it asks
+for is only what the Hub cannot know — who the freelancer is, what they are
+being asked to make, and anything particular about how.
+
+The output is plain text, deliberately. It goes to somebody outside the company
+who will never have a Hub account, so a page they cannot open would be the
+wrong deliverable. Copy it, paste it into an email. Nothing is sent from here.
+
+## Resources, and the two databases under Data
+
+**Under Data**, two links: the **STEPIC Driver Database**
+(stepic-ssft.wgsndev.com) and **WGSN Score** (score.wgsndev.com). "Where do I
+find the drivers" is a question about data, and the answer being a different
+domain is not the forecaster's problem to remember.
+
+**Resources** is the drawer at the bottom of the menu for everything else —
+the Chrome extension somebody swears by, the training doc nobody can find.
+Admins edit it in the studio (`/studio/resources`), it is stored in the Hub,
+and it appears in everyone's sidebar. That is the whole design: a list that
+needed a developer to add a row would end up back in chat, which is where these
+links live now and where they get lost.
+
+It ships with one link, [Moody2](https://chromewebstore.google.com/detail/moody2/ndddendnbhencpcekggegcihmjbjmfbj),
+and an untouched list has no database row at all — so what ships is whatever
+the code says until somebody saves their own.
+
+Only `http` and `https` addresses are stored, checked on the server. These
+become the `href` of something every forecaster is invited to click, so
+`javascript:` and `data:` are a way in and are refused; a row missing its name
+or its address is dropped rather than failing the save, and the editor says how
+many were left out. `server/src/resources.test.mjs` is about what is refused
+rather than what is kept.
 
 ## Trends
 
@@ -1356,15 +1441,22 @@ npm run build -w server && node demo/build.mjs   # writes demo/forecasters-hub.h
 Edit `demo/hub.template.html` and rebuild; the schedule comes from the same
 seed module as the app, so the two never drift apart.
 
+The Lab is in it, working: the canvas takes a drop, the brief writes itself
+from a real forecast and updates as you type, and the Resources list can be
+added to from the demo's own studio. The one thing the demo cannot do is keep
+any of it — there is no server behind a single file, and the pages say so
+where it matters.
+
 ## Scripts
 
 - `npm run dev` — API on :3001 and the client on :5173 together
 - `npm run build` — builds both
 - `npm start` — runs the built server; with `NODE_ENV=production` it also
   serves the built client, with a catch-all so deep links survive a refresh
-- `npm test -w server` — 107 tests: the Smartsheet reader against a stubbed
+- `npm test -w server` — 116 tests: the Smartsheet reader against a stubbed
   API, the proof point library and its sanitiser, what the notifier says and
-  when, how search ranks, and the `?` → `$1` translation both databases rely on
+  when, how search ranks, what a resource link is allowed to be, and the
+  `?` → `$1` translation both databases rely on
 - `node demo/build.mjs` — rebuilds the shareable single-file demo
 - `python3 tools/extract-proof-points.py <workbook.xlsx>` — regenerates the
   proof point seed from the Proof Points Reviewer workbook

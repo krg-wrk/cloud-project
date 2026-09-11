@@ -439,6 +439,17 @@ export interface ViewDef {
 }
 
 /** A custom view in the sidebar. */
+/**
+ * A link in the Resources drawer: a tool or a document that is not ours to
+ * hold, kept in the menu so nobody has to ask for it in chat again.
+ */
+export interface ResourceLink {
+  id: string;
+  label: string;
+  url: string;
+  note?: string;
+}
+
 export interface ViewLink {
   slug: string;
   label: string;

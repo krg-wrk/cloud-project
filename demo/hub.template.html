@@ -720,6 +720,352 @@
     white-space: nowrap;
   }
 
+  /* ---- The Forecast Lab ---------------------------------------------------
+   *
+   * Two of these pages are concepts and one is a first cut, so the furniture
+   * is deliberately the same as everywhere else: a concept that looks like a
+   * different product is a concept nobody can judge. What marks them out is
+   * the banner at the top saying so.
+   * ------------------------------------------------------------------------- */
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* The marker on a link that leaves the Hub. Quiet: it is a fact about the
+     destination, not a call to press it. */
+  .nav-out {
+    margin-left: 5px;
+    color: var(--ink-soft);
+    flex: none;
+  }
+
+  .nav-link:hover .nav-out {
+    color: var(--accent);
+  }
+
+  .concept-note {
+    margin: 16px 0 0;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--review);
+    background: var(--ground);
+  }
+
+  .concept-note strong {
+    font-weight: 500;
+  }
+
+  .concept-note p {
+    margin: 4px 0 0;
+    color: var(--ink-mid);
+  }
+
+  .lab-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 320px) minmax(0, 1fr);
+    gap: 24px;
+    margin-top: 20px;
+    align-items: start;
+  }
+
+  .brief-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .lab-h2 {
+    margin: 0 0 4px;
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  .atom-palette {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .atom,
+  .library {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    text-align: left;
+    cursor: grab;
+  }
+
+  .library {
+    cursor: pointer;
+  }
+
+  .atom:hover,
+  .library:hover {
+    border-color: var(--accent);
+  }
+
+  .library.on {
+    border-color: var(--accent);
+    box-shadow: inset 2px 0 0 var(--accent);
+  }
+
+  .atom .icon,
+  .library .icon {
+    margin-top: 2px;
+    color: var(--ink-soft);
+    flex: none;
+  }
+
+  .library.on .icon {
+    color: var(--accent);
+  }
+
+  .atom b,
+  .library b {
+    display: block;
+    font-weight: 500;
+  }
+
+  .atom small,
+  .library small {
+    display: block;
+    margin-top: 2px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+
+  .library-picker {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .canvas {
+    min-height: 320px;
+    padding: 16px;
+    border: 1.5px dashed var(--line-firm);
+    background: var(--ground);
+  }
+
+  .canvas.over {
+    border-color: var(--accent);
+    background: var(--paper);
+  }
+
+  .canvas-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    min-height: 288px;
+    color: var(--ink-soft);
+    text-align: center;
+  }
+
+  .canvas-empty .icon {
+    color: var(--line-firm);
+  }
+
+  .canvas-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+
+  .canvas-atoms {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .canvas-atom {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 7px 9px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    font-size: 12.5px;
+  }
+
+  .canvas-atom .icon {
+    color: var(--ink-soft);
+  }
+
+  .canvas-atom button {
+    margin-left: 2px;
+    padding: 0 2px;
+    border: 0;
+    background: none;
+    color: var(--ink-soft);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .canvas-atom button:hover {
+    color: var(--late);
+  }
+
+  .canvas-foot {
+    margin-top: 16px;
+    max-width: 60ch;
+    color: var(--ink-soft);
+  }
+
+  .lab-form {
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+    margin-top: 20px;
+  }
+
+  .lab-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    margin-top: 12px;
+    max-width: 52ch;
+  }
+
+  .lab-field-label {
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .lab-field input,
+  .lab-field select,
+  .lab-field textarea {
+    padding: 7px 9px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    resize: vertical;
+  }
+
+  .lab-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    color: var(--ink-soft);
+  }
+
+  .drop-zone {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 28px 16px;
+    border: 1.5px dashed var(--line-firm);
+    background: var(--ground);
+    text-align: center;
+  }
+
+  .drop-zone .icon {
+    color: var(--line-firm);
+  }
+
+  .drop-zone p {
+    margin: 0;
+  }
+
+  .drop-zone small {
+    color: var(--ink-soft);
+  }
+
+  .tag-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .tag-row .tag {
+    align-items: center;
+    gap: 5px;
+  }
+
+  .tag-row .tag button {
+    border: 0;
+    background: none;
+    color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .plan-list {
+    margin: 12px 0 0;
+    padding: 0;
+    list-style: none;
+    max-width: 72ch;
+  }
+
+  .plan-list li {
+    padding: 9px 0;
+    border-bottom: 1px solid var(--line);
+    color: var(--ink-mid);
+    line-height: 1.6;
+  }
+
+  .plan-list b {
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  .brief-context {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-top: 12px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .brief-context span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* The brief itself: monospaced because it is text to be copied, not a page
+     to be read — what you see is what lands in the email. */
+  .brief-preview {
+    margin-top: 12px;
+    padding: 16px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    overflow-x: auto;
+  }
+
   /* ---- Filters ----------------------------------------------------------- */
 
   .filters {
@@ -5068,6 +5414,12 @@
   }
 
   @media (max-width: 900px) {
+    /* The Lab's two columns become one, in the order the markup reads. */
+    .lab-layout,
+    .brief-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
     /* The rail is gone at this width, so the panel anchors to the screen. */
     .bell-panel {
       position: fixed;
@@ -5499,6 +5851,16 @@
     plus: "M12 5v14M5 12h14",
     edit: "M15.5 4.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4L15.5 4.5ZM14 6l4 4",
 
+    // The Forecast Lab, and the arrow on anything that leaves the Hub.
+    builder: "M4 5h6v6H4zM14 5h6v6h-6zM4 15h6v4H4zM14 15h6v4h-6zM10 8h4M10 17h4M7 11v4M17 11v4",
+    atom: "M12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM12 3c4.4 0 8 4 8 9s-3.6 9-8 9-8-4-8-9 3.6-9 8-9ZM4.2 8.5c-1 1.7 2.7 5 8.3 7.5s10.5 3.1 11.3 1.4M19.8 8.5c1 1.7-2.7 5-8.3 7.5S1 19.1.2 17.4",
+    media: "M4 5h16a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM10 9.5v5l4.5-2.5L10 9.5Z",
+    feed: "M5 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4ZM4 4a16 16 0 0 1 16 16M4 10.5A9.5 9.5 0 0 1 13.5 20",
+    brief: "M9 3h6v3H9zM8 4.5H6a1 1 0 0 0-1 1V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V5.5a1 1 0 0 0-1-1h-2M9 11h6M9 15h4",
+    driver: "M12 3v7M12 14v7M5 7.5 12 10l7-2.5M5 16.5 12 14l7 2.5M12 12.5a1.3 1.3 0 1 0 0-2.6 1.3 1.3 0 0 0 0 2.6ZM4 8.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM20 8.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM4 18.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM20 18.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z",
+    score: "M12 3.5l2.6 5.3 5.9.9-4.2 4.1 1 5.8-5.3-2.8-5.3 2.8 1-5.8L3.5 9.7l5.9-.9L12 3.5Z",
+    external: "M14 4h6v6M20 4l-9 9M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10",
+
     // The studio. The five layouts double as the layout picker's own icons,
     // so the choice reads as a shape rather than a word.
     studio: "M4 7h7M15 7h5M4 17h5M13 17h7M13 4.5v5M9 14.5v5",
@@ -5520,11 +5882,11 @@
   };
 
   /** Presentational by default: the label beside it carries the meaning. */
-  function icon(name, size = 16) {
+  function icon(name, size = 16, extra = "") {
     const d = ICONS[name];
     if (!d) return "";
     return (
-      `<svg class="icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" ` +
+      `<svg class="icon${extra ? " " + extra : ""}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" ` +
       `stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" ` +
       `aria-hidden="true"><path d="${d}"/></svg>`
     );
@@ -5929,6 +6291,24 @@
   const connections = new Map();
   const datasets = new Map();
   const views = new Map();
+
+  /*
+   * The Resources drawer: links that are not the Hub's, kept in the menu so
+   * nobody has to ask for them in chat again. In the Hub these are stored
+   * and edited by an admin in the studio; here they are a list, because the
+   * demo is one file and has nowhere to save to.
+   */
+  const resources = [
+    {
+      label: "Moody2",
+      url: "https://chromewebstore.google.com/detail/moody2/ndddendnbhencpcekggegcihmjbjmfbj",
+      note: "Chrome extension for building mood boards as you browse.",
+    },
+  ];
+
+  /** The drawer, in the same tuple shape the rest of the rail uses. */
+  const resourceLinks = () =>
+    resources.map((r) => [esc(r.label), r.url, `res/${r.url}`, "", "link", false, true]);
 
   // What an admin has changed about the built-in pages: wording, what is on
   // them, and in what order. Shared like everything else.
@@ -6456,7 +6836,7 @@
     // so "here" has to carry both segments or every one of them would
     // highlight at once.
     const here =
-      parts[0] === "v" || parts[0] === "data"
+      parts[0] === "v" || parts[0] === "data" || parts[0] === "lab"
         ? `${parts[0]}/${parts[1] ?? ""}`
         : (parts[0] ?? "");
     const me = person(viewerId);
@@ -6481,6 +6861,34 @@
       "nav.item.trends": ["#/trends", "trends", "", "trends", true, "work"],
       "nav.item.performance": ["#/performance", "performance", "", "performance", false, "work"],
       /*
+       * The Forecast Lab: where a forecast gets made rather than tracked.
+       *
+       * Two concepts, one first cut, and two tools of ours that live on their
+       * own domains — the seventh field marks those, and they open in a new
+       * tab so nobody loses where they were in the Hub.
+       */
+      "nav.item.lab-builder": ["#/lab/builder", "lab/builder", "", "builder", false, "lab"],
+      "nav.item.lab-atoms": ["#/lab/atoms", "lab/atoms", "", "atom", false, "lab"],
+      "nav.item.lab-workspace": [
+        "https://medialibrary.wgsn.com/",
+        "lab/workspace",
+        "",
+        "media",
+        false,
+        "lab",
+        true,
+      ],
+      "nav.item.lab-feed": [
+        "https://www.wgsn.com/trend-tag",
+        "lab/feed",
+        "",
+        "feed",
+        false,
+        "lab",
+        true,
+      ],
+      "nav.item.lab-brief": ["#/lab/brief", "lab/brief", "", "brief", false, "lab"],
+      /*
        * Data has sub-views rather than one page, so the section heading is
        * the group and each analysis is an item under it. One so far; the
        * shape is there for the next.
@@ -6500,6 +6908,30 @@
         "review",
         false,
         "data",
+      ],
+      /*
+       * The two databases that are ours but not the Hub's. Listed here
+       * because "where do I find the drivers" is a question about data, and
+       * the answer being a different domain is our problem rather than the
+       * forecaster's.
+       */
+      "nav.item.stepic": [
+        "https://stepic-ssft.wgsndev.com/",
+        "data/stepic",
+        "",
+        "driver",
+        false,
+        "data",
+        true,
+      ],
+      "nav.item.score": [
+        "https://score.wgsndev.com/",
+        "data/score",
+        "",
+        "score",
+        false,
+        "data",
+        true,
       ],
       "nav.item.learning": [
         "#/learning",
@@ -6539,11 +6971,11 @@
       ordered
         .filter((x) => fixed[x.id][5] === which)
         .map((x) => {
-          const [href, key, badge, iconName, primary] = fixed[x.id];
+          const [href, key, badge, iconName, primary, , away] = fixed[x.id];
           // A label is typed by an admin and is interpolated into the rail
           // and the phone bar as HTML, so it is escaped here. The group
           // headings go through slot(), which escapes its own text.
-          return [esc(slotText(x.id)), href, key, badge, iconName, primary];
+          return [esc(slotText(x.id)), href, key, badge, iconName, primary, away];
         });
 
     /*
@@ -6551,21 +6983,19 @@
      * it is an anchor, and a button inside one would swallow the click that
      * navigates. Items are renamed from the studio's list, which is a step
      * away rather than a different mechanism.
+     *
+     * A heading only appears if its group has anything in it, so hiding the
+     * library does not leave a stray "Data" above nothing — and a Resources
+     * drawer nobody has filled in is not a drawer.
      */
-    const links = [
-      [slot("nav.group.work", { tag: "" }), null, null, null, null, false],
-      ...inGroup("work"),
-      // The heading only appears if the group has anything in it, so hiding
-      // the library does not leave a stray "Data" above nothing.
-      ...(inGroup("data").length
-        ? [
-            [slot("nav.group.data", { tag: "" }), null, null, null, null, false],
-            ...inGroup("data"),
-          ]
-        : []),
-      [slot("nav.group.team", { tag: "" }), null, null, null, null, false],
-      ...inGroup("team"),
-    ];
+    const groups = ["work", "lab", "data", "team", "resources"];
+    const links = [];
+    for (const group of groups) {
+      const rows = group === "resources" ? resourceLinks() : inGroup(group);
+      if (!rows.length) continue;
+      links.push([slot(`nav.group.${group}`, { tag: "" }), null, null, null, null, false]);
+      links.push(...rows);
+    }
 
     // Views built in the studio land in the group they were given, beside the
     // hand-written pages — because to the person a view was built for there is
@@ -6596,12 +7026,16 @@
       links.push(["Studio", "#/studio/connections", "studio", "", "studio", false]);
     }
     document.getElementById("nav").innerHTML = links
-      .map(([label, href, key, badge, iconName]) =>
+      .map(([label, href, key, badge, iconName, , away]) =>
         href === null
           ? `<div class="nav-group">${label}</div>`
-          : `<a class="nav-link${key === here ? " on" : ""}" href="${href}">${icon(
-              iconName,
-            )}${label}${badge ? `<b>${badge}</b>` : ""}</a>`,
+          : `<a class="nav-link${key === here ? " on" : ""}" href="${href}"${
+              // Somewhere that is not the Hub: a new tab, and said out loud
+              // for anyone who cannot see the little arrow.
+              away ? ' target="_blank" rel="noopener noreferrer"' : ""
+            }>${icon(iconName)}${label}${
+              away ? `${icon("external", 13, "nav-out")}<span class="sr-only">(opens in a new tab)</span>` : ""
+            }${badge ? `<b>${badge}</b>` : ""}</a>`,
       )
       .join("");
 
@@ -6676,11 +7110,14 @@
         </div>
         <div class="nav-sheet-links">${rest
           .map(
-            ([label, href, key, badge, iconName]) =>
-              `<a class="sheet-link${key === here ? " on" : ""}" href="${href}"
-                 data-sheet-go="1">${icon(iconName, 18)}${label}${
-                badge && badge !== "0" ? `<b>${badge}</b>` : ""
-              }</a>`,
+            ([label, href, key, badge, iconName, , away]) =>
+              `<a class="sheet-link${key === here ? " on" : ""}" href="${href}"${
+                away ? ' target="_blank" rel="noopener noreferrer"' : ' data-sheet-go="1"'
+              }>${icon(iconName, 18)}${label}${
+                away
+                  ? `${icon("external", 13, "nav-out")}<span class="sr-only">(opens in a new tab)</span>`
+                  : ""
+              }${badge && badge !== "0" ? `<b>${badge}</b>` : ""}</a>`,
           )
           .join("")}
           <!-- A phone has no ⌘K, so the sheet carries the way in. -->
@@ -9273,8 +9710,10 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           label: "Group headings",
           slots: [
             slotTitle("nav.group.work", "Your work"),
+            slotTitle("nav.group.lab", "Forecast Lab"),
             slotTitle("nav.group.data", "Data"),
             slotTitle("nav.group.team", "The team"),
+            slotTitle("nav.group.resources", "Resources"),
           ],
         },
         {
@@ -9287,8 +9726,15 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             slotNav("nav.item.calendar", "Calendar"),
             slotNav("nav.item.trends", "Trends"),
             slotNav("nav.item.performance", "Performance"),
+            slotNav("nav.item.lab-builder", "Forecast Builder"),
+            slotNav("nav.item.lab-atoms", "Add Atoms"),
+            slotNav("nav.item.lab-workspace", "Workspace 2"),
+            slotNav("nav.item.lab-feed", "The Feed"),
+            slotNav("nav.item.lab-brief", "Freelance Brief Builder"),
             slotNav("nav.item.proof-points", "Proof Point Library"),
             slotNav("nav.item.proof-review", "Review proof points"),
+            slotNav("nav.item.stepic", "STEPIC Driver Database"),
+            slotNav("nav.item.score", "WGSN Score"),
             slotNav("nav.item.learning", "Learning"),
             slotNav("nav.item.team", "Forecasters"),
             slotNav("nav.item.whats-on", "What’s on"),
@@ -9431,6 +9877,67 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             slotField("trends.figure.mine", "Yours"),
             slotField("trends.figure.live", "Live"),
             slotField("trends.figure.awaiting", "Awaiting a score"),
+          ],
+        },
+      ],
+    },
+    /*
+     * The Lab's three pages. Two of them are concepts and say so on the page
+     * — which is exactly why their wording is editable: the words are the
+     * whole of what is there, and they will be argued over before any of it
+     * is built.
+     */
+    {
+      id: "builder",
+      label: "Forecast Builder",
+      path: "/lab/builder",
+      groups: [
+        {
+          id: "builder.head",
+          label: "Page heading",
+          slots: [
+            slotTitle("builder.eyebrow", "Concept"),
+            slotTitle("builder.title", "Forecast Builder"),
+            slotTitle("builder.canvas", "Drag atoms in to start building"),
+            slotSection("builder.palette", "Atoms"),
+            slotSection("builder.plan", "What it is for"),
+          ],
+        },
+      ],
+    },
+    {
+      id: "atoms",
+      label: "Add Atoms",
+      path: "/lab/atoms",
+      groups: [
+        {
+          id: "atoms.head",
+          label: "Page heading",
+          slots: [
+            slotTitle("atoms.eyebrow", "Concept"),
+            slotTitle("atoms.title", "Add Atoms"),
+            slotSection("atoms.drop", "The upload"),
+            slotSection("atoms.kinds", "What could this be useful for?"),
+            slotSection("atoms.tags", "Tags"),
+            slotSection("atoms.plan", "What it is for"),
+          ],
+        },
+      ],
+    },
+    {
+      id: "brief",
+      label: "Freelance Brief Builder",
+      path: "/lab/brief",
+      groups: [
+        {
+          id: "brief.head",
+          label: "Page heading",
+          slots: [
+            slotTitle("brief.eyebrow", "Forecast Lab"),
+            slotTitle("brief.title", "Freelance Brief Builder"),
+            slotSection("brief.about", "The forecast"),
+            slotSection("brief.work", "The work"),
+            slotSection("brief.preview", "The brief"),
           ],
         },
       ],
@@ -10112,6 +10619,54 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
   /* ---- studio pages ------------------------------------------------------ */
 
+  /**
+   * The Resources drawer, edited where it is used.
+   *
+   * The whole reason the section exists is that useful links live in chat,
+   * where they are found once and lost — so a list that needed a developer
+   * to add a row would go the same way. In the running Hub this is saved to
+   * the Hub's own database and appears in everybody's sidebar; here it lasts
+   * as long as the page does, which the note says.
+   */
+  function studioResources() {
+    return `
+      <div class="studio-bar">
+        <p class="signup-note" style="margin:0">These appear under <b>Resources</b> at the
+          bottom of everybody's sidebar, in this order, and open in a new tab. In the
+          running Hub they are saved for the whole team; this page has no server, so a
+          change here lasts until you reload.</p>
+      </div>
+      <div class="studio-list">
+        ${resources
+          .map(
+            (r, i) => `
+          <div class="studio-item">
+            <div class="studio-item-head">
+              <div>
+                <h2>${esc(r.label)}</h2>
+                <p class="signup-note" style="margin:2px 0 0">${esc(r.note ?? "")}</p>
+                <p class="signup-note" style="margin:2px 0 0"><code>${esc(r.url)}</code></p>
+              </div>
+              <button class="toggle" data-res-drop="${i}">Remove</button>
+            </div>
+          </div>`,
+          )
+          .join("")}
+      </div>
+      <div class="studio-item">
+        <div class="lab-field"><span class="lab-field-label">Name</span>
+          <input id="res-label" placeholder="WGSN training" /></div>
+        <div class="lab-field"><span class="lab-field-label">Address</span>
+          <input id="res-url" placeholder="https://…" /></div>
+        <div class="lab-field"><span class="lab-field-label">What it is for (optional)</span>
+          <input id="res-note" placeholder="The deck everyone asks for in their first week." /></div>
+        <div class="lab-actions" style="margin-top:12px">
+          <button class="toggle" data-res-add>${icon("plus", 15)}Add the link</button>
+          <span id="res-said"></span>
+        </div>
+      </div>`;
+  }
+
   function studioTabs(here) {
     const tab = (key, n, label, blurb, iconName) =>
       `<a class="studio-tab${here === key ? " on" : ""}" href="#/studio/${key}">${icon(
@@ -10126,6 +10681,10 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         "edit",
         15,
       )}<span><b>The built-in pages</b><em>Rename, hide, reorder</em></span></a>
+      <a class="studio-tab${here === "resources" ? " on" : ""}" href="#/studio/resources">${icon(
+        "link",
+        15,
+      )}<span><b>Resources</b><em>The links in the menu</em></span></a>
     </nav>`;
   }
 
@@ -10141,7 +10700,9 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         ? studioDatasets()
         : tab === "pages"
           ? studioPages()
-          : tab === "views"
+          : tab === "resources"
+            ? studioResources()
+            : tab === "views"
             ? params.get("build")
               ? studioBuilder(params.get("build"))
               : studioViews()
@@ -11393,6 +11954,324 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
   }
 
   /** The Data section: one analysis so far, and room for the next. */
+  /* ---- The Forecast Lab --------------------------------------------------
+   *
+   * Where a forecast gets made rather than tracked. Two of these pages are
+   * concepts — they say so at the top, and they run enough to be argued
+   * with, which a picture of a page cannot be. The third writes a real brief
+   * from a real forecast.
+   * ----------------------------------------------------------------------- */
+
+  const LAB_ATOMS = [
+    ["data", "data", "Data", "A figure with a source — sell-through, search volume, a survey."],
+    ["driver", "driver", "Driver", "A STEPIC driver: the social or economic force underneath the shift."],
+    ["image", "image", "Image", "A catwalk shot, a store photograph, a product still."],
+    ["media", "media", "Media", "Video, audio, a deck — anything Workspace 2 holds."],
+    ["research", "note", "Research", "A report, an interview, a page you want the forecast to argue with."],
+  ];
+
+  /** What has been dropped on the canvas this session. Nothing is saved. */
+  let canvasAtoms = [];
+
+  function pageBuilder() {
+    const empty = `
+      <div class="canvas-empty">${icon("builder", 26)}
+        ${slot("builder.canvas", { tag: "p" })}
+      </div>`;
+    const full = `
+      <div class="canvas-head">
+        <span class="muted">${canvasAtoms.length} atom${
+          canvasAtoms.length === 1 ? "" : "s"
+        } — held in this page only</span>
+        <button class="toggle" data-canvas-clear>Clear</button>
+      </div>
+      <div class="canvas-atoms">${canvasAtoms
+        .map(
+          (a, i) =>
+            `<div class="canvas-atom">${icon(a[1], 15)}${esc(a[2])}
+               <button data-canvas-drop="${i}" aria-label="Remove ${esc(a[2])}">×</button></div>`,
+        )
+        .join("")}</div>
+      <p class="canvas-foot">Eventually: the Hub reads these, finds every forecast that has
+        argued something similar, and tells you where this one agrees, disagrees or has
+        nothing to say.</p>`;
+
+    return `
+      <div class="head">
+        <div>
+          ${slot("builder.eyebrow", { tag: "div", cls: "eyebrow" })}
+          ${slot("builder.title", { tag: "h1" })}
+          <p class="lede">Drop in data, context, research and media, and have it
+            cross-referenced against everything we have already forecast — so a forecast
+            starts from what we know rather than from a blank page.</p>
+        </div>
+      </div>
+
+      <div class="concept-note">
+        <strong>A concept, not a feature.</strong>
+        <p>Nothing here is saved and nothing is cross-referenced yet. This is the shape of
+          the thing, to be argued with before it is built.</p>
+      </div>
+
+      <div class="lab-layout">
+        <div>
+          ${slot("builder.palette", { tag: "h2", cls: "lab-h2" })}
+          <p class="muted">Drag one onto the canvas, or press Enter on it.</p>
+          <div class="atom-palette">${LAB_ATOMS.map(
+            ([kind, ic, label, blurb], i) =>
+              `<button class="atom" draggable="true" data-atom="${i}">${icon(ic, 18)}
+                 <span><b>${esc(label)}</b><small>${esc(blurb)}</small></span></button>`,
+          ).join("")}</div>
+        </div>
+        <div class="canvas" id="lab-canvas">${canvasAtoms.length ? full : empty}</div>
+      </div>
+
+      ${slot("builder.plan", { tag: "h2", cls: "lab-h2" })}
+      <ul class="plan-list">
+        <li><b>Cross-reference, not autocomplete.</b> The value is being told "three forecasts
+          already say this, and one says the opposite" — not having a machine write the
+          forecast.</li>
+        <li><b>Everything keeps its source.</b> An atom carries where it came from, so a claim
+          in a finished forecast can always be walked back to the thing it rests on.</li>
+        <li><b>Alignment is the point.</b> Two forecasters pulling on the same trend should
+          find each other's work here rather than three weeks later in review.</li>
+        <li><b>It has to be faster than a blank page</b>, or nobody will open it twice.</li>
+      </ul>`;
+  }
+
+  const LAB_LIBRARIES = [
+    ["data", "data", "Data", "A figure and its source."],
+    ["driver", "driver", "Driver", "A STEPIC force."],
+    ["image", "image", "Image", "Catwalk, store, product."],
+    ["media", "media", "Media", "Video, audio, a deck."],
+    ["research", "note", "Research", "A report or an interview."],
+  ];
+
+  let atomKinds = [];
+  let atomTags = [];
+
+  function pageAtoms() {
+    return `
+      <div class="head">
+        <div>
+          ${slot("atoms.eyebrow", { tag: "div", cls: "eyebrow" })}
+          ${slot("atoms.title", { tag: "h1" })}
+          <p class="lede">Upload research once, say what it could be useful for, and let the
+            Hub file it into the data, driver, image and media libraries with the tags to
+            find it again.</p>
+        </div>
+      </div>
+
+      <div class="concept-note">
+        <strong>A concept, not a feature.</strong>
+        <p>Nothing is uploaded and nothing is filed. The questions are what is being tried
+          out here — they are what decides whether any of this is findable later.</p>
+      </div>
+
+      <div class="lab-form">
+        <section>
+          ${slot("atoms.drop", { tag: "h2", cls: "lab-h2" })}
+          <div class="drop-zone">${icon("atom", 26)}
+            <p>Drop a file here, or paste a link</p>
+            <small>Images, PDFs, decks, a URL — one thing at a time, or a folder of them.</small>
+          </div>
+          <label class="lab-field"><span class="lab-field-label">What is it?</span>
+            <input id="atom-name" placeholder="Sell-through on cargo trousers, John Lewis, Q2" />
+          </label>
+        </section>
+
+        <section>
+          ${slot("atoms.kinds", { tag: "h2", cls: "lab-h2" })}
+          <p class="muted">More than one is normal — a catwalk shot with a figure attached
+            is both.</p>
+          <div class="library-picker">${LAB_LIBRARIES.map(
+            ([id, ic, label, blurb]) =>
+              `<button class="library${atomKinds.includes(id) ? " on" : ""}"
+                 data-atom-kind="${id}" aria-pressed="${atomKinds.includes(id)}">${icon(ic, 17)}
+                 <span><b>${esc(label)}</b><small>${esc(blurb)}</small></span></button>`,
+          ).join("")}</div>
+        </section>
+
+        <section>
+          ${slot("atoms.tags", { tag: "h2", cls: "lab-h2" })}
+          <div class="tag-row">${atomTags
+            .map(
+              (t) =>
+                `<span class="tag">${esc(t)}<button data-atom-untag="${esc(
+                  t,
+                )}" aria-label="Remove ${esc(t)}">×</button></span>`,
+            )
+            .join("")}</div>
+          <label class="lab-field"><span class="lab-field-label">Add a tag</span>
+            <input id="atom-tag" data-atom-tag placeholder="Womenswear, S/S 28, denim" />
+          </label>
+          <p class="muted">Eventually these come from the taxonomy we already use for
+            trends, so a tag typed here is the same word the Proof Point Library searches.</p>
+        </section>
+
+        <div class="lab-actions">
+          <button class="toggle" disabled>File it</button>
+          <span>Not yet — this is where the filing would happen.</span>
+        </div>
+      </div>
+
+      ${slot("atoms.plan", { tag: "h2", cls: "lab-h2" })}
+      <ul class="plan-list">
+        <li><b>Asked once, at the moment it is fresh.</b> Nobody goes back to tag an upload
+          from three weeks ago, so the questions have to be short enough to answer now.</li>
+        <li><b>Filed for a stranger.</b> The test is whether a forecaster who was not
+          involved can find it, which is why the libraries and tags matter more than the
+          folder it came from.</li>
+        <li><b>An atom is reusable.</b> The same figure can hold up three different
+          forecasts — that is the whole reason to keep them apart from the documents.</li>
+        <li><b>It feeds the Builder.</b> These are the atoms that get dragged in there.</li>
+      </ul>`;
+  }
+
+  const BRIEF_KINDS = [
+    "Image research",
+    "Trend research",
+    "Written copy",
+    "Data gathering",
+    "Photography",
+    "Illustration",
+  ];
+
+  /** Days before the forecast is due that the freelance work should land. */
+  const BRIEF_LEAD = 7;
+
+  const brief = { who: "", kind: BRIEF_KINDS[0], needs: "", extra: "" };
+
+  function briefText(item, me) {
+    const due = addDays(item.submissionDate, -BRIEF_LEAD);
+    const links = detailsFor(item.id)?.researchLinks ?? [];
+    const lines = [
+      `Brief: ${brief.kind} for \u201c${item.title}\u201d`,
+      "",
+      `For: ${brief.who.trim() || "[freelancer]"}`,
+      `From: ${me.name} (${me.email})`,
+      "",
+      "THE FORECAST",
+      `Title: ${item.title}`,
+      `Type: ${detailsFor(item.id)?.contentType ?? item.type}`,
+      `Vertical: ${item.vertical}`,
+      `Season: ${item.season}`,
+      `Publishes: ${long(item.publicationDate)}`,
+      "",
+      "WHAT I NEED",
+      `${brief.kind}${brief.needs.trim() ? `: ${brief.needs.trim()}` : ""}`,
+      `Back to me by: ${long(due)} — the forecast itself is due ${long(
+        item.submissionDate,
+      )}, so this needs to land a week before.`,
+      "",
+    ];
+    if (links.length) {
+      lines.push("CONTEXT ALREADY GATHERED");
+      for (const l of links) lines.push(`- ${l.label}: ${l.url}`);
+      lines.push("");
+    }
+    if (brief.extra.trim()) lines.push("ANYTHING ELSE", brief.extra.trim(), "");
+    lines.push(
+      "HOUSE RULES",
+      "- Everything sourced: a figure without a source cannot be used.",
+      "- Images need rights cleared for WGSN publication, with the credit as it should appear.",
+      "- Flag anything you think contradicts the brief rather than quietly resolving it.",
+    );
+    return lines.join("\n");
+  }
+
+  function pageBrief(params) {
+    const me = person(viewerId);
+    const chosen = params.get("for") ?? "";
+    const mine = content.filter((c) => c.status !== "published");
+    const ordered = [
+      ...mine.filter((c) => c.forecasterId === me.id),
+      ...mine.filter((c) => c.forecasterId !== me.id),
+    ];
+    const item = ordered.find((c) => c.id === chosen);
+    const links = item ? (detailsFor(item.id)?.researchLinks ?? []) : [];
+
+    return `
+      <div class="head">
+        <div>
+          ${slot("brief.eyebrow", { tag: "div", cls: "eyebrow" })}
+          ${slot("brief.title", { tag: "h1" })}
+          <p class="lede">Pick a forecast and the Hub writes the brief around it — the
+            context a freelancer needs is already here, so nobody types it out again.</p>
+        </div>
+      </div>
+
+      <div class="lab-layout brief-layout">
+        <div class="lab-form">
+          <section>
+            ${slot("brief.about", { tag: "h2", cls: "lab-h2" })}
+            <label class="lab-field"><span class="lab-field-label">Which forecast is this for?</span>
+              <select data-filter="for">
+                <option value="">Choose a forecast…</option>
+                ${ordered
+                  .map(
+                    (c) =>
+                      `<option value="${c.id}"${c.id === chosen ? " selected" : ""}>${esc(
+                        c.title,
+                      )} — ${esc(c.season)}${
+                        c.forecasterId !== me.id ? ` (${esc(nameOf(c.forecasterId))})` : ""
+                      }</option>`,
+                  )
+                  .join("")}
+              </select>
+            </label>
+            ${
+              item
+                ? `<div class="brief-context">
+                     <span>${icon("calendar", 14)} Due ${long(item.submissionDate)}</span>
+                     <span>${icon("published", 14)} Publishes ${long(item.publicationDate)}</span>
+                     <span>${icon("link", 14)} ${links.length} research link${
+                       links.length === 1 ? "" : "s"
+                     } attached</span>
+                   </div>`
+                : ""
+            }
+          </section>
+
+          <section>
+            ${slot("brief.work", { tag: "h2", cls: "lab-h2" })}
+            <label class="lab-field"><span class="lab-field-label">Who is it for?</span>
+              <input id="brief-who" data-brief="who" value="${esc(brief.who)}"
+                placeholder="The freelancer’s name" />
+            </label>
+            <label class="lab-field"><span class="lab-field-label">What kind of work?</span>
+              <select id="brief-kind" data-brief="kind">${BRIEF_KINDS.map(
+                (k) => `<option${k === brief.kind ? " selected" : ""}>${esc(k)}</option>`,
+              ).join("")}</select>
+            </label>
+            <label class="lab-field"><span class="lab-field-label">What exactly do you need?</span>
+              <textarea id="brief-needs" data-brief="needs" rows="3"
+                placeholder="30 images of workwear detailing from independent retail, Berlin and Copenhagen">${esc(
+                  brief.needs,
+                )}</textarea>
+            </label>
+            <label class="lab-field"><span class="lab-field-label">Anything else they should know</span>
+              <textarea id="brief-extra" data-brief="extra" rows="3"
+                placeholder="Avoid anything we ran in the S/S 27 update.">${esc(brief.extra)}</textarea>
+            </label>
+          </section>
+        </div>
+
+        <div>
+          ${slot("brief.preview", { tag: "h2", cls: "lab-h2" })}
+          ${
+            item
+              ? `<pre class="brief-preview" id="brief-text">${esc(briefText(item, me))}</pre>
+                 <div class="lab-actions">
+                   <button class="toggle" data-brief-copy>${icon("copy", 15)}Copy the brief</button>
+                   <span>Paste it into an email. Nothing is sent from here.</span>
+                 </div>`
+              : `<p class="muted">Choose a forecast and the brief writes itself from here.</p>`
+          }
+        </div>
+      </div>`;
+  }
+
   function pageData() {
     return `
       <div class="head">
@@ -13107,6 +13986,14 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       case "trends":
         html = parts[1] ? pageTrend(parts[1]) : pageTrends(params);
         break;
+      case "lab":
+        html =
+          parts[1] === "atoms"
+            ? pageAtoms()
+            : parts[1] === "brief"
+              ? pageBrief(params)
+              : pageBuilder();
+        break;
       case "data":
         html =
           parts[1] === "proof-points"
@@ -13179,6 +14066,138 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     );
     view.querySelectorAll("[data-mine]").forEach((el) =>
       el.addEventListener("click", () => setParam("mine", el.dataset.mine)),
+    );
+
+    /*
+     * The resources editor. The address is checked before it is stored for
+     * the same reason the Hub checks it: this becomes the href of something
+     * everybody is invited to click, and only http and https belong there.
+     */
+    view.querySelectorAll("[data-res-drop]").forEach((el) =>
+      el.addEventListener("click", () => {
+        resources.splice(Number(el.dataset.resDrop), 1);
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-res-add]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const label = view.querySelector("#res-label").value.trim();
+        const url = view.querySelector("#res-url").value.trim();
+        const note = view.querySelector("#res-note").value.trim();
+        const said = view.querySelector("#res-said");
+        let ok = false;
+        try {
+          const at = new URL(url);
+          ok = at.protocol === "http:" || at.protocol === "https:";
+        } catch {
+          ok = false;
+        }
+        if (!label || !ok) {
+          said.textContent = "A link needs a name and an address starting http:// or https://.";
+          return;
+        }
+        resources.push({ label: label.slice(0, 80), url, ...(note ? { note: note.slice(0, 200) } : {}) });
+        render();
+      }),
+    );
+
+    /* The Forecast Lab -----------------------------------------------------
+     *
+     * The concept pages run rather than being pictures of themselves: a
+     * canvas you can drop things on answers "is this how I would work?",
+     * which is the only question worth asking of a concept. Nothing is kept
+     * beyond this page, and both pages say so.
+     */
+    const addAtom = (i) => {
+      const atom = LAB_ATOMS[Number(i)];
+      if (!atom) return;
+      canvasAtoms = [...canvasAtoms, atom];
+      render();
+    };
+
+    view.querySelectorAll("[data-atom]").forEach((el) => {
+      el.addEventListener("click", () => addAtom(el.dataset.atom));
+      el.addEventListener("dragstart", (e) =>
+        e.dataTransfer.setData("text/plain", el.dataset.atom),
+      );
+    });
+
+    const canvas = view.querySelector("#lab-canvas");
+    if (canvas) {
+      canvas.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        canvas.classList.add("over");
+      });
+      canvas.addEventListener("dragleave", () => canvas.classList.remove("over"));
+      canvas.addEventListener("drop", (e) => {
+        e.preventDefault();
+        canvas.classList.remove("over");
+        addAtom(e.dataTransfer.getData("text/plain"));
+      });
+    }
+
+    view.querySelectorAll("[data-canvas-drop]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const at = Number(el.dataset.canvasDrop);
+        canvasAtoms = canvasAtoms.filter((_, i) => i !== at);
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-canvas-clear]").forEach((el) =>
+      el.addEventListener("click", () => {
+        canvasAtoms = [];
+        render();
+      }),
+    );
+
+    view.querySelectorAll("[data-atom-kind]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const id = el.dataset.atomKind;
+        atomKinds = atomKinds.includes(id)
+          ? atomKinds.filter((k) => k !== id)
+          : [...atomKinds, id];
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-atom-untag]").forEach((el) =>
+      el.addEventListener("click", () => {
+        atomTags = atomTags.filter((t) => t !== el.dataset.atomUntag);
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-atom-tag]").forEach((el) =>
+      el.addEventListener("keydown", (e) => {
+        if (e.key !== "Enter" && e.key !== ",") return;
+        e.preventDefault();
+        const tag = el.value.trim().replace(/,$/, "");
+        if (tag && !atomTags.includes(tag)) atomTags = [...atomTags, tag];
+        el.value = "";
+        render();
+      }),
+    );
+
+    /*
+     * The brief's fields re-render the preview as they are typed, which is
+     * the whole point of showing it beside them. The render keeps the cursor
+     * where it was — see the focus restore above.
+     */
+    view.querySelectorAll("[data-brief]").forEach((el) =>
+      el.addEventListener("input", () => {
+        brief[el.dataset.brief] = el.value;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-brief-copy]").forEach((el) =>
+      el.addEventListener("click", async () => {
+        const text = view.querySelector("#brief-text")?.textContent ?? "";
+        try {
+          await navigator.clipboard.writeText(text);
+          el.textContent = "Copied";
+          setTimeout(() => render(), 1600);
+        } catch {
+          window.prompt("Copy the brief", text);
+        }
+      }),
     );
 
     // The Proof Point Library ----------------------------------------------

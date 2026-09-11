@@ -7,7 +7,15 @@ import { Icon } from "../lib/icons";
 import { CustomisationProvider, EditBar, Slot, useCustom } from "../lib/custom";
 import { useDialog } from "../lib/dialog";
 import { ViewerProvider, useViewer } from "../lib/viewer";
-import type { ContentItem, Inbox, Me, Person, SessionWithSignUps, ViewLink } from "../types";
+import type {
+  ContentItem,
+  Inbox,
+  Me,
+  Person,
+  ResourceLink,
+  SessionWithSignUps,
+  ViewLink,
+} from "../types";
 import { Avatar, ErrorNote, Loading } from "./bits";
 import FreshnessNote from "./FreshnessNote";
 import NotificationBell from "./NotificationBell";
@@ -68,7 +76,17 @@ interface Section {
   short?: string;
   badge?: string;
   end?: boolean;
-  group: "work" | "data" | "team";
+  group: GroupKey;
+  /**
+   * Somewhere else entirely: a tool of ours that lives on its own domain.
+   *
+   * The Hub is where a forecaster starts their day, so the things they open
+   * every day belong in this menu whether or not the Hub is what serves
+   * them. An external item opens in a new tab and says so — losing the Hub's
+   * state because a menu item was a different kind of link is the failure to
+   * avoid.
+   */
+  href?: string;
   /** Shown as a tab on a phone; the rest go behind "More". */
   primary?: boolean;
   /** Built in the studio rather than written by hand. */
@@ -77,6 +95,23 @@ interface Section {
   /** The registry slot that names it, for the fixed sections. */
   slot?: string;
 }
+
+type GroupKey = "work" | "lab" | "data" | "team" | "resources";
+
+/**
+ * The groups, in the order they are read.
+ *
+ * Your work first because it is why people are here; the Lab next because it
+ * is where the work is made; Data and the team after; Resources last, since
+ * it is the drawer of things that are not the Hub's at all.
+ */
+const GROUPS: { key: GroupKey; slot: string }[] = [
+  { key: "work", slot: "nav.group.work" },
+  { key: "lab", slot: "nav.group.lab" },
+  { key: "data", slot: "nav.group.data" },
+  { key: "team", slot: "nav.group.team" },
+  { key: "resources", slot: "nav.group.resources" },
+];
 
 /**
  * The sections, in one place. The sidebar renders them grouped; the bar at
@@ -133,6 +168,55 @@ function sections({
       slot: "nav.item.performance",
     },
     /*
+     * The Forecast Lab: where a forecast gets made rather than tracked.
+     *
+     * Two of these are concepts with a page that says so, one is a first cut,
+     * and two are tools of ours that live on their own domains. They are one
+     * group because that is how the work feels from the inside — you are
+     * building, and it does not matter which of our systems serves the thing
+     * you reach for.
+     */
+    {
+      to: "/lab/builder",
+      label: "Forecast Builder",
+      short: "Builder",
+      icon: "builder",
+      slot: "nav.item.lab-builder",
+      group: "lab",
+    },
+    {
+      to: "/lab/atoms",
+      label: "Add Atoms",
+      short: "Atoms",
+      icon: "atom",
+      slot: "nav.item.lab-atoms",
+      group: "lab",
+    },
+    {
+      to: "https://medialibrary.wgsn.com/",
+      href: "https://medialibrary.wgsn.com/",
+      label: "Workspace 2",
+      icon: "media",
+      slot: "nav.item.lab-workspace",
+      group: "lab",
+    },
+    {
+      to: "https://www.wgsn.com/trend-tag",
+      href: "https://www.wgsn.com/trend-tag",
+      label: "The Feed",
+      icon: "feed",
+      slot: "nav.item.lab-feed",
+      group: "lab",
+    },
+    {
+      to: "/lab/brief",
+      label: "Freelance Brief Builder",
+      short: "Briefs",
+      icon: "brief",
+      slot: "nav.item.lab-brief",
+      group: "lab",
+    },
+    /*
      * Data has sub-views rather than one page, so the section heading is the
      * group and each analysis is an item under it. One so far; the shape is
      * there for the next.
@@ -151,6 +235,29 @@ function sections({
       short: "Review",
       icon: "review",
       slot: "nav.item.proof-review",
+      group: "data",
+    },
+    /*
+     * The two databases that are ours but not the Hub's. Listed here because
+     * "where do I find the drivers" is a question about data, and the answer
+     * being a different domain is our problem rather than the forecaster's.
+     */
+    {
+      to: "https://stepic-ssft.wgsndev.com/",
+      href: "https://stepic-ssft.wgsndev.com/",
+      label: "STEPIC Driver Database",
+      short: "STEPIC",
+      icon: "driver",
+      slot: "nav.item.stepic",
+      group: "data",
+    },
+    {
+      to: "https://score.wgsndev.com/",
+      href: "https://score.wgsndev.com/",
+      label: "WGSN Score",
+      short: "Score",
+      icon: "score",
+      slot: "nav.item.score",
       group: "data",
     },
     {
@@ -194,6 +301,57 @@ function sections({
       badge: unread > 0 ? String(unread) : undefined,
     },
   ];
+}
+
+/**
+ * One item, whether it is a page of ours or somewhere else.
+ *
+ * Both kinds look the same in the menu on purpose — the difference that
+ * matters to the person reading it is where they end up, and that is what
+ * the marker and "opens in a new tab" say. Screen readers get the words;
+ * everybody else gets the little arrow.
+ */
+function NavItem({
+  section,
+  className,
+  onClick,
+}: {
+  section: Section;
+  className: string;
+  onClick?: () => void;
+}) {
+  const inside = (
+    <>
+      <Icon name={section.icon} size={className === "sheet-link" ? 18 : undefined} />
+      {section.label}
+      {section.href && (
+        <>
+          <Icon name="external" size={13} className="nav-out" />
+          <span className="sr-only">(opens in a new tab)</span>
+        </>
+      )}
+      {section.badge && <span className="count">{section.badge}</span>}
+    </>
+  );
+
+  if (section.href) {
+    return (
+      <a
+        className={className}
+        href={section.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        onClick={onClick}
+      >
+        {inside}
+      </a>
+    );
+  }
+  return (
+    <NavLink className={className} to={section.to} end={section.end} onClick={onClick}>
+      {inside}
+    </NavLink>
+  );
 }
 
 /**
@@ -246,6 +404,9 @@ function useSections(content: ContentItem[]): Section[] {
   // An account with no forecaster record has no inbox, which is a 403 — so
   // the count is simply nought rather than an error in the sidebar.
   const inbox = useApi<Inbox>("/notifications");
+  // The Resources drawer, which an admin fills in from the studio rather
+  // than by asking for a deploy.
+  const resources = useApi<{ links: ResourceLink[] }>("/resources");
 
   const fixed = sections({
     overdue: scope.filter((c) => isOverdue(c)).length,
@@ -263,7 +424,19 @@ function useSections(content: ContentItem[]): Section[] {
     ? [{ to: "/studio", label: "Studio", icon: "studio", group: "team", order: 1000 }]
     : [];
 
-  return [...customise(fixed, custom), ...built, ...studio];
+  /*
+   * Resources are data rather than code, so they are not slots: renaming one
+   * is editing the link itself, in the studio, where it was added.
+   */
+  const links: Section[] = (resources.data?.links ?? []).map((link) => ({
+    to: link.url,
+    href: link.url,
+    label: link.label,
+    icon: "link",
+    group: "resources",
+  }));
+
+  return [...customise(fixed, custom), ...built, ...studio, ...links];
 }
 
 function Sidebar({ content, onSearch }: { content: ContentItem[]; onSearch: () => void }) {
@@ -292,49 +465,24 @@ function Sidebar({ content, onSearch }: { content: ContentItem[]; onSearch: () =
         <kbd>{mac ? "\u2318" : "Ctrl"}K</kbd>
       </button>
 
+      {/* A heading only appears if its group has anything in it, so hiding
+          the library does not leave a stray "Data" above nothing — and a
+          Resources drawer nobody has filled in is not a drawer. */}
       <nav className="nav">
-        <Slot id="nav.group.work" as="div" className="nav-label" />
-        {items
-          .filter((s) => s.group === "work")
-          .map((s) => (
-            <NavLink key={s.to} to={s.to} end={s.end} className="nav-link">
-              <Icon name={s.icon} />
-              {s.label}
-              {s.badge && <span className="count">{s.badge}</span>}
-            </NavLink>
-          ))}
-
-        {/* The heading only appears if the group has anything in it, so
-            hiding the library does not leave a stray "Data" above nothing. */}
-        {items.some((s) => s.group === "data") && (
-          <>
-            <div className="nav-label" style={{ marginTop: 20 }}>
-              <Slot id="nav.group.data" />
-            </div>
-            {items
-              .filter((s) => s.group === "data")
-              .map((s) => (
-                <NavLink key={s.to} to={s.to} className="nav-link">
-                  <Icon name={s.icon} />
-                  {s.label}
-                  {s.badge && <span className="count">{s.badge}</span>}
-                </NavLink>
+        {GROUPS.map(({ key, slot }, i) => {
+          const inGroup = items.filter((s) => s.group === key);
+          if (!inGroup.length) return null;
+          return (
+            <div key={key} className="nav-group">
+              <div className="nav-label" style={i > 0 ? { marginTop: 20 } : undefined}>
+                <Slot id={slot} />
+              </div>
+              {inGroup.map((s) => (
+                <NavItem key={s.to} section={s} className="nav-link" />
               ))}
-          </>
-        )}
-
-        <div className="nav-label" style={{ marginTop: 20 }}>
-          <Slot id="nav.group.team" />
-        </div>
-        {items
-          .filter((s) => s.group === "team")
-          .map((s) => (
-            <NavLink key={s.to} to={s.to} className="nav-link">
-              <Icon name={s.icon} />
-              {s.label}
-              {s.badge && <span className="count">{s.badge}</span>}
-            </NavLink>
-          ))}
+            </div>
+          );
+        })}
       </nav>
 
       <div className="sidebar-foot">
@@ -419,11 +567,7 @@ function NavSheet({
         </div>
         <div className="nav-sheet-links">
           {rest.map((s) => (
-            <NavLink key={s.to} to={s.to} className="sheet-link" onClick={close}>
-              <Icon name={s.icon} size={18} />
-              {s.label}
-              {s.badge && <span className="count">{s.badge}</span>}
-            </NavLink>
+            <NavItem key={s.to} section={s} className="sheet-link" onClick={close} />
           ))}
         </div>
         {/* A phone has no ⌘K, so the sheet carries the way in. */}
@@ -451,7 +595,10 @@ function MobileNav({ content, onSearch }: { content: ContentItem[]; onSearch: ()
   const rest = items.filter((s) => !s.primary);
   // "More" carries the dot when something behind it wants attention.
   const restBadge = rest.some((s) => s.badge && s.badge !== "0");
-  const onRest = rest.some((s) => location.pathname.startsWith(s.to) && s.to !== "/");
+  // An external item is never "where you are", however its URL starts.
+  const onRest = rest.some(
+    (s) => !s.href && location.pathname.startsWith(s.to) && s.to !== "/",
+  );
 
   return (
     <>

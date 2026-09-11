@@ -10,6 +10,9 @@ import ProofPoints from "./routes/data/ProofPoints";
 import Review from "./routes/data/Review";
 import Deadlines from "./routes/Deadlines";
 import Kpis from "./routes/Kpis";
+import Atoms from "./routes/lab/Atoms";
+import Brief from "./routes/lab/Brief";
+import Builder from "./routes/lab/Builder";
 import Notifications from "./routes/Notifications";
 import SessionDetail from "./routes/SessionDetail";
 import Studio from "./routes/studio/Studio";
@@ -19,6 +22,7 @@ import Freshness from "./routes/studio/Freshness";
 import NotifyAdmin from "./routes/studio/NotifyAdmin";
 import Views from "./routes/studio/Views";
 import Pages from "./routes/studio/Pages";
+import Resources from "./routes/studio/Resources";
 import Subscribe from "./routes/Subscribe";
 import { TeamList, TeamMember } from "./routes/Team";
 import Today from "./routes/Today";
@@ -54,6 +58,13 @@ const router = createBrowserRouter([
       { path: "subscribe", element: <Subscribe /> },
       { path: "notifications", element: <Notifications /> },
 
+      // The Forecast Lab: where a forecast is made rather than tracked. Two
+      // of these are concepts and say so on the page; the brief builder works.
+      { path: "lab", element: <Navigate to="/lab/builder" replace /> },
+      { path: "lab/builder", element: <Builder /> },
+      { path: "lab/atoms", element: <Atoms /> },
+      { path: "lab/brief", element: <Brief /> },
+
       // Data: the analysis that sits beside the schedule. The library's
       // filters — and which proof point is enlarged — are all in the query
       // string, so any state of it is a link.
@@ -76,6 +87,7 @@ const router = createBrowserRouter([
           { path: "freshness", element: <Freshness /> },
           { path: "notifications", element: <NotifyAdmin /> },
           { path: "pages", element: <Pages /> },
+          { path: "resources", element: <Resources /> },
         ],
       },
 

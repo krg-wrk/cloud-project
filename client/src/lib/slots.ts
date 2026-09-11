@@ -98,8 +98,10 @@ export const SLOT_PAGES: SlotPage[] = [
         label: "Group headings",
         slots: [
           t("nav.group.work", "Your work"),
+          t("nav.group.lab", "Forecast Lab"),
           t("nav.group.data", "Data"),
           t("nav.group.team", "The team"),
+          t("nav.group.resources", "Resources"),
         ],
       },
       {
@@ -112,8 +114,15 @@ export const SLOT_PAGES: SlotPage[] = [
           nav("nav.item.calendar", "Calendar"),
           nav("nav.item.trends", "Trends"),
           nav("nav.item.performance", "Performance"),
+          nav("nav.item.lab-builder", "Forecast Builder"),
+          nav("nav.item.lab-atoms", "Add Atoms"),
+          nav("nav.item.lab-workspace", "Workspace 2"),
+          nav("nav.item.lab-feed", "The Feed"),
+          nav("nav.item.lab-brief", "Freelance Brief Builder"),
           nav("nav.item.proof-points", "Proof Point Library"),
           nav("nav.item.proof-review", "Review proof points"),
+          nav("nav.item.stepic", "STEPIC Driver Database"),
+          nav("nav.item.score", "WGSN Score"),
           nav("nav.item.workshops", "Learning"),
           nav("nav.item.team", "Forecasters"),
           nav("nav.item.whats-on", "What’s on"),
@@ -320,6 +329,90 @@ export const SLOT_PAGES: SlotPage[] = [
           field("trends.filter.state", "State"),
           field("trends.filter.call", "Call"),
           field("trends.filter.scores", "Scores"),
+        ],
+      },
+    ],
+  },
+
+  /*
+   * The Lab's three pages. Two of them are concepts and say so on the page —
+   * which is exactly why their wording is editable: the words are the whole
+   * of what is there, and they will be argued over before any of it is built.
+   */
+  {
+    id: "builder",
+    label: "Forecast Builder",
+    path: "/lab/builder",
+    groups: [
+      {
+        id: "builder.head",
+        label: "Page heading",
+        slots: [
+          t("builder.eyebrow", "Concept"),
+          t("builder.title", "Forecast Builder"),
+          {
+            id: "builder.sub",
+            label:
+              "Drop in data, context, research and media, and have it cross-referenced against everything we have already forecast — so a forecast starts from what we know rather than from a blank page.",
+            kind: "sub",
+            hint: "The line under the title",
+          },
+          t("builder.canvas", "Drag atoms in to start building"),
+          section("builder.palette", "Atoms"),
+          section("builder.plan", "What it is for"),
+        ],
+      },
+    ],
+  },
+
+  {
+    id: "atoms",
+    label: "Add Atoms",
+    path: "/lab/atoms",
+    groups: [
+      {
+        id: "atoms.head",
+        label: "Page heading",
+        slots: [
+          t("atoms.eyebrow", "Concept"),
+          t("atoms.title", "Add Atoms"),
+          {
+            id: "atoms.sub",
+            label:
+              "Upload research once, say what it could be useful for, and let the Hub file it into the data, driver, image and media libraries with the tags to find it again.",
+            kind: "sub",
+            hint: "The line under the title",
+          },
+          section("atoms.drop", "The upload"),
+          section("atoms.kinds", "What could this be useful for?"),
+          section("atoms.tags", "Tags"),
+          section("atoms.plan", "What it is for"),
+        ],
+      },
+    ],
+  },
+
+  {
+    id: "brief",
+    label: "Freelance Brief Builder",
+    path: "/lab/brief",
+    groups: [
+      {
+        id: "brief.head",
+        label: "Page heading",
+        slots: [
+          t("brief.eyebrow", "Forecast Lab"),
+          t("brief.title", "Freelance Brief Builder"),
+          {
+            id: "brief.sub",
+            label:
+              "Pick a forecast and the Hub writes the brief around it — the context a freelancer needs is already here, so nobody types it out again.",
+            kind: "sub",
+            hint: "The line under the title",
+          },
+          section("brief.about", "The forecast"),
+          section("brief.work", "The work"),
+          section("brief.preview", "The brief"),
         ],
       },
     ],

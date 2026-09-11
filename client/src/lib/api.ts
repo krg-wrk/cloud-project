@@ -54,12 +54,22 @@ export interface Async<T> {
   loading: boolean;
 }
 
-/** Fetch-on-mount, with a reload for pages that change what they read. */
+/**
+ * Fetch-on-mount, with a reload for pages that change what they read.
+ *
+ * An empty path fetches nothing and settles as "no data" — for the page that
+ * has not been told what to load yet, since a hook cannot be called
+ * conditionally and `/api` is not a request worth making.
+ */
 export function useApi<T>(path: string): Async<T> & { reload: () => void } {
   const [state, setState] = useState<Async<T>>({ loading: true });
   const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
+    if (!path) {
+      setState({ loading: false });
+      return;
+    }
     const controller = new AbortController();
     setState((s) => ({ ...s, loading: true }));
     getJson<T>(path, controller.signal)
