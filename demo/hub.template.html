@@ -26,8 +26,17 @@
 
   :root {
     --paper: #ffffff;
-    --ground: #f4f4f2;
-    --sunken: #ebebe8;
+    /*
+     * The ground, and the reason it is not neutral grey. It was #f4f4f2 — a
+     * flat warm grey — which made a screen of white cards read as a
+     * spreadsheet with the colour turned off. This is the same lightness
+     * carried a few degrees toward the accent's hue: enough for the eye to
+     * read the page as lit rather than as grey, nowhere near enough to call
+     * it blue. Re-measured against every muted ink; the ratios move by a
+     * hundredth.
+     */
+    --ground: #f3f4f8;
+    --sunken: #e9eaf1;
     --ink: #0e0e10;
     --ink-mid: #56565c;
     /*
@@ -39,8 +48,10 @@
      * change to the look that is actually readable.
      */
     --ink-soft: #69696f;
-    --line: #e2e2de;
-    --line-firm: #c7c7c1;
+    /* The hairlines take the same faint cast as the ground, so a rule reads
+       as part of the page rather than as a pencil line drawn on top of it. */
+    --line: #e3e4ec;
+    --line-firm: #c4c6d4;
     --accent: #4c5578;
     --accent-soft: #7a83a6;
     --accent-wash: #eceef4;
@@ -84,16 +95,34 @@
     --mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
     --rail: 240px;
-    /* Cards with a picture in them; everything else stays square. */
-    --radius-card: 8px;
+    /*
+     * Corners. These were square with the edge knocked off — close enough to
+     * a hard corner that it read as severity rather than as a decision. 6px
+     * is still an editorial corner rather than a consumer-app pill.
+     */
+    --radius: 6px;
+    --radius-sm: 4px;
+    /* Cards with a picture in them, which can carry more. */
+    --radius-card: 12px;
+    /*
+     * Two shadows rather than one: a tight contact shadow plus a wider, softer
+     * one, which is what actually lifts a white card off a tinted ground. Both
+     * are mixed from the accent rather than from black, so the shade under a
+     * card belongs to the same palette as everything else.
+     */
+    --shadow: 0 1px 2px rgb(38 44 72 / 6%), 0 2px 8px rgb(38 44 72 / 4%);
+    --shadow-lift: 0 2px 4px rgb(38 44 72 / 8%), 0 8px 24px rgb(38 44 72 / 7%);
     color-scheme: light;
   }
 
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --paper: #16161a;
-      --ground: #0d0d10;
-      --sunken: #1e1e23;
+      --paper: #17171c;
+      /* Same move as the light theme, in the other direction: the ground
+         carries a few degrees of the accent's hue so a panel sits on
+         something rather than beside it. */
+      --ground: #0e0e13;
+      --sunken: #1f1f27;
       --ink: #f1f1ef;
       --ink-mid: #a4a4ab;
       /* 4.36 on paper and 4.01 on the sunken ground; #86868e clears 4.5 on all three. */
@@ -129,14 +158,18 @@
       --cover-l1: 24%;
       --cover-s2: 14%;
       --cover-l2: 17%;
+      /* A shadow on a near-black ground has to be much heavier to read at
+         all, and is nearly pure black rather than tinted. */
+      --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 2px 8px rgb(0 0 0 / 26%);
+      --shadow-lift: 0 2px 4px rgb(0 0 0 / 46%), 0 8px 24px rgb(0 0 0 / 34%);
       color-scheme: dark;
     }
   }
 
   :root[data-theme="dark"] {
-    --paper: #16161a;
-    --ground: #0d0d10;
-    --sunken: #1e1e23;
+    --paper: #17171c;
+    --ground: #0e0e13;
+    --sunken: #1f1f27;
     --ink: #f1f1ef;
     --ink-mid: #a4a4ab;
     --ink-soft: #8c8c94;
@@ -171,6 +204,8 @@
     --cover-l1: 24%;
     --cover-s2: 14%;
     --cover-l2: 17%;
+    --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 2px 8px rgb(0 0 0 / 26%);
+    --shadow-lift: 0 2px 4px rgb(0 0 0 / 46%), 0 8px 24px rgb(0 0 0 / 34%);
     color-scheme: dark;
   }
 
@@ -328,23 +363,63 @@
     top: 57px;
     display: flex;
     flex-direction: column;
-    gap: 24px;
+    gap: 18px;
     padding: 22px 18px 26px;
     border-right: 1px solid var(--line);
     background: var(--paper);
-    min-height: calc(100vh - 57px);
+    /*
+     * Three bands, and only the middle one scrolls.
+     *
+     * It was `min-height` with no overflow of its own, so a menu taller than
+     * the window simply ran off the bottom — and because the rail is sticky,
+     * the only way to reach the account switcher was to scroll the *main
+     * page* to its end and let the rail slide up. That is a menu you cannot
+     * use until you have finished reading the page it is for.
+     *
+     * The height cannot be a constant here the way it can in the app. Above
+     * the sticky address bar sits the proof-of-concept banner, which scrolls
+     * away — so the chrome over the rail is ~94px at the top of the page and
+     * 57px once it is gone, and a fixed `100vh - 57px` hangs the last 37px of
+     * the rail below the fold exactly when somebody first arrives. `--rail-h`
+     * is measured off the address bar on scroll; the calc is the fallback for
+     * the moment before the first measurement.
+     */
+    height: var(--rail-h, calc(100vh - 57px));
+    overflow: hidden;
   }
 
-  /* The wordmark is set as a solid block, the way WGSN sets its own. */
+  .rail-top,
+  .rail-foot {
+    flex: none;
+  }
+
+  .rail-top {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .nav-scroll {
+    /* `min-height: 0` is the whole trick — without it a flex child refuses to
+       shrink below its content and the overflow never engages. */
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    margin-right: -6px;
+    padding-right: 6px;
+    scrollbar-width: thin;
+  }
+
+  /*
+   * The supplied wordmark, sized by height and left to find its own width
+   * from the artwork's 4:1 ratio. It takes `currentColor`, so the dark theme
+   * needs no second asset.
+   */
   .brand-mark {
-    display: inline-block;
-    padding: 5px 9px 4px;
-    background: var(--ink);
-    color: var(--paper);
-    font-size: 19px;
-    font-weight: 700;
-    line-height: 1;
-    letter-spacing: 0.02em;
+    display: block;
+    height: 19px;
+    width: auto;
+    color: var(--ink);
   }
 
   .brand-sub {
@@ -372,18 +447,73 @@
   }
 
   .nav-group {
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* The heading is the fold control, so it is a button that looks like the
+     label it replaced — full width, because a 9px target is not a target. */
+  .nav-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
     padding: 0 0 7px;
     margin-bottom: 3px;
+    border: none;
     border-bottom: 1px solid var(--line);
+    background: none;
+    font-family: inherit;
     font-size: 9.5px;
     font-weight: 500;
     letter-spacing: 0.17em;
     text-transform: uppercase;
     color: var(--ink-soft);
+    text-align: left;
+    cursor: pointer;
   }
 
-  .nav-group:not(:first-child) {
+  .nav-group:not(:first-child) .nav-label {
     margin-top: 20px;
+  }
+
+  .nav-label:hover {
+    color: var(--ink);
+  }
+
+  .nav-fold {
+    flex: none;
+    color: var(--ink-soft);
+    transition: transform 0.15s ease;
+  }
+
+  /* One glyph, two states: a quarter turn is the whole difference. */
+  .nav-group.shut .nav-fold {
+    transform: rotate(-90deg);
+  }
+
+  /* You are in this group, which is folded. Same accent the open group puts
+     against the current item. */
+  .nav-here {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex: none;
+  }
+
+  .nav-shut-count {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0;
+    color: var(--ink-soft);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav-fold {
+      transition: none;
+    }
   }
 
   .nav-link {
@@ -534,6 +664,24 @@
     border-bottom: 1px solid var(--line);
   }
 
+  /*
+   * An accent bar beside each section heading, so the page has a spine of
+   * colour down the left as you scroll. Beside the text rather than under it:
+   * the row is baseline-aligned with the link next to it, so its rule sits a
+   * good twenty pixels below the words and a mark on that rule belongs to
+   * nothing in particular.
+   */
+  .sec-head h2::before {
+    content: "";
+    display: inline-block;
+    width: 3px;
+    height: 0.82em;
+    margin-right: 9px;
+    border-radius: 2px;
+    background: var(--accent);
+    vertical-align: -0.04em;
+  }
+
   .sec-link {
     font-size: 12px;
     font-weight: 500;
@@ -545,6 +693,9 @@
   }
 
   /* Figures earn a tile only here, where they are the headline. */
+  /* One lifted panel divided by hairlines, rather than a grey box with white
+     patches in it. The rounding lives on the wrapper with `overflow: hidden`,
+     because the tiles inside are square and would poke through the corners. */
   .figures {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(142px, 1fr));
@@ -552,11 +703,21 @@
     margin-bottom: 30px;
     background: var(--line);
     border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
   }
 
   .figure {
     padding: 15px 17px;
     background: var(--paper);
+    /* A hairline of the figure's own colour along the top. Nearly nothing on
+       its own; across a row of four it is what stops the panel reading grey. */
+    box-shadow: inset 0 2px 0 var(--tint, var(--accent-soft));
+  }
+
+  .figure.hot {
+    --tint: var(--late);
   }
 
   .figure b {
@@ -586,8 +747,10 @@
 
   .rows {
     border: 1px solid var(--line);
+    border-radius: var(--radius);
     background: var(--paper);
     overflow: hidden;
+    box-shadow: var(--shadow);
   }
 
   .row {
@@ -846,6 +1009,336 @@
     margin-top: 2px;
     color: var(--ink-soft);
     line-height: 1.5;
+  }
+
+  /* --- The node workspace ---------------------------------------------------
+   *
+   * Three columns: what you can pull in, the canvas, and what the selected
+   * node is. The canvas is the only part that is a diagram; everything either
+   * side of it is the same furniture as the rest of the Hub, on purpose — a
+   * concept that looks like a different product is a concept nobody can judge.
+   *
+   * Each family of node takes a hue, which is the one place in this file
+   * colour carries meaning rather than decorating: what you pull in, what
+   * weaves it, what comes out.
+   * ------------------------------------------------------------------------- */
+
+  .nodes-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 260px) minmax(0, 1fr) minmax(0, 260px);
+    gap: 20px;
+    margin-top: 20px;
+    align-items: start;
+  }
+
+  .palette-band {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 14px;
+  }
+
+  .palette-band .eyebrow {
+    margin-bottom: 2px;
+  }
+
+  .fam-source {
+    --fam: var(--accent);
+  }
+
+  .fam-weave {
+    --fam: var(--mine);
+  }
+
+  .fam-output {
+    --fam: var(--ok);
+  }
+
+  .atom.fam-source,
+  .atom.fam-weave,
+  .atom.fam-output {
+    border-left: 3px solid var(--fam);
+  }
+
+  .atom.fam-source .icon,
+  .atom.fam-weave .icon,
+  .atom.fam-output .icon {
+    color: var(--fam);
+  }
+
+  .node-canvas {
+    position: relative;
+    min-height: 420px;
+    border: 1px solid var(--line-firm);
+    border-radius: var(--radius);
+    background-color: var(--paper);
+    /* A dot grid, so a node one pixel out looks it and the canvas reads as a
+       workspace rather than as an empty card. */
+    background-image: radial-gradient(circle, var(--line) 1px, transparent 1px);
+    background-size: 16px 16px;
+    /* Scrolls rather than clips: a graph grows to the right by its nature,
+       and a workspace that swallows the end of your own pipeline is worse
+       than one you have to scroll. */
+    overflow: auto;
+    box-shadow: var(--shadow);
+  }
+
+  .wire-layer {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  .wire {
+    fill: none;
+    stroke: var(--line-firm);
+    stroke-width: 2;
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  .wire:hover {
+    stroke: var(--late);
+    stroke-width: 3;
+  }
+
+  .node {
+    position: absolute;
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line-firm);
+    border-top: 3px solid var(--fam, var(--accent));
+    border-radius: var(--radius);
+    background: var(--paper);
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+
+  .node.on {
+    border-color: var(--fam, var(--accent));
+    box-shadow: var(--shadow-lift);
+  }
+
+  .node.wiring {
+    outline: 2px dashed var(--fam, var(--accent));
+    outline-offset: 2px;
+  }
+
+  .node-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--line);
+    font-size: 11px;
+    /* The title bar is the handle; the body is not, so a click to select does
+       not become a drag of one pixel. */
+    cursor: grab;
+    touch-action: none;
+  }
+
+  .node-head .icon {
+    color: var(--fam, var(--accent));
+    flex: none;
+  }
+
+  .node-head b {
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .node-x {
+    margin-left: auto;
+    padding: 0 3px;
+    border: 0;
+    background: none;
+    color: var(--ink-soft);
+    font-size: 15px;
+    line-height: 1;
+  }
+
+  .node-x:hover {
+    color: var(--late);
+  }
+
+  /* Fixed-height nodes, so a long note is clamped with an ellipsis rather
+     than sliced off mid-word. The whole text is in the inspector. */
+  .node-body {
+    flex: 1;
+    padding: 7px 9px;
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: var(--ink-mid);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+  }
+
+  /* The ports. Round, and straddling the edge, which is the convention every
+     node editor shares — so nobody has to be told what they are. */
+  .port {
+    position: absolute;
+    top: 50%;
+    width: 13px;
+    height: 13px;
+    margin-top: -6.5px;
+    padding: 0;
+    border: 2px solid var(--paper);
+    border-radius: 50%;
+    background: var(--fam, var(--accent));
+  }
+
+  .port.out {
+    right: -7px;
+  }
+
+  .port.in {
+    left: -7px;
+  }
+
+  .port:disabled {
+    background: var(--line-firm);
+    cursor: default;
+  }
+
+  .port:not(:disabled):hover {
+    transform: scale(1.25);
+  }
+
+  .wiring-note {
+    position: absolute;
+    left: 12px;
+    bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 8px 12px;
+    border: 1px solid var(--line-firm);
+    border-radius: var(--radius);
+    background: var(--paper);
+    box-shadow: var(--shadow-lift);
+    font-size: 12.5px;
+  }
+
+  .node-inspect {
+    padding: 14px 15px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+    box-shadow: var(--shadow);
+  }
+
+  .node-inspect textarea {
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    color: var(--ink);
+    font: inherit;
+    resize: vertical;
+  }
+
+  .plan-list.tight li {
+    padding: 5px 0;
+  }
+
+  /* --- What the run found --------------------------------------------------- */
+
+  .weave-cols {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px;
+  }
+
+  .weave-block {
+    padding: 14px 15px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+    box-shadow: var(--shadow);
+  }
+
+  /* The one finding a search box could not have given you, marked as such. */
+  .weave-block.tension {
+    margin-bottom: 16px;
+    border-left: 3px solid var(--review);
+  }
+
+  .weave-tension {
+    margin: 8px 0 0;
+    font-size: 13.5px;
+    line-height: 1.6;
+  }
+
+  .weave-tension em {
+    display: block;
+    font-style: normal;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .weave-list {
+    margin: 8px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+  }
+
+  .weave-list li {
+    padding: 7px 0;
+    border-bottom: 1px solid var(--line);
+    line-height: 1.5;
+  }
+
+  .weave-list li:last-child {
+    border-bottom: none;
+  }
+
+  .weave-list a {
+    font-weight: 500;
+  }
+
+  .weave-list a:hover {
+    color: var(--accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* The strategic call, wherever it is quoted. */
+  .call {
+    display: inline-block;
+    margin: 0 2px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 10.5px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--paper);
+    background: var(--call-expand);
+  }
+
+  .call-protect { background: var(--call-protect); }
+  .call-test { background: var(--call-test); }
+  .call-expand { background: var(--call-expand); }
+  .call-invest { background: var(--call-invest); }
+
+  .head-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  @media (max-width: 1180px) {
+    .nodes-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 
   .library-picker {
@@ -1903,7 +2396,9 @@
   .panel {
     padding: 16px 17px;
     border: 1px solid var(--line);
+    border-radius: var(--radius);
     background: var(--paper);
+    box-shadow: var(--shadow);
   }
 
   .panel + .panel {
@@ -6080,21 +6575,34 @@
 
 <div class="shell">
   <aside class="rail">
-    <div class="brand-row">
-      <a class="brand" href="#/">
-        <span class="brand-mark">WGSN</span>
-        <span class="brand-sub">Forecasters Hub</span>
-        <em>Content calendar</em>
-      </a>
-      <!-- The bell sits with the identity rather than in the nav: it is
-           about you, not about a section of the app. -->
-      <div class="bell-wrap" id="bell-wrap"></div>
+    <!-- Pinned: the identity and the way into everything stay put while the
+         menu below them scrolls. -->
+    <div class="rail-top">
+      <div class="brand-row">
+        <a class="brand" href="#/">
+          <!-- The supplied artwork, inlined so it takes the ink colour of
+               whichever theme it is drawn in, and so the single file that
+               gets emailed around carries its own logo. -->
+          <svg class="brand-mark" viewBox="0 0 1020.47 255.12" fill="currentColor" role="img" aria-label="WGSN">
+            <polygon points="226.69,249.16 165.55,117.98 164.89,117.98 103.41,249.16 96.81,249.16 8.26,9.28 64.75,9.28 105.73,129.87 107.06,129.87 162.22,9.28 168.52,9.28 224.03,130.22 225.34,130.22 266.65,9.28 321.14,9.28 233.28,249.16" />
+            <polygon points="963.32,8.95 963.32,144.43 816.96,8.29 806.02,8.29 806.02,245.84 855.6,245.84 855.6,111.39 856.58,111.39 1001.97,248.17 1012.21,248.17 1012.21,8.95" />
+            <polygon points="459.41,104.45 459.41,150.04 512.28,150.04 512.28,203.23 559.54,203.23 559.54,104.45" />
+            <path d="M390.38,127.58c0-41.98,32.4-72.38,80.27-72.38h8.29V3.66h-7.96c-77.64,0-132.14,52.22-132.14,123.92 c0,71.35,54.5,123.88,132.14,123.88h7.96V199.6h-8.29C422.78,199.6,390.38,169.53,390.38,127.58" />
+            <path d="M605.45,175.47c16.86,16.18,45.28,27.08,68.43,27.08c20.8,0,35-10.54,35-25.74c0-16.86-18.51-23.13-42.95-33.05 c-25.11-9.92-63.1-25.79-63.1-69.06c0-37.35,31.04-71.05,84.25-71.05c19.81,0,44.95,6.28,60.46,15.2V71.4 c-15.19-11.57-38.33-19.5-56.5-19.5c-23.44,0-36.01,9.93-36.01,22.48c0,13.55,14.2,19.82,34.03,27.43 c30.39,11.57,74.01,25.78,74.01,72.69c0,39.99-32.71,76.65-87.87,76.65c-25.8,0-53.23-8.26-69.75-20.15V175.47z" />
+          </svg>
+          <span class="brand-sub">Forecasters Hub</span>
+          <em>Content calendar</em>
+        </a>
+        <!-- The bell sits with the identity rather than in the nav: it is
+             about you, not about a section of the app. -->
+        <div class="bell-wrap" id="bell-wrap"></div>
+      </div>
+      <!-- Above the sections, because it is a way to reach any of them. -->
+      <button class="search-open" id="search-open">
+        <span id="search-icon"></span><span>Search</span><kbd id="search-key"></kbd>
+      </button>
     </div>
-    <!-- Above the sections, because it is a way to reach any of them. -->
-    <button class="search-open" id="search-open">
-      <span id="search-icon"></span><span>Search</span><kbd id="search-key"></kbd>
-    </button>
-    <nav id="nav"></nav>
+    <nav id="nav" class="nav-scroll"></nav>
     <div class="rail-foot">
       <div class="as-label">Signed in as (demo)</div>
       <select id="as"></select>
@@ -6219,6 +6727,11 @@
     lock: "M7 10.5V7.5a5 5 0 0 1 10 0v3M5.5 10.5h13a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1Z",
     people: "M17 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-7A3.5 3.5 0 0 0 3 18.5V20M10 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7ZM21 20v-2a3.5 3.5 0 0 0-2.2-3.2",
     back: "M19 12H5M11 18l-6-6 6-6",
+    // Points down when a group is open and is rotated a quarter turn when
+    // shut, so the same glyph is both states and cannot disagree with itself.
+    "chevron-down": "M6 9.5l6 6 6-6",
+    settings:
+      "M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1Z",
     data: "M4 6.5C4 5.1 7.6 4 12 4s8 1.1 8 2.5S16.4 9 12 9 4 7.9 4 6.5ZM4 6.5v11C4 18.9 7.6 20 12 20s8-1.1 8-2.5v-11M4 12c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5M9 16.5h.01M12 16.5h.01",
     proof: "M9 12.5l2 2 4.5-4.5M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z",
     copy: "M9 9V5.5A1.5 1.5 0 0 1 10.5 4h8A1.5 1.5 0 0 1 20 5.5v8a1.5 1.5 0 0 1-1.5 1.5H15M5.5 9h8A1.5 1.5 0 0 1 15 10.5v8a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 4 18.5v-8A1.5 1.5 0 0 1 5.5 9Z",
@@ -7294,6 +7807,10 @@
        * which a phone does not have — so the page needs a way in that
        * survives the layout, and "what am I being emailed about" is a thing
        * people look for in a menu rather than by clicking a bell.
+       *
+       * Under Settings rather than with the team: it is a page about your own
+       * preferences — which alerts reach you, and by which channel — not
+       * about anybody else.
        */
       "nav.item.notifications": [
         "#/notifications",
@@ -7301,13 +7818,38 @@
         unreadCount(me.id) || "",
         "bell",
         false,
-        "team",
+        "settings",
       ],
     };
   }
 
   /** What a sidebar item ships with, for the studio's icon picker. */
   const navIconOf = (id) => navFixed()[id]?.[3];
+
+  /**
+   * Which rail groups this person has folded away.
+   *
+   * Per browser rather than per account, like every other preference in the
+   * demo. Reading is wrapped because storage can be blocked outright, in
+   * which case everything is open — which is the default anyway.
+   */
+  const SHUT_KEY = "forecasters-hub.nav-collapsed";
+
+  function readShutGroups() {
+    try {
+      return JSON.parse(localStorage.getItem(SHUT_KEY) ?? "{}");
+    } catch {
+      return {};
+    }
+  }
+
+  function writeShutGroups(next) {
+    try {
+      localStorage.setItem(SHUT_KEY, JSON.stringify(next));
+    } catch {
+      // The choice lasts for this page load only, which is no worse than before.
+    }
+  }
 
   function renderNav() {
     const { parts } = route();
@@ -7350,12 +7892,12 @@
      * library does not leave a stray "Data" above nothing — and a Resources
      * drawer nobody has filled in is not a drawer.
      */
-    const groups = ["work", "lab", "data", "team", "resources"];
+    const groups = ["work", "lab", "data", "team", "resources", "settings"];
     const links = [];
     for (const group of groups) {
       const rows = group === "resources" ? resourceLinks() : inGroup(group);
       if (!rows.length) continue;
-      links.push([slot(`nav.group.${group}`, { tag: "" }), null, null, null, null, false]);
+      links.push([slot(`nav.group.${group}`, { tag: "" }), null, group, null, null, false]);
       links.push(...rows);
     }
 
@@ -7385,21 +7927,67 @@
       links.splice(insertAt, 0, ...rows);
     }
     if (viewer().isAdmin) {
-      links.push(["Studio", "#/studio/connections", "studio", "", "studio", false]);
+      // Under Settings, with Alerts: both are about your own setup rather
+      // than about a section of the work.
+      const at = links.findIndex(([, href, key]) => href === null && key === "settings");
+      if (at === -1) {
+        links.push([slot("nav.group.settings", { tag: "" }), null, "settings", null, null, false]);
+        links.push(["Studio", "#/studio/connections", "studio", "", "studio", false]);
+      } else {
+        links.push(["Studio", "#/studio/connections", "studio", "", "studio", false]);
+      }
     }
-    document.getElementById("nav").innerHTML = links
-      .map(([label, href, key, badge, iconName, , away]) =>
-        href === null
-          ? `<div class="nav-group">${label}</div>`
-          : `<a class="nav-link${key === here ? " on" : ""}" href="${href}"${
-              // Somewhere that is not the Hub: a new tab, and said out loud
-              // for anyone who cannot see the little arrow.
-              away ? ' target="_blank" rel="noopener noreferrer"' : ""
-            }>${icon(iconName)}${label}${
-              away ? `${icon("external", 13, "nav-out")}<span class="sr-only">(opens in a new tab)</span>` : ""
-            }${badge ? `<b>${badge}</b>` : ""}</a>`,
-      )
+
+    /*
+     * The rail, as folding groups.
+     *
+     * The flat list above is cut into groups on the heading rows, and each
+     * group is rendered inside its own wrapper so a heading can hide the
+     * items under it. Open by default — a menu that starts closed hides the
+     * app from somebody who has never seen it — and what gets remembered is
+     * the closing.
+     */
+    const shut = readShutGroups();
+    const chunks = [];
+    for (const row of links) {
+      if (row[1] === null) chunks.push({ key: row[2], label: row[0], rows: [] });
+      else if (chunks.length) chunks[chunks.length - 1].rows.push(row);
+      else chunks.push({ key: "", label: "", rows: [row] });
+    }
+
+    const linkHtml = ([label, href, key, badge, iconName, , away]) =>
+      `<a class="nav-link${key === here ? " on" : ""}" href="${href}"${
+        // Somewhere that is not the Hub: a new tab, and said out loud
+        // for anyone who cannot see the little arrow.
+        away ? ' target="_blank" rel="noopener noreferrer"' : ""
+      }>${icon(iconName)}${label}${
+        away ? `${icon("external", 13, "nav-out")}<span class="sr-only">(opens in a new tab)</span>` : ""
+      }${badge ? `<b>${badge}</b>` : ""}</a>`;
+
+    document.getElementById("nav").innerHTML = chunks
+      .map((chunk) => {
+        if (!chunk.label) return chunk.rows.map(linkHtml).join("");
+        const open = !shut[chunk.key];
+        const holdsCurrent = chunk.rows.some(([, , key]) => key === here);
+        return `<div class="nav-group${open ? "" : " shut"}">
+          <button class="nav-label" data-fold="${esc(chunk.key)}" aria-expanded="${open}">
+            ${icon("chevron-down", 12, "nav-fold")}<span>${chunk.label}</span>
+            ${!open && holdsCurrent ? '<span class="nav-here" title="The page you are on is in this group"></span>' : ""}
+            ${!open ? `<span class="nav-shut-count">${chunk.rows.length}</span>` : ""}
+          </button>
+          ${open ? chunk.rows.map(linkHtml).join("") : ""}
+        </div>`;
+      })
       .join("");
+
+    for (const button of document.querySelectorAll("[data-fold]")) {
+      button.addEventListener("click", () => {
+        const was = readShutGroups();
+        const key = button.dataset.fold;
+        writeShutGroups({ ...was, [key]: !was[key] });
+        renderNav();
+      });
+    }
 
     renderTabs(links, here);
 
@@ -10177,6 +10765,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             slotTitle("nav.group.data", "Data"),
             slotTitle("nav.group.team", "The team"),
             slotTitle("nav.group.resources", "Resources"),
+            slotTitle("nav.group.settings", "Settings"),
           ],
         },
         {
@@ -10202,7 +10791,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             slotNav("nav.item.team", "Forecasters"),
             slotNav("nav.item.whats-on", "What’s on"),
             slotNav("nav.item.subscribe", "Add to your calendar"),
-            slotNav("nav.item.notifications", "What the Hub tells you"),
+            slotNav("nav.item.notifications", "Alerts"),
           ],
         },
       ],
@@ -10361,8 +10950,8 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           slots: [
             slotTitle("builder.eyebrow", "Concept"),
             slotTitle("builder.title", "Forecast Builder"),
-            slotTitle("builder.canvas", "Drag atoms in to start building"),
-            slotSection("builder.palette", "Atoms"),
+            slotTitle("builder.canvas", "Drag a node in to start building"),
+            slotSection("builder.palette", "Nodes"),
             slotSection("builder.plan", "What it is for"),
           ],
         },
@@ -12569,39 +13158,319 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
    * from a real forecast.
    * ----------------------------------------------------------------------- */
 
-  const LAB_ATOMS = [
-    ["data", "data", "Data", "A figure with a source — sell-through, search volume, a survey."],
-    ["driver", "driver", "Driver", "A STEPIC driver: the social or economic force underneath the shift."],
-    ["image", "image", "Image", "A catwalk shot, a store photograph, a product still."],
-    ["media", "media", "Media", "Video, audio, a deck — anything Workspace 2 holds."],
-    ["research", "note", "Research", "A report, an interview, a page you want the forecast to argue with."],
+  /* ---- The node workspace ------------------------------------------------
+   *
+   * The same page as the app's, with one difference that matters: the app
+   * asks the server to red-thread the canvas, and the demo has no server, so
+   * the same logic runs here over the seed. It is the real algorithm against
+   * a real (if smaller) slice of the trend database and the proof point
+   * library — 446 profiles and 627 callouts — so what comes back is true of
+   * the data in this file rather than written to look convincing.
+   * ----------------------------------------------------------------------- */
+
+  const NODE_KINDS = [
+    ["subject", "Subject", "note", "What the forecast is about, in your words.", "out", "source",
+     "Barrier-first beauty and collagen skincare"],
+    ["data", "Data", "data", "A figure with a source — sell-through, search volume, a survey.", "out", "source",
+     "Searches for collagen supplements climbing year on year"],
+    ["driver", "STEPIC driver", "driver", "The social or economic force underneath the shift.", "out", "source",
+     "Healthy ageing as a consumer priority"],
+    ["research", "Research", "source", "A report, an interview, a page the forecast should argue with.", "out", "source",
+     "Cosmoprof North America 2026 floor notes"],
+    ["image", "Image", "image", "A catwalk shot, a store photograph, a product still.", "out", "source",
+     "Catwalk: Paris A/W 27"],
+    ["pulse", "Pulse", "ai", "Red-threads the canvas against everything we have already published.", "both", "weave", ""],
+    ["draft", "Forecast draft", "brief", "What comes out: the skeleton, with every claim still attached to its source.", "in", "output", ""],
   ];
 
-  /** What has been dropped on the canvas this session. Nothing is saved. */
-  let canvasAtoms = [];
+  const nodeKind = (id) => NODE_KINDS.find((k) => k[0] === id);
+
+  const NODE_W = 188;
+  const NODE_H = 96;
+
+  let nodeSeq = 0;
+  const nextNodeId = () => `n${++nodeSeq}`;
+
+  /**
+   * The canvas a forecaster lands on, so the page is never an empty rectangle.
+   *
+   * The subject is chosen rather than arbitrary: barrier-first beauty is
+   * ground the trend database genuinely covers from several directions, so a
+   * first press of Run returns a stack of profiles and — the part worth
+   * seeing — live profiles calling it differently.
+   */
+  function starterGraph() {
+    nodeSeq = 0;
+    const a = { id: nextNodeId(), kind: "subject", x: 24, y: 32, text: "Barrier-first beauty and collagen skincare" };
+    const b = { id: nextNodeId(), kind: "data", x: 24, y: 160, text: "Searches for collagen supplements climbing year on year" };
+    const c = { id: nextNodeId(), kind: "pulse", x: 268, y: 96, text: "" };
+    const d = { id: nextNodeId(), kind: "draft", x: 512, y: 96, text: "" };
+    return {
+      nodes: [a, b, c, d],
+      wires: [{ from: a.id, to: c.id }, { from: b.id, to: c.id }, { from: c.id, to: d.id }],
+    };
+  }
+
+  let graph = starterGraph();
+  let nodeSelected = null;
+  let nodeWiring = null;
+  let weaveResult = null;
+
+  /* ---- The red-threading, client-side ------------------------------------ */
+
+  const WEAVE_STOP = new Set([
+    "the","and","for","with","that","this","from","are","was","were","has","have",
+    "had","will","would","can","could","its","their","our","into","onto","over",
+    "under","more","most","less","than","then","but","not","all","any","how","why",
+    "what","when","who","in","on","at","to","of","as","by","up","out","off","it",
+    "is","be","or","if","so","no","do","we","us","you","an","per","via","yoy","vs",
+  ]);
+
+  function weaveTerms(text) {
+    const seen = new Set();
+    for (const raw of String(text).toLowerCase().split(/[^a-z0-9&']+/)) {
+      if (raw.length >= 2 && !WEAVE_STOP.has(raw)) seen.add(raw);
+    }
+    return [...seen].slice(0, 24);
+  }
+
+  const weaveHits = (text, terms) => {
+    const hay = String(text ?? "").toLowerCase();
+    return terms.filter((t) => hay.includes(t)).length;
+  };
+
+  const CALL_ORDER = ["Protect", "Test", "Expand", "Invest"];
+
+  /**
+   * What the Hub already holds on these terms.
+   *
+   * The bar is two terms once there are two to have — one term is not a match
+   * when there are several, or a canvas about collagen comes back with every
+   * profile that happens to say "beauty". Flooding is a problem of what is
+   * *shown*, and only eight are ever shown, so the rest is ranking.
+   */
+  function weave(terms) {
+    if (!terms.length) {
+      return { terms, trends: [], proofPoints: [], forecasts: [], tensions: [],
+               counts: { trends: 0, proofPoints: 0, forecasts: 0 }, proofTerms: [], threshold: 0 };
+    }
+    const need = Math.min(2, terms.length);
+
+    const scoredTrends = TRENDS
+      .map((t) => ({
+        t,
+        matched: weaveHits([t.title, t.description, t.needToKnow, (t.types ?? []).join(" "), (t.industries ?? []).join(" ")].join(" "), terms),
+        titleHits: weaveHits(t.title, terms),
+      }))
+      .filter((x) => x.matched >= need)
+      .sort((a, b) => b.titleHits - a.titleHits || b.matched - a.matched || a.t.title.localeCompare(b.t.title));
+
+    const asTrend = (x) => ({
+      id: x.t.id,
+      profileId: x.t.profileId,
+      title: x.t.title,
+      call: x.t.call,
+      ownerName: x.t.ownerName ?? "",
+      // Anchored: "Unpublished" contains "published", and an unanchored test
+      // marked every draft as live.
+      published: /^\s*published\s*$/i.test(x.t.published ?? ""),
+      industries: x.t.industries ?? [],
+      matched: x.matched,
+    });
+
+    const trends = scoredTrends.slice(0, 8).map(asTrend);
+
+    /* Two live profiles on shared ground, called differently — the one
+       finding here a search box could not have given you. */
+    const tensions = [];
+    const live = scoredTrends.map(asTrend).filter((t) => t.published && t.call);
+    for (let i = 0; i < live.length && tensions.length < 3; i++) {
+      for (let j = i + 1; j < live.length && tensions.length < 3; j++) {
+        const a = live[i], b = live[j];
+        if (a.call === b.call) continue;
+        const shared = a.industries.filter((x) => b.industries.includes(x));
+        if (!shared.length) continue;
+        // Adjacent calls are a nuance; two steps apart is a disagreement.
+        if (Math.abs(CALL_ORDER.indexOf(a.call) - CALL_ORDER.indexOf(b.call)) < 2) continue;
+        tensions.push({ a, b, note: `Both live in ${shared[0]}, called ${a.call} and ${b.call}.` });
+      }
+    }
+
+    /* Proof points, loosening when every word together finds nothing — and
+       ranked by how much of the canvas each one actually carries, not by word
+       length, which is not rarity. */
+    const points = PROOF.points ?? [];
+    const titles = new Set(scoredTrends.map((x) => x.t.title));
+    const textOf = (p) => `${p.text ?? ""}`;
+    let pool = points.filter((p) => terms.every((t) => textOf(p).toLowerCase().includes(t)));
+    let proofTerms = terms;
+    if (!pool.length) {
+      const found = new Map();
+      proofTerms = [];
+      for (const term of terms) {
+        const some = points.filter((p) => textOf(p).toLowerCase().includes(term)).slice(0, 12);
+        if (some.length) proofTerms.push(term);
+        for (const p of some) if (!found.has(p.id)) found.set(p.id, p);
+      }
+      pool = [...found.values()];
+    }
+    const ranked = pool
+      .map((p) => ({ p, title: proofTrend(p.trendId).title }))
+      .map((x) => ({ ...x, carries: weaveHits(textOf(x.p), terms), onTopic: titles.has(x.title) ? 1 : 0 }))
+      .sort((a, b) => b.onTopic - a.onTopic || b.carries - a.carries || (b.p.match ?? 0) - (a.p.match ?? 0));
+
+    /* The same callout is matched to several trends and arrives as several
+       rows; collapsed on its text, with the extra trends counted on the one
+       that survives. */
+    const bySame = new Map();
+    for (const x of ranked) {
+      const key = textOf(x.p).trim().toLowerCase();
+      const already = bySame.get(key);
+      if (already) {
+        if (!already.alsoOn.includes(x.title)) already.alsoOn.push(x.title);
+        continue;
+      }
+      bySame.set(key, { id: x.p.id, text: textOf(x.p), trendTitle: x.title, match: x.p.match ?? 0, alsoOn: [] });
+    }
+
+    const scoredForecasts = content
+      .map((c) => ({
+        c,
+        matched: weaveHits([c.title, c.type, c.vertical, c.season].join(" "), terms),
+        titleHits: weaveHits(c.title, terms),
+      }))
+      .filter((x) => x.matched >= need)
+      .sort((a, b) => b.titleHits - a.titleHits || b.matched - a.matched || a.c.title.localeCompare(b.c.title));
+
+    return {
+      terms,
+      trends,
+      proofPoints: [...bySame.values()].slice(0, 6),
+      forecasts: scoredForecasts.slice(0, 6).map((x) => ({
+        id: x.c.id, title: x.c.title, format: x.c.type, vertical: x.c.vertical, status: x.c.status,
+      })),
+      tensions,
+      counts: { trends: scoredTrends.length, proofPoints: bySame.size, forecasts: scoredForecasts.length },
+      proofTerms,
+      threshold: need,
+    };
+  }
+
+  /** Every source node that reaches the Pulse node, however many hops away. */
+  function feedingPulse() {
+    const pulse = graph.nodes.find((n) => n.kind === "pulse");
+    if (!pulse) return [];
+    const up = new Set();
+    const stack = [pulse.id];
+    while (stack.length) {
+      const at = stack.pop();
+      for (const w of graph.wires) {
+        if (w.to === at && !up.has(w.from)) { up.add(w.from); stack.push(w.from); }
+      }
+    }
+    return graph.nodes.filter((n) => up.has(n.id));
+  }
+
+  const canvasText = () =>
+    feedingPulse()
+      .map((n) => n.text.trim() || nodeKind(n.kind)?.[6] || "")
+      .filter(Boolean)
+      .join(" ");
+
+  /**
+   * A wire, as a cubic curve that leaves horizontally at both ends — which is
+   * what makes a node graph readable: the eye follows a line out of a port and
+   * back into one without working out which end is which.
+   */
+  function wirePath(a, b) {
+    const bow = Math.max(40, Math.abs(b.x - a.x) / 3);
+    return `M ${a.x} ${a.y} C ${a.x + bow} ${a.y}, ${b.x - bow} ${b.y}, ${b.x} ${b.y}`;
+  }
+
+  const outAt = (n) => ({ x: n.x + NODE_W, y: n.y + NODE_H / 2 });
+  const inAt = (n) => ({ x: n.x, y: n.y + NODE_H / 2 });
 
   function pageBuilder() {
-    const empty = `
-      <div class="canvas-empty">${icon("builder", 26)}
-        ${slot("builder.canvas", { tag: "p" })}
-      </div>`;
-    const full = `
-      <div class="canvas-head">
-        <span class="muted">${canvasAtoms.length} atom${
-          canvasAtoms.length === 1 ? "" : "s"
-        } — held in this page only</span>
-        <button class="toggle" data-canvas-clear>Clear</button>
-      </div>
-      <div class="canvas-atoms">${canvasAtoms
-        .map(
-          (a, i) =>
-            `<div class="canvas-atom">${icon(a[1], 15)}${esc(a[2])}
-               <button data-canvas-drop="${i}" aria-label="Remove ${esc(a[2])}">×</button></div>`,
-        )
-        .join("")}</div>
-      <p class="canvas-foot">Eventually: the Hub reads these, finds every forecast that has
-        argued something similar, and tells you where this one agrees, disagrees or has
-        nothing to say.</p>`;
+    const hasPulse = graph.nodes.some((n) => n.kind === "pulse");
+    const text = canvasText();
+    const feeding = feedingPulse().length;
+
+    const wiresHtml = graph.wires
+      .map((w) => {
+        const a = graph.nodes.find((n) => n.id === w.from);
+        const b = graph.nodes.find((n) => n.id === w.to);
+        if (!a || !b) return "";
+        return `<path class="wire" d="${wirePath(outAt(a), inAt(b))}" data-cut="${esc(w.from)}|${esc(w.to)}"></path>`;
+      })
+      .join("");
+
+    const nodesHtml = graph.nodes
+      .map((n) => {
+        const k = nodeKind(n.kind);
+        if (!k) return "";
+        const [, label, ic, , ports, family, placeholder] = k;
+        const body =
+          n.kind === "pulse"
+            ? weaveResult
+              ? `${weaveResult.counts.trends} trends · ${weaveResult.counts.forecasts} forecasts`
+              : "Not run yet"
+            : n.kind === "draft"
+              ? weaveResult ? "Ready to write" : "Waiting on the run"
+              : n.text.trim()
+                ? esc(n.text)
+                : `<em class="muted">${esc(placeholder || "Empty")}</em>`;
+        return `<div class="node fam-${family}${nodeSelected === n.id ? " on" : ""}${
+          nodeWiring === n.id ? " wiring" : ""
+        }" data-node="${esc(n.id)}" style="left:${n.x}px;top:${n.y}px;width:${NODE_W}px;height:${NODE_H}px">
+          <div class="node-head" data-drag="${esc(n.id)}">${icon(ic, 13)}<b>${esc(label)}</b>
+            <button class="node-x" data-kill="${esc(n.id)}" aria-label="Remove the ${esc(label)} node">×</button>
+          </div>
+          <div class="node-body">${body}</div>
+          ${ports !== "in" ? `<button class="port out" data-from="${esc(n.id)}" aria-label="Start a wire from ${esc(label)}"></button>` : ""}
+          ${ports !== "out" ? `<button class="port in" data-to="${esc(n.id)}"${nodeWiring ? "" : " disabled"} aria-label="${nodeWiring ? `Finish the wire at ${esc(label)}` : `Wire into ${esc(label)}`}"></button>` : ""}
+        </div>`;
+      })
+      .join("");
+
+    const palette = ["source", "weave", "output"]
+      .map((family) => {
+        const band = family === "source" ? "Pull in" : family === "weave" ? "Weave" : "Out";
+        const items = NODE_KINDS.filter((k) => k[5] === family)
+          .map(
+            ([id, label, ic, blurb]) =>
+              `<button class="atom fam-${family}" draggable="true" data-add="${esc(id)}">${icon(ic, 18)}
+                 <span><b>${esc(label)}</b><small>${esc(blurb)}</small></span></button>`,
+          )
+          .join("");
+        return `<div class="palette-band"><div class="eyebrow">${band}</div>${items}</div>`;
+      })
+      .join("");
+
+    const node = graph.nodes.find((n) => n.id === nodeSelected);
+    const inspector = node
+      ? (() => {
+          const k = nodeKind(node.kind);
+          return `<div class="eyebrow">${esc(k[1])}</div>
+            <p class="muted small">${esc(k[3])}</p>
+            ${
+              k[5] === "source"
+                ? `<label class="lab-field"><span class="lab-field-label">What it says</span>
+                     <textarea rows="4" id="node-text" placeholder="${esc(k[6])}">${esc(node.text)}</textarea></label>`
+                : `<p class="muted small">Nothing to set. ${
+                    k[5] === "weave" ? "It reads whatever is wired into it." : "It reads whatever reaches it."
+                  }</p>`
+            }`;
+        })()
+      : `<div class="eyebrow">The run</div>${
+          weaveResult
+            ? `<ul class="plan-list tight">
+                 <li><b>${weaveResult.counts.trends}</b> trend profile${weaveResult.counts.trends === 1 ? "" : "s"}</li>
+                 <li><b>${weaveResult.counts.proofPoints}</b> proof point${weaveResult.counts.proofPoints === 1 ? "" : "s"}</li>
+                 <li><b>${weaveResult.counts.forecasts}</b> forecast${weaveResult.counts.forecasts === 1 ? "" : "s"}</li>
+                 <li><b>${weaveResult.tensions.length}</b> disagreement${weaveResult.tensions.length === 1 ? "" : "s"} between live calls</li>
+               </ul>`
+            : `<p class="muted small">Press Run to see what we already hold on this. Pick a node to edit it.</p>`
+        }`;
 
     return `
       <div class="head">
@@ -12612,38 +13481,131 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             cross-referenced against everything we have already forecast — so a forecast
             starts from what we know rather than from a blank page.</p>
         </div>
+        <div class="head-actions">
+          <button class="toggle" data-builder-reset>Start again</button>
+          <button class="toggle solid" data-builder-run${
+            hasPulse && text ? "" : " disabled"
+          }>${icon("ai", 14)} Run</button>
+        </div>
       </div>
 
       <div class="concept-note">
         <strong>A concept, not a feature.</strong>
-        <p>Nothing here is saved and nothing is cross-referenced yet. This is the shape of
-          the thing, to be argued with before it is built.</p>
+        <p>The wiring and the run are real — Run searches the trend database, the proof
+          point library and the schedule in this file, and every row it returns can be
+          opened. Pulse itself is not connected: the retrieval is ours, the writing would
+          be Pulse&rsquo;s, and this page does the first and says so rather than inventing
+          the second. Nothing is saved.</p>
       </div>
 
-      <div class="lab-layout">
-        <div>
+      <div class="nodes-layout">
+        <div class="node-palette">
           ${slot("builder.palette", { tag: "h2", cls: "lab-h2" })}
-          <p class="muted">Drag one onto the canvas, or press Enter on it.</p>
-          <div class="atom-palette">${LAB_ATOMS.map(
-            ([kind, ic, label, blurb], i) =>
-              `<button class="atom" draggable="true" data-atom="${i}">${icon(ic, 18)}
-                 <span><b>${esc(label)}</b><small>${esc(blurb)}</small></span></button>`,
-          ).join("")}</div>
+          <p class="muted small">Drag one onto the canvas, or press it to drop one in.</p>
+          ${palette}
         </div>
-        <div class="canvas" id="lab-canvas">${canvasAtoms.length ? full : empty}</div>
+        <div>
+          <div class="node-canvas" id="node-canvas">
+            <svg class="wire-layer" aria-hidden="true">${wiresHtml}</svg>
+            ${nodesHtml}
+            ${
+              nodeWiring
+                ? `<p class="wiring-note" role="status">Now press the left-hand port of the node it feeds.
+                     <button class="toggle" data-wire-cancel>Cancel</button></p>`
+                : ""
+            }
+          </div>
+          <p class="muted small canvas-foot">${graph.nodes.length} node${
+            graph.nodes.length === 1 ? "" : "s"
+          }, ${graph.wires.length} wire${graph.wires.length === 1 ? "" : "s"}${
+            feeding ? ` · ${feeding} feeding Pulse` : ""
+          }. Drag a node by its title bar; press a port to wire; press a wire to cut it.</p>
+        </div>
+        <div class="node-inspect">${inspector}</div>
       </div>
 
-      ${slot("builder.plan", { tag: "h2", cls: "lab-h2" })}
-      <ul class="plan-list">
-        <li><b>Cross-reference, not autocomplete.</b> The value is being told "three forecasts
-          already say this, and one says the opposite" — not having a machine write the
-          forecast.</li>
-        <li><b>Everything keeps its source.</b> An atom carries where it came from, so a claim
-          in a finished forecast can always be walked back to the thing it rests on.</li>
-        <li><b>Alignment is the point.</b> Two forecasters pulling on the same trend should
-          find each other's work here rather than three weeks later in review.</li>
-        <li><b>It has to be faster than a blank page</b>, or nobody will open it twice.</li>
-      </ul>`;
+      ${weaveResult && !node ? `<h2 class="lab-h2" style="margin-top:30px">What we already hold</h2>${weaveFindings(weaveResult)}` : ""}`;
+  }
+
+  /** The run's results, full width under the canvas. */
+  function weaveFindings(r) {
+    if (!r.terms.length) {
+      return `<p class="none">Nothing was wired into Pulse, so there was nothing to look for.</p>`;
+    }
+    const callPill = (c) => (c ? `<span class="call call-${esc(c.toLowerCase())}">${esc(c)}</span>` : "");
+    return `<div class="weave">
+      ${
+        r.tensions.length
+          ? `<section class="weave-block tension">
+               <div class="eyebrow">Where we disagree with ourselves</div>
+               ${r.tensions
+                 .map(
+                   (t) => `<p class="weave-tension"><b>${esc(t.a.title)}</b> ${callPill(t.a.call)}
+                     against <b>${esc(t.b.title)}</b> ${callPill(t.b.call)}<em>${esc(t.note)}</em></p>`,
+                 )
+                 .join("")}
+             </section>`
+          : ""
+      }
+      <div class="weave-cols">
+        <section class="weave-block">
+          <div class="eyebrow">Trend profiles${
+            r.counts.trends > r.trends.length ? ` (${r.trends.length} of ${r.counts.trends})` : ""
+          }</div>
+          ${
+            r.trends.length
+              ? `<ul class="weave-list">${r.trends
+                  .map(
+                    (t) => `<li><a href="#/trends/${esc(t.id)}">${esc(t.title)}</a>${callPill(t.call)}${
+                      t.published ? "" : `<span class="tag">Not published</span>`
+                    }<span class="muted small"> ${esc(t.ownerName)}</span></li>`,
+                  )
+                  .join("")}</ul>`
+              : `<p class="muted small">Nothing in the trend database matches this yet.</p>`
+          }
+        </section>
+        <section class="weave-block">
+          <div class="eyebrow">Proof points</div>
+          ${
+            r.proofPoints.length
+              ? `<ul class="weave-list">${r.proofPoints
+                  .map(
+                    (p) => `<li><a href="#/data/proof-points?q=${encodeURIComponent(
+                      p.text.split("\n")[0].slice(0, 40),
+                    )}&quality=all">${esc(p.text.split("\n")[0].slice(0, 90))}</a><span class="muted small"> ${esc(
+                      p.trendTitle,
+                    )}${p.alsoOn.length ? ` and ${p.alsoOn.length} more` : ""}</span></li>`,
+                  )
+                  .join("")}</ul>
+                 ${
+                   r.proofTerms.length < r.terms.length
+                     ? `<p class="muted small">Nothing carried every word, so these match ${r.proofTerms
+                         .map((t) => `&ldquo;${esc(t)}&rdquo;`)
+                         .join(", ")} rather than the whole canvas.</p>`
+                     : ""
+                 }`
+              : `<p class="muted small">No callout in the library matches this yet.</p>`
+          }
+        </section>
+        <section class="weave-block">
+          <div class="eyebrow">Forecasts that covered this ground</div>
+          ${
+            r.forecasts.length
+              ? `<ul class="weave-list">${r.forecasts
+                  .map(
+                    (f) => `<li><a href="#/content/${esc(f.id)}">${esc(f.title)}</a><span class="muted small"> ${esc(
+                      f.format,
+                    )} · ${esc(f.vertical)} · ${esc(f.status)}</span></li>`,
+                  )
+                  .join("")}</ul>`
+              : `<p class="muted small">Nothing on the schedule has argued this yet.</p>`
+          }
+        </section>
+      </div>
+      <p class="muted small">Matched on ${r.terms
+        .map((t) => `&ldquo;${esc(t)}&rdquo;`)
+        .join(", ")}, counting a row that carries ${r.threshold} or more of them.</p>
+    </div>`;
   }
 
   const LAB_LIBRARIES = [
@@ -15039,50 +16001,185 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
     /* The Forecast Lab -----------------------------------------------------
      *
-     * The concept pages run rather than being pictures of themselves: a
-     * canvas you can drop things on answers "is this how I would work?",
+     * The node workspace runs rather than being a picture of itself: a canvas
+     * you can wire up and press Run on answers "is this how I would work?",
      * which is the only question worth asking of a concept. Nothing is kept
-     * beyond this page, and both pages say so.
+     * beyond this page, and the page says so.
      */
-    const addAtom = (i) => {
-      const atom = LAB_ATOMS[Number(i)];
-      if (!atom) return;
-      canvasAtoms = [...canvasAtoms, atom];
-      render();
+    const reRender = () => render();
+
+    const addNode = (kindId, at) => {
+      if (!nodeKind(kindId)) return;
+      const id = nextNodeId();
+      graph = {
+        ...graph,
+        nodes: [
+          ...graph.nodes,
+          {
+            id,
+            kind: kindId,
+            x: at ? Math.max(0, Math.round(at.x / 8) * 8) : 40 + (graph.nodes.length % 4) * 40,
+            y: at ? Math.max(0, Math.round(at.y / 8) * 8) : 40 + (graph.nodes.length % 6) * 36,
+            text: "",
+          },
+        ],
+      };
+      nodeSelected = id;
+      reRender();
     };
 
-    view.querySelectorAll("[data-atom]").forEach((el) => {
-      el.addEventListener("click", () => addAtom(el.dataset.atom));
-      el.addEventListener("dragstart", (e) =>
-        e.dataTransfer.setData("text/plain", el.dataset.atom),
-      );
+    /**
+     * Join two nodes, refusing the joins that would not mean anything: a node
+     * to itself, a duplicate, and any wire that would close a loop.
+     */
+    const connectNodes = (from, to) => {
+      nodeWiring = null;
+      if (from !== to && !graph.wires.some((w) => w.from === from && w.to === to)) {
+        const seen = new Set();
+        const stack = [to];
+        while (stack.length) {
+          const at = stack.pop();
+          for (const w of graph.wires) {
+            if (w.from === at && !seen.has(w.to)) { seen.add(w.to); stack.push(w.to); }
+          }
+        }
+        if (!seen.has(from)) graph = { ...graph, wires: [...graph.wires, { from, to }] };
+      }
+      reRender();
+    };
+
+    view.querySelectorAll("[data-add]").forEach((el) => {
+      el.addEventListener("click", () => addNode(el.dataset.add));
+      el.addEventListener("dragstart", (e) => e.dataTransfer.setData("text/plain", el.dataset.add));
     });
 
-    const canvas = view.querySelector("#lab-canvas");
-    if (canvas) {
-      canvas.addEventListener("dragover", (e) => {
+    const nodeCanvas = view.querySelector("#node-canvas");
+    if (nodeCanvas) {
+      nodeCanvas.addEventListener("dragover", (e) => e.preventDefault());
+      nodeCanvas.addEventListener("drop", (e) => {
         e.preventDefault();
-        canvas.classList.add("over");
+        const box = nodeCanvas.getBoundingClientRect();
+        addNode(e.dataTransfer.getData("text/plain"), {
+          x: e.clientX - box.left - NODE_W / 2 + nodeCanvas.scrollLeft,
+          y: e.clientY - box.top - NODE_H / 2 + nodeCanvas.scrollTop,
+        });
       });
-      canvas.addEventListener("dragleave", () => canvas.classList.remove("over"));
-      canvas.addEventListener("drop", (e) => {
-        e.preventDefault();
-        canvas.classList.remove("over");
-        addAtom(e.dataTransfer.getData("text/plain"));
+      nodeCanvas.addEventListener("click", (e) => {
+        if (e.target === nodeCanvas) { nodeSelected = null; nodeWiring = null; reRender(); }
+      });
+
+      /*
+       * Dragging a node.
+       *
+       * Bound to the canvas rather than re-bound per node on every render,
+       * and moving the element directly rather than re-rendering on each
+       * pointer event — a full re-render mid-drag would replace the node
+       * under the cursor and the drag would come apart.
+       */
+      let dragging = null;
+      nodeCanvas.addEventListener("pointerdown", (e) => {
+        const handle = e.target.closest("[data-drag]");
+        if (!handle) return;
+        const n = graph.nodes.find((x) => x.id === handle.dataset.drag);
+        if (!n) return;
+        const box = nodeCanvas.getBoundingClientRect();
+        dragging = { n, el: handle.closest(".node"), dx: e.clientX - box.left - n.x, dy: e.clientY - box.top - n.y };
+        handle.setPointerCapture?.(e.pointerId);
+      });
+      nodeCanvas.addEventListener("pointermove", (e) => {
+        if (!dragging) return;
+        const box = nodeCanvas.getBoundingClientRect();
+        dragging.n.x = Math.max(0, Math.round((e.clientX - box.left - dragging.dx) / 8) * 8);
+        dragging.n.y = Math.max(0, Math.round((e.clientY - box.top - dragging.dy) / 8) * 8);
+        dragging.el.style.left = `${dragging.n.x}px`;
+        dragging.el.style.top = `${dragging.n.y}px`;
+        // The wires have to follow, or they unhook from the node mid-drag.
+        for (const path of nodeCanvas.querySelectorAll(".wire")) {
+          const [from, to] = path.dataset.cut.split("|");
+          const a = graph.nodes.find((x) => x.id === from);
+          const b = graph.nodes.find((x) => x.id === to);
+          if (a && b) path.setAttribute("d", wirePath(outAt(a), inAt(b)));
+        }
+      });
+      nodeCanvas.addEventListener("pointerup", () => {
+        if (dragging) { dragging = null; reRender(); }
       });
     }
 
-    view.querySelectorAll("[data-canvas-drop]").forEach((el) =>
-      el.addEventListener("click", () => {
-        const at = Number(el.dataset.canvasDrop);
-        canvasAtoms = canvasAtoms.filter((_, i) => i !== at);
-        render();
+    view.querySelectorAll("[data-node]").forEach((el) =>
+      el.addEventListener("click", (e) => {
+        if (e.target.closest("[data-kill]") || e.target.closest(".port")) return;
+        const id = el.dataset.node;
+        const k = nodeKind(graph.nodes.find((n) => n.id === id)?.kind);
+        // Mid-wire, a click on the body finishes the join.
+        if (nodeWiring && nodeWiring !== id && k && k[4] !== "out") connectNodes(nodeWiring, id);
+        else { nodeSelected = id; reRender(); }
       }),
     );
-    view.querySelectorAll("[data-canvas-clear]").forEach((el) =>
+
+    view.querySelectorAll("[data-kill]").forEach((el) =>
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const id = el.dataset.kill;
+        graph = {
+          nodes: graph.nodes.filter((n) => n.id !== id),
+          // A wire to nowhere is not a wire.
+          wires: graph.wires.filter((w) => w.from !== id && w.to !== id),
+        };
+        if (nodeSelected === id) nodeSelected = null;
+        reRender();
+      }),
+    );
+
+    view.querySelectorAll("[data-from]").forEach((el) =>
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        nodeWiring = el.dataset.from;
+        reRender();
+      }),
+    );
+    view.querySelectorAll("[data-to]").forEach((el) =>
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (nodeWiring) connectNodes(nodeWiring, el.dataset.to);
+      }),
+    );
+    view.querySelectorAll("[data-wire-cancel]").forEach((el) =>
+      el.addEventListener("click", () => { nodeWiring = null; reRender(); }),
+    );
+    view.querySelectorAll("[data-cut]").forEach((el) =>
       el.addEventListener("click", () => {
-        canvasAtoms = [];
-        render();
+        const [from, to] = el.dataset.cut.split("|");
+        graph = { ...graph, wires: graph.wires.filter((w) => !(w.from === from && w.to === to)) };
+        reRender();
+      }),
+    );
+
+    const nodeText = view.querySelector("#node-text");
+    if (nodeText) {
+      nodeText.addEventListener("input", () => {
+        const n = graph.nodes.find((x) => x.id === nodeSelected);
+        // Typed straight onto the node rather than through a re-render, so
+        // the caret is not thrown back to the start on every keystroke.
+        if (n) n.text = nodeText.value;
+      });
+      nodeText.addEventListener("blur", reRender);
+    }
+
+    view.querySelectorAll("[data-builder-run]").forEach((el) =>
+      el.addEventListener("click", () => {
+        weaveResult = weave(weaveTerms(canvasText()));
+        nodeSelected = null;
+        reRender();
+      }),
+    );
+    view.querySelectorAll("[data-builder-reset]").forEach((el) =>
+      el.addEventListener("click", () => {
+        graph = starterGraph();
+        weaveResult = null;
+        nodeSelected = null;
+        nodeWiring = null;
+        reRender();
       }),
     );
 
@@ -16253,6 +17350,27 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     },
     true,
   );
+
+  /*
+   * How tall the rail may be, measured rather than assumed.
+   *
+   * The proof-of-concept banner above the sticky address bar scrolls away, so
+   * the chrome over the rail is about 94px at the top of the page and 57px
+   * once it has gone. A constant height leaves the account switcher below the
+   * fold exactly when somebody first arrives — which was the whole complaint.
+   * Reading the address bar's own bottom edge gets it right in both states
+   * and needs no constant to keep in step with the CSS.
+   */
+  function sizeRail() {
+    const bar = document.querySelector(".urlbar");
+    if (!bar) return;
+    const top = Math.max(0, bar.getBoundingClientRect().bottom);
+    document.documentElement.style.setProperty("--rail-h", `${window.innerHeight - top}px`);
+  }
+
+  sizeRail();
+  addEventListener("scroll", sizeRail, { passive: true });
+  addEventListener("resize", sizeRail);
 
   window.addEventListener("hashchange", () => {
     if (goingBack) {

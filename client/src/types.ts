@@ -837,3 +837,57 @@ export interface SearchResult {
   more: boolean;
   labels: Record<SearchKind, string>;
 }
+
+/* --- The Forecast Lab ----------------------------------------------------- */
+
+/**
+ * What the Hub already holds on what is on the builder's canvas.
+ *
+ * Mirrors `server/src/lab/weave.ts` by hand, the way the rest of this file
+ * mirrors the server's types.
+ */
+export interface WeaveTrend {
+  id: string;
+  profileId: string;
+  title: string;
+  call?: string;
+  ownerName: string;
+  published: boolean;
+  industries: string[];
+  /** How many of the canvas's terms this profile carried. */
+  matched: number;
+}
+
+export interface WeaveProof {
+  id: string;
+  text: string;
+  trendId: string;
+  trendTitle: string;
+  match: number;
+  /** Other trends the same callout is matched to. */
+  alsoOn: string[];
+}
+
+export interface WeaveForecast {
+  id: string;
+  title: string;
+  /** The sheet calls it type; every page of the Hub calls it format. */
+  format: string;
+  vertical: string;
+  status: string;
+  forecasterId: string;
+}
+
+export interface WeaveResult {
+  terms: string[];
+  trends: WeaveTrend[];
+  proofPoints: WeaveProof[];
+  forecasts: WeaveForecast[];
+  /** Two live profiles on shared ground, called differently. */
+  tensions: { a: WeaveTrend; b: WeaveTrend; note: string }[];
+  counts: { trends: number; proofPoints: number; forecasts: number };
+  /** The terms the proof point search actually used, when it had to loosen. */
+  proofTerms: string[];
+  /** How many terms a row had to carry to be counted. */
+  threshold: number;
+}

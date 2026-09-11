@@ -21,6 +21,7 @@ import { Avatar, ErrorNote, Loading } from "./bits";
 import FreshnessNote from "./FreshnessNote";
 import NotificationBell from "./NotificationBell";
 import SearchPalette, { useSearchShortcut } from "./SearchPalette";
+import Wordmark from "./Wordmark";
 
 const ROLE_LABELS: Record<Me["role"], string> = {
   forecaster: "Forecaster",
@@ -97,14 +98,16 @@ interface Section {
   slot?: string;
 }
 
-type GroupKey = "work" | "lab" | "data" | "team" | "resources";
+type GroupKey = "work" | "lab" | "data" | "team" | "resources" | "settings";
 
 /**
  * The groups, in the order they are read.
  *
  * Your work first because it is why people are here; the Lab next because it
- * is where the work is made; Data and the team after; Resources last, since
- * it is the drawer of things that are not the Hub's at all.
+ * is where the work is made; Data and the team after; Resources then, since
+ * it is the drawer of things that are not the Hub's at all. Settings last,
+ * where every application people already use keeps it — it is the group you
+ * go to on purpose, never the one you are trying to get past.
  */
 const GROUPS: { key: GroupKey; slot: string }[] = [
   { key: "work", slot: "nav.group.work" },
@@ -112,6 +115,7 @@ const GROUPS: { key: GroupKey; slot: string }[] = [
   { key: "data", slot: "nav.group.data" },
   { key: "team", slot: "nav.group.team" },
   { key: "resources", slot: "nav.group.resources" },
+  { key: "settings", slot: "nav.group.settings" },
 ];
 
 /**
@@ -290,13 +294,16 @@ function sections({
      * which a phone does not have — so the page needs a way in that survives
      * the layout, and "what am I being emailed about" is a thing people look
      * for in a menu rather than by clicking a bell.
+     *
+     * Under Settings rather than with the team: it is a page about your own
+     * preferences — which alerts reach you, and by which channel — not about
+     * anybody else.
      */
     {
       to: "/notifications",
-      label: "What the Hub tells you",
-      short: "Notices",
+      label: "Alerts",
       icon: "bell",
-      group: "team",
+      group: "settings",
       slot: "nav.item.notifications",
       badge: unread > 0 ? String(unread) : undefined,
     },
@@ -364,6 +371,83 @@ function NavItem({
     <NavLink className={className} to={section.to} end={section.end} onClick={onClick}>
       {inside}
     </NavLink>
+  );
+}
+
+/** Where a person's collapsed groups are kept, per account. */
+const COLLAPSED_KEY = "forecasters-hub.nav-collapsed";
+
+function readCollapsed(): Record<string, boolean> {
+  try {
+    return JSON.parse(localStorage.getItem(COLLAPSED_KEY) ?? "{}") as Record<string, boolean>;
+  } catch {
+    // Blocked or corrupt storage: everything open, which is the default anyway.
+    return {};
+  }
+}
+
+/**
+ * One group of the sidebar, with a heading that folds it away.
+ *
+ * Open by default and on a first visit, because a menu that starts closed is
+ * a menu that hides the app from somebody who has never seen it. What gets
+ * remembered is the closing: if you have decided you never use Resources,
+ * that decision should survive a reload.
+ *
+ * The heading is a real `<button>` with `aria-expanded` rather than a `<div>`
+ * with a click handler, so it is reachable by keyboard and announced as what
+ * it is.
+ *
+ * Every group folds, the one you are currently inside included. Refusing to
+ * fold that one was the first try — the reasoning being that collapsing it
+ * hides the highlight showing where you are — but it made the heading of
+ * whichever group you were in do nothing when pressed, which reads as broken
+ * rather than as protective. A collapsed group that holds the current page
+ * carries the marker on its heading instead, so nothing is lost by folding it.
+ */
+function NavGroup({
+  groupKey,
+  slot,
+  items,
+}: {
+  groupKey: GroupKey;
+  slot: string;
+  items: Section[];
+}) {
+  const { pathname } = useLocation();
+  const [open, setOpen] = useState(() => !(readCollapsed()[groupKey] ?? false));
+
+  const holdsCurrent = items.some(
+    (s) => !s.href && (s.to === pathname || (s.to !== "/" && pathname.startsWith(`${s.to}/`))),
+  );
+
+  const toggle = () => {
+    const next = !open;
+    setOpen(next);
+    try {
+      localStorage.setItem(
+        COLLAPSED_KEY,
+        JSON.stringify({ ...readCollapsed(), [groupKey]: !next }),
+      );
+    } catch {
+      // The choice lasts for this page load only, which is no worse than before.
+    }
+  };
+
+  return (
+    <div className={open ? "nav-group" : "nav-group shut"}>
+      <button className="nav-label" onClick={toggle} aria-expanded={open}>
+        <Icon name="chevron-down" size={12} className="nav-fold" />
+        <Slot id={slot} as="span" />
+        {/* Folded, but you are in there: the same accent bar the open group
+            puts against the current item, kept on the heading. */}
+        {!open && holdsCurrent && (
+          <span className="nav-here" title="The page you are on is in this group" />
+        )}
+        {!open && <span className="nav-shut-count">{items.length}</span>}
+      </button>
+      {open && items.map((s) => <NavItem key={s.to} section={s} className="nav-link" />)}
+    </div>
   );
 }
 
@@ -437,7 +521,7 @@ function useSections(content: ContentItem[]): Section[] {
     .map(asSection);
 
   const studio: Section[] = isAdmin
-    ? [{ to: "/studio", label: "Studio", icon: "studio", group: "team", order: 1000 }]
+    ? [{ to: "/studio", label: "Studio", icon: "studio", group: "settings", order: 1000 }]
     : [];
 
   /*
@@ -471,9 +555,12 @@ function Sidebar({ content, onSearch }: { content: ContentItem[]; onSearch: () =
 
   return (
     <aside className="sidebar">
+      {/* Pinned: the identity and the way into everything stay put while the
+          menu below them scrolls. */}
+      <div className="sidebar-top">
       <div className="brand-row">
         <NavLink to="/" className="brand">
-          <div className="brand-mark">WGSN</div>
+          <Wordmark className="brand-mark" />
           <div className="brand-sub">Forecasters Hub</div>
           <div className="brand-kicker">Content Calendar</div>
         </NavLink>
@@ -488,24 +575,16 @@ function Sidebar({ content, onSearch }: { content: ContentItem[]; onSearch: () =
         <span>Search</span>
         <kbd>{mac ? "\u2318" : "Ctrl"}K</kbd>
       </button>
+      </div>
 
       {/* A heading only appears if its group has anything in it, so hiding
           the library does not leave a stray "Data" above nothing — and a
           Resources drawer nobody has filled in is not a drawer. */}
-      <nav className="nav">
-        {GROUPS.map(({ key, slot }, i) => {
+      <nav className="nav nav-scroll">
+        {GROUPS.map(({ key, slot }) => {
           const inGroup = items.filter((s) => s.group === key);
           if (!inGroup.length) return null;
-          return (
-            <div key={key} className="nav-group">
-              <div className="nav-label" style={i > 0 ? { marginTop: 20 } : undefined}>
-                <Slot id={slot} />
-              </div>
-              {inGroup.map((s) => (
-                <NavItem key={s.to} section={s} className="nav-link" />
-              ))}
-            </div>
-          );
+          return <NavGroup key={key} groupKey={key} slot={slot} items={inGroup} />;
         })}
       </nav>
 

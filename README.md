@@ -413,7 +413,7 @@ their own domains.
 
 | Item | Where it goes | State |
 | --- | --- | --- |
-| Forecast Builder | `/lab/builder` | Concept |
+| Forecast Builder | `/lab/builder` | Concept, but the run is real |
 | Add Atoms | `/lab/atoms` | Concept |
 | Workspace 2 | medialibrary.wgsn.com | An existing tool, linked |
 | The Feed | wgsn.com/trend-tag | An existing tool, linked |
@@ -435,11 +435,81 @@ questions, while a canvas you can drag things onto answers "is this how I would
 actually work?", which is the only question worth asking of something unbuilt.
 Nothing is saved and both pages say so.
 
-**Forecast Builder** has the five kinds of atom — data, driver, image, media,
-research — and a canvas to drag them onto. What it would eventually do is
-cross-reference what you dropped against everything we have already published:
-not autocomplete, but being told "three forecasts already argue this, and one
-argues the opposite". Alignment is as much the point as speed.
+**Forecast Builder** is a node workspace. A forecast is assembled out of things
+we already hold, so building one should look like assembling rather than like
+typing: you pull nodes onto a canvas — a subject, a figure, a STEPIC driver, a
+piece of research, an image — wire them into a **Pulse** step, and press Run.
+
+Nodes are dragged by their title bars and snap to an eight-pixel grid; wires are
+cubic curves that leave horizontally at both ends, which is what lets the eye
+follow one out of a port and back into another. Pressing an output port starts a
+wire and pressing an input port finishes it, so the graph can be built without a
+mouse. A wire that would join a node to itself, duplicate one that exists, or
+close a loop is refused rather than drawn.
+
+#### What Run actually does, and what it does not
+
+Run is real. It gathers the text off every source node that reaches the Pulse
+step — however many hops away — and asks `POST /api/lab/weave`, which searches
+the Hub's own corpus and answers with four things:
+
+- **Trend profiles** that cover the same ground, with their strategic call.
+- **Proof points** out of the ten thousand, deduplicated across the trends each
+  is matched to.
+- **Forecasts on the schedule** that have already argued it.
+- **Tensions** — two *live* profiles, sharing an industry, called two or more
+  steps apart on Protect / Test / Expand / Invest.
+
+The tensions are the only finding a search box could not have given you, so they
+are listed first. Nobody wants to publish a Test call on a trend a colleague
+called Invest three weeks ago, and nobody finds that out from a blank document.
+Adjacent calls are a nuance rather than a disagreement and are not raised;
+neither is an unpublished profile, which cannot contradict anything because
+nobody can read it.
+
+All of that is retrieval and arithmetic over our own data, which is why it can be
+trusted and why every row on the page is a link you can open.
+
+**Pulse itself is not connected.** The generative half — the prose, the "here is
+how these hang together" — is where WGSN's own Pulse would sit, and the page says
+so rather than printing invented paragraphs and letting somebody assume. That
+split is the point rather than a shortcut: the useful half of this job is
+retrieval, it needs no model at all, and doing it without one means every claim
+walks back to a row somebody can open. A model makes the answer read nicely; it
+should not be what makes it true.
+
+#### Two ways the matching was wrong first
+
+Both were caught by measuring rather than by reading the code, and both are
+pinned by tests in `server/src/lab/weave.test.mjs`.
+
+**One common word matched the department.** A canvas about "collagen barrier
+skincare" came back with 183 trend profiles, because "beauty" appears in most of
+them. Requiring more than one term fixed it — but the first version counted
+*occurrences* rather than distinct terms, so a profile with "beauty" in its title
+and in its industry tags scored two for a word the canvas used once. It counts
+distinct terms now.
+
+**Falling back to the longest word is not falling back to the rarest.** Almost
+no canvas has a proof point carrying every one of its words, so the search
+loosens. Loosening to the longest term sent a canvas about collagen to six
+proof points about textured snacks, because "ingredient" is longer than
+"collagen" and very nearly meaningless. It now searches each term separately and
+ranks the pool by how much of the canvas each result actually carries, and
+whether it belongs to a trend the canvas already matched.
+
+A third correction came from the stop list: "in", "up", "yoy" and friends were
+not just noise in the matching, they inflated the term count, and since the bar
+was a fraction of it, junk words made the threshold *harder*. The bar is flat at
+two now, and ranking does the rest — flooding is a problem of what is shown, and
+only eight are ever shown.
+
+#### In the demo
+
+The demo has no server, so the same algorithm runs in the page against the seed
+— 446 trend profiles and 627 of the proof points. It is the real logic over a
+smaller slice, so what comes back is true of the data in that file rather than
+written to look convincing.
 
 **Add Atoms** is the other end of the same idea: upload research once, say
 which libraries it belongs in and tag it, and have it findable by a forecaster

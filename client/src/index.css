@@ -10,8 +10,18 @@
 
 :root {
   --paper: #ffffff;
-  --ground: #f4f4f2;
-  --sunken: #ebebe8;
+  /*
+   * The ground, and the reason it is not neutral grey.
+   *
+   * It was #f4f4f2 — a flat warm grey — which made a screen of white cards on
+   * it read as a spreadsheet with the colour turned off. This is the same
+   * lightness carried a few degrees toward the accent's hue, which is enough
+   * for the eye to read the page as *lit* rather than as grey, and not nearly
+   * enough to call it blue. The white of a card now sits above something
+   * rather than beside it.
+   */
+  --ground: #f3f4f8;
+  --sunken: #e9eaf1;
   --ink: #0e0e10;
   --ink-70: #56565c;
   /*
@@ -25,13 +35,19 @@
    * can see it and as nothing at all to somebody who cannot.
    *
    * #69696f is the lightest grey on the same hue that clears 4.5:1 against
-   * all three grounds — paper 5.45, ground 4.95, sunken 4.57 — so it is the
+   * all three grounds — paper 5.45, ground 4.96, sunken 4.55 — so it is the
    * smallest change to the look that is actually readable. It stays well
    * clear of --ink-70 at 7.29, so the hierarchy still reads.
+   *
+   * Re-measured when the grounds were tinted toward the accent: the shift
+   * moves these by a hundredth either way, which is why the tint could be a
+   * free change rather than a trade against legibility.
    */
   --ink-45: #69696f;
-  --rule: #e2e2de;
-  --rule-strong: #c7c7c1;
+  /* The hairlines take the same faint cast as the ground, so a rule reads as
+     part of the page rather than as a pencil line drawn on top of it. */
+  --rule: #e3e4ec;
+  --rule-strong: #c4c6d4;
 
   --accent: #4c5578;
   /* A lighter step of the accent for de-emphasised bars: >=3:1 on white and
@@ -82,11 +98,28 @@
   --ui: "DM Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
   --mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
-  --radius: 2px;
-  --radius-sm: 2px;
-  /* Cards with a picture in them; everything else stays square. */
-  --radius-card: 8px;
-  --shadow: 0 1px 2px rgb(14 14 16 / 5%);
+  /*
+   * Corners.
+   *
+   * These were 2px, which is square with the edge knocked off — close enough
+   * to a hard corner that it read as severity rather than as a decision. 6px
+   * is still an editorial corner rather than a consumer-app pill: enough to
+   * take the hardness out of a screen of forty rectangles, not enough to stop
+   * the page looking like a WGSN page.
+   */
+  --radius: 6px;
+  --radius-sm: 4px;
+  /* Cards with a picture in them, which can carry more. */
+  --radius-card: 12px;
+  /*
+   * Two shadows rather than one. The old single hairline shadow was doing
+   * nothing visible; this is a tight contact shadow plus a wider, softer one,
+   * which is what actually lifts a white card off a tinted ground. Both are
+   * mixed from the accent rather than from black, so the shade under a card
+   * belongs to the same palette as everything else.
+   */
+  --shadow: 0 1px 2px rgb(38 44 72 / 6%), 0 2px 8px rgb(38 44 72 / 4%);
+  --shadow-lift: 0 2px 4px rgb(38 44 72 / 8%), 0 8px 24px rgb(38 44 72 / 7%);
   --sidebar-width: 244px;
 }
 
@@ -135,33 +168,56 @@ button {
   min-height: 100vh;
 }
 
+/*
+ * Three bands: the identity, the nav, and who you are signed in as. Only the
+ * middle one scrolls.
+ *
+ * It used to be one 100vh column with no overflow of its own, which meant a
+ * menu taller than the window simply ran off the bottom of it — and because
+ * the column is sticky, the only way to reach the account switcher was to
+ * scroll the *main page* to its end and let the sidebar slide up. That is a
+ * menu you cannot use until you have finished reading the page it is for.
+ */
 .sidebar {
   position: sticky;
   top: 0;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  gap: 18px;
   padding: 22px 18px 24px;
   border-right: 1px solid var(--rule);
   background: var(--paper);
+  /* Belt and braces: the bands below own the scrolling, and nothing escapes. */
+  overflow: hidden;
+}
+
+.nav-scroll {
+  /* `min-height: 0` is the whole trick — without it a flex child refuses to
+     shrink below its content and the overflow never engages. */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  /* Room for the scrollbar to sit without crowding the badges. */
+  margin-right: -6px;
+  padding-right: 6px;
+  scrollbar-width: thin;
 }
 
 .brand {
   display: block;
 }
 
-/* The wordmark is set as a solid block, the way WGSN sets its own. */
+/*
+ * The supplied wordmark, sized by height and left to find its own width from
+ * the artwork's 4:1 ratio. It takes `currentColor`, so the theme swap needs
+ * no second asset.
+ */
 .brand-mark {
-  display: inline-block;
-  padding: 5px 9px 4px;
-  background: var(--ink);
-  color: var(--paper);
-  font-family: var(--display);
-  font-size: 19px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.02em;
+  display: block;
+  height: 19px;
+  width: auto;
+  color: var(--ink);
 }
 
 .brand-sub {
@@ -187,15 +243,69 @@ button {
   gap: 0;
 }
 
+/* The heading is the fold control, so it is a button that looks like the
+   label it replaced — full width, because a 9px target is not a target. */
 .nav-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
   padding: 0 0 7px;
   margin-bottom: 4px;
+  border: none;
   border-bottom: 1px solid var(--rule);
+  background: none;
+  font-family: inherit;
   font-size: 9.5px;
   font-weight: 500;
   letter-spacing: 0.17em;
   text-transform: uppercase;
   color: var(--ink-45);
+  text-align: left;
+  cursor: pointer;
+}
+
+.nav-group:not(:first-child) .nav-label {
+  margin-top: 20px;
+}
+
+.nav-label:hover {
+  color: var(--ink);
+}
+
+.nav-fold {
+  flex: none;
+  color: var(--ink-45);
+  transition: transform 0.15s ease;
+}
+
+/* One glyph, two states: a quarter turn is the whole difference. */
+.nav-group.shut .nav-fold {
+  transform: rotate(-90deg);
+}
+
+/* You are in this group, which is folded. Same accent the open group puts
+   against the current item. */
+.nav-here {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex: none;
+}
+
+.nav-shut-count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0;
+  color: var(--ink-45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nav-fold {
+    transition: none;
+  }
 }
 
 .nav-link {
@@ -259,8 +369,20 @@ button {
   color: var(--accent);
 }
 
+/* Pinned above and below the scrolling nav, so the account switcher is
+   reachable without reading the page first. */
+.sidebar-top,
 .sidebar-foot {
-  margin-top: auto;
+  flex: none;
+}
+
+.sidebar-top {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.sidebar-foot {
   font-size: 11px;
   line-height: 1.6;
   color: var(--ink-45);
@@ -338,6 +460,7 @@ button {
   border: 1px solid var(--rule);
   border-radius: var(--radius);
   background: var(--paper);
+  box-shadow: var(--shadow);
 }
 
 .section {
@@ -361,6 +484,29 @@ button {
   letter-spacing: -0.02em;
 }
 
+/*
+ * An accent bar beside each section heading, so the page has a spine of
+ * colour down the left as you scroll — the cheapest way to stop a stack of
+ * hairlines reading as ruled paper.
+ *
+ * Beside the text rather than under it. The first try was a tick sitting on
+ * the heading's own hairline, which looked detached: the row is baseline-
+ * aligned with the "see everything" link beside it, so its rule sits a good
+ * twenty pixels below the words and a mark on that rule belongs to nothing in
+ * particular. Attached to the title it cannot come adrift, whatever the row
+ * does around it.
+ */
+.section-head .section-title::before {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 0.82em;
+  margin-right: 9px;
+  border-radius: 2px;
+  background: var(--accent);
+  vertical-align: -0.04em;
+}
+
 .section-link {
   font-size: 12px;
   font-weight: 500;
@@ -371,6 +517,12 @@ button {
   text-decoration: underline;
 }
 
+/*
+ * The headline figures, as one lifted panel divided by hairlines rather than
+ * as a grey box with white patches in it. The rounding has to be on the
+ * wrapper with `overflow: hidden`, because the tiles inside are square and
+ * would otherwise poke through the corners.
+ */
 .stat-row {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -378,11 +530,21 @@ button {
   margin-bottom: 34px;
   background: var(--rule);
   border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
 }
 
 .stat {
   padding: 15px 17px;
   background: var(--paper);
+  /* A hairline of the figure's own colour along the top. Nearly nothing on
+     its own; across a row of four it is what stops the panel reading grey. */
+  box-shadow: inset 0 2px 0 var(--tint, var(--accent-soft));
+}
+
+.stat.alarm {
+  --tint: var(--status-at-risk);
 }
 
 .stat-value {
@@ -416,6 +578,7 @@ button {
   border-radius: var(--radius);
   background: var(--paper);
   overflow: hidden;
+  box-shadow: var(--shadow);
 }
 
 .deadline {
@@ -2629,11 +2792,15 @@ a.session-title:hover {
   gap: 1px;
   background: var(--rule);
   border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: var(--shadow);
 }
 
 .head-figures .figure {
   padding: 12px 16px;
   background: var(--paper);
+  box-shadow: inset 0 2px 0 var(--tint, var(--accent-soft));
 }
 
 .head-figures .figure b {
@@ -5862,6 +6029,345 @@ a.inbox-title:hover {
   margin-top: 2px;
   color: var(--ink-45);
   line-height: 1.5;
+}
+
+/* --- The node workspace ---------------------------------------------------
+ *
+ * Three columns: what you can pull in, the canvas, and what the selected node
+ * is. The canvas is the only part that is a diagram; everything either side
+ * of it is the same furniture as the rest of the Hub, on purpose — a concept
+ * that looks like a different product is a concept nobody can judge.
+ *
+ * Each family of node takes a hue, which is the one place in the app colour
+ * is carrying meaning rather than decorating: what you pull in, what weaves
+ * it, what comes out.
+ * -------------------------------------------------------------------------- */
+
+.nodes-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr) minmax(0, 260px);
+  gap: 20px;
+  margin-top: 20px;
+  align-items: start;
+}
+
+.palette-band {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.palette-band .eyebrow {
+  margin-bottom: 2px;
+}
+
+/* The three families, as one custom property each thing reads off. */
+.fam-source {
+  --fam: var(--accent);
+}
+
+.fam-weave {
+  --fam: var(--mine);
+}
+
+.fam-output {
+  --fam: var(--status-published);
+}
+
+.atom.fam-source,
+.atom.fam-weave,
+.atom.fam-output {
+  border-left: 3px solid var(--fam);
+}
+
+.atom.fam-source .icon,
+.atom.fam-weave .icon,
+.atom.fam-output .icon {
+  color: var(--fam);
+}
+
+.node-canvas {
+  position: relative;
+  min-height: 420px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background-color: var(--paper);
+  /* A dot grid, so a node that is one pixel out looks it and the canvas reads
+     as a workspace rather than as an empty card. */
+  background-image: radial-gradient(circle, var(--rule) 1px, transparent 1px);
+  background-size: 16px 16px;
+  /*
+   * Scrolls rather than clips. `hidden` was the first try and it cut the
+   * output node in half at ordinary window widths — a graph grows to the
+   * right by its nature, and a workspace that silently swallows the end of
+   * your own pipeline is worse than one you have to scroll.
+   */
+  overflow: auto;
+  box-shadow: var(--shadow);
+}
+
+.wire-layer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.wire {
+  fill: none;
+  stroke: var(--rule-strong);
+  stroke-width: 2;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.wire:hover {
+  stroke: var(--status-at-risk);
+  stroke-width: 3;
+}
+
+.node {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--rule-strong);
+  border-top: 3px solid var(--fam, var(--accent));
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+  cursor: pointer;
+}
+
+.node.on {
+  border-color: var(--fam, var(--accent));
+  box-shadow: var(--shadow-lift);
+}
+
+.node.wiring {
+  outline: 2px dashed var(--fam, var(--accent));
+  outline-offset: 2px;
+}
+
+.node-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--rule);
+  font-size: 11px;
+  /* The title bar is the handle; the body is not, so a click to select does
+     not become a drag of one pixel. */
+  cursor: grab;
+  touch-action: none;
+}
+
+.node-head .icon {
+  color: var(--fam, var(--accent));
+  flex: none;
+}
+
+.node-head b {
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-x {
+  margin-left: auto;
+  padding: 0 3px;
+  border: 0;
+  background: none;
+  color: var(--ink-45);
+  font-size: 15px;
+  line-height: 1;
+}
+
+.node-x:hover {
+  color: var(--status-at-risk);
+}
+
+/* Fixed-height nodes, so a long note is clamped with an ellipsis rather than
+   sliced off mid-word. The whole text is in the inspector. */
+.node-body {
+  flex: 1;
+  padding: 7px 9px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--ink-70);
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+/* The ports. Round, and straddling the edge, which is the convention every
+   node editor shares — so nobody has to be told what they are. */
+.port {
+  position: absolute;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  margin-top: -6.5px;
+  padding: 0;
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  background: var(--fam, var(--accent));
+}
+
+.port.out {
+  right: -7px;
+}
+
+.port.in {
+  left: -7px;
+}
+
+.port:disabled {
+  background: var(--rule-strong);
+  cursor: default;
+}
+
+.port:not(:disabled):hover {
+  transform: scale(1.25);
+}
+
+.wiring-note {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--shadow-lift);
+  font-size: 12.5px;
+}
+
+.node-inspect {
+  padding: 14px 15px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+
+.node-inspect textarea {
+  width: 100%;
+}
+
+.plan-list.tight li {
+  padding: 5px 0;
+}
+
+/* --- What the run found --------------------------------------------------- */
+
+.weave-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.weave-block {
+  padding: 14px 15px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+
+/* The one finding a search box could not have given you, marked as such. */
+.weave-block.tension {
+  margin-bottom: 16px;
+  border-left: 3px solid var(--review);
+}
+
+.weave-tension {
+  margin: 8px 0 0;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.weave-tension em {
+  display: block;
+  font-style: normal;
+  font-size: 12px;
+  color: var(--ink-45);
+}
+
+.weave-list {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.weave-list li {
+  padding: 7px 0;
+  border-bottom: 1px solid var(--rule);
+  line-height: 1.5;
+}
+
+.weave-list li:last-child {
+  border-bottom: none;
+}
+
+.weave-list a {
+  font-weight: 500;
+}
+
+.weave-list a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* The strategic call, wherever it is quoted. */
+.call {
+  display: inline-block;
+  margin: 0 2px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--paper);
+  background: var(--call-expand);
+}
+
+.call-protect {
+  background: var(--call-protect);
+}
+
+.call-test {
+  background: var(--call-test);
+}
+
+.call-expand {
+  background: var(--call-expand);
+}
+
+.call-invest {
+  background: var(--call-invest);
+}
+
+.head-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 1180px) {
+  .nodes-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .library-picker {
