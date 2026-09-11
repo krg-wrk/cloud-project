@@ -102,6 +102,39 @@ export class ProofPointLibrary {
   }
 
   /**
+   * Suggestions whose text carries every one of these words.
+   *
+   * For the one search box, which needs a cheap answer over ten thousand
+   * callouts and does not need the reasoning or the rendered markup — so
+   * this reads `text` alone and returns the least it can. Best match first,
+   * because that is the only ordering the library has that means anything
+   * for a free-text query.
+   *
+   * Stops as soon as it has `take`, which is what keeps it cheap: a common
+   * word like "growth" matches thousands and the box shows four.
+   */
+  textSearch(
+    terms: string[],
+    take: number,
+  ): { id: string; text: string; trendTitle: string; match: number }[] {
+    if (!terms.length) return [];
+    const out: { id: string; text: string; trendTitle: string; match: number }[] = [];
+    const ranked = [...this.points].sort((a, b) => b.match - a.match);
+    for (const p of ranked) {
+      if (out.length >= take) break;
+      const haystack = p.text.toLowerCase();
+      if (!terms.every((t) => haystack.includes(t))) continue;
+      out.push({
+        id: p.id,
+        text: p.text,
+        trendTitle: this.trends.get(p.trendId)?.title ?? p.trendId,
+        match: p.match,
+      });
+    }
+    return out;
+  }
+
+  /**
    * How many suggestions each trend has waiting on a decision.
    *
    * Keyed on the trend rather than on a person, because the library has no

@@ -758,3 +758,28 @@ export interface NotifyLog {
   team: number;
   names: Record<string, string>;
 }
+
+/* ---- One search box ------------------------------------------------------ */
+
+export type SearchKind = "forecast" | "trend" | "person" | "session" | "proof" | "view";
+
+export interface SearchHit {
+  kind: SearchKind;
+  /** Where to go. Already a path, so it goes straight into a Link. */
+  to: string;
+  title: string;
+  sub: string;
+  /** Why it matched, when the match was in the body rather than the title. */
+  why?: string;
+  score: number;
+}
+
+export interface SearchResult {
+  q: string;
+  total: number;
+  hits: SearchHit[];
+  counts: Partial<Record<SearchKind, number>>;
+  /** True when a kind had more than it showed. */
+  more: boolean;
+  labels: Record<SearchKind, string>;
+}

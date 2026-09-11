@@ -1,4 +1,12 @@
 <title>Forecasters Hub</title>
+<!--
+  Published as an Artifact the host supplies this, but the same file gets
+  emailed around and opened straight off a phone — and without it the phone
+  lays the page out at 980px, so none of the breakpoints fire and nobody
+  sees the layout that was built for them. Identical to the host's, so the
+  duplicate costs nothing.
+-->
+<meta name="viewport" content="width=device-width, initial-scale=1" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link
@@ -5068,11 +5076,211 @@
     }
   }
 
+  /* -----------------------------------------------------------------------
+     One search box
+
+     A palette rather than a page: a search is a way to get somewhere, and a
+     results page you then have to leave is one step more than anybody wants.
+     ----------------------------------------------------------------------- */
+
+  .search-open {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--line);
+    background: var(--ground);
+    font: inherit;
+    font-size: 13px;
+    color: var(--ink-soft);
+    text-align: left;
+  }
+
+  .search-open:hover {
+    border-color: var(--line-firm);
+    color: var(--ink-mid);
+  }
+
+  .search-open > span:nth-child(2) {
+    flex: 1;
+  }
+
+  .palette-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    border: none;
+    padding: 0;
+    background: rgb(14 14 16 / 34%);
+    cursor: default;
+  }
+
+  .palette {
+    position: fixed;
+    z-index: 61;
+    top: 12vh;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(680px, calc(100vw - 32px));
+    display: flex;
+    flex-direction: column;
+    max-height: min(70vh, 620px);
+    border: 1px solid var(--line-firm);
+    background: var(--paper);
+    box-shadow: 0 24px 60px rgb(0 0 0 / 24%);
+    overflow: hidden;
+  }
+
+  .palette-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 15px;
+    border-bottom: 1px solid var(--line);
+    flex: none;
+  }
+
+  .palette-box .icon {
+    color: var(--ink-soft);
+  }
+
+  .palette-box input {
+    flex: 1;
+    min-width: 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 16px;
+    color: var(--ink);
+    outline: none;
+  }
+
+  .palette-results {
+    overflow-y: auto;
+    padding: 6px 0;
+  }
+
+  .palette-none {
+    margin: 0;
+    padding: 22px 18px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+
+  .palette-group {
+    padding: 10px 15px 5px;
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .palette-hit {
+    display: flex;
+    align-items: flex-start;
+    gap: 11px;
+    width: 100%;
+    padding: 9px 15px;
+    border: none;
+    border-left: 2px solid transparent;
+    background: none;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+  }
+
+  .palette-hit .icon {
+    margin-top: 2px;
+    color: var(--ink-soft);
+  }
+
+  /* One highlight, driven by the arrow keys — hover moves the selection
+     rather than painting a second one, so there is never a question which
+     Enter takes. */
+  .palette-hit.on {
+    background: var(--accent-wash);
+    border-left-color: var(--accent);
+  }
+
+  .palette-hit.on .icon {
+    color: var(--accent);
+  }
+
+  .palette-hit > .icon:last-child {
+    margin-left: auto;
+    opacity: 0;
+    transform: rotate(180deg);
+  }
+
+  .palette-hit.on > .icon:last-child {
+    opacity: 0.7;
+  }
+
+  .palette-text {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+
+  .palette-text b {
+    font-weight: 500;
+    font-size: 13.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .palette-sub {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* The sentence the match was found in, so a body match explains itself. */
+  .palette-why {
+    margin-top: 3px;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--ink-mid);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .palette-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex: none;
+    padding: 9px 15px;
+    border-top: 1px solid var(--line);
+    background: var(--ground);
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+
+  @media (max-width: 900px) {
+    .palette {
+      top: 8px;
+      max-height: calc(100vh - 16px);
+    }
+  }
+
   /* Naming keys to somebody holding a phone is no help to them. */
   @media (pointer: coarse) {
     .rv-keys,
     .rv-actions kbd,
-    .rv-reasons kbd {
+    .rv-reasons kbd,
+    .palette-foot span:first-child,
+    .search-open kbd {
       display: none;
     }
   }
@@ -5141,6 +5349,10 @@
            about you, not about a section of the app. -->
       <div class="bell-wrap" id="bell-wrap"></div>
     </div>
+    <!-- Above the sections, because it is a way to reach any of them. -->
+    <button class="search-open" id="search-open">
+      <span id="search-icon"></span><span>Search</span><kbd id="search-key"></kbd>
+    </button>
     <nav id="nav"></nav>
     <div class="rail-foot">
       <div class="as-label">Signed in as (demo)</div>
@@ -5156,6 +5368,7 @@
   <div id="edit-bar"></div>
 </div>
 
+<div id="palette-host"></div>
 <button class="sheet-scrim" id="scrim" hidden aria-label="Close menu"></button>
 <div class="nav-sheet" id="sheet" role="dialog" aria-label="More sections" hidden></div>
 <nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
@@ -5207,6 +5420,7 @@
     today: "M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM12 2v2.5M12 19.5V22M4.9 4.9l1.8 1.8M17.3 17.3l1.8 1.8M2 12h2.5M19.5 12H22M4.9 19.1l1.8-1.8M17.3 6.7l1.8-1.8",
     deadlines: "M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01",
     bell: "M18 9a6 6 0 0 0-12 0c0 5-2 6.5-2 6.5h16S18 14 18 9ZM13.7 19a2 2 0 0 1-3.4 0",
+    search: "M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13ZM15.5 15.5 20 20",
     mail: "M3.5 6h17a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-17a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1ZM3 7l9 6 9-6",
     chat: "M21 12a8 8 0 0 1-8 8H8l-5 3 1.3-4.4A8 8 0 0 1 13 4a8 8 0 0 1 8 8ZM9 11h.01M13 11h.01M17 11h.01",
     calendar: "M3 9h18M7 3v3M17 3v3M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z",
@@ -6421,7 +6635,13 @@
                 badge && badge !== "0" ? `<b>${badge}</b>` : ""
               }</a>`,
           )
-          .join("")}</div>`;
+          .join("")}
+          <!-- A phone has no ⌘K, so the sheet carries the way in. -->
+          <button class="sheet-link" data-pal-open>${icon(
+            "search",
+            18,
+          )}Search everything</button>
+        </div>`;
     }
   }
 
@@ -11164,6 +11384,345 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
    * arrow keys because a reviewer doing forty of these should not be moving
    * a mouse.
    */
+  /* ---- One search box --------------------------------------------------
+   *
+   * The Hub grew six places to look something up and no place to look
+   * everything up. A forecaster who half-remembers a title should not have
+   * to guess which page it lives on first.
+   *
+   * Ranked across kinds rather than within them, because the best answer to
+   * "collagen" is a trend whatever page it lives on — but capped per kind
+   * and grouped into blocks, so ten thousand proof points cannot crowd out
+   * the one forecast somebody meant, and a heading never appears twice.
+   *
+   * Same ranking as server/src/search.ts. In the deployed Hub this runs on
+   * the server, because forty thousand rows do not belong on a phone; here
+   * the whole corpus is already in the page.
+   */
+
+  const SEARCH_KINDS = [
+    ["forecast", "Forecasts", "deadlines"],
+    ["trend", "Trends", "trends"],
+    ["person", "People", "people"],
+    ["session", "Learning", "learning"],
+    ["proof", "Proof points", "proof"],
+    ["view", "Built views", "eye"],
+  ];
+
+  const SEARCH_CAP = { forecast: 6, trend: 6, person: 4, session: 4, proof: 4, view: 3 };
+
+  /**
+   * Words, lowercased, punctuation dropped.
+   *
+   * Word-wise rather than a raw substring, so "vision womens" finds "The
+   * Vision S/S 28: Womenswear Key Items" — which is how people actually
+   * half-remember a title. Every word has to appear, so more words narrow.
+   */
+  const searchWords = (q) =>
+    q
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}\s]+/gu, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 1);
+
+  /**
+   * How well a candidate matches, or 0 for not at all.
+   *
+   * The title is worth much more than the body — somebody typing "quiet
+   * kitchens" wants the thing called that — and a match at the start of the
+   * title beats one in the middle.
+   */
+  function searchRank(terms, title, body, boost = 0) {
+    const t = String(title).toLowerCase();
+    const b = String(body).toLowerCase();
+    let score = 0;
+    for (const term of terms) {
+      const at = t.indexOf(term);
+      if (at === 0) score += 12;
+      else if (at > 0) score += t[at - 1] === " " ? 9 : 6;
+      else if (b.includes(term)) score += 2;
+      else return 0;
+    }
+    if (terms.length > 1 && t.includes(terms.join(" "))) score += 8;
+    return score + boost;
+  }
+
+  /** The phrase a body match was found in, so it explains itself. */
+  function searchContext(terms, body) {
+    const b = String(body).replace(/\s+/g, " ").trim();
+    if (!b) return undefined;
+    const low = b.toLowerCase();
+    const found = terms.map((t) => low.indexOf(t)).filter((i) => i >= 0);
+    if (!found.length) return undefined;
+    const from = Math.max(0, Math.min(...found) - 40);
+    const cut = b.slice(from, from + 140).trim();
+    return `${from > 0 ? "…" : ""}${cut}${from + 140 < b.length ? "…" : ""}`;
+  }
+
+  function searchHits(q) {
+    const terms = searchWords(q);
+    const counts = { forecast: 0, trend: 0, person: 0, session: 0, proof: 0, view: 0 };
+    if (!terms.length) return { total: 0, hits: [], counts, more: false };
+
+    const byKind = { forecast: [], trend: [], person: [], session: [], proof: [], view: [] };
+
+    for (const c of content) {
+      const body = [c.type, c.vertical, c.season, c.status, nameOf(c.forecasterId), c.notes ?? ""].join(" ");
+      const score = searchRank(terms, c.title, body);
+      if (!score) continue;
+      counts.forecast++;
+      byKind.forecast.push({
+        kind: "forecast",
+        to: `#/content/${c.id}`,
+        title: c.title,
+        sub: `${c.type} · ${c.vertical} · ${nameOf(c.forecasterId)} · due ${medium(c.submissionDate)}`,
+        why: searchContext(terms, c.notes ?? ""),
+        score,
+        at: c.submissionDate,
+      });
+    }
+
+    for (const t of TRENDS) {
+      // An archived earlier version of a live profile is noise in a box.
+      if (t.editorStatus === "archived") continue;
+      const body = [
+        t.description,
+        t.needToKnow,
+        (t.industries ?? []).join(" "),
+        (t.hashtags ?? []).join(" "),
+        (t.types ?? []).join(" "),
+        t.ownerName,
+        (t.authorNames ?? []).join(" "),
+      ].join(" ");
+      const score = searchRank(terms, t.title, body, t.published === "Published" ? 1 : 0);
+      if (!score) continue;
+      counts.trend++;
+      byKind.trend.push({
+        kind: "trend",
+        to: `#/trends/${t.profileId}`,
+        title: t.title,
+        sub: [
+          (t.industries ?? []).slice(0, 3).join(", ") || "no industries",
+          t.ownerName || "unowned",
+          t.published === "Published" ? "live" : "not published",
+        ].join(" · "),
+        why: searchContext(terms, `${t.description} ${t.needToKnow}`),
+        score,
+      });
+    }
+
+    for (const pn of people) {
+      const body = [pn.email, pn.role, pn.vertical ?? "", pn.department ?? "", pn.forecasterRole ?? ""].join(" ");
+      const score = searchRank(terms, pn.name, body);
+      if (!score) continue;
+      counts.person++;
+      byKind.person.push({
+        kind: "person",
+        to: `#/team/${pn.id}`,
+        title: pn.name,
+        sub: [pn.forecasterRole ?? pn.role, pn.vertical, pn.region].filter(Boolean).join(" · "),
+        score,
+      });
+    }
+
+    for (const s of sessions) {
+      const body = [
+        s.summary,
+        (s.topics ?? []).join(" "),
+        s.kind,
+        s.location,
+        s.hostExternal ?? nameOf(s.hostId ?? ""),
+      ].join(" ");
+      const score = searchRank(terms, s.title, body);
+      if (!score) continue;
+      counts.session++;
+      byKind.session.push({
+        kind: "session",
+        to: `#/learning/${s.id}`,
+        title: s.title,
+        sub: `${s.kind.replace(/-/g, " ")} · ${medium(s.date)} · ${s.location}`,
+        why: searchContext(terms, s.summary),
+        score,
+        at: s.date,
+      });
+    }
+
+    for (const view of [...views.values()]) {
+      if (!canSeeView(view)) continue;
+      const score = searchRank(terms, view.label, `${view.description ?? ""} ${view.section ?? ""}`);
+      if (!score) continue;
+      counts.view++;
+      byKind.view.push({
+        kind: "view",
+        to: `#/v/${view.slug}`,
+        title: view.label,
+        sub: `${view.section ?? "Your work"} · built in the studio`,
+        score,
+      });
+    }
+
+    /*
+     * Proof points last and ranked down, deliberately. They have no titles —
+     * the "title" is the callout's own sentence — so every match is a body
+     * match, and somebody searching a trend name wants the trend first and
+     * the evidence under it second.
+     */
+    const ordered = [...PROOF.points].sort((a, b) => b.match - a.match);
+    for (const pp of ordered) {
+      if (byKind.proof.length >= SEARCH_CAP.proof * 3) break;
+      if (!terms.every((t) => pp.text.toLowerCase().includes(t))) continue;
+      counts.proof++;
+      // A callout is a headline, a figure and a caption on separate lines;
+      // one row of a list is one line, so the breaks become spaces.
+      const flat = pp.text.replace(/\s+/g, " ").trim();
+      byKind.proof.push({
+        kind: "proof",
+        to: `#/data/proof-points?q=${encodeURIComponent(q)}&open=${encodeURIComponent(pp.id)}`,
+        title: flat.length > 90 ? `${flat.slice(0, 90).trim()}…` : flat,
+        sub: `${proofTrend(pp.trendId).title} · ${pp.match}% match`,
+        score: 1 + pp.match / 100,
+      });
+    }
+
+    /*
+     * Blocks of one kind, the blocks ordered by their best hit.
+     *
+     * Not one flat sort: that interleaves kinds wherever scores tie, and the
+     * page then draws the heading "Forecasts" twice. Ties inside a block go
+     * to the nearer date rather than the alphabet — searching a forecaster's
+     * name matches all their work equally, and the one closest to its
+     * deadline is the likely reason you typed it.
+     */
+    const order = (a, b) =>
+      b.score - a.score ||
+      (a.at ?? "9999").localeCompare(b.at ?? "9999") ||
+      a.title.localeCompare(b.title);
+    let more = false;
+    const blocks = SEARCH_KINDS.map(([kind]) => {
+      const sorted = byKind[kind].sort(order);
+      if (sorted.length > SEARCH_CAP[kind]) more = true;
+      return sorted.slice(0, SEARCH_CAP[kind]);
+    })
+      .filter((block) => block.length)
+      .sort((a, b) => order(a[0], b[0]));
+
+    return {
+      total: Object.values(counts).reduce((a, b) => a + b, 0),
+      hits: blocks.flat(),
+      counts,
+      more,
+    };
+  }
+
+  /** The palette's own state: open, what is typed, and which row is chosen. */
+  let paletteOpen = false;
+  let paletteQ = "";
+  let paletteAt = 0;
+
+  function paletteHtml() {
+    if (!paletteOpen) return "";
+    const typed = paletteQ.trim();
+    const r = typed.length >= 2 ? searchHits(typed) : { total: 0, hits: [], counts: {}, more: false };
+    const hits = r.hits;
+    if (paletteAt >= hits.length) paletteAt = Math.max(0, hits.length - 1);
+
+    let last = null;
+    const rows = hits
+      .map((h, i) => {
+        const [, label, ico] = SEARCH_KINDS.find((k) => k[0] === h.kind);
+        const heading = h.kind !== last ? label : null;
+        last = h.kind;
+        const count = r.counts[h.kind] ?? 0;
+        const shown = hits.filter((x) => x.kind === h.kind).length;
+        return `
+          ${
+            heading
+              ? `<div class="palette-group">${esc(heading)}${
+                  count > shown ? ` <span class="soft">· ${count} in all</span>` : ""
+                }</div>`
+              : ""
+          }
+          <button class="palette-hit${i === paletteAt ? " on" : ""}" id="hit-${i}"
+            role="option" aria-selected="${i === paletteAt}" data-pal-go="${i}">
+            ${icon(ico, 15)}
+            <span class="palette-text">
+              <b>${esc(h.title)}</b>
+              <span class="palette-sub">${esc(h.sub)}</span>
+              ${h.why ? `<span class="palette-why">${esc(h.why)}</span>` : ""}
+            </span>
+            ${icon("back", 14)}
+          </button>`;
+      })
+      .join("");
+
+    return `
+      <button class="palette-scrim" data-pal-close aria-label="Close search" tabindex="-1"></button>
+      <div class="palette" role="dialog" aria-modal="true" aria-label="Search the Hub">
+        <div class="palette-box">
+          ${icon("search", 17)}
+          <input id="pal-input" type="search" value="${esc(paletteQ)}"
+            placeholder="Forecasts, trends, people, sessions, proof points…"
+            aria-label="Search the Hub" aria-autocomplete="list" aria-controls="pal-results"
+            ${hits[paletteAt] ? `aria-activedescendant="hit-${paletteAt}"` : ""} />
+          <kbd>Esc</kbd>
+        </div>
+        <div class="palette-results" id="pal-results" role="listbox">
+          ${
+            typed.length < 2
+              ? `<p class="palette-none">Two letters is enough. This looks in forecast titles and
+                  notes, trend profiles and their descriptions, people, sessions and the proof
+                  point library at once.</p>`
+              : hits.length === 0
+                ? `<p class="palette-none">Nothing matches &ldquo;${esc(
+                    typed,
+                  )}&rdquo;. Every word has to appear somewhere, so fewer words finds more.</p>`
+                : rows
+          }
+        </div>
+        <div class="palette-foot">
+          <span><kbd>&uarr;</kbd> <kbd>&darr;</kbd> to move · <kbd>&crarr;</kbd> to open</span>
+          ${
+            r.total
+              ? `<span class="soft">${r.total.toLocaleString()} ${
+                  r.total === 1 ? "match" : "matches"
+                }${r.more ? ", showing the best of each" : ""}</span>`
+              : ""
+          }
+        </div>
+      </div>`;
+  }
+
+  /** Draw just the palette, without re-rendering the page under it. */
+  function renderPalette(keepCaret = true) {
+    const host = document.getElementById("palette-host");
+    const caret = keepCaret ? document.getElementById("pal-input")?.selectionStart : null;
+    host.innerHTML = paletteHtml();
+    const box = document.getElementById("pal-input");
+    if (box) {
+      box.focus();
+      if (caret != null) box.setSelectionRange(caret, caret);
+      document.querySelector('.palette-hit[aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
+    }
+  }
+
+  function openPalette() {
+    /*
+     * Opens empty, every time. Otherwise the box still holds the last search
+     * and the next keystroke lands on the end of it — you press ⌘K, type
+     * "collagen", and search for "catwalkcollagen".
+     */
+    paletteOpen = true;
+    paletteQ = "";
+    paletteAt = 0;
+    renderPalette(false);
+  }
+
+  function closePalette() {
+    paletteOpen = false;
+    renderPalette(false);
+    document.getElementById("search-open")?.focus();
+  }
+
   /* ---- Notifications ---------------------------------------------------
    *
    * The Hub is a website, so it can only tell you something while you are
@@ -12534,6 +13093,13 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     view.innerHTML = html;
     document.getElementById("edit-bar").innerHTML = editBar();
     document.getElementById("bell-wrap").innerHTML = bellHtml();
+    document.getElementById("search-icon").innerHTML = icon("search", 15);
+    // ⌘ on a Mac, Ctrl everywhere else. "/" works either way.
+    document.getElementById("search-key").textContent = /Mac|iPhone|iPad/.test(
+      navigator.platform || navigator.userAgent,
+    )
+      ? "\u2318K"
+      : "CtrlK";
     renderNav();
     renderUrl();
 
@@ -13354,6 +13920,28 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       return;
     }
 
+    // The search palette. Delegated, like the bell, because it lives outside
+    // the element a page render replaces.
+    if (e.target.closest("#search-open") || e.target.closest("[data-pal-open]")) {
+      sheetOpen = false;
+      renderNav();
+      openPalette();
+      return;
+    }
+    if (e.target.closest("[data-pal-close]")) {
+      closePalette();
+      return;
+    }
+    const palGo = e.target.closest("[data-pal-go]");
+    if (palGo) {
+      const hits = searchHits(paletteQ.trim()).hits;
+      const hit = hits[Number(palGo.dataset.palGo)];
+      paletteOpen = false;
+      renderPalette(false);
+      if (hit) location.hash = hit.to;
+      return;
+    }
+
     /*
      * The bell and its panel.
      *
@@ -13458,6 +14046,66 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
   // Enter saves, Escape abandons — the same keys as the studio's own boxes.
   document.addEventListener("keydown", (e) => {
+    /*
+     * The search palette owns its keys while it is open: arrows walk the
+     * list, Enter goes, Escape closes, and Tab is trapped because a dialog
+     * you can tab out of is a dialog somebody will get lost in.
+     */
+    if (paletteOpen) {
+      const hits = searchHits(paletteQ.trim()).hits;
+      if (e.key === "Escape") {
+        e.preventDefault();
+        closePalette();
+        return;
+      }
+      if (e.key === "Tab") {
+        e.preventDefault();
+        document.getElementById("pal-input")?.focus();
+        return;
+      }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp" || e.key === "Home" || e.key === "End") {
+        e.preventDefault();
+        if (!hits.length) return;
+        paletteAt =
+          e.key === "ArrowDown"
+            ? Math.min(paletteAt + 1, hits.length - 1)
+            : e.key === "ArrowUp"
+              ? Math.max(paletteAt - 1, 0)
+              : e.key === "Home"
+                ? 0
+                : hits.length - 1;
+        renderPalette();
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const hit = hits[paletteAt];
+        if (!hit) return;
+        paletteOpen = false;
+        renderPalette(false);
+        location.hash = hit.to;
+        return;
+      }
+      return;
+    }
+
+    /*
+     * The way in: ⌘K, or a plain "/" as every search box on the web has —
+     * but not while somebody is typing into something, where it is a
+     * character rather than a shortcut.
+     */
+    const inABox = e.target?.tagName && /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName);
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      openPalette();
+      return;
+    }
+    if (e.key === "/" && !inABox && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      openPalette();
+      return;
+    }
+
     // Escape closes the bell, as it does any menu.
     if (e.key === "Escape" && bellOpen) {
       bellOpen = false;
@@ -13544,6 +14192,20 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       slotOpen = null;
       render();
     }
+  });
+
+  /*
+   * Typing in the palette.
+   *
+   * No debounce: the whole corpus is already in the page, so the ranking is
+   * a scan over forty thousand small objects and finishes in a few
+   * milliseconds. The deployed Hub waits 160ms because there it is a request.
+   */
+  document.addEventListener("input", (e) => {
+    if (e.target?.id !== "pal-input") return;
+    paletteQ = e.target.value;
+    paletteAt = 0;
+    renderPalette();
   });
 
   document.addEventListener(

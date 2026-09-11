@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { devViewer, setDevViewer, useApi } from "../lib/api";
 import { TODAY, monthKey } from "../lib/date";
@@ -10,6 +10,7 @@ import type { ContentItem, Inbox, Me, Person, SessionWithSignUps, ViewLink } fro
 import { Avatar, ErrorNote, Loading } from "./bits";
 import FreshnessNote from "./FreshnessNote";
 import NotificationBell from "./NotificationBell";
+import SearchPalette, { useSearchShortcut } from "./SearchPalette";
 
 const ROLE_LABELS: Record<Me["role"], string> = {
   forecaster: "Forecaster",
@@ -264,9 +265,11 @@ function useSections(content: ContentItem[]): Section[] {
   return [...customise(fixed, custom), ...built, ...studio];
 }
 
-function Sidebar({ content }: { content: ContentItem[] }) {
+function Sidebar({ content, onSearch }: { content: ContentItem[]; onSearch: () => void }) {
   const { me, person, people } = useViewer();
   const items = useSections(content);
+  // ⌘ on a Mac, Ctrl everywhere else. Read once: it never changes mid-session.
+  const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 
   return (
     <aside className="sidebar">
@@ -280,6 +283,13 @@ function Sidebar({ content }: { content: ContentItem[] }) {
             about you, not about a section of the app. */}
         <NotificationBell />
       </div>
+
+      {/* Above the sections, because it is a way to reach any of them. */}
+      <button className="search-open" onClick={onSearch}>
+        <Icon name="search" size={15} />
+        <span>Search</span>
+        <kbd>{mac ? "\u2318" : "Ctrl"}K</kbd>
+      </button>
 
       <nav className="nav">
         <Slot id="nav.group.work" as="div" className="nav-label" />
@@ -354,7 +364,7 @@ function Sidebar({ content }: { content: ContentItem[] }) {
  * sections as icon-and-label tabs, and More for the rest — so the whole app
  * is reachable with a thumb.
  */
-function MobileNav({ content }: { content: ContentItem[] }) {
+function MobileNav({ content, onSearch }: { content: ContentItem[]; onSearch: () => void }) {
   const [sheet, setSheet] = useState(false);
   const { me, person, people } = useViewer();
   const items = useSections(content);
@@ -397,6 +407,17 @@ function MobileNav({ content }: { content: ContentItem[] }) {
                 </NavLink>
               ))}
             </div>
+            {/* A phone has no ⌘K, so the sheet carries the way in. */}
+            <button
+              className="sheet-link"
+              onClick={() => {
+                setSheet(false);
+                onSearch();
+              }}
+            >
+              <Icon name="search" size={18} />
+              Search everything
+            </button>
             <AccountSwitch people={people} />
           </div>
         </>
@@ -428,6 +449,9 @@ function MobileNav({ content }: { content: ContentItem[] }) {
 
 /** Loads the account and the team once, then hands the app a settled viewer. */
 export default function Layout() {
+  const [searching, setSearching] = useState(false);
+  const openSearch = useCallback(() => setSearching(true), []);
+  useSearchShortcut(openSearch);
   const me = useApi<Me>("/me");
   const people = useApi<Person[]>("/people");
   const content = useApi<ContentItem[]>("/content");
@@ -506,7 +530,7 @@ export default function Layout() {
       */}
       <CustomisationProvider>
         <div className="shell">
-          <Sidebar content={content.data} />
+          <Sidebar content={content.data} onSearch={openSearch} />
           <main className="main">
             <Outlet />
             {/*
@@ -517,8 +541,9 @@ export default function Layout() {
             */}
             <FreshnessNote />
           </main>
-          <MobileNav content={content.data} />
+          <MobileNav content={content.data} onSearch={openSearch} />
         </div>
+        <SearchPalette open={searching} onClose={() => setSearching(false)} />
         <EditBar />
       </CustomisationProvider>
     </ViewerProvider>

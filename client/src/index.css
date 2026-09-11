@@ -5460,3 +5460,230 @@ a.inbox-title:hover {
   font-size: 11.5px;
   line-height: 1.45;
 }
+
+/* -------------------------------------------------------------------------
+   One search box
+
+   A palette rather than a page: a search is a way to get somewhere, and a
+   results page you then have to leave is one step more than anybody wants.
+   Grouped headings over a single ranked list, which is what lets the arrow
+   keys walk the whole thing.
+   ------------------------------------------------------------------------- */
+
+.search-open {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--ground);
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-45);
+  text-align: left;
+}
+
+.search-open:hover {
+  border-color: var(--rule-strong);
+  color: var(--ink-70);
+}
+
+.search-open span {
+  flex: 1;
+}
+
+.palette-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  border: none;
+  padding: 0;
+  background: rgb(14 14 16 / 34%);
+  cursor: default;
+}
+
+.palette {
+  position: fixed;
+  z-index: 61;
+  top: 12vh;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(680px, calc(100vw - 32px));
+  display: flex;
+  flex-direction: column;
+  max-height: min(70vh, 620px);
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 24px 60px rgb(0 0 0 / 24%);
+  overflow: hidden;
+}
+
+.palette-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 15px;
+  border-bottom: 1px solid var(--rule);
+  flex: none;
+}
+
+.palette-box .icon {
+  color: var(--ink-45);
+}
+
+.palette-box input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  outline: none;
+}
+
+/* A quiet mark rather than a spinner: it is one request over local data. */
+.palette-busy {
+  width: 7px;
+  height: 7px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: palette-pulse 900ms ease-in-out infinite;
+}
+
+@keyframes palette-pulse {
+  0%,
+  100% {
+    opacity: 0.25;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.palette-results {
+  overflow-y: auto;
+  padding: 6px 0;
+}
+
+.palette-none {
+  margin: 0;
+  padding: 22px 18px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink-45);
+}
+
+.palette-group {
+  padding: 10px 15px 5px;
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink-45);
+}
+
+.palette-hit {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  width: 100%;
+  padding: 9px 15px;
+  border: none;
+  border-left: 2px solid transparent;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.palette-hit .icon {
+  margin-top: 2px;
+  color: var(--ink-45);
+}
+
+/* One highlight, driven by the arrow keys — hover moves the selection rather
+   than painting a second one, so there is never a question which Enter takes. */
+.palette-hit.on {
+  background: var(--accent-wash);
+  border-left-color: var(--accent);
+}
+
+.palette-hit.on .icon {
+  color: var(--accent);
+}
+
+.palette-hit > .icon:last-child {
+  margin-left: auto;
+  opacity: 0;
+  transform: rotate(180deg);
+}
+
+.palette-hit.on > .icon:last-child {
+  opacity: 0.7;
+}
+
+.palette-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.palette-text b {
+  font-weight: 500;
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.palette-sub {
+  font-size: 11.5px;
+  color: var(--ink-45);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The sentence the match was found in, so a body match explains itself. */
+.palette-why {
+  margin-top: 3px;
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-70);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.palette-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: none;
+  padding: 9px 15px;
+  border-top: 1px solid var(--rule);
+  background: var(--ground);
+  font-size: 11.5px;
+  color: var(--ink-45);
+}
+
+@media (max-width: 900px) {
+  .palette {
+    top: 8px;
+    max-height: calc(100vh - 16px);
+  }
+
+  /* Naming keys to somebody holding a phone is no help to them. */
+  .palette-foot span:first-child,
+  .palette-box kbd {
+    display: none;
+  }
+}

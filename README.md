@@ -594,6 +594,58 @@ things that belong to the Hub rather than to a person. An untouched setting
 has no row, so the code's own default ships and adding one needs no migration
 — the same arrangement the page wording uses.
 
+## One box over everything
+
+The Hub grew six places to look something up and no place to look everything
+up. A forecaster who half-remembers a title had to guess which page it lived
+on first, which is the sort of thing software is supposed to do for you.
+
+**⌘K, Ctrl-K, or a plain `/`** — and there is a box in the sidebar for people
+who would rather click. It searches forecasts (titles, formats, verticals,
+forecasters, notes), trend profiles (titles, descriptions, need-to-knows,
+industries, hashtags, owners), people, sessions and their topics, the proof
+point library's ten thousand callouts, and any view built in the studio.
+
+No page of its own. A search is a way to get somewhere, not a destination,
+and a results page you then have to leave is one step more than anybody
+wants. Arrow keys walk the list, Enter opens, Escape closes and puts focus
+back where it was.
+
+### How it ranks
+
+- **Word-wise, not substring.** "vision womens" finds *The Vision S/S 28:
+  Womenswear Key Items*, which is how people actually half-remember a title.
+  Every word has to appear somewhere, so more words narrow rather than widen.
+- **The title is worth six times the body.** Somebody typing "quiet kitchens"
+  wants the thing *called* that, not the four others that mention it — and a
+  match at the start of a title beats one in the middle.
+- **Capped per kind, then grouped into blocks.** The best hit decides which
+  kind leads, and once a kind starts it finishes. A flat sort interleaves
+  kinds wherever scores tie, and the page then draws the heading "Forecasts"
+  twice, which reads as a bug however honest it is about the ranking.
+- **Ties go to the nearer date, not the alphabet.** Searching a forecaster's
+  name matches everything they write equally; the one closest to its deadline
+  is the likely reason you typed it.
+- **Proof points are ranked down.** They have no titles — the "title" is the
+  callout's own sentence — so every match is a body match, and there are ten
+  thousand of them. Somebody searching a trend name wants the trend first and
+  the evidence under it second. A hit links into the library with itself
+  already open.
+- **A body match explains itself**, with the phrase it was found in. A title
+  match needs no explanation.
+
+An archived earlier version of a live trend profile is left out: it is the
+same title twice, and only one of them is the one people want.
+
+It runs on the server, because the corpus is 40,000 rows once the proof
+points are counted and none of it belongs on a phone — the answer is a few
+kilobytes whatever the query, and comes back in 15–45ms. The one thing
+filtered per viewer is a studio view, by the same audience rule the sidebar
+uses: nobody should be able to discover a view they cannot open.
+
+In the demo the same ranking runs in the page, because there is no server and
+the whole corpus is already there.
+
 ## Telling people things
 
 The Hub is a website, and a website only tells you something while you are
