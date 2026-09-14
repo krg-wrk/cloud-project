@@ -1523,14 +1523,39 @@ does something specific instead: a very pale iridescent field — mint through
 cream through lilac — at a saturation low enough that it reads as *light*
 rather than as colour. The Hub borrows that.
 
-Four things make it work rather than making it a gradient:
+**The ground gets out of the way first.** It was flat warm grey, then a grey
+tinted toward the accent — which only made it a *purple* grey: still the
+loudest thing on the page, and now fighting the wash rather than carrying it.
+The reference does neither. It is near-white paper with the colour arriving as
+gradient, so the ground steps back to `#f8f8fa` and the wash does the work.
 
-**Colour at the edges, white through the middle.** This is the whole of it,
-and the first attempt got it backwards — the strongest radial went at the
-top-left, where the title is, which tinted the head of every page and read as
-a coloured banner. In the material the centre is nearly white and the colour
-gathers at the corners. Four small radials near the edges, none reaching the
-middle, all faint.
+Four things then make it read as a gradient rather than as a tint:
+
+**The colour needs somewhere to be.** The field alone was never going to work
+on a page like the proof point library, where twenty-four cards cover the
+column edge to edge and a background shows only in the gutters. The reference
+pages have room — the Pulse page is half empty and gives its sweep the whole
+bottom — and the one place every page here has room is the head, around the
+title. So that is where the gradient goes, with the ambient field carrying the
+corners and the foot.
+
+**Weighted right, and light where the words are.** The head band started
+centred on the left, which put its strongest colour under the eyebrow and the
+standfirst — the two palest greys on the page. Measured, `--ink-45` fell to
+3.16:1. Turning the band down until that cleared 4.5 put it back to invisible,
+which is the trade that started all this. So the colour moved instead of
+dimming: the title block occupies the left third, the right two-thirds of every
+head are empty, and weighting the band right leaves the text on near-white with
+the gradient still at a strength you can see. Verified by sampling the rendered
+pixels behind each run of head text, in all four hues, rather than by modelling
+it — the eyebrow reads 5.14:1 and the standfirst 6.87:1, which are the plain
+on-paper numbers.
+
+**Every centre sits outside the box.** Past 100%, or past zero. Put a radial's
+centre on an edge and its whole flank lies along that edge, which is how the
+first strong version ended up with a mint stripe hugging the sidebar — a
+vignette rather than a sweep. Pushed out, only the upper arc reaches the page,
+which is the part that looks like light.
 
 **It is fixed, not scrolled.** The field stays put and the page moves over it,
 so it behaves like the light in the room rather than a pattern printed on the
@@ -1561,6 +1586,21 @@ The switch is one setting for everybody rather than a personal preference,
 because it is a decision about how the Hub looks — the same kind of decision as
 the accent colour three fields below it. Off gives flat paper and nothing else
 changes.
+
+`--wash-strength` is the one dial: every alpha in the field is a multiple of
+it, so the whole effect turns up or down from a single number rather than from
+hunting through five radials.
+
+### A proof point is drawn on its own paper
+
+The slides carry `--pp-sheet`, a fixed neutral `#f4f4f5`, rather than the
+Hub's own sunken grey. They used to share it, and when the grounds were tinted
+toward the accent a WGSN data slide ended up inside a faintly purple rectangle
+— which, next to a cool page, looked wrong. A proof point is artwork made for a
+white slide and copied out into reports; it should look the same here as it
+does there, whatever the page around it is doing. Same reasoning as the one
+that already kept its donuts and gauges out of the dark theme. The slides are
+rounded now too, to match everything else on the page.
 
 Three things make it safe to hand over:
 

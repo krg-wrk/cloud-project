@@ -27,16 +27,20 @@
   :root {
     --paper: #ffffff;
     /*
-     * The ground, and the reason it is not neutral grey. It was #f4f4f2 — a
-     * flat warm grey — which made a screen of white cards read as a
-     * spreadsheet with the colour turned off. This is the same lightness
-     * carried a few degrees toward the accent's hue: enough for the eye to
-     * read the page as lit rather than as grey, nowhere near enough to call
-     * it blue. Re-measured against every muted ink; the ratios move by a
-     * hundredth.
+     * The ground: very nearly white.
+     *
+     * Two goes at this. It started flat warm grey (#f4f4f2), which made a
+     * screen of white cards read as a spreadsheet with the colour turned off;
+     * then it was tinted toward the accent, which only made it a *purple*
+     * grey — still grey, still the loudest thing on the page, and now
+     * fighting the wash rather than carrying it.
+     *
+     * The reference does neither. It is near-white paper with the colour
+     * arriving as gradient. So the ground steps back to a whisper and the
+     * wash does the work.
      */
-    --ground: #f3f4f8;
-    --sunken: #e9eaf1;
+    --ground: #f8f8fa;
+    --sunken: #eeeef2;
     --ink: #0e0e10;
     --ink-mid: #56565c;
     /*
@@ -48,10 +52,10 @@
      * change to the look that is actually readable.
      */
     --ink-soft: #69696f;
-    /* The hairlines take the same faint cast as the ground, so a rule reads
-       as part of the page rather than as a pencil line drawn on top of it. */
-    --line: #e3e4ec;
-    --line-firm: #c4c6d4;
+    /* The hairlines take the faintest cast of the accent, so a rule reads as
+       part of the page rather than as a pencil line drawn on top of it. */
+    --line: #e6e6ee;
+    --line-firm: #c8c9d6;
     --accent: #4c5578;
     --accent-soft: #7a83a6;
     --accent-wash: #eceef4;
@@ -105,10 +109,26 @@
      * painted at full strength — everything below uses them between 10% and
      * 30%, over a ground that is already near-white.
      */
-    --wash-lilac: 148 158 232;
-    --wash-mint: 132 206 180;
-    --wash-cream: 232 210 142;
-    --wash-rose: 228 158 198;
+    --wash-lilac: 138 148 236;
+    --wash-mint: 108 204 176;
+    --wash-cream: 240 206 116;
+    --wash-rose: 236 138 190;
+    /*
+     * How strong the field is — one number, because every alpha below is a
+     * multiple of it. The first version was a tenth of this and invisible.
+     */
+    --wash-strength: 1.4;
+
+    /*
+     * The ground a proof point is drawn on.
+     *
+     * A fixed neutral, not a themed one and not the old #ebebe8. That warm
+     * grey put a faintly beige rectangle around a WGSN data slide and, next
+     * to a cool page, looked odd. A proof point is artwork made for a white
+     * slide — it is drawn on WGSN's own neutral sheet grey in both themes,
+     * like an image.
+     */
+    --pp-sheet: #f4f4f5;
 
     /*
      * Corners. These were square with the edge knocked off — close enough to
@@ -1075,11 +1095,57 @@
     left: var(--rail);
     z-index: 0;
     pointer-events: none;
+    /*
+     * Every centre sits outside the box — past 100%, or past zero. Put one on
+     * the edge itself and its whole flank lies along that edge, which is how
+     * the first strong version ended up with a mint stripe hugging the rail:
+     * a vignette rather than a sweep. Pushed out, only the upper arc of each
+     * blob reaches the page, which is the part that looks like light.
+     */
     background:
-      radial-gradient(38% 30% at 0% 2%, rgb(var(--lead) / 20%), transparent 68%),
-      radial-gradient(30% 26% at 100% 0%, rgb(var(--wash-lilac) / 13%), transparent 66%),
-      radial-gradient(42% 30% at 96% 62%, rgb(var(--support) / 12%), transparent 66%),
-      radial-gradient(50% 26% at 20% 100%, rgb(var(--wash-cream) / 10%), transparent 68%);
+      radial-gradient(60% 46% at 24% 112%, rgb(var(--lead) / calc(48% * var(--wash-strength))), transparent 70%),
+      radial-gradient(56% 44% at 62% 116%, rgb(var(--support) / calc(42% * var(--wash-strength))), transparent 70%),
+      radial-gradient(52% 40% at 96% 104%, rgb(var(--wash-lilac) / calc(36% * var(--wash-strength))), transparent 70%),
+      radial-gradient(30% 24% at 104% -6%, rgb(var(--support) / calc(26% * var(--wash-strength))), transparent 68%),
+      radial-gradient(26% 20% at -4% -6%, rgb(var(--lead) / calc(20% * var(--wash-strength))), transparent 68%);
+  }
+
+  /*
+   * The gradient moment, behind the page title.
+   *
+   * The ambient field alone was never going to work on a page like the proof
+   * point library: twenty-four cards cover the column edge to edge and a
+   * field behind them shows only in the gutters. The one place every page has
+   * room is the head, around the title — so that is where the colour goes.
+   *
+   * Weighted right, and light where the words are. Centring it on the left
+   * put the strongest colour under the eyebrow and the standfirst, the two
+   * palest greys on the page, and measured them down to 3.16:1. Turning the
+   * band down until that cleared put it back to invisible. So the colour
+   * moves instead of dimming: the title block occupies the left third, the
+   * right two-thirds are empty on every page, and weighting it right leaves
+   * the text on near-white with the gradient still at a strength you can see.
+   */
+  :root[data-gradients="on"] .head {
+    position: relative;
+  }
+
+  :root[data-gradients="on"] .head::before {
+    content: "";
+    position: absolute;
+    left: -34px;
+    right: -34px;
+    top: -30px;
+    bottom: 0;
+    z-index: -1;
+    pointer-events: none;
+    border-radius: 0 0 var(--radius-card) var(--radius-card);
+    background:
+      radial-gradient(50% 108% at 96% 24%, rgb(var(--lead) / 38%), transparent 74%),
+      radial-gradient(40% 86% at 66% -12%, rgb(var(--support) / 30%), transparent 72%),
+      radial-gradient(34% 70% at 30% -24%, rgb(var(--wash-lilac) / 22%), transparent 70%);
+    /* Gone by the rule, so the band has no bottom edge of its own to notice. */
+    mask-image: linear-gradient(180deg, #000 0%, #000 52%, transparent 100%);
   }
 
   .wash-lilac {
@@ -5461,7 +5527,7 @@
     overflow: hidden;
     /* The proof point's own ground, which does not follow the theme — see
        the note on .pp below. */
-    background: #ebebe8;
+    background: var(--pp-sheet);
     border-bottom: 1px solid var(--line);
   }
 
@@ -5789,7 +5855,7 @@
    * and it is shown as one in both themes, like an image.
    */
   .pp {
-    --pp-slide: #ebebe8;
+    --pp-slide: var(--pp-sheet);
     --pp-ink: #0e0e10;
     --pp-ink-mid: #56565c;
     --pp-ink-soft: #8b8b91;
@@ -5813,6 +5879,7 @@
     min-height: 168px;
     padding: 26px 24px 30px;
     background: var(--pp-slide);
+    border-radius: var(--radius-card);
     text-align: center;
   }
 

@@ -11,17 +11,20 @@
 :root {
   --paper: #ffffff;
   /*
-   * The ground, and the reason it is not neutral grey.
+   * The ground: very nearly white.
    *
-   * It was #f4f4f2 — a flat warm grey — which made a screen of white cards on
-   * it read as a spreadsheet with the colour turned off. This is the same
-   * lightness carried a few degrees toward the accent's hue, which is enough
-   * for the eye to read the page as *lit* rather than as grey, and not nearly
-   * enough to call it blue. The white of a card now sits above something
-   * rather than beside it.
+   * Two goes at this. It started flat warm grey (#f4f4f2), which made a
+   * screen of white cards read as a spreadsheet with the colour turned off;
+   * then it was tinted toward the accent, which only made it a *purple* grey
+   * — still grey, still the loudest thing on the page, and now fighting the
+   * wash rather than carrying it.
+   *
+   * The reference does neither. It is near-white paper with the colour
+   * arriving as gradient, and the grey is barely there at all. So the ground
+   * steps back to a whisper and the wash does the work.
    */
-  --ground: #f3f4f8;
-  --sunken: #e9eaf1;
+  --ground: #f8f8fa;
+  --sunken: #eeeef2;
   --ink: #0e0e10;
   --ink-70: #56565c;
   /*
@@ -44,10 +47,10 @@
    * free change rather than a trade against legibility.
    */
   --ink-45: #69696f;
-  /* The hairlines take the same faint cast as the ground, so a rule reads as
+  /* The hairlines take the faintest cast of the accent, so a rule reads as
      part of the page rather than as a pencil line drawn on top of it. */
-  --rule: #e3e4ec;
-  --rule-strong: #c4c6d4;
+  --rule: #e6e6ee;
+  --rule-strong: #c8c9d6;
 
   --accent: #4c5578;
   /* A lighter step of the accent for de-emphasised bars: >=3:1 on white and
@@ -131,10 +134,35 @@
    * painted at full strength — everything below uses them at 6% to 22%, over
    * a ground that is already near-white.
    */
-  --wash-lilac: 148 158 232;
-  --wash-mint: 132 206 180;
-  --wash-cream: 232 210 142;
-  --wash-rose: 228 158 198;
+  --wash-lilac: 138 148 236;
+  --wash-mint: 108 204 176;
+  --wash-cream: 240 206 116;
+  --wash-rose: 236 138 190;
+  /*
+   * How strong the field is. One number, because every alpha below is a
+   * multiple of it — so the whole effect turns up or down from here without
+   * hunting through four radials.
+   *
+   * It was a tenth of this and invisible: "the gradient hues don't seem to
+   * have worked" was the honest verdict on a field nobody could see. WGSN's
+   * own material is not shy about it — the Pulse page runs a full orange to
+   * magenta to blue sweep across the bottom third — so this is a good deal
+   * bolder than the first attempt and still nowhere near that.
+   */
+  --wash-strength: 1.4;
+
+  /*
+   * The ground a proof point is drawn on.
+   *
+   * Its own token rather than `--sunken`, which is what it used to be. The
+   * sunken grey follows the Hub's palette and picked up the accent's cast
+   * when the grounds were tinted — which put a faintly purple rectangle
+   * around a WGSN data slide and, as the person who noticed it put it, looked
+   * odd. A proof point is artwork that gets copied into a report; it is drawn
+   * on WGSN's own neutral sheet grey, and it should look the same here as it
+   * does there whatever the page around it is doing.
+   */
+  --pp-sheet: #f4f4f5;
 }
 
 * {
@@ -455,26 +483,36 @@ button {
   z-index: 0;
   pointer-events: none;
   /*
-   * Colour at the edges, white through the middle.
+   * A big iridescent sweep across the bottom, and colour at the top corners.
    *
-   * This is the thing the reference does and the thing the first attempt got
-   * backwards. Putting the strongest radial at the top-left — where the title
-   * is — tinted the whole head of the page and read as a coloured banner, not
-   * as light. In the material it is the opposite: the centre, where the words
-   * go, is nearly white, and the colour gathers at the corners and creeps in
-   * from the sides.
+   * Three goes at this. The first put the strongest radial at the top-left,
+   * where the title is, which tinted the head of every page and read as a
+   * coloured banner rather than as light. The second over-corrected into four
+   * small faint blobs at the edges — technically right about where colour
+   * belongs, and invisible.
    *
-   * So: four small radials pinned outside or near the edges, none of them
-   * reaching the middle, and all of them faint. The page's own hue leads at
-   * the top-left; the others are there so the field is iridescent rather than
-   * a single tint — which is the whole difference between this and a wash of
-   * pale purple.
+   * What the reference actually does is give the gradient somewhere to *be*.
+   * The Pulse page keeps its top half white for the words and then runs a
+   * full sweep — orange into magenta into blue — across the bottom third,
+   * where there is nothing to read. That is the shape copied here: four hues
+   * meeting along the lower half at a strength you can actually see, and the
+   * top left alone for the title.
+   *
+   * The two small corner radials are the only colour above the fold, and they
+   * are there so a page does not open looking black and white.
+   *
+   * Every centre sits *outside* the box — past 100%, or past zero. Put one on
+   * the edge itself and its whole flank lies along that edge, which is how
+   * the first strong version ended up with a mint stripe hugging the sidebar:
+   * a vignette rather than a sweep. Pushed out, only the upper arc of each
+   * blob reaches the page, which is the part that looks like light.
    */
   background:
-    radial-gradient(38% 30% at 0% 2%, rgb(var(--lead) / 20%), transparent 68%),
-    radial-gradient(30% 26% at 100% 0%, rgb(var(--wash-lilac) / 13%), transparent 66%),
-    radial-gradient(42% 30% at 96% 62%, rgb(var(--support) / 12%), transparent 66%),
-    radial-gradient(50% 26% at 20% 100%, rgb(var(--wash-cream) / 10%), transparent 68%);
+    radial-gradient(60% 46% at 24% 112%, rgb(var(--lead) / calc(48% * var(--wash-strength))), transparent 70%),
+    radial-gradient(56% 44% at 62% 116%, rgb(var(--support) / calc(42% * var(--wash-strength))), transparent 70%),
+    radial-gradient(52% 40% at 96% 104%, rgb(var(--wash-lilac) / calc(36% * var(--wash-strength))), transparent 70%),
+    radial-gradient(30% 24% at 104% -6%, rgb(var(--support) / calc(26% * var(--wash-strength))), transparent 68%),
+    radial-gradient(26% 20% at -4% -6%, rgb(var(--lead) / calc(20% * var(--wash-strength))), transparent 68%);
 }
 
 .wash-lilac {
@@ -541,6 +579,55 @@ button {
   background-size: 100% 1px;
   background-position: 0 100%;
   background-repeat: no-repeat;
+}
+
+/*
+ * The gradient moment, behind the page title.
+ *
+ * The ambient field alone was never going to work on a page like the proof
+ * point library: twenty-four cards cover the content column edge to edge, and
+ * a field behind them shows only in the gutters. The reference pages have
+ * room — the Pulse page is half empty and gives its sweep the whole bottom —
+ * and the one place every page here has room is the head, around the title.
+ *
+ * So that is where the colour goes. Three radials in the page's own hue
+ * family, meeting and blending, bleeding out past the content's padding to
+ * the edges of the column, and fading to nothing before the rule under the
+ * title. Not the flat one-colour band of the first attempt, which read as a
+ * coloured banner — this is a gradient, and it reads as one.
+ */
+:root[data-gradients="on"] .page-head::before {
+  content: "";
+  position: absolute;
+  left: -40px;
+  right: -40px;
+  top: -32px;
+  bottom: 0;
+  z-index: -1;
+  pointer-events: none;
+  border-radius: 0 0 var(--radius-card) var(--radius-card);
+  /*
+   * Weighted right, and light where the words are.
+   *
+   * The first version of this band centred its strongest radial at 4% — right
+   * under the eyebrow and the standfirst, which are the two palest greys on
+   * the page. Measured, `--ink-45` fell to 3.16:1 against it. Turning the
+   * whole band down until that cleared 4.5 put it back to invisible, which is
+   * the trade that started this.
+   *
+   * So the colour moves instead of dimming. The title block occupies the left
+   * third; the right two-thirds of the head are empty on every page in the
+   * Hub, and the figures that sometimes sit there carry their own white
+   * panel. Weighting the band right leaves the text on near-white, lets the
+   * gradient run at a strength you can see, and — as it happens — looks
+   * better than the symmetrical version did.
+   */
+  background:
+    radial-gradient(50% 108% at 96% 24%, rgb(var(--lead) / 38%), transparent 74%),
+    radial-gradient(40% 86% at 66% -12%, rgb(var(--support) / 30%), transparent 72%),
+    radial-gradient(34% 70% at 30% -24%, rgb(var(--wash-lilac) / 22%), transparent 70%);
+  /* Gone by the rule, so the band has no bottom edge of its own to notice. */
+  mask-image: linear-gradient(180deg, #000 0%, #000 52%, transparent 100%);
 }
 
 /* The page's own title rule stays the firm black one — it is the top of the
@@ -4391,7 +4478,9 @@ a.view-row:hover {
   position: relative;
   height: 196px;
   overflow: hidden;
-  background: var(--sunken);
+  /* The same sheet grey as the slide scaled inside it, so a card is one
+     rectangle rather than a grey inside a slightly different grey. */
+  background: var(--pp-sheet);
   border-bottom: 1px solid var(--rule);
 }
 
@@ -4741,7 +4830,8 @@ a.view-row:hover {
   gap: 9px;
   min-height: 168px;
   padding: 26px 24px 30px;
-  background: var(--sunken);
+  background: var(--pp-sheet);
+  border-radius: var(--radius-card);
   text-align: center;
 }
 
