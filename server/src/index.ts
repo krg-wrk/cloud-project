@@ -1,4 +1,5 @@
 import path from "node:path";
+import compression from "compression";
 import cors from "cors";
 import express from "express";
 import { createNoteDrafter } from "./ai.js";
@@ -70,7 +71,29 @@ if (source instanceof SmartsheetSource) {
   }
 }
 
-app.use(cors());
+/*
+ * Compress everything on the way out.
+ *
+ * Measured rather than assumed: the trend list is 893KB of JSON and the
+ * client bundle 542KB, and neither was being compressed. Over a corporate
+ * link that is the difference between the Hub feeling instant and feeling
+ * like a report. A reverse proxy in front may well do this too — doing it
+ * twice costs nothing, because it will not compress what is already
+ * compressed, and doing it here means the Hub is fast whatever it is hosted
+ * behind rather than only behind the right thing.
+ */
+app.use(compression());
+
+/*
+ * Who may call the API from a browser.
+ *
+ * In production the client is served from this same origin, so nothing needs
+ * cross-origin access at all and the default `*` is a door with nothing
+ * behind it. HUB_ORIGIN closes it anyway; in dev it stays open, because the
+ * client runs on :5173 and the API on :3001.
+ */
+const allowedOrigin = process.env.HUB_ORIGIN;
+app.use(cors(allowedOrigin ? { origin: allowedOrigin } : {}));
 
 /*
  * Bodies stay small — 100KB, Express's own default — everywhere except the
@@ -124,8 +147,33 @@ const schedule = startSchedule(data, store, signUps, proofPoints);
 // /content/ss-4021 survive a refresh and a paste into Slack.
 if (process.env.NODE_ENV === "production") {
   const clientDist = path.resolve(import.meta.dirname, "../../client/dist");
-  app.use(express.static(clientDist));
+  /*
+   * Two kinds of file, two lifetimes.
+   *
+   * Everything under /assets carries a content hash in its name — change the
+   * code and the name changes — so it can be cached for a year and never
+   * revalidated. index.html is the opposite: one unchanging name whose
+   * contents point at whichever hashed bundle is current, so it must never be
+   * cached or a deploy reaches nobody until their browser feels like asking.
+   *
+   * This was `max-age=0` on everything, which meant a 542KB bundle
+   * revalidated on every page load.
+   */
+  app.use(
+    express.static(clientDist, {
+      index: false,
+      setHeaders(res, filePath) {
+        res.setHeader(
+          "Cache-Control",
+          filePath.endsWith("index.html")
+            ? "no-cache"
+            : "public, max-age=31536000, immutable",
+        );
+      },
+    }),
+  );
   app.get(/^(?!\/api\/).*/, (_req, res) => {
+    res.setHeader("Cache-Control", "no-cache");
     res.sendFile(path.join(clientDist, "index.html"));
   });
 }
