@@ -5,6 +5,8 @@ import { ICON_PATHS, Icon } from "../../lib/icons";
 import { SLOT_GROUPS } from "../../lib/slots";
 import {
   APPEARANCE_CHANGED,
+  WASHES,
+  WASH_GROUPS,
   applyColours,
   applyGradients,
   type Appearance,
@@ -49,6 +51,7 @@ export default function Look() {
   const [colours, setColours] = useState<Record<string, string> | null>(null);
   const [icons, setIcons] = useState<Record<string, string> | null>(null);
   const [gradients, setGradients] = useState<boolean | null>(null);
+  const [washes, setWashes] = useState<Record<string, string> | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -58,6 +61,7 @@ export default function Look() {
       setColours(stored.data.colours ?? {});
       setIcons(stored.data.icons ?? {});
       setGradients(stored.data.gradients !== false);
+      setWashes(stored.data.washes ?? {});
     }
   }, [stored.data, colours]);
 
@@ -91,7 +95,7 @@ export default function Look() {
   }, [gradients, savedGradients]);
 
   if (stored.error) return <ErrorNote message={stored.error} />;
-  if (!stored.data || !colours || !icons || gradients === null) {
+  if (!stored.data || !colours || !icons || gradients === null || !washes) {
     return <Loading what="the colours" />;
   }
 
@@ -99,7 +103,10 @@ export default function Look() {
   const groups = [...new Set(tokens.map((t) => t.group))];
   const navItems = SLOT_GROUPS["nav.item"]?.slots ?? [];
   const changed =
-    Object.keys(colours).length > 0 || Object.keys(icons).length > 0 || !gradients;
+    Object.keys(colours).length > 0 ||
+    Object.keys(icons).length > 0 ||
+    Object.keys(washes).length > 0 ||
+    !gradients;
 
   const set = (id: string, value: string) => {
     const next = { ...colours };
@@ -123,11 +130,12 @@ export default function Look() {
       const res = await send<Appearance & { dropped?: number }>(
         "/studio/appearance",
         "PUT",
-        { colours, icons, gradients },
+        { colours, icons, gradients, washes },
       );
       setColours(res.colours);
       setIcons(res.icons);
       setGradients(res.gradients !== false);
+      setWashes(res.washes ?? {});
       setNote(
         res.dropped
           ? `Saved. ${res.dropped} value${res.dropped === 1 ? " was" : "s were"} left out — a colour has to be a hex code like #4c5578.`
@@ -160,6 +168,7 @@ export default function Look() {
             setColours({});
             setIcons({});
             setGradients(true);
+            setWashes({});
           }}
           disabled={!changed}
         >
@@ -186,11 +195,44 @@ export default function Look() {
             <b>Iridescent wash behind the pages</b>
             <small>
               A very pale field of colour that stays put while the page scrolls, and a
-              band behind each title. Its hue follows the section you are in — the Lab
-              warm, Data cool, the team warmer. Off gives you flat paper.
+              gradient behind each page title. Off gives you flat paper.
             </small>
           </span>
         </label>
+
+        {/*
+          Which hue each part of the Hub takes.
+          Keyed on the sidebar's own groups rather than on pages, because that
+          is the grain the nav already has and the only one anybody thinks in.
+          Every option is a colour the Hub already uses somewhere, which is
+          what stops the field looking arbitrary.
+        */}
+        {gradients && (
+          <div className="wash-rows">
+            {WASH_GROUPS.map((group) => {
+              const chosen = washes[group.id] ?? stored.data!.washes?.[group.id] ?? "dusk";
+              return (
+                <div className="wash-row" key={group.id}>
+                  <span className={`wash-dot wash-${chosen}`} aria-hidden="true" />
+                  <label className="swatch-name" htmlFor={`wash-${group.id}`}>
+                    <b>{group.label}</b>
+                  </label>
+                  <select
+                    id={`wash-${group.id}`}
+                    value={chosen}
+                    onChange={(e) => setWashes({ ...washes, [group.id]: e.target.value })}
+                  >
+                    {WASHES.map((w) => (
+                      <option key={w.id} value={w.id}>
+                        {w.label} — from {w.from}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {groups.map((group) => (

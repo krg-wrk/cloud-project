@@ -81,9 +81,50 @@ export interface Appearance {
    * own reduced-motion setting, which no admin should be able to overrule.
    */
   gradients: boolean;
+  /**
+   * Which wash hue each part of the Hub takes.
+   *
+   * Keyed on the sidebar's own group ids, so the choice is "Data feels like
+   * this" rather than "this page feels like this" — which is the grain the
+   * nav already has and the only one a person would think in. Anything not
+   * set here falls back to the default below, so an admin only stores the
+   * ones they changed.
+   */
+  washes: Record<string, string>;
 }
 
-export const EMPTY: Appearance = { colours: {}, icons: {}, gradients: true };
+/** The hues on offer, each one a colour the Hub already uses somewhere. */
+export const WASHES = [
+  { id: "dusk", label: "Future Dusk", from: "the accent" },
+  { id: "magenta", label: "Magenta", from: "the Pulse node, and anything that is yours" },
+  { id: "green", label: "Green", from: "an approved proof point" },
+  { id: "teal", label: "Teal", from: "a lunch and learn" },
+  { id: "rose", label: "Rose", from: "a masterclass" },
+  { id: "amber", label: "Amber", from: "a workshop" },
+] as const;
+
+const WASH_IDS: ReadonlySet<string> = new Set<string>(WASHES.map((w) => w.id));
+
+/**
+ * Where each group starts, before anybody changes it.
+ *
+ * Chosen so the light on a page agrees with the page: the Lab gets the
+ * magenta its Pulse node is drawn in, Data the green an approved proof point
+ * already uses, the team the amber of a workshop.
+ */
+export const DEFAULT_WASHES: Record<string, string> = {
+  work: "dusk",
+  lab: "magenta",
+  data: "teal",
+  team: "amber",
+  resources: "dusk",
+  settings: "dusk",
+};
+
+/** A nav group id, which is what a wash choice is keyed on. */
+const isGroup = (key: string): boolean => key in DEFAULT_WASHES;
+
+export const EMPTY: Appearance = { colours: {}, icons: {}, gradients: true, washes: {} };
 
 /**
  * A colour the browser will take and a person meant.
@@ -123,14 +164,35 @@ const isSlot = (key: string): boolean => /^nav\.item\.[a-z0-9-]{1,40}$/.test(key
  * went, so it is not silent.
  */
 export function readAppearance(value: unknown): { kept: Appearance; dropped: number } {
-  const body = (value ?? {}) as { colours?: unknown; icons?: unknown; gradients?: unknown };
+  const body = (value ?? {}) as {
+    colours?: unknown;
+    icons?: unknown;
+    gradients?: unknown;
+    washes?: unknown;
+  };
   /*
    * Absent means on, which matters for the records written before the switch
    * existed: an admin who had set a colour last month should not find the
    * washes off because their stored appearance predates them.
    */
-  const kept: Appearance = { colours: {}, icons: {}, gradients: body.gradients !== false };
+  const kept: Appearance = {
+    colours: {},
+    icons: {},
+    gradients: body.gradients !== false,
+    washes: {},
+  };
   let dropped = 0;
+
+  for (const [group, raw] of Object.entries((body.washes ?? {}) as Record<string, unknown>)) {
+    if (raw === "" || raw === null) continue;
+    if (!isGroup(group) || typeof raw !== "string" || !WASH_IDS.has(raw)) {
+      dropped++;
+      continue;
+    }
+    // Storing the default is the same as not storing it.
+    if (raw === DEFAULT_WASHES[group]) continue;
+    kept.washes[group] = raw;
+  }
 
   for (const [id, raw] of Object.entries((body.colours ?? {}) as Record<string, unknown>)) {
     const colour = readColour(raw);
@@ -157,6 +219,18 @@ export function readAppearance(value: unknown): { kept: Appearance; dropped: num
   return { kept, dropped };
 }
 
+/**
+ * Every group's wash, defaults filled in.
+ *
+ * Resolved on the server rather than in the client, so there is one copy of
+ * the defaults and a page cannot disagree with the studio about what it is
+ * showing.
+ */
+export async function washesFor(store: HubStore): Promise<Record<string, string>> {
+  const stored = (await appearanceFor(store)).washes;
+  return { ...DEFAULT_WASHES, ...stored };
+}
+
 export async function appearanceFor(store: HubStore): Promise<Appearance> {
   const raw = await store.setting(KEY);
   if (!raw) return EMPTY;
@@ -181,7 +255,7 @@ export function createAppearanceRouter(store: HubStore): Router {
         res.status(403).json({ error: "This account does not have access to the Hub." });
         return;
       }
-      res.json({ ...(await appearanceFor(store)), tokens: TOKENS });
+      res.json({ ...(await appearanceFor(store)), tokens: TOKENS, washes: await washesFor(store) });
     } catch (err) {
       next(err);
     }

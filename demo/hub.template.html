@@ -39,8 +39,8 @@
      * arriving as gradient. So the ground steps back to a whisper and the
      * wash does the work.
      */
-    --ground: #f8f8fa;
-    --sunken: #eeeef2;
+    --ground: #fcfcfc;
+    --sunken: #f0f0f3;
     --ink: #0e0e10;
     --ink-mid: #56565c;
     /*
@@ -109,15 +109,24 @@
      * painted at full strength — everything below uses them between 10% and
      * 30%, over a ground that is already near-white.
      */
-    --wash-lilac: 138 148 236;
-    --wash-mint: 108 204 176;
-    --wash-cream: 240 206 116;
-    --wash-rose: 236 138 190;
+    /*
+     * Each wash is a section's own colour, kept on its hue and raised to a
+     * wash lightness. Not chosen by eye: the Lab's wash is the same magenta
+     * as the Pulse node that lives there, Data's the green an approved proof
+     * point uses, Your work Future Dusk itself. That is what makes the field
+     * look considered rather than decorative.
+     */
+    --wash-dusk: 134 152 223;      /* --accent            #4c5578 */
+    --wash-magenta: 223 134 195;   /* --mine, the Pulse hue  #8e3b74 */
+    --wash-green: 134 223 179;     /* --ok                #256b48 */
+    --wash-rose: 223 134 166;      /* --kind-masterclass  #a33a60 */
+    --wash-amber: 223 190 134;     /* --event-workshop    #9c6b16 */
+    --wash-teal: 134 223 219;      /* --kind-lunch-and-learn #17706c */
     /*
      * How strong the field is — one number, because every alpha below is a
      * multiple of it. The first version was a tenth of this and invisible.
      */
-    --wash-strength: 1.4;
+    --wash-strength: 1.05;
 
     /*
      * The ground a proof point is drawn on.
@@ -198,14 +207,20 @@
       /* The same washes, dimmer: on a near-black ground a pale tint reads as
          fog, so the dark theme uses deeper, more saturated versions at a
          lower alpha and lets them glow rather than wash. */
-      --wash-lilac: 108 122 214;
-      --wash-mint: 74 170 144;
-      --wash-cream: 186 160 84;
-      --wash-rose: 196 106 160;
-      --wash-lilac: 108 122 214;
-    --wash-mint: 74 170 144;
-    --wash-cream: 186 160 84;
-    --wash-rose: 196 106 160;
+      --wash-dusk: 104 118 196;
+      --wash-magenta: 196 106 166;
+      --wash-green: 84 178 134;
+      --wash-rose: 196 106 134;
+      --wash-amber: 186 158 92;
+      --wash-teal: 88 182 178;
+      /* The same hues, deeper and dimmer: on a near-black ground a pale tint
+       reads as fog, so the dark theme lets them glow rather than wash. */
+    --wash-dusk: 104 118 196;
+    --wash-magenta: 196 106 166;
+    --wash-green: 84 178 134;
+    --wash-rose: 196 106 134;
+    --wash-amber: 186 158 92;
+    --wash-teal: 88 182 178;
     --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 2px 8px rgb(0 0 0 / 26%);
       --shadow-lift: 0 2px 4px rgb(0 0 0 / 46%), 0 8px 24px rgb(0 0 0 / 34%);
       color-scheme: dark;
@@ -415,6 +430,18 @@
   .rail {
     position: sticky;
     top: 57px;
+    /*
+     * Above the content column, which the wash gave a z-index of 1. Without
+     * this the bell's panel — z-index 40, but inside the rail's stacking
+     * context, which had none — painted behind the page.
+     *
+     * An `overflow: hidden` used to sit below the height, as belt and braces
+     * over bands that are sized not to overflow anyway. It was also clipping
+     * that panel at the rail's edge — which is the other half of why the
+     * panel looked broken, and the half a z-index cannot fix, because a clip
+     * does not care what order things paint in.
+     */
+    z-index: 2;
     display: flex;
     flex-direction: column;
     gap: 18px;
@@ -439,7 +466,6 @@
      * the moment before the first measurement.
      */
     height: var(--rail-h, calc(100vh - 57px));
-    overflow: hidden;
   }
 
   .rail-top,
@@ -631,23 +657,7 @@
   }
 
   /* A real WGSN detail: the accent is one of their Colours of the Year. */
-  .swatch-note {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 10px;
-    line-height: 1.35;
-    color: var(--ink-soft);
-  }
-
-  .swatch-note i {
-    width: 22px;
-    height: 22px;
-    flex: none;
-    background: #4c5578;
-  }
-
-  main {
+      main {
     min-width: 0;
     padding: 30px 34px 90px;
     /* Above the wash. Everything inside inherits the layer, so nothing else
@@ -1069,6 +1079,13 @@
     line-height: 1.5;
   }
 
+  /* A demo file cannot carry ten thousand rendered slides, and the count on
+     the page should not imply it does. */
+  .pp-sample {
+    font-style: normal;
+    color: var(--ink-soft);
+  }
+
   /* --- The wash -------------------------------------------------------------
    *
    * A soft iridescent field behind the content column, fixed so the page moves
@@ -1105,7 +1122,7 @@
     background:
       radial-gradient(60% 46% at 24% 112%, rgb(var(--lead) / calc(48% * var(--wash-strength))), transparent 70%),
       radial-gradient(56% 44% at 62% 116%, rgb(var(--support) / calc(42% * var(--wash-strength))), transparent 70%),
-      radial-gradient(52% 40% at 96% 104%, rgb(var(--wash-lilac) / calc(36% * var(--wash-strength))), transparent 70%),
+      radial-gradient(52% 40% at 96% 104%, rgb(var(--support) / calc(36% * var(--wash-strength))), transparent 70%),
       radial-gradient(30% 24% at 104% -6%, rgb(var(--support) / calc(26% * var(--wash-strength))), transparent 68%),
       radial-gradient(26% 20% at -4% -6%, rgb(var(--lead) / calc(20% * var(--wash-strength))), transparent 68%);
   }
@@ -1143,29 +1160,42 @@
     background:
       radial-gradient(50% 108% at 96% 24%, rgb(var(--lead) / 38%), transparent 74%),
       radial-gradient(40% 86% at 66% -12%, rgb(var(--support) / 30%), transparent 72%),
-      radial-gradient(34% 70% at 30% -24%, rgb(var(--wash-lilac) / 22%), transparent 70%);
+      radial-gradient(34% 70% at 30% -24%, rgb(var(--support) / 22%), transparent 70%);
     /* Gone by the rule, so the band has no bottom edge of its own to notice. */
     mask-image: linear-gradient(180deg, #000 0%, #000 52%, transparent 100%);
   }
 
-  .wash-lilac {
-    --lead: var(--wash-lilac);
-    --support: var(--wash-mint);
+  /* A lead hue and a supporting one per section. The support is always a
+     neighbour rather than an opposite, so the two blend into one field
+     instead of meeting at a visible seam. */
+  .wash-dusk {
+    --lead: var(--wash-dusk);
+    --support: var(--wash-teal);
   }
 
-  .wash-mint {
-    --lead: var(--wash-mint);
-    --support: var(--wash-cream);
+  .wash-magenta {
+    --lead: var(--wash-magenta);
+    --support: var(--wash-dusk);
   }
 
-  .wash-cream {
-    --lead: var(--wash-cream);
-    --support: var(--wash-rose);
+  .wash-green {
+    --lead: var(--wash-green);
+    --support: var(--wash-teal);
   }
 
   .wash-rose {
     --lead: var(--wash-rose);
-    --support: var(--wash-lilac);
+    --support: var(--wash-amber);
+  }
+
+  .wash-amber {
+    --lead: var(--wash-amber);
+    --support: var(--wash-rose);
+  }
+
+  .wash-teal {
+    --lead: var(--wash-teal);
+    --support: var(--wash-dusk);
   }
 
   /*
@@ -1181,8 +1211,8 @@
     border-bottom-color: transparent;
     background-image: linear-gradient(
       90deg,
-      rgb(var(--lead, var(--wash-lilac)) / 85%),
-      rgb(var(--lead, var(--wash-lilac)) / 20%) 34%,
+      rgb(var(--lead, var(--wash-dusk)) / 85%),
+      rgb(var(--lead, var(--wash-dusk)) / 20%) 34%,
       var(--line) 70%
     );
     background-size: 100% 1px;
@@ -1210,9 +1240,9 @@
     inset: -25%;
     pointer-events: none;
     background:
-      radial-gradient(26% 32% at 28% 36%, rgb(var(--wash-rose) / 30%), transparent 62%),
-      radial-gradient(24% 28% at 72% 62%, rgb(var(--wash-mint) / 26%), transparent 62%),
-      radial-gradient(22% 26% at 56% 16%, rgb(var(--wash-lilac) / 24%), transparent 62%);
+      radial-gradient(26% 32% at 28% 36%, rgb(var(--wash-magenta) / 30%), transparent 62%),
+      radial-gradient(24% 28% at 72% 62%, rgb(var(--wash-teal) / 26%), transparent 62%),
+      radial-gradient(22% 26% at 56% 16%, rgb(var(--wash-dusk) / 24%), transparent 62%);
     animation: canvas-drift 38s ease-in-out infinite alternate;
   }
 
@@ -1232,6 +1262,33 @@
     :root[data-gradients="on"] .node-canvas::before {
       animation: none;
     }
+  }
+
+  /* Which hue each part of the Hub takes, with a swatch of the real thing. */
+  .wash-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 18px;
+  }
+
+  .wash-row {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr) 320px;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* The wash itself, so the dot is a preview rather than a guess. */
+  .wash-dot {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background:
+      radial-gradient(circle at 32% 28%, rgb(var(--lead) / 85%), transparent 72%),
+      radial-gradient(circle at 74% 76%, rgb(var(--support) / 70%), transparent 72%),
+      var(--paper);
   }
 
   /* The one switch on the Look page, which needs room for a sentence under it
@@ -2014,6 +2071,28 @@
     display: flex;
     flex-direction: column;
     gap: 26px;
+  }
+
+  /*
+   * Each group is a panel, like everything else on a page of this Hub.
+   *
+   * The directory was the one list still drawn straight onto the ground,
+   * which was fine when the ground was flat and looked unfinished the moment
+   * there was a gradient behind it — the rows had nothing to sit on. Slightly
+   * translucent rather than solid, so the wash still reads through it.
+   */
+  .dir-group {
+    padding: 16px 18px 6px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: color-mix(in srgb, var(--paper) 74%, transparent);
+    box-shadow: var(--shadow);
+  }
+
+  @supports (backdrop-filter: blur(1px)) {
+    .dir-group {
+      backdrop-filter: blur(6px);
+    }
   }
 
   .dir-group-head {
@@ -5525,8 +5604,12 @@
     position: relative;
     height: 196px;
     overflow: hidden;
-    /* The proof point's own ground, which does not follow the theme — see
-       the note on .pp below. */
+    /* Inset, because the pipeline's own markup starts its text hard against
+       the left margin and had nowhere to breathe. The padding goes here
+       rather than on the slide inside it: the sheet grey has to fill the
+       whole well, and moving the background inwards left a band of white
+       under a preview that is shorter than the well it sits in. */
+    padding: 12px 14px 0;
     background: var(--pp-sheet);
     border-bottom: 1px solid var(--line);
   }
@@ -6871,10 +6954,6 @@
       <div class="as-label">Signed in as (demo)</div>
       <select id="as"></select>
       <div class="role-line" id="role-line"></div>
-      <div class="swatch-note">
-        <i></i>
-        <span>Accent: Future Dusk<br />Coloro 129-35-18</span>
-      </div>
     </div>
   </aside>
   <main id="view" tabindex="-1"></main>
@@ -8123,12 +8202,15 @@
    * Anything unrecognised gets the accent's own lilac, which is the Hub's
    * default temperature.
    */
-  function washClass(first) {
-    if (first === "lab") return "wash-rose";
-    if (first === "data") return "wash-mint";
-    if (["team", "workshops", "whats-on", "subscribe"].includes(first)) return "wash-cream";
-    return "wash-lilac";
+  function washGroup(first) {
+    if (first === "lab") return "lab";
+    if (first === "data") return "data";
+    if (["team", "workshops", "whats-on", "subscribe"].includes(first)) return "team";
+    if (first === "studio" || first === "notifications") return "settings";
+    return "work";
   }
+
+  const washClass = (first) => `wash-${lookWashes[washGroup(first)] ?? "dusk"}`;
 
   function renderNav() {
     const { parts } = route();
@@ -12013,6 +12095,43 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
    */
   let lookGradients = true;
 
+  /**
+   * The hues on offer, each one a colour the Hub already uses somewhere.
+   * Mirrors `server/src/appearance.ts` by hand, like the rest of this file.
+   */
+  const WASHES = [
+    ["dusk", "Future Dusk", "the accent"],
+    ["magenta", "Magenta", "the Pulse node, and anything that is yours"],
+    ["green", "Green", "an approved proof point"],
+    ["teal", "Teal", "a lunch and learn"],
+    ["rose", "Rose", "a masterclass"],
+    ["amber", "Amber", "a workshop"],
+  ];
+
+  const WASH_GROUPS = [
+    ["work", "Your work"],
+    ["lab", "Forecast Lab"],
+    ["data", "Data"],
+    ["team", "The team"],
+    ["resources", "Resources"],
+    ["settings", "Settings"],
+  ];
+
+  /*
+   * Where each group starts, before anybody changes it. Chosen so the light
+   * on a page agrees with the page: the Lab gets the magenta its Pulse node
+   * is drawn in, Data the green an approved proof point uses, the team the
+   * amber of a workshop.
+   */
+  const lookWashes = {
+    work: "dusk",
+    lab: "magenta",
+    data: "teal",
+    team: "amber",
+    resources: "dusk",
+    settings: "dusk",
+  };
+
   function applyGradients() {
     document.documentElement.dataset.gradients = lookGradients ? "on" : "off";
   }
@@ -12058,10 +12177,27 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           <span>
             <b>Iridescent wash behind the pages</b>
             <small>A very pale field of colour that stays put while the page scrolls, and a
-              band under each title. Its hue follows the section you are in — the Lab warm,
-              Data cool, the team warmer. Off gives you flat paper.</small>
+              gradient behind each page title. Off gives you flat paper.</small>
           </span>
         </label>
+        ${
+          lookGradients
+            ? `<div class="wash-rows">${WASH_GROUPS.map(
+                ([id, label]) => `<div class="wash-row">
+                  <span class="wash-dot wash-${esc(lookWashes[id])}" aria-hidden="true"></span>
+                  <label class="swatch-name" for="wash-${esc(id)}"><b>${esc(label)}</b></label>
+                  <select id="wash-${esc(id)}" data-look-wash="${esc(id)}">
+                    ${WASHES.map(
+                      ([w, wl, from]) =>
+                        `<option value="${w}"${w === lookWashes[id] ? " selected" : ""}>${esc(
+                          wl,
+                        )} &mdash; from ${esc(from)}</option>`,
+                    ).join("")}
+                  </select>
+                </div>`,
+              ).join("")}</div>`
+            : ""
+        }
       </div>
       ${groups
         .map(
@@ -15860,7 +15996,10 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                  total < PROOF.points.length
                    ? ` filtered from ${PROOF.points.length.toLocaleString()}`
                    : ""
-               } &middot; click a proof point to enlarge it</p>
+               } &middot; click a proof point to enlarge it
+               <br /><em class="pp-sample">This file carries ${PROOF.points.length.toLocaleString()}
+                 of the library&rsquo;s ${PROOF.total.toLocaleString()} suggestions &mdash; every third
+                 one, plus every decided one. The running Hub holds all of them.</em></p>
              <div class="pp-grid">${shown.map(card).join("")}</div>
              ${
                pages > 1
@@ -16260,6 +16399,15 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       el.addEventListener("change", () => {
         lookGradients = el.checked;
         applyGradients();
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-look-wash]").forEach((el) =>
+      el.addEventListener("change", () => {
+        lookWashes[el.dataset.lookWash] = el.value;
+        // renderNav() puts the class on the shell, so the page changes hue
+        // as soon as the option changes rather than on the next navigation.
+        renderNav();
         render();
       }),
     );

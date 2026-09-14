@@ -27,10 +27,32 @@ export interface Appearance {
   icons: Record<string, string>;
   /** Whether the pages carry the iridescent wash behind them. */
   gradients: boolean;
+  /** Nav group id → wash hue id, with the defaults already filled in. */
+  washes: Record<string, string>;
   tokens?: Token[];
 }
 
-export const NO_APPEARANCE: Appearance = { colours: {}, icons: {}, gradients: true };
+/** The hues on offer, mirroring `server/src/appearance.ts`. */
+export const WASHES = [
+  { id: "dusk", label: "Future Dusk", from: "the accent" },
+  { id: "magenta", label: "Magenta", from: "the Pulse node, and anything that is yours" },
+  { id: "green", label: "Green", from: "an approved proof point" },
+  { id: "teal", label: "Teal", from: "a lunch and learn" },
+  { id: "rose", label: "Rose", from: "a masterclass" },
+  { id: "amber", label: "Amber", from: "a workshop" },
+];
+
+/** The groups a wash can be chosen for, in the order the sidebar shows them. */
+export const WASH_GROUPS = [
+  { id: "work", label: "Your work" },
+  { id: "lab", label: "Forecast Lab" },
+  { id: "data", label: "Data" },
+  { id: "team", label: "The team" },
+  { id: "resources", label: "Resources" },
+  { id: "settings", label: "Settings" },
+];
+
+export const NO_APPEARANCE: Appearance = { colours: {}, icons: {}, gradients: true, washes: {} };
 
 /**
  * Put a set of colours on the page.

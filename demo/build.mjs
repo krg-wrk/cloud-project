@@ -47,7 +47,22 @@ const { TIER_MEANING } = await import(join(here, "../server/dist/proofPoints/typ
  * The markup is sanitised here, at build time, by the same function the
  * server uses — the demo has no server to do it on the way out.
  */
-function proofPointSample(every = 17) {
+/**
+ * A sample of the library, not the whole of it.
+ *
+ * Every third suggestion, plus every one somebody has decided on. The whole
+ * ten thousand is about 28 MB of rendered markup once it is inlined — past
+ * what a single file that gets emailed around should be, and past the
+ * artifact size cap. Every third is 3,400-odd, which is enough that the
+ * filters, the trend picker and the search all behave as they do against the
+ * real thing.
+ *
+ * It was every seventeenth, which was set against a much earlier guess at the
+ * size budget and left 627. Measured properly the cost is nearly all download
+ * rather than parse — 18 ms to parse a 5 MB seed, 322 ms to first paint — so
+ * the sample could be a good deal denser than it was.
+ */
+function proofPointSample(every = 3) {
   const library = new ProofPointLibrary();
   const admin = { email: "", name: "", personId: null, role: "admin", verticals: "all", active: true };
   const all = library.query({ quality: "all", pageSize: 96, page: 1 }, admin);

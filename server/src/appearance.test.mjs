@@ -44,7 +44,7 @@ test("setting a token back to its own colour stores nothing", () => {
 
 test("an empty value is a reset rather than a mistake", () => {
   const { kept, dropped } = readAppearance({ colours: { accent: "" }, icons: { "nav.item.today": "" } });
-  assert.deepEqual(kept, { colours: {}, icons: {}, gradients: true });
+  assert.deepEqual(kept, { colours: {}, icons: {}, gradients: true, washes: {} });
   assert.equal(dropped, 0);
 });
 
@@ -57,9 +57,31 @@ test("icons are keyed on sidebar slots and nothing else", () => {
 });
 
 test("nothing sent is nothing stored", () => {
-  const bare = { colours: {}, icons: {}, gradients: true };
+  const bare = { colours: {}, icons: {}, gradients: true, washes: {} };
   assert.deepEqual(readAppearance(undefined).kept, bare);
   assert.deepEqual(readAppearance({ colours: null, icons: null }).kept, bare);
+});
+
+test("a wash is stored only when it differs from the default", () => {
+  /*
+   * The defaults are meaningful — each group's hue is taken from a colour
+   * that group already uses — so storing one is a change, and storing the
+   * default is the same as storing nothing. Keeping the record minimal means
+   * a later change to a default reaches everybody who never overrode it.
+   */
+  assert.deepEqual(readAppearance({ washes: { lab: "magenta" } }).kept.washes, {},
+    "magenta is the Lab's default");
+  assert.deepEqual(readAppearance({ washes: { lab: "green" } }).kept.washes, { lab: "green" });
+  assert.deepEqual(readAppearance({ washes: { work: "" } }).kept.washes, {},
+    "an empty value is a reset");
+});
+
+test("an unknown group or hue is dropped rather than stored", () => {
+  const { kept, dropped } = readAppearance({
+    washes: { data: "teal", data2: "green", work: "chartreuse", lab: "amber" },
+  });
+  assert.deepEqual(kept.washes, { lab: "amber" }, "teal is Data's default, so not stored");
+  assert.equal(dropped, 2, "the made-up group and the made-up hue");
 });
 
 test("the wash is on unless somebody turned it off", () => {

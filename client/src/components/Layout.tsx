@@ -746,8 +746,15 @@ export default function Layout() {
   const [searching, setSearching] = useState(false);
   const openSearch = useCallback(() => setSearching(true), []);
   useSearchShortcut(openSearch);
-  // The wash's hue follows the section of the Hub you are in.
-  const wash = useWashClass();
+  /*
+   * The wash's hue follows the section of the Hub you are in, and which hue
+   * each section takes is the admin's to set — so this reads the appearance
+   * rather than hard-coding it. `useAppearance` is what applies the colours
+   * and the on/off switch too; calling it here means one read serves all
+   * three.
+   */
+  const look = useAppearance();
+  const wash = useWashClass(look.washes);
   const me = useApi<Me>("/me");
   const people = useApi<Person[]>("/people");
   const content = useApi<ContentItem[]>("/content");

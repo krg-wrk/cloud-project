@@ -1527,7 +1527,33 @@ rather than as colour. The Hub borrows that.
 tinted toward the accent — which only made it a *purple* grey: still the
 loudest thing on the page, and now fighting the wash rather than carrying it.
 The reference does neither. It is near-white paper with the colour arriving as
-gradient, so the ground steps back to `#f8f8fa` and the wash does the work.
+gradient, so the ground steps back to `#fcfcfc` and the wash does the work.
+
+**Each hue is the section's own colour.** Not picked by eye: every wash is a
+colour that part of the Hub already uses, kept on its hue and raised to a wash
+lightness. The Lab's is the magenta of the Pulse node that lives there, Data's
+the green an approved proof point already carries, Your work is Future Dusk
+itself, the team is the amber of a workshop. That is what makes the field look
+considered rather than decorative — the page and the light on it agree.
+
+The six on offer, and where each comes from:
+
+| Wash | Taken from |
+| --- | --- |
+| Future Dusk | `--accent` |
+| Magenta | `--mine` — the Pulse node, and anything that is yours |
+| Green | `--status-published` — an approved proof point |
+| Teal | `--kind-lunch-and-learn` |
+| Rose | `--kind-masterclass` |
+| Amber | `--event-workshop` |
+
+**Which section gets which is the admin's to set**, in the same studio panel as
+the on/off switch, keyed on the sidebar's own groups — "Data feels like this"
+rather than "this page feels like this", which is the grain the nav already has
+and the only one anybody thinks in. The defaults above are resolved on the
+server, so there is one copy of them and a page cannot disagree with the studio
+about what it is showing. Storing a choice that matches the default stores
+nothing, so changing a default later reaches everybody who never overrode it.
 
 Four things then make it read as a gradient rather than as a tint:
 
