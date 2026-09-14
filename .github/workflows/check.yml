@@ -1,0 +1,40 @@
+# Every push and every pull request, checked.
+#
+# Four things, in the order they fail fastest: the server's own tests (which
+# build it first, so a type error in the server fails here), the client's
+# types, the client's lint, and the demo build — which now parses the demo's
+# script and refuses to write a broken one, so a syntax error in that one
+# large file is caught here rather than by somebody opening a blank page.
+name: Check
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 22 is a floor, not a preference: the SQLite path uses `node:sqlite`.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - run: npm ci
+
+      # Builds server/dist and runs the tests against it — what ships, not the
+      # source it came from.
+      - run: npm test -w server
+
+      - run: npx tsc -p client/tsconfig.json --noEmit
+      - run: npm run lint
+      - run: npm run build -w client
+      - run: node demo/build.mjs
+
+      # Production dependencies only: a dev-only advisory should not fail a
+      # build, and a production one should.
+      - run: npm audit --omit=dev --audit-level=moderate

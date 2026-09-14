@@ -1,0 +1,24 @@
+# What must never reach the image.
+#
+# The first two are correctness — a host's node_modules copied into a Linux
+# image is how you ship the wrong binaries. The rest are secrecy: the real
+# Content Directory is a hundred and fifty colleagues and their addresses,
+# and a local database may hold anything the team has written.
+node_modules
+**/node_modules
+dist
+**/dist
+
+.env
+.env.*
+data/directory.json
+data/*.db
+data/*.db-shm
+data/*.db-wal
+
+.git
+.github
+.claude
+demo/forecasters-hub.html
+*.log
+*.tsbuildinfo
