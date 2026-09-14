@@ -101,6 +101,46 @@ training), a host, a capacity and a `signUpsOpen` flag:
 
 Sign-ups persist in the store (see **Data** below), so they survive restarts.
 
+### Showing real data in the single-file demo
+
+`demo/forecasters-hub.html` carries invented people on purpose: it is the file
+that gets emailed around, and the team's real schedule is not something to
+send to anyone who asks. Once the Hub is hosted, **the hosted Hub is the
+demo** — send people its address and they see live data under their own
+sign-in, always current, with the permissions they actually have.
+
+For the cases where a file is still wanted — somebody without access, a deck,
+a snapshot of how it looked in March — the same build reads live:
+
+```bash
+node demo/build.mjs                    # the shareable sample (default)
+DATA_SOURCE=smartsheet SMARTSHEET_TOKEN=… SMARTSHEET_CONTENT_SHEET_ID=… \
+  node demo/build.mjs --live           # a snapshot of the real thing
+  … --live --with-emails               # keep addresses in it
+```
+
+Four things make that safe to have:
+
+- **It writes a different file.** `forecasters-hub-live.html`, which is
+  gitignored, so a snapshot of the commissioning schedule cannot be committed
+  or confused with the one that gets shared.
+- **It refuses to lie.** `createDataSource()` falls back to the sample when
+  nothing is configured, so `--live` on an unconfigured machine would
+  otherwise write invented people under a banner claiming they are real. It
+  checks, and stops.
+- **The banner says what it is** — *"Internal snapshot. Real data from
+  smartsheet, frozen at 14 Sept 2026, 17:23. It does not update — the Hub
+  itself does. Do not share it outside WGSN."* — because somebody handed the
+  file a fortnight later will otherwise read an old schedule as today's.
+- **Addresses are stripped** unless `--with-emails`. The page only ever
+  displays them and nothing in it matches on one, so removing them costs the
+  demo nothing and means a file that leaves the building is not a contact
+  list.
+
+What a snapshot cannot carry is the parts that need a server: signing in as
+yourself, writing back to Smartsheet, and anything the studio reads through a
+live connection. Those are reasons to send the URL rather than the file.
+
 ## Branding
 
 WGSN house style: white surfaces, hairline rules, uppercase micro-labels,

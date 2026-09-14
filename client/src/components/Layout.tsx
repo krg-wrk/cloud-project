@@ -494,10 +494,13 @@ function NavGroup({
   groupKey,
   slot,
   items,
+  hue,
 }: {
   groupKey: GroupKey;
   slot: string;
   items: Section[];
+  /** The wash hue this section was given in the studio: dusk, magenta, … */
+  hue: string;
 }) {
   const { pathname } = useLocation();
   const [open, setOpen] = useState(() => !(readCollapsed()[groupKey] ?? false));
@@ -520,7 +523,7 @@ function NavGroup({
   };
 
   return (
-    <div className={open ? "nav-group" : "nav-group shut"}>
+    <div className={`nav-group hue-${hue}${open ? "" : " shut"}`}>
       <button className="nav-label" onClick={toggle} aria-expanded={open}>
         <Icon name="chevron-down" size={12} className="nav-fold" />
         <Slot id={slot} as="span" />
@@ -628,11 +631,11 @@ function useSections(content: ContentItem[]): Section[] {
   return [...withIcons(customise(fixed, custom)), ...built, ...studio, ...links];
 }
 
-function Sidebar({ content, onSearch }: { content: ContentItem[]; onSearch: () => void }) {
+function Sidebar({ content }: { content: ContentItem[] }) {
   const { people } = useViewer();
   const items = useSections(content);
-  // ⌘ on a Mac, Ctrl everywhere else. Read once: it never changes mid-session.
-  const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  // Which colour each section carries, as an admin set it in the studio.
+  const look = useAppearance();
 
   return (
     <aside className="sidebar">
@@ -650,12 +653,6 @@ function Sidebar({ content, onSearch }: { content: ContentItem[]; onSearch: () =
         <NotificationBell />
       </div>
 
-      {/* Above the sections, because it is a way to reach any of them. */}
-      <button className="search-open" onClick={onSearch}>
-        <Icon name="search" size={15} />
-        <span>Search</span>
-        <kbd>{mac ? "\u2318" : "Ctrl"}K</kbd>
-      </button>
       </div>
 
       {/* A heading only appears if its group has anything in it, so hiding
@@ -665,7 +662,18 @@ function Sidebar({ content, onSearch }: { content: ContentItem[]; onSearch: () =
         {GROUPS.map(({ key, slot }) => {
           const inGroup = items.filter((s) => s.group === key);
           if (!inGroup.length) return null;
-          return <NavGroup key={key} groupKey={key} slot={slot} items={inGroup} />;
+          return (
+            <NavGroup
+              key={key}
+              groupKey={key}
+              slot={slot}
+              items={inGroup}
+              /* The studio's choice for this section, which is also what
+                 decides the wash behind its pages — so the menu and the page
+                 agree without anybody keeping two settings in step. */
+              hue={look.washes?.[key] ?? "dusk"}
+            />
+          );
         })}
       </nav>
 
@@ -955,7 +963,7 @@ export default function Layout() {
           {/* Behind the content column, and behind nothing else: the sidebar
               paints its own paper over it. */}
           <Wash />
-          <Sidebar content={content.data} onSearch={openSearch} />
+          <Sidebar content={content.data} />
           <main className="main" id="main" tabIndex={-1}>
             <Outlet />
             {/*

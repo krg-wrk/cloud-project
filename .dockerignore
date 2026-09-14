@@ -20,5 +20,6 @@ data/*.db-wal
 .github
 .claude
 demo/forecasters-hub.html
+demo/forecasters-hub-live.html
 *.log
 *.tsbuildinfo

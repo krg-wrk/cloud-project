@@ -558,7 +558,11 @@
   }
 
   .nav-label:hover {
-    color: var(--ink);
+    color: var(--group-ink);
+  }
+
+  .nav-label:hover .nav-fold {
+    color: var(--group-ink);
   }
 
   .nav-fold {
@@ -572,13 +576,13 @@
     transform: rotate(-90deg);
   }
 
-  /* You are in this group, which is folded. Same accent the open group puts
-     against the current item. */
+  /* You are in this group, which is folded. The same colour the open group
+     puts against the current item, which is the group's own. */
   .nav-here {
     width: 5px;
     height: 5px;
     border-radius: 50%;
-    background: var(--accent);
+    background: var(--group-ink);
     flex: none;
   }
 
@@ -606,14 +610,52 @@
     color: var(--ink-mid);
   }
 
+  /*
+   * Each part of the Hub in its own colour.
+   *
+   * `--group-ink` is the *source* colour its wash was derived from, not the
+   * wash itself: a wash is a pale field and would be unreadable as text.
+   *
+   * Measured rather than assumed, because a hover colour is body text and
+   * 4.5:1 is the floor. Against the light ground: dusk 7.11, magenta 6.76,
+   * green 6.25, rose 6.14, teal 5.73, amber 4.52. Amber is the tight one and
+   * it still clears.
+   */
+  .nav-group {
+    --group-ink: var(--accent);
+  }
+
+  .nav-group.hue-dusk { --group-ink: var(--accent); }
+  .nav-group.hue-magenta { --group-ink: var(--mine); }
+  .nav-group.hue-green { --group-ink: var(--ok); }
+  .nav-group.hue-teal { --group-ink: var(--kind-lunch-and-learn); }
+  .nav-group.hue-rose { --group-ink: var(--kind-masterclass); }
+  .nav-group.hue-amber { --group-ink: var(--kind-critique); }
+
+  /* A fade rather than a switch: the colour arriving is the point, and an
+     instant change at 13px reads as a flicker. */
+  .nav-link,
+  .nav-link .icon,
+  .nav-label {
+    transition: color 0.18s ease;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .nav-link,
+    .nav-link .icon,
+    .nav-label {
+      transition: none;
+    }
+  }
+
   .nav-link:hover {
-    color: var(--accent);
+    color: var(--group-ink);
   }
 
   .nav-link.on {
     color: var(--ink);
     padding-left: 10px;
-    box-shadow: inset 2px 0 0 var(--accent);
+    box-shadow: inset 2px 0 0 var(--group-ink);
   }
 
   .nav-link b {
@@ -626,7 +668,7 @@
   }
 
   .nav-link.on b {
-    color: var(--accent);
+    color: var(--group-ink);
   }
 
   .rail-foot {
@@ -6918,29 +6960,6 @@
     outline: none;
   }
 
-  .search-open {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 100%;
-    padding: 8px 10px;
-    border: 1px solid var(--line);
-    background: var(--ground);
-    font: inherit;
-    font-size: 13px;
-    color: var(--ink-soft);
-    text-align: left;
-  }
-
-  .search-open:hover {
-    border-color: var(--line-firm);
-    color: var(--ink-mid);
-  }
-
-  .search-open > span:nth-child(2) {
-    flex: 1;
-  }
-
   .palette-scrim {
     position: fixed;
     inset: 0;
@@ -7114,8 +7133,7 @@
     .rv-keys,
     .rv-actions kbd,
     .rv-reasons kbd,
-    .palette-foot span:first-child,
-    .search-open kbd {
+    .palette-foot span:first-child {
       display: none;
     }
   }
@@ -7163,15 +7181,9 @@
 -->
 <a class="skip" href="#view">Skip to the page</a>
 
-<div class="demo-note">
-  <strong>Proof of concept</strong>
-  <span
-    >Sample schedule, not live data. Two things are real: the address bar below changes as you
-    move around, and what you write &mdash; notes, reminders, peer reviews, workshop sign-ups
-    &mdash; saves and is visible to anyone else on this page. Switch account at the bottom left
-    to see the view follow whoever is signed in.</span
-  >
-</div>
+<!-- Replaced wholesale by demo/build.mjs on a live snapshot, because the
+     first line of a page carrying real names must not say "sample data". -->
+<div class="demo-note">__BANNER__</div>
 
 <div class="urlbar">
   <div class="urlbar-dots"><i></i><i></i><i></i></div>
@@ -7209,10 +7221,6 @@
              about you, not about a section of the app. -->
         <div class="bell-wrap" id="bell-wrap"></div>
       </div>
-      <!-- Above the sections, because it is a way to reach any of them. -->
-      <button class="search-open" id="search-open">
-        <span id="search-icon"></span><span>Search</span><kbd id="search-key"></kbd>
-      </button>
     </div>
     <nav id="nav" class="nav-scroll"></nav>
     <!-- One row: who you are, and a cog. Everything else — the address, the
@@ -8607,7 +8615,10 @@
         if (!chunk.label) return chunk.rows.map(linkHtml).join("");
         const open = !shut[chunk.key];
         const holdsCurrent = chunk.rows.some(([, , key]) => key === here);
-        return `<div class="nav-group${open ? "" : " shut"}">
+        // The colour this section carries, as an admin set it in the studio —
+        // the same choice that decides the wash behind its pages.
+        const hue = lookWashes[chunk.key] ?? "dusk";
+        return `<div class="nav-group hue-${hue}${open ? "" : " shut"}">
           <button class="nav-label" data-fold="${esc(chunk.key)}" aria-expanded="${open}">
             ${icon("chevron-down", 12, "nav-fold")}<span>${chunk.label}</span>
             ${!open && holdsCurrent ? '<span class="nav-here" title="The page you are on is in this group"></span>' : ""}
@@ -15300,7 +15311,10 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
   function closePalette() {
     paletteOpen = false;
     renderPalette(false);
-    document.getElementById("search-open")?.focus();
+    // Nothing to return focus to on a desktop — the palette is opened by the
+    // keyboard now, not by a button — so the phone's sheet link is the only
+    // opener that still exists to go back to.
+    document.querySelector("[data-pal-open]")?.focus();
   }
 
   /* ---- Notifications ---------------------------------------------------
@@ -16914,13 +16928,6 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     view.innerHTML = html;
     document.getElementById("edit-bar").innerHTML = editBar();
     document.getElementById("bell-wrap").innerHTML = bellHtml();
-    document.getElementById("search-icon").innerHTML = icon("search", 15);
-    // ⌘ on a Mac, Ctrl everywhere else. "/" works either way.
-    document.getElementById("search-key").textContent = /Mac|iPhone|iPad/.test(
-      navigator.platform || navigator.userAgent,
-    )
-      ? "\u2318K"
-      : "CtrlK";
     renderNav();
     renderUrl();
 
@@ -18157,7 +18164,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
     // The search palette. Delegated, like the bell, because it lives outside
     // the element a page render replaces.
-    if (e.target.closest("#search-open") || e.target.closest("[data-pal-open]")) {
+    if (e.target.closest("[data-pal-open]")) {
       sheetOpen = false;
       renderNav();
       openPalette();

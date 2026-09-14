@@ -11,23 +11,104 @@ import { writeFileSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 
 const here = dirname(new URL(import.meta.url).pathname);
-const {
-  people,
-  content,
-  events,
-  sessions,
-  signUps,
-  access,
-  metrics,
-  metricObservations,
-  trends,
-} = await import(join(here, "../server/dist/data/seed.js"));
+
+/** The source's name reaches the page as markup, so it is escaped. */
+const escapeHtml = (value) =>
+  String(value).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
 /*
- * The directory: the invented rows, read by the Hub's own reader, so the demo
- * carries people rather than rows and the parsing is not written twice.
+ * Two builds from one template.
+ *
+ * Without a flag this is the shareable page: invented people, an invented
+ * schedule, safe to email to anyone. `--live` reads whatever the server is
+ * configured to read — the real Smartsheet sheets — and writes a *different
+ * file*, because a snapshot of the real commissioning schedule is an internal
+ * document and must never be confused with the one that gets sent around.
+ *
+ *   node demo/build.mjs                 # the sample (default)
+ *   DATA_SOURCE=smartsheet SMARTSHEET_TOKEN=… \
+ *     node demo/build.mjs --live        # a snapshot of the real thing
+ *   … --live --with-emails              # keep addresses in it (see below)
+ *
+ * Addresses are stripped from a live snapshot unless asked for. The page only
+ * ever *displays* them; nothing in it matches on one, so removing them costs
+ * the demo nothing and means a file that leaves the building is not a
+ * contact list.
  */
-const { directoryRows } = await import(join(here, "../server/dist/data/directory.js"));
-const { readDirectory } = await import(join(here, "../server/dist/directory.js"));
+const LIVE = process.argv.includes("--live");
+const WITH_EMAILS = process.argv.includes("--with-emails");
+
+let people, content, events, sessions, signUps, access, metrics, metricObservations, trends;
+let directory;
+let sourceName = "the built-in sample";
+let takenAt = null;
+
+if (LIVE) {
+  const { createDataSource } = await import(join(here, "../server/dist/data/index.js"));
+  const source = createDataSource();
+
+  /*
+   * Refuse to label the sample as live.
+   *
+   * `createDataSource()` falls back to the seed when DATA_SOURCE is not set,
+   * so without this check `--live` on an unconfigured machine would write a
+   * file full of invented people with a banner claiming it is real — which is
+   * a worse outcome than any error.
+   */
+  if (/seed/i.test(source.name)) {
+    console.error(
+      "--live needs the server's own data settings, and none are set.\n" +
+        "DATA_SOURCE=smartsheet, SMARTSHEET_TOKEN and the sheet ids, as in the README.\n" +
+        "Nothing was written.",
+    );
+    process.exit(1);
+  }
+
+  sourceName = source.name;
+  takenAt = new Date();
+  process.stdout.write(`Reading ${sourceName}…\n`);
+
+  [people, content, events, sessions, signUps, access, metrics, metricObservations, trends, directory] =
+    await Promise.all([
+      source.listPeople(),
+      source.listContent(),
+      source.listEvents(),
+      source.listSessions(),
+      source.listSignUps(),
+      source.listAccess(),
+      source.listMetrics(),
+      source.listMetricObservations(),
+      source.listTrends(),
+      source.listDirectory(),
+    ]);
+
+  if (!WITH_EMAILS) {
+    const strip = (rows) =>
+      rows.map((row) => (row && row.email ? { ...row, email: "" } : row));
+    people = strip(people);
+    access = strip(access);
+    directory = strip(directory);
+  }
+} else {
+  ({
+    people,
+    content,
+    events,
+    sessions,
+    signUps,
+    access,
+    metrics,
+    metricObservations,
+    trends,
+  } = await import(join(here, "../server/dist/data/seed.js")));
+  /*
+   * The directory: the invented rows, read by the Hub's own reader, so the
+   * demo carries people rather than rows and the parsing is not written twice.
+   */
+  const { directoryRows } = await import(join(here, "../server/dist/data/directory.js"));
+  const { readDirectory } = await import(join(here, "../server/dist/directory.js"));
+  directory = readDirectory(directoryRows);
+}
 const { CONTENT_TYPES, TIER_MEANINGS, ROLE_BENCHMARKS } = await import(
   join(here, "../server/dist/taxonomy.js")
 );
@@ -119,7 +200,30 @@ function proofPointSample(every = 3) {
 
 const proofPoints = proofPointSample();
 
-const html = readFileSync(join(here, "hub.template.html"), "utf8").replace(
+/*
+ * The first line of the page, which is the one that must not lie.
+ *
+ * A sample build says it is a sample. A live snapshot says whose data it is,
+ * when it was taken, and that it is frozen — because somebody handed this
+ * file next week will otherwise read a fortnight-old schedule as today's.
+ */
+const banner = LIVE
+  ? `<strong>Internal snapshot</strong><span>Real data from ${escapeHtml(sourceName)}, ` +
+    `frozen at ${takenAt.toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" })}. ` +
+    `It does not update — the Hub itself does. ${
+      WITH_EMAILS
+        ? "It carries email addresses."
+        : "Email addresses have been removed."
+    } Do not share it outside WGSN.</span>`
+  : `<strong>Proof of concept</strong><span>Sample schedule, not live data. Two things are ` +
+    `real: the address bar below changes as you move around, and what you write &mdash; notes, ` +
+    `reminders, peer reviews, workshop sign-ups &mdash; saves and is visible to anyone else on ` +
+    `this page. Switch account at the bottom left to see the view follow whoever is signed ` +
+    `in.</span>`;
+
+const html = readFileSync(join(here, "hub.template.html"), "utf8")
+  .replace("__BANNER__", () => banner)
+  .replace(
   "__SEED__",
   JSON.stringify({
     people,
@@ -131,7 +235,7 @@ const html = readFileSync(join(here, "hub.template.html"), "utf8").replace(
     metrics,
     trends,
     observations: metricObservations,
-    directory: readDirectory(directoryRows),
+    directory,
     taxonomy: { contentTypes: CONTENT_TYPES, tiers: TIER_MEANINGS, roles: ROLE_BENCHMARKS },
     proofPoints,
   }),
@@ -164,12 +268,12 @@ try {
   process.exit(1);
 }
 
-const out = join(here, "forecasters-hub.html");
+const out = join(here, LIVE ? "forecasters-hub-live.html" : "forecasters-hub.html");
 writeFileSync(out, html);
 const live = trends.filter((t) => t.published === "Published").length;
 const decided = proofPoints.points.filter((p) => p.decision).length;
 console.log(
-  `${out} — ${(html.length / 1e6).toFixed(2)} MB\n` +
+  `${out} — ${(html.length / 1e6).toFixed(2)} MB${LIVE ? "  [INTERNAL — real data]" : ""}\n` +
     `  ${people.length} people, ${content.length} forecasts, ${events.length} events, ` +
     `${sessions.length} sessions, ${metrics.length} metrics, ${CONTENT_TYPES.length} formats\n` +
     `  ${trends.length} trend profiles from TFDB (${live} live, ${trends.length - live} not published)\n` +
