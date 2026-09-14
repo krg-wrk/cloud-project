@@ -95,6 +95,21 @@
     --mono: "DM Mono", ui-monospace, "SF Mono", Menlo, monospace;
 
     --rail: 240px;
+
+    /*
+     * The washes, as bare RGB triplets so an alpha can be chosen per use.
+     *
+     * Taken off WGSN's own material: a pale iridescent field, mint through
+     * cream through lilac, at a saturation low enough that it reads as light
+     * rather than as colour. These are the full-strength hues and are never
+     * painted at full strength — everything below uses them between 10% and
+     * 30%, over a ground that is already near-white.
+     */
+    --wash-lilac: 148 158 232;
+    --wash-mint: 132 206 180;
+    --wash-cream: 232 210 142;
+    --wash-rose: 228 158 198;
+
     /*
      * Corners. These were square with the edge knocked off — close enough to
      * a hard corner that it read as severity rather than as a decision. 6px
@@ -160,7 +175,18 @@
       --cover-l2: 17%;
       /* A shadow on a near-black ground has to be much heavier to read at
          all, and is nearly pure black rather than tinted. */
-      --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 2px 8px rgb(0 0 0 / 26%);
+      /* The same washes, dimmer: on a near-black ground a pale tint reads as
+         fog, so the dark theme uses deeper, more saturated versions at a
+         lower alpha and lets them glow rather than wash. */
+      --wash-lilac: 108 122 214;
+      --wash-mint: 74 170 144;
+      --wash-cream: 186 160 84;
+      --wash-rose: 196 106 160;
+      --wash-lilac: 108 122 214;
+    --wash-mint: 74 170 144;
+    --wash-cream: 186 160 84;
+    --wash-rose: 196 106 160;
+    --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 2px 8px rgb(0 0 0 / 26%);
       --shadow-lift: 0 2px 4px rgb(0 0 0 / 46%), 0 8px 24px rgb(0 0 0 / 34%);
       color-scheme: dark;
     }
@@ -259,6 +285,14 @@
   /* ---- Demo frame -------------------------------------------------------- */
 
   .demo-note {
+    /*
+     * Positioned only so it can be lifted above the wash. The wash is fixed
+     * with a z-index of 0, and an unpositioned banner paints below anything
+     * with a z-index at all — so without this the field bled across the top
+     * of the proof-of-concept strip. The address bar below is already at 5.
+     */
+    position: relative;
+    z-index: 6;
     display: flex;
     align-items: baseline;
     gap: 10px;
@@ -596,6 +630,10 @@
   main {
     min-width: 0;
     padding: 30px 34px 90px;
+    /* Above the wash. Everything inside inherits the layer, so nothing else
+       needs a z-index of its own. */
+    position: relative;
+    z-index: 1;
   }
 
   /* ---- Page furniture ---------------------------------------------------- */
@@ -1011,6 +1049,156 @@
     line-height: 1.5;
   }
 
+  /* --- The wash -------------------------------------------------------------
+   *
+   * A soft iridescent field behind the content column, fixed so the page moves
+   * over it: it should behave like the light in the room rather than like a
+   * pattern printed on the page.
+   *
+   * Colour at the edges, white through the middle. This is the thing WGSN's
+   * own material does and the thing the first attempt got backwards — putting
+   * the strongest radial where the title is tinted the whole head of the page
+   * and read as a coloured banner, not as light. Four small radials pinned
+   * near the edges, none reaching the centre, all faint.
+   * ------------------------------------------------------------------------- */
+
+  .wash {
+    display: none;
+  }
+
+  :root[data-gradients="on"] .wash {
+    display: block;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: var(--rail);
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(38% 30% at 0% 2%, rgb(var(--lead) / 20%), transparent 68%),
+      radial-gradient(30% 26% at 100% 0%, rgb(var(--wash-lilac) / 13%), transparent 66%),
+      radial-gradient(42% 30% at 96% 62%, rgb(var(--support) / 12%), transparent 66%),
+      radial-gradient(50% 26% at 20% 100%, rgb(var(--wash-cream) / 10%), transparent 68%);
+  }
+
+  .wash-lilac {
+    --lead: var(--wash-lilac);
+    --support: var(--wash-mint);
+  }
+
+  .wash-mint {
+    --lead: var(--wash-mint);
+    --support: var(--wash-cream);
+  }
+
+  .wash-cream {
+    --lead: var(--wash-cream);
+    --support: var(--wash-rose);
+  }
+
+  .wash-rose {
+    --lead: var(--wash-rose);
+    --support: var(--wash-lilac);
+  }
+
+  /*
+   * Where a section starts, said in the rule rather than in a block behind it.
+   *
+   * A filled band behind each title was the first reading of "split by the
+   * title sections". It was wrong twice over: a rectangle with an edge is
+   * exactly what a wash is not, and stacked down a page the bands turn the
+   * layout into a chart of itself. The rule under the title was already doing
+   * the splitting, so the rule carries the colour instead.
+   */
+  :root[data-gradients="on"] .sec-head {
+    border-bottom-color: transparent;
+    background-image: linear-gradient(
+      90deg,
+      rgb(var(--lead, var(--wash-lilac)) / 85%),
+      rgb(var(--lead, var(--wash-lilac)) / 20%) 34%,
+      var(--line) 70%
+    );
+    background-size: 100% 1px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+  }
+
+  /*
+   * The canvas breathes.
+   *
+   * One page gets movement and this is the one, because it is the only page in
+   * the Hub that is a workspace rather than a document — the thing it stands
+   * in for is alive, and a perfectly still rectangle undersells that.
+   *
+   * Three soft blobs on a single layer. One layer rather than two
+   * pseudo-elements, because `::after` paints *above* the positioned nodes and
+   * would fog them; `::before` sits below. `transform` rather than
+   * `background-position`, so the browser can hand it to the compositor and
+   * never repaint the graph underneath.
+   */
+  :root[data-gradients="on"] .node-canvas::before {
+    content: "";
+    position: absolute;
+    /* Oversized, so the edges of the blobs never swing into view. */
+    inset: -25%;
+    pointer-events: none;
+    background:
+      radial-gradient(26% 32% at 28% 36%, rgb(var(--wash-rose) / 30%), transparent 62%),
+      radial-gradient(24% 28% at 72% 62%, rgb(var(--wash-mint) / 26%), transparent 62%),
+      radial-gradient(22% 26% at 56% 16%, rgb(var(--wash-lilac) / 24%), transparent 62%);
+    animation: canvas-drift 38s ease-in-out infinite alternate;
+  }
+
+  @keyframes canvas-drift {
+    from {
+      transform: translate3d(-2.5%, -2%, 0) scale(1);
+    }
+
+    to {
+      transform: translate3d(3.5%, 2.5%, 0) scale(1.14);
+    }
+  }
+
+  /* Somebody who has asked their machine for less movement gets the field
+     without the drift, rather than losing the colour as well. */
+  @media (prefers-reduced-motion: reduce) {
+    :root[data-gradients="on"] .node-canvas::before {
+      animation: none;
+    }
+  }
+
+  /* The one switch on the Look page, which needs room for a sentence under it
+     rather than a label on one line. */
+  .gradient-switch {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 4px;
+    font-size: 13.5px;
+  }
+
+  .gradient-switch input {
+    width: 15px;
+    height: 15px;
+    margin-top: 3px;
+    flex: none;
+    accent-color: var(--accent);
+  }
+
+  .gradient-switch b {
+    display: block;
+    font-weight: 500;
+  }
+
+  .gradient-switch small {
+    display: block;
+    margin-top: 3px;
+    max-width: 62ch;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+
   /* --- The node workspace ---------------------------------------------------
    *
    * Three columns: what you can pull in, the canvas, and what the selected
@@ -1324,10 +1512,16 @@
     background: var(--call-expand);
   }
 
-  .call-protect { background: var(--call-protect); }
-  .call-test { background: var(--call-test); }
-  .call-expand { background: var(--call-expand); }
-  .call-invest { background: var(--call-invest); }
+  /*
+   * Scoped to `.call`: the Trends page has its own call pills marked
+   * `call-pill call-expand`, and bare `.call-expand` rules later in this file
+   * beat `.call-pill` on order — which turned that page's light, dotted pills
+   * into solid navy blocks with navy text on them.
+   */
+  .call.call-protect { background: var(--call-protect); }
+  .call.call-test { background: var(--call-test); }
+  .call.call-expand { background: var(--call-expand); }
+  .call.call-invest { background: var(--call-invest); }
 
   .head-actions {
     display: flex;
@@ -6573,7 +6767,10 @@
   <button class="copy-btn" id="copy">Copy link to this view</button>
 </div>
 
-<div class="shell">
+<div class="shell" id="shell">
+  <!-- Behind the content column, and behind nothing else: the rail paints its
+       own paper over it. -->
+  <div class="wash" aria-hidden="true"></div>
   <aside class="rail">
     <!-- Pinned: the identity and the way into everything stay put while the
          menu below them scrolls. -->
@@ -7851,8 +8048,27 @@
     }
   }
 
+  /**
+   * Which hue the wash takes, by where you are.
+   *
+   * Keyed to the rail's own groups rather than to individual pages: the point
+   * is that Data feels like Data, not that every page is a different colour.
+   * Anything unrecognised gets the accent's own lilac, which is the Hub's
+   * default temperature.
+   */
+  function washClass(first) {
+    if (first === "lab") return "wash-rose";
+    if (first === "data") return "wash-mint";
+    if (["team", "workshops", "whats-on", "subscribe"].includes(first)) return "wash-cream";
+    return "wash-lilac";
+  }
+
   function renderNav() {
     const { parts } = route();
+    const shell = document.getElementById("shell");
+    if (shell) {
+      shell.className = `shell ${washClass(parts[0] ?? "")}`;
+    }
     // A custom view lives at /v/<slug> and a Data sub-view at /data/<name>,
     // so "here" has to carry both segments or every one of them would
     // highlight at once.
@@ -11719,6 +11935,20 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
 
   const lookColours = {};
   const lookIcons = {};
+  /*
+   * Whether the pages carry the iridescent wash.
+   *
+   * On by default, and one switch for everybody rather than a per-person
+   * preference: it is a decision about how the Hub looks, the same kind of
+   * decision as the accent colour sitting below it. The movement on the
+   * Forecast Builder is governed separately by the browser's own
+   * reduced-motion setting, which no admin should be able to overrule.
+   */
+  let lookGradients = true;
+
+  function applyGradients() {
+    document.documentElement.dataset.gradients = lookGradients ? "on" : "off";
+  }
 
   /** WCAG relative luminance, for the contrast figure beside each swatch. */
   function lookContrast(hex) {
@@ -11747,6 +11977,24 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           on any sidebar item. The paper, the ink and the rules are the house style and are
           not here — changing those is a redesign rather than a setting. In the running Hub
           this is saved for the whole team; on this page it lasts until you reload.</p>
+      </div>
+
+      <!--
+        First, because it is the one setting here that changes how every page
+        feels rather than what one chip means — and because somebody who wants
+        it off wants it off before they read anything else.
+      -->
+      <div class="studio-item">
+        <div class="studio-item-head"><h2>Background</h2></div>
+        <label class="gradient-switch">
+          <input type="checkbox" data-look-gradients${lookGradients ? " checked" : ""} />
+          <span>
+            <b>Iridescent wash behind the pages</b>
+            <small>A very pale field of colour that stays put while the page scrolls, and a
+              band under each title. Its hue follows the section you are in — the Lab warm,
+              Data cool, the team warmer. Off gives you flat paper.</small>
+          </span>
+        </label>
       </div>
       ${groups
         .map(
@@ -15941,6 +16189,13 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         render();
       }),
     );
+    view.querySelectorAll("[data-look-gradients]").forEach((el) =>
+      el.addEventListener("change", () => {
+        lookGradients = el.checked;
+        applyGradients();
+        render();
+      }),
+    );
     view.querySelectorAll("[data-look-icon]").forEach((el) =>
       el.addEventListener("change", () => {
         const slot = el.dataset.lookIcon;
@@ -17389,6 +17644,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
    * screen reader with no language falls back to the reader's own, which
    * turns "S/S 28" and "A/W 27/28" into noise.
    */
+  applyGradients();
   document.documentElement.lang = "en-GB";
 
   render();

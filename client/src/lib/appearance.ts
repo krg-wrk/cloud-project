@@ -25,10 +25,12 @@ export interface Token {
 export interface Appearance {
   colours: Record<string, string>;
   icons: Record<string, string>;
+  /** Whether the pages carry the iridescent wash behind them. */
+  gradients: boolean;
   tokens?: Token[];
 }
 
-export const NO_APPEARANCE: Appearance = { colours: {}, icons: {} };
+export const NO_APPEARANCE: Appearance = { colours: {}, icons: {}, gradients: true };
 
 /**
  * Put a set of colours on the page.
@@ -47,6 +49,17 @@ export function applyColours(tokens: Token[], colours: Record<string, string>): 
     if (chosen) root.style.setProperty(token.css, chosen);
     else root.style.removeProperty(token.css);
   }
+}
+
+/**
+ * Turn the wash on or off, page-wide.
+ *
+ * An attribute on the root rather than a class on the shell, so the whole
+ * stylesheet can gate on it in one selector and the preview in the studio is
+ * a single line either way.
+ */
+export function applyGradients(on: boolean): void {
+  document.documentElement.dataset.gradients = on ? "on" : "off";
 }
 
 /**
@@ -70,6 +83,10 @@ export function useAppearance(): Appearance {
     if (tokens.length) applyColours(tokens, look.colours);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, tokens.length]);
+
+  useEffect(() => {
+    applyGradients(look.gradients !== false);
+  }, [look.gradients]);
 
   const { reload } = stored;
   useEffect(() => {

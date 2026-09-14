@@ -1,5 +1,11 @@
 <!doctype html>
-<html lang="en-GB">
+<!--
+  The wash is on until the server says otherwise. Declared here rather than
+  left to the appearance hook so the first paint already has it: coming up
+  grey and then turning iridescent a moment later looks like a bug, and the
+  overwhelming majority of loads are going to end up on anyway.
+-->
+<html lang="en-GB" data-gradients="on">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />

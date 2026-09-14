@@ -121,6 +121,20 @@
   --shadow: 0 1px 2px rgb(38 44 72 / 6%), 0 2px 8px rgb(38 44 72 / 4%);
   --shadow-lift: 0 2px 4px rgb(38 44 72 / 8%), 0 8px 24px rgb(38 44 72 / 7%);
   --sidebar-width: 244px;
+
+  /*
+   * The washes, as bare RGB triplets so an alpha can be chosen per use.
+   *
+   * Taken off WGSN's own material: a pale iridescent field, mint through
+   * cream through lilac, at a saturation low enough that it reads as light
+   * rather than as colour. These are the *full-strength* hues and are never
+   * painted at full strength — everything below uses them at 6% to 22%, over
+   * a ground that is already near-white.
+   */
+  --wash-lilac: 148 158 232;
+  --wash-mint: 132 206 180;
+  --wash-cream: 232 210 142;
+  --wash-rose: 228 158 198;
 }
 
 * {
@@ -415,12 +429,85 @@ button {
   font-size: 13px;
 }
 
+/* --- The wash -------------------------------------------------------------
+ *
+ * A soft iridescent field behind the content column, fixed so the page moves
+ * over it: it should behave like the light in the room rather than like a
+ * pattern printed on the page. Three overlapping radials rather than one, so
+ * the hues meet and blend the way they do in the reference instead of sitting
+ * in bands.
+ *
+ * `.main` is lifted to its own layer above it, which is the whole of the
+ * stacking arrangement — no z-index is needed on anything inside.
+ * -------------------------------------------------------------------------- */
+
+.wash {
+  display: none;
+}
+
+:root[data-gradients="on"] .wash {
+  display: block;
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: var(--sidebar-width);
+  z-index: 0;
+  pointer-events: none;
+  /*
+   * Colour at the edges, white through the middle.
+   *
+   * This is the thing the reference does and the thing the first attempt got
+   * backwards. Putting the strongest radial at the top-left — where the title
+   * is — tinted the whole head of the page and read as a coloured banner, not
+   * as light. In the material it is the opposite: the centre, where the words
+   * go, is nearly white, and the colour gathers at the corners and creeps in
+   * from the sides.
+   *
+   * So: four small radials pinned outside or near the edges, none of them
+   * reaching the middle, and all of them faint. The page's own hue leads at
+   * the top-left; the others are there so the field is iridescent rather than
+   * a single tint — which is the whole difference between this and a wash of
+   * pale purple.
+   */
+  background:
+    radial-gradient(38% 30% at 0% 2%, rgb(var(--lead) / 20%), transparent 68%),
+    radial-gradient(30% 26% at 100% 0%, rgb(var(--wash-lilac) / 13%), transparent 66%),
+    radial-gradient(42% 30% at 96% 62%, rgb(var(--support) / 12%), transparent 66%),
+    radial-gradient(50% 26% at 20% 100%, rgb(var(--wash-cream) / 10%), transparent 68%);
+}
+
+.wash-lilac {
+  --lead: var(--wash-lilac);
+  --support: var(--wash-mint);
+}
+
+.wash-mint {
+  --lead: var(--wash-mint);
+  --support: var(--wash-cream);
+}
+
+.wash-cream {
+  --lead: var(--wash-cream);
+  --support: var(--wash-rose);
+}
+
+.wash-rose {
+  --lead: var(--wash-rose);
+  --support: var(--wash-lilac);
+}
+
 .main {
   min-width: 0;
   padding: 32px 40px 90px;
+  /* Above the wash. Everything inside inherits the layer, so nothing else in
+     the app needs a z-index of its own. */
+  position: relative;
+  z-index: 1;
 }
 
 .page-head {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
@@ -430,6 +517,34 @@ button {
   margin-bottom: 26px;
   border-bottom: 1px solid var(--ink);
 }
+
+/*
+ * Where a section starts, said in the rule rather than in a block behind it.
+ *
+ * "Split by the title sections" started as a filled band behind each title.
+ * It was a mistake twice over: a rectangle with an edge is exactly what a
+ * wash is not, and stacked down a page the bands turned the layout into a
+ * chart of itself. The rule under the title was already doing the splitting —
+ * so the rule carries the colour instead, fading out along its own length.
+ *
+ * Costs nothing, cannot box anything in, and still means the page changes
+ * temperature as you move down it.
+ */
+:root[data-gradients="on"] .section-head {
+  border-bottom-color: transparent;
+  background-image: linear-gradient(
+    90deg,
+    rgb(var(--lead, var(--wash-lilac)) / 85%),
+    rgb(var(--lead, var(--wash-lilac)) / 20%) 34%,
+    var(--rule) 70%
+  );
+  background-size: 100% 1px;
+  background-position: 0 100%;
+  background-repeat: no-repeat;
+}
+
+/* The page's own title rule stays the firm black one — it is the top of the
+   page and the one line that should not be decorative. */
 
 .page-title {
   font-family: var(--display);
@@ -6107,6 +6222,51 @@ a.inbox-title:hover {
   box-shadow: var(--shadow);
 }
 
+/*
+ * The canvas breathes.
+ *
+ * One page gets movement and this is the one, because it is the only page in
+ * the Hub that is a workspace rather than a document — the thing it is
+ * standing in for is alive, and a perfectly still rectangle undersells that.
+ * Everywhere else motion would just be something to wait out.
+ *
+ * Three soft blobs on a single layer, drifting and swelling over half a
+ * minute. One layer rather than two pseudo-elements, because `::after` paints
+ * *above* the positioned nodes and would fog them; `::before` sits below.
+ * `transform` rather than `background-position` so the browser can hand it to
+ * the compositor and never repaint the graph underneath.
+ */
+:root[data-gradients="on"] .node-canvas::before {
+  content: "";
+  position: absolute;
+  /* Oversized, so the edges of the blobs never swing into view. */
+  inset: -25%;
+  pointer-events: none;
+  background:
+    radial-gradient(26% 32% at 28% 36%, rgb(var(--wash-rose) / 30%), transparent 62%),
+    radial-gradient(24% 28% at 72% 62%, rgb(var(--wash-mint) / 26%), transparent 62%),
+    radial-gradient(22% 26% at 56% 16%, rgb(var(--wash-lilac) / 24%), transparent 62%);
+  animation: canvas-drift 38s ease-in-out infinite alternate;
+}
+
+@keyframes canvas-drift {
+  from {
+    transform: translate3d(-2.5%, -2%, 0) scale(1);
+  }
+
+  to {
+    transform: translate3d(3.5%, 2.5%, 0) scale(1.14);
+  }
+}
+
+/* Somebody who has asked their machine for less movement gets the field
+   without the drift, rather than losing the colour as well. */
+@media (prefers-reduced-motion: reduce) {
+  :root[data-gradients="on"] .node-canvas::before {
+    animation: none;
+  }
+}
+
 .wire-layer {
   position: absolute;
   inset: 0;
@@ -6342,19 +6502,26 @@ a.inbox-title:hover {
   background: var(--call-expand);
 }
 
-.call-protect {
+/*
+ * Scoped to `.call`, which matters: the Trends page has its own call pills
+ * marked `call-pill call-expand`, and bare `.call-expand` rules sitting later
+ * in this file beat `.call-pill` on specificity order — which turned that
+ * page's light, dotted pills into solid navy blocks with navy text on them.
+ * The hue only applies to something that is also a `.call`.
+ */
+.call.call-protect {
   background: var(--call-protect);
 }
 
-.call-test {
+.call.call-test {
   background: var(--call-test);
 }
 
-.call-expand {
+.call.call-expand {
   background: var(--call-expand);
 }
 
-.call-invest {
+.call.call-invest {
   background: var(--call-invest);
 }
 
@@ -6788,6 +6955,31 @@ a.inbox-title:hover {
   width: 15px;
   height: 15px;
   accent-color: var(--accent);
+}
+
+/* The one switch on the Look page, which needs room for a sentence under it
+   rather than a label on one line. */
+.gradient-switch {
+  align-items: flex-start;
+  margin-top: 4px;
+}
+
+.gradient-switch input {
+  margin-top: 3px;
+  flex: none;
+}
+
+.gradient-switch b {
+  display: block;
+  font-weight: 500;
+}
+
+.gradient-switch small {
+  display: block;
+  margin-top: 3px;
+  max-width: 62ch;
+  color: var(--ink-45);
+  line-height: 1.55;
 }
 
 .drop-zone.over {

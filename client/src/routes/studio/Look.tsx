@@ -3,7 +3,13 @@ import { send, useApi } from "../../lib/api";
 import { NAV_ICONS } from "../../components/Layout";
 import { ICON_PATHS, Icon } from "../../lib/icons";
 import { SLOT_GROUPS } from "../../lib/slots";
-import { APPEARANCE_CHANGED, applyColours, type Appearance, type Token } from "../../lib/appearance";
+import {
+  APPEARANCE_CHANGED,
+  applyColours,
+  applyGradients,
+  type Appearance,
+  type Token,
+} from "../../lib/appearance";
 import { ErrorNote, Loading } from "../../components/bits";
 
 /**
@@ -42,6 +48,7 @@ export default function Look() {
   const stored = useApi<Appearance & { tokens: Token[] }>("/appearance");
   const [colours, setColours] = useState<Record<string, string> | null>(null);
   const [icons, setIcons] = useState<Record<string, string> | null>(null);
+  const [gradients, setGradients] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -50,6 +57,7 @@ export default function Look() {
     if (stored.data && colours === null) {
       setColours(stored.data.colours ?? {});
       setIcons(stored.data.icons ?? {});
+      setGradients(stored.data.gradients !== false);
     }
   }, [stored.data, colours]);
 
@@ -70,14 +78,28 @@ export default function Look() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drafted, tokenList]);
 
+  /*
+   * The switch previews on the real page too, and puts back what was saved if
+   * you leave without saving — the same bargain the colours make. A wash can
+   * only be judged against a page, not against the word "gradients".
+   */
+  const savedGradients = stored.data?.gradients !== false;
+  useEffect(() => {
+    if (gradients === null) return;
+    applyGradients(gradients);
+    return () => applyGradients(savedGradients);
+  }, [gradients, savedGradients]);
+
   if (stored.error) return <ErrorNote message={stored.error} />;
-  if (!stored.data || !colours || !icons) return <Loading what="the colours" />;
+  if (!stored.data || !colours || !icons || gradients === null) {
+    return <Loading what="the colours" />;
+  }
 
   const tokens = stored.data.tokens ?? [];
   const groups = [...new Set(tokens.map((t) => t.group))];
   const navItems = SLOT_GROUPS["nav.item"]?.slots ?? [];
   const changed =
-    Object.keys(colours).length > 0 || Object.keys(icons).length > 0;
+    Object.keys(colours).length > 0 || Object.keys(icons).length > 0 || !gradients;
 
   const set = (id: string, value: string) => {
     const next = { ...colours };
@@ -101,10 +123,11 @@ export default function Look() {
       const res = await send<Appearance & { dropped?: number }>(
         "/studio/appearance",
         "PUT",
-        { colours, icons },
+        { colours, icons, gradients },
       );
       setColours(res.colours);
       setIcons(res.icons);
+      setGradients(res.gradients !== false);
       setNote(
         res.dropped
           ? `Saved. ${res.dropped} value${res.dropped === 1 ? " was" : "s were"} left out — a colour has to be a hex code like #4c5578.`
@@ -136,11 +159,38 @@ export default function Look() {
           onClick={() => {
             setColours({});
             setIcons({});
+            setGradients(true);
           }}
           disabled={!changed}
         >
           Put everything back
         </button>
+      </div>
+
+      {/*
+        First, because it is the one setting on this page that changes how
+        every page feels rather than what one chip means — and because
+        somebody who wants it off wants it off before they read anything else.
+      */}
+      <div className="studio-item">
+        <div className="studio-item-head">
+          <h2>Background</h2>
+        </div>
+        <label className="check gradient-switch">
+          <input
+            type="checkbox"
+            checked={gradients}
+            onChange={(e) => setGradients(e.target.checked)}
+          />
+          <span>
+            <b>Iridescent wash behind the pages</b>
+            <small>
+              A very pale field of colour that stays put while the page scrolls, and a
+              band behind each title. Its hue follows the section you are in — the Lab
+              warm, Data cool, the team warmer. Off gives you flat paper.
+            </small>
+          </span>
+        </label>
       </div>
 
       {groups.map((group) => (

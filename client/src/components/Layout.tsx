@@ -22,6 +22,7 @@ import FreshnessNote from "./FreshnessNote";
 import NotificationBell from "./NotificationBell";
 import SearchPalette, { useSearchShortcut } from "./SearchPalette";
 import Wordmark from "./Wordmark";
+import Wash, { useWashClass } from "./Wash";
 
 const ROLE_LABELS: Record<Me["role"], string> = {
   forecaster: "Forecaster",
@@ -745,6 +746,8 @@ export default function Layout() {
   const [searching, setSearching] = useState(false);
   const openSearch = useCallback(() => setSearching(true), []);
   useSearchShortcut(openSearch);
+  // The wash's hue follows the section of the Hub you are in.
+  const wash = useWashClass();
   const me = useApi<Me>("/me");
   const people = useApi<Person[]>("/people");
   const content = useApi<ContentItem[]>("/content");
@@ -833,7 +836,10 @@ export default function Layout() {
         <a className="skip" href="#main">
           Skip to the page
         </a>
-        <div className="shell">
+        <div className={`shell ${wash}`}>
+          {/* Behind the content column, and behind nothing else: the sidebar
+              paints its own paper over it. */}
+          <Wash />
           <Sidebar content={content.data} onSearch={openSearch} />
           <main className="main" id="main" tabIndex={-1}>
             <Outlet />

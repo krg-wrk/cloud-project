@@ -44,7 +44,7 @@ test("setting a token back to its own colour stores nothing", () => {
 
 test("an empty value is a reset rather than a mistake", () => {
   const { kept, dropped } = readAppearance({ colours: { accent: "" }, icons: { "nav.item.today": "" } });
-  assert.deepEqual(kept, { colours: {}, icons: {} });
+  assert.deepEqual(kept, { colours: {}, icons: {}, gradients: true });
   assert.equal(dropped, 0);
 });
 
@@ -57,8 +57,23 @@ test("icons are keyed on sidebar slots and nothing else", () => {
 });
 
 test("nothing sent is nothing stored", () => {
-  assert.deepEqual(readAppearance(undefined).kept, { colours: {}, icons: {} });
-  assert.deepEqual(readAppearance({ colours: null, icons: null }).kept, { colours: {}, icons: {} });
+  const bare = { colours: {}, icons: {}, gradients: true };
+  assert.deepEqual(readAppearance(undefined).kept, bare);
+  assert.deepEqual(readAppearance({ colours: null, icons: null }).kept, bare);
+});
+
+test("the wash is on unless somebody turned it off", () => {
+  /*
+   * Absent means on, which matters for the records written before the switch
+   * existed: an admin who set a colour last month should not find the washes
+   * off because their stored appearance predates them. Only an explicit
+   * `false` turns it off — a missing key, a null, or anything truthy is on.
+   */
+  assert.equal(readAppearance({}).kept.gradients, true, "absent is on");
+  assert.equal(readAppearance({ gradients: undefined }).kept.gradients, true);
+  assert.equal(readAppearance({ gradients: null }).kept.gradients, true);
+  assert.equal(readAppearance({ gradients: true }).kept.gradients, true);
+  assert.equal(readAppearance({ gradients: false }).kept.gradients, false, "off is off");
 });
 
 test("every token names a real variable and a real colour", () => {

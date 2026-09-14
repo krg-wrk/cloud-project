@@ -1511,9 +1511,56 @@ What is in it:
 - **The marks** — "yours", and "waiting on a review".
 - **Sidebar icons** — any item, any glyph from the Hub's own set, so a changed
   icon is still drawn in the same weight as the rest.
+- **The background** — one switch, for the wash described below.
 
 What is deliberately not in it: the paper, the ink, the hairline rules. Those
 are the house style, and changing them is a redesign rather than a setting.
+
+### The wash
+
+White cards on flat grey is honest and a little joyless. WGSN's own material
+does something specific instead: a very pale iridescent field — mint through
+cream through lilac — at a saturation low enough that it reads as *light*
+rather than as colour. The Hub borrows that.
+
+Four things make it work rather than making it a gradient:
+
+**Colour at the edges, white through the middle.** This is the whole of it,
+and the first attempt got it backwards — the strongest radial went at the
+top-left, where the title is, which tinted the head of every page and read as
+a coloured banner. In the material the centre is nearly white and the colour
+gathers at the corners. Four small radials near the edges, none reaching the
+middle, all faint.
+
+**It is fixed, not scrolled.** The field stays put and the page moves over it,
+so it behaves like the light in the room rather than a pattern printed on the
+page. A gradient that scrolls with the content is what makes one look cheap.
+
+**Its hue says where you are.** Each nav group gets one — the Lab warm, Data
+cool, the team warmer — so the colour is doing the same job as the group
+heading in the sidebar. Moving between parts of the Hub feels like moving
+rooms.
+
+**Sections are split in the rule, not in a block.** "Split by the title
+sections" started as a filled band behind each title and was wrong twice over:
+a rectangle with an edge is exactly what a wash is not, and stacked down a page
+the bands turn a layout into a chart of itself. The hairline under each section
+title carries the hue instead, fading out along its own length — the same idea
+at a tenth of the volume, and it cannot box anything in.
+
+**One page moves.** The Forecast Builder's canvas has three soft blobs
+drifting and swelling behind the node graph over about forty seconds. It gets
+the movement because it is the only page in the Hub that is a *workspace*
+rather than a document, and the thing it stands in for is alive; everywhere
+else motion would just be something to wait out. It is a `transform` on a
+single layer, so the compositor handles it and the graph underneath is never
+repainted — and `prefers-reduced-motion` stops the drift while keeping the
+colour, rather than taking both away.
+
+The switch is one setting for everybody rather than a personal preference,
+because it is a decision about how the Hub looks — the same kind of decision as
+the accent colour three fields below it. Off gives flat paper and nothing else
+changes.
 
 Three things make it safe to hand over:
 

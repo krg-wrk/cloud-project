@@ -71,9 +71,19 @@ export interface Appearance {
   colours: Record<string, string>;
   /** slot id → icon name. Only what somebody changed. */
   icons: Record<string, string>;
+  /**
+   * Whether the pages carry the iridescent wash behind them.
+   *
+   * On by default, and a single switch for everybody rather than a per-person
+   * preference: it is a decision about how the Hub looks, which is the same
+   * kind of decision as the accent colour sitting two fields above it. The
+   * movement on the Forecast Builder is governed separately by the browser's
+   * own reduced-motion setting, which no admin should be able to overrule.
+   */
+  gradients: boolean;
 }
 
-export const EMPTY: Appearance = { colours: {}, icons: {} };
+export const EMPTY: Appearance = { colours: {}, icons: {}, gradients: true };
 
 /**
  * A colour the browser will take and a person meant.
@@ -113,8 +123,13 @@ const isSlot = (key: string): boolean => /^nav\.item\.[a-z0-9-]{1,40}$/.test(key
  * went, so it is not silent.
  */
 export function readAppearance(value: unknown): { kept: Appearance; dropped: number } {
-  const body = (value ?? {}) as { colours?: unknown; icons?: unknown };
-  const kept: Appearance = { colours: {}, icons: {} };
+  const body = (value ?? {}) as { colours?: unknown; icons?: unknown; gradients?: unknown };
+  /*
+   * Absent means on, which matters for the records written before the switch
+   * existed: an admin who had set a colour last month should not find the
+   * washes off because their stored appearance predates them.
+   */
+  const kept: Appearance = { colours: {}, icons: {}, gradients: body.gradients !== false };
   let dropped = 0;
 
   for (const [id, raw] of Object.entries((body.colours ?? {}) as Record<string, unknown>)) {
