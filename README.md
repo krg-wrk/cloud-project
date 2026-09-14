@@ -252,6 +252,7 @@ on, and each one is described where it belongs:
 ```bash
 SMARTSHEET_WRITE=1                # let a manager change the sheet (below)
 SMARTSHEET_API=...                # Smartsheet's EU region, or a stub, if needed
+GOOGLE_SHEETS_KEY=...             # a service-account JSON key, named by a studio connection
 GEMINI_API_KEY=...                # AI note drafting; without it the button says so
 NOTIFY_SCHEDULE=1                 # let notifications send themselves
 NOTIFY_HOUR=8                     # the hour they go, local time
@@ -1342,7 +1343,7 @@ The reason the team has not left AppSheet is that a manager can point it at a
 sheet and build a view for a group of people without waiting for anyone. This
 is that, at `/studio`, admin-only, in three steps in the order you do them.
 
-**1. Connections** — where data comes from. Two of them read today:
+**1. Connections** — where data comes from. Three of them read today:
 
 - **This Hub's own tables.** The schedule, the team, the events, the
   workshops, the KPIs and the 446 trend profiles, already loaded, no
@@ -1353,11 +1354,71 @@ is that, at `/studio`, admin-only, in three steps in the order you do them.
   what came back in words you can act on: a refused token, a sheet not shared
   with the token's account, and a blocked network read differently, because
   they need different fixes.
+- **Google Sheets.** Any spreadsheet, a tab at a time. Paste the sheet's
+  address — nobody has the bare id to hand — and give it a service-account
+  key; then share the sheet with that account, exactly as you would with a
+  colleague. Details below.
 
-Google Sheets, MongoDB and Snowflake are modelled with the settings each will
-need, and every one of them reports "not wired up yet" rather than failing
-quietly. Snowflake in particular is not urgent: TFDB already reaches the Hub
-through the Smartsheet sheet it feeds.
+MongoDB and Snowflake are modelled with the settings each will need, and both
+report "not wired up yet" rather than failing quietly. Snowflake in particular
+is not urgent: TFDB already reaches the Hub through the Smartsheet sheet it
+feeds.
+
+### Connecting a Google Sheet
+
+Two ways in, and the first is the one to use.
+
+**A service account**, which is a robot with an email address. The sheet stays
+private and is shared with one more address; nothing is published to the web.
+Once, for the whole Hub:
+
+1. In the Google Cloud console, make a project (or use an existing one) and
+   turn on the **Google Sheets API**.
+2. Make a **service account** and download its **JSON key**.
+3. In the Hub's studio, add a Google Sheets connection, paste the sheet's
+   address, and paste the whole JSON file into the credential box — or better,
+   put it in an environment variable and name that instead.
+4. Share the spreadsheet with the service account's address, the one ending
+   `…iam.gserviceaccount.com`. **Viewer is enough.**
+
+Step 4 is the one everybody forgets, so the Hub is built to catch it: a
+connection that has not been shared fails its test with *"Share the sheet with
+hub@….iam.gserviceaccount.com — the way you would share it with a colleague"*,
+naming the address rather than leaving somebody to find it in a file they
+downloaded once.
+
+**An API key** also works, and only on a sheet that anyone with the link can
+already view. It is quick for trying something out and wrong for anything
+confidential, and the studio says so rather than letting somebody discover it
+by publishing a sheet.
+
+Three things about how a Google Sheet is read are worth knowing before you
+build on one:
+
+- **A column is its heading.** Smartsheet gives every column a permanent id,
+  so the Hub keys on that and a rename changes nothing. A Google Sheet has no
+  such thing — a column is a letter, and a letter is a position. Keying on
+  position would mean that inserting a column, which people do in a Google
+  Sheet without thinking, silently re-points every view at its neighbour. So
+  the heading is the key: insert, move and delete columns freely; *rename* one
+  and the views bound to it go empty, which is at least visible, and reading
+  the columns again picks the new name up.
+- **A tab is its number, not its name.** The `gid` out of the address bar, so
+  renaming a tab breaks nothing.
+- **Dates are converted.** A sheet hands back what the cell displays, so a
+  date arrives as `24/11/2026` and would sort alphabetically — putting the
+  1st of every month together. Each column is converted to `YYYY-MM-DD`, with
+  day-first or month-first decided by evidence: a value over 12 in the first
+  position can only be a day, over 12 in the second can only be a month. A
+  column where every value could be read either way is genuinely ambiguous and
+  is read day-first, which is right for a UK team; a column that cannot be one
+  format at all is left exactly as it was rather than mangled.
+
+Unlike the Smartsheet reader, this one **has** been run against the live API:
+`sheets.googleapis.com` is reachable from the environment the Hub was built
+in, so `npm test -w server` includes two tests that call Google for real and
+check that its own refusals survive the trip. They skip themselves when the
+network is not there.
 
 **2. Datasets** name one table out of a connection and read its columns. That
 step is what makes the builder quick — once the columns and their types are

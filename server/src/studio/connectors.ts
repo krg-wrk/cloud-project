@@ -1,4 +1,5 @@
 import type { DataSource } from "../types.js";
+import { GoogleSheetsConnector } from "./googleSheets.js";
 import type { Connection, ConnectorKind, Field, FieldType } from "./types.js";
 
 /**
@@ -17,7 +18,7 @@ import type { Connection, ConnectorKind, Field, FieldType } from "./types.js";
 export interface Connector {
   readonly kind: ConnectorKind;
   /** Shown in the studio: what this connector needs to be set up. */
-  readonly needs: { settings: SettingSpec[]; credential: string };
+  readonly needs: Needs;
   /** Whether the credential works. The note is shown to the admin verbatim. */
   probe(ctx: ConnectorContext): Promise<{ ok: boolean; note: string }>;
   /** The tables available, when the system can list them. */
@@ -40,6 +41,20 @@ export interface SettingSpec {
   required: boolean;
 }
 
+/**
+ * What a connector needs before it can read.
+ *
+ * `credentialLines` exists because a Google service-account key is a JSON
+ * file rather than a token: pasted into a single-line input, a browser throws
+ * the newlines away and the private key inside it is silently ruined. A
+ * connector that wants a file says how tall a box to give it.
+ */
+export interface Needs {
+  settings: SettingSpec[];
+  credential: string;
+  credentialLines?: number;
+}
+
 /** Everything a connector needs for one call. The secret never leaves here. */
 export interface ConnectorContext {
   settings: Record<string, string>;
@@ -58,7 +73,7 @@ export interface ConnectorContext {
 class NotWiredUp implements Connector {
   constructor(
     readonly kind: ConnectorKind,
-    readonly needs: { settings: SettingSpec[]; credential: string },
+    readonly needs: Needs,
     private readonly note: string,
   ) {}
 
@@ -524,17 +539,7 @@ export function createConnectors(data: DataSource): Record<ConnectorKind, Connec
   return {
   hub: new HubConnector(data),
   smartsheet: new SmartsheetConnector(),
-  "google-sheets": new NotWiredUp(
-    "google-sheets",
-    {
-      settings: [
-        { key: "spreadsheetId", label: "Spreadsheet id", required: true },
-        { key: "tab", label: "Tab name", required: false },
-      ],
-      credential: "A Google service-account key, shared onto the spreadsheet.",
-    },
-    "Google Sheets is not wired up yet. The model is here; the reader is not.",
-  ),
+  "google-sheets": new GoogleSheetsConnector(),
   mongodb: new NotWiredUp(
     "mongodb",
     {
@@ -564,7 +569,7 @@ export function createConnectors(data: DataSource): Record<ConnectorKind, Connec
 }
 
 /** The kinds that actually read today. The studio labels the rest as such. */
-const LIVE_KINDS: ConnectorKind[] = ["hub", "smartsheet"];
+const LIVE_KINDS: ConnectorKind[] = ["hub", "smartsheet", "google-sheets"];
 
 /** What the studio shows about each kind: what it needs, and whether it works. */
 export function connectorCatalogue(

@@ -1172,6 +1172,7 @@ button {
 }
 
 .field select,
+.field textarea,
 .field input {
   padding: 7px 9px;
   border: 1px solid var(--rule-strong);
@@ -1185,6 +1186,20 @@ button {
 
 .field input {
   min-width: 190px;
+}
+
+/*
+ * A credential that is a file rather than a token — a Google service-account
+ * key. Monospaced and only vertically resizable, because it holds JSON and
+ * because dragging it sideways would break the form's grid.
+ */
+.field textarea {
+  width: 100%;
+  min-width: 0;
+  resize: vertical;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.45;
 }
 
 .filters-right {

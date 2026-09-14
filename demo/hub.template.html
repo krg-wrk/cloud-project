@@ -12116,7 +12116,8 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
   const KIND_BLURBS = {
     hub: "The schedule, the team, the events and the 446 trend profiles this page already holds. No credential needed.",
     smartsheet: "Any sheet, by its id. Needs an API token, and the sheet shared with that token's account.",
-    "google-sheets": "A spreadsheet and a tab, via a service account.",
+    "google-sheets":
+      "Any spreadsheet, a tab at a time. Paste its address, and share the sheet with a service account the way you would with a colleague.",
     mongodb: "A collection, read-only.",
     snowflake: "A table or view, through a read-only role.",
   };
@@ -12130,7 +12131,12 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         "Smartsheet reads live in the deployed Hub, where a token sits on the server. " +
         "This page has no server, so it cannot hold one or make the call.",
     },
-    "google-sheets": { live: false, note: "Not wired up yet. The model is here; the reader is not." },
+    "google-sheets": {
+      live: false,
+      note:
+        "Google Sheets reads live in the deployed Hub, where a service-account key sits on the server. " +
+        "This page has no server, so it cannot hold one or make the call.",
+    },
     mongodb: { live: false, note: "Not wired up yet. The model is here; the reader is not." },
     snowflake: {
       live: false,

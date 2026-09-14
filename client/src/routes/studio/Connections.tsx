@@ -27,7 +27,8 @@ export const KIND_LABELS: Record<ConnectorKind, string> = {
 const KIND_BLURBS: Record<ConnectorKind, string> = {
   hub: "The schedule, the team, the events and the 446 trend profiles the Hub already reads. No credential needed.",
   smartsheet: "Any sheet, by its id. Needs an API token, and the sheet shared with that token's account.",
-  "google-sheets": "A spreadsheet and a tab, via a service account.",
+  "google-sheets":
+    "Any spreadsheet, a tab at a time. Paste its address, and share the sheet with a service account the way you would with a colleague.",
   mongodb: "A collection, read-only.",
   snowflake: "A table or view, through a read-only role.",
 };
@@ -328,7 +329,7 @@ function ConnectionForm({
               <input
                 id="c-env"
                 value={secretEnv}
-                placeholder="SMARTSHEET_TOKEN"
+                placeholder={kind === "google-sheets" ? "GOOGLE_SHEETS_KEY" : "SMARTSHEET_TOKEN"}
                 onChange={(e) => setSecretEnv(e.target.value)}
               />
             </div>
@@ -337,14 +338,37 @@ function ConnectionForm({
                 …or paste it here
                 {existing?.hasSecret && ` (${existing.secretHint} is stored)`}
               </label>
-              <input
-                id="c-secret"
-                type="password"
-                autoComplete="off"
-                value={secret}
-                placeholder={existing?.hasSecret ? "Leave blank to keep it" : ""}
-                onChange={(e) => setSecret(e.target.value)}
-              />
+              {/*
+                A token goes in a password box; a key file goes in a textarea.
+                Not a nicety: pasting multi-line JSON into an <input> makes the
+                browser throw the newlines away, and the private key inside a
+                Google service-account file is then quietly unusable — which
+                fails later, as a signing error, a long way from the cause.
+              */}
+              {spec?.needs.credentialLines ? (
+                <textarea
+                  id="c-secret"
+                  rows={spec.needs.credentialLines}
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={secret}
+                  placeholder={
+                    existing?.hasSecret
+                      ? "Leave blank to keep the stored key"
+                      : '{ "type": "service_account", "project_id": … }'
+                  }
+                  onChange={(e) => setSecret(e.target.value)}
+                />
+              ) : (
+                <input
+                  id="c-secret"
+                  type="password"
+                  autoComplete="off"
+                  value={secret}
+                  placeholder={existing?.hasSecret ? "Leave blank to keep it" : ""}
+                  onChange={(e) => setSecret(e.target.value)}
+                />
+              )}
             </div>
           </div>
           <p className="muted small">

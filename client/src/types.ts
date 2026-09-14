@@ -363,6 +363,12 @@ export interface ConnectorInfo {
   needs: {
     settings: { key: string; label: string; placeholder?: string; required: boolean }[];
     credential: string;
+    /**
+     * How tall a box the credential needs, when it is a file rather than a
+     * token. A Google service-account key pasted into a single-line input
+     * loses its newlines, which ruins the private key inside it.
+     */
+    credentialLines?: number;
   };
 }
 
