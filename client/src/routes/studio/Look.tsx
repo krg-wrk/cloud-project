@@ -12,6 +12,7 @@ import {
   type Appearance,
   type Token,
 } from "../../lib/appearance";
+import { usePreferences } from "../../lib/preferences";
 import { ErrorNote, Loading } from "../../components/bits";
 
 /**
@@ -48,6 +49,7 @@ const ICONS = Object.keys(ICON_PATHS).sort();
 
 export default function Look() {
   const stored = useApi<Appearance & { tokens: Token[] }>("/appearance");
+  const mine = usePreferences();
   const [colours, setColours] = useState<Record<string, string> | null>(null);
   const [icons, setIcons] = useState<Record<string, string> | null>(null);
   const [gradients, setGradients] = useState<boolean | null>(null);
@@ -88,11 +90,15 @@ export default function Look() {
    * only be judged against a page, not against the word "gradients".
    */
   const savedGradients = stored.data?.gradients !== false;
+  const washOffForMe = mine.wash === "off";
   useEffect(() => {
     if (gradients === null) return;
-    applyGradients(gradients);
-    return () => applyGradients(savedGradients);
-  }, [gradients, savedGradients]);
+    // An admin who turned the wash off for themselves in Settings still sees
+    // their own page unwashed while they set it for everybody — otherwise the
+    // studio would look like it had ignored their own setting.
+    applyGradients(gradients && !washOffForMe);
+    return () => applyGradients(savedGradients && !washOffForMe);
+  }, [gradients, savedGradients, washOffForMe]);
 
   if (stored.error) return <ErrorNote message={stored.error} />;
   if (!stored.data || !colours || !icons || gradients === null || !washes) {

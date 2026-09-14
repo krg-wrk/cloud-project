@@ -137,6 +137,33 @@ const html = readFileSync(join(here, "hub.template.html"), "utf8").replace(
   }),
 );
 
+/*
+ * Does the page's own script actually parse?
+ *
+ * The demo is one file with half a megabyte of hand-written JavaScript inside
+ * a <script> tag, and a browser answers a syntax error in it with a blank
+ * page and one line in a console nobody has open. This catches it here, where
+ * the message says which line — the failure it was written for was a backtick
+ * inside an HTML comment inside a template literal, which ended the string
+ * three hundred lines early and broke everything after it.
+ *
+ * `new Function` parses without running: no page, no DOM, nothing executed.
+ */
+const scriptOf = (page) => {
+  const seed = page.indexOf('<script id="seed"');
+  const after = page.indexOf("</script>", seed) + "</script>".length;
+  const start = page.indexOf("<script>", after) + "<script>".length;
+  return page.slice(start, page.indexOf("</script>", start));
+};
+
+try {
+  new Function(scriptOf(html));
+} catch (err) {
+  console.error(`The demo's script does not parse: ${err.message}`);
+  console.error("Nothing was written. Fix the template and build again.");
+  process.exit(1);
+}
+
 const out = join(here, "forecasters-hub.html");
 writeFileSync(out, html);
 const live = trends.filter((t) => t.published === "Published").length;

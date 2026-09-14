@@ -18,6 +18,7 @@ import {
 } from "./auth.js";
 import { buildFeed } from "./ics.js";
 import { compareTeam, computeKpis, precedingRange, type Bucket } from "./kpis.js";
+import { readPhoto } from "./photos.js";
 import { COLUMNS } from "./data/smartsheetSource.js";
 import { CONTENT_TYPES, ROLE_BENCHMARKS, TIER_MEANINGS } from "./taxonomy.js";
 import type { SignUps } from "./signUps.js";
@@ -119,7 +120,9 @@ export function createApiRouter(
     try {
       const viewer = req.viewer!;
       const people = await data.listPeople();
-      const person = viewer.personId ? people.find((p) => p.id === viewer.personId) : undefined;
+      const found = viewer.personId ? people.find((p) => p.id === viewer.personId) : undefined;
+      const photoAt = found ? (await store.photo(found.id))?.updatedAt : undefined;
+      const person = found && photoAt ? { ...found, photoAt } : found;
       res.json({
         email: viewer.email,
         name: viewer.name,
@@ -240,9 +243,22 @@ export function createApiRouter(
     res.json({ contentTypes: CONTENT_TYPES, tiers: TIER_MEANINGS, roles: ROLE_BENCHMARKS });
   });
 
+  /**
+   * The team, each with a stamp saying when their photo last changed.
+   *
+   * The stamp rather than the photograph: the bytes come from their own
+   * endpoint one at a time, so the browser caches them and a page that draws
+   * twelve avatars fetches twelve, not two hundred. The stamp is what makes
+   * that cache safe to keep — change your photo and the URL changes with it.
+   */
+  const withPhotos = async (people: Person[]): Promise<(Person & { photoAt?: string })[]> => {
+    const stamps = await store.photoStamps();
+    return people.map((p) => (stamps[p.id] ? { ...p, photoAt: stamps[p.id] } : p));
+  };
+
   router.get("/people", async (_req, res, next) => {
     try {
-      res.json(await data.listPeople());
+      res.json(await withPhotos(await data.listPeople()));
     } catch (err) {
       next(err);
     }
@@ -250,7 +266,7 @@ export function createApiRouter(
 
   router.get("/people/:id", async (req, res, next) => {
     try {
-      const people = await data.listPeople();
+      const people = await withPhotos(await data.listPeople());
       const person = people.find((p) => p.id === req.params.id);
       if (!person) {
         res.status(404).json({ error: `No person with id "${req.params.id}"` });
@@ -1312,6 +1328,81 @@ export function createApiRouter(
     }
     await store.deleteEntry(entry.id);
     res.status(204).end();
+  });
+
+  // --- Your photograph ----------------------------------------------------
+
+  /**
+   * One person's avatar, as image bytes.
+   *
+   * Its own endpoint rather than a data URL inside the team list, so a
+   * browser caches it and a page full of avatars costs one small request
+   * each. Anybody signed in may read one — it is a face on a team page — but
+   * only the person themselves may set it, below.
+   *
+   * Served with `nosniff` and a locked-down policy because these bytes were
+   * uploaded rather than built: the content check on the way in is the first
+   * line, and this is the second.
+   */
+  router.get("/photos/:personId", async (req: ViewerRequest, res, next) => {
+    try {
+      const photo = await store.photo(req.params.personId);
+      if (!photo) {
+        res.status(404).json({ error: "That person has no photo." });
+        return;
+      }
+      const bytes = Buffer.from(photo.base64, "base64");
+      const tag = `"${photo.updatedAt}"`;
+      res.set({
+        "Content-Type": photo.mediaType,
+        "X-Content-Type-Options": "nosniff",
+        "Content-Security-Policy": "default-src 'none'; sandbox",
+        "Content-Disposition": "inline",
+        // Private: it is a colleague's face, not a public asset. The URL
+        // carries the stamp, so a long life here costs nothing.
+        "Cache-Control": "private, max-age=604800",
+        ETag: tag,
+      });
+      if (req.headers["if-none-match"] === tag) {
+        res.status(304).end();
+        return;
+      }
+      res.send(bytes);
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /**
+   * Your own photograph, and nobody else's.
+   *
+   * There is no personId in the path on purpose: the only photo this can
+   * change is the caller's own, so there is no permission to get wrong. An
+   * admin who needs somebody's photo gone can delete the row; putting that on
+   * an endpoint would be a way to put a picture of a colleague on a colleague.
+   */
+  router.put("/my/photo", async (req: ViewerRequest, res, next) => {
+    try {
+      const personId = requirePerson(req, res);
+      if (!personId) return;
+      const read = readPhoto(req.body?.photo);
+      if (!read.ok) return bad(res, read.problem);
+      const saved = await store.setPhoto(personId, read.photo.mediaType, read.photo.base64);
+      res.json({ photoAt: saved.updatedAt, bytes: read.photo.bytes });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.delete("/my/photo", async (req: ViewerRequest, res, next) => {
+    try {
+      const personId = requirePerson(req, res);
+      if (!personId) return;
+      await store.deletePhoto(personId);
+      res.status(204).end();
+    } catch (err) {
+      next(err);
+    }
   });
 
   // --- Diary and schedule ------------------------------------------------

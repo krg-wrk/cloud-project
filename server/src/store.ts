@@ -28,6 +28,15 @@ import {
 
 export type NoteSource = "human" | "ai";
 
+/** A person's avatar photograph, as it is stored. */
+export interface PersonPhoto {
+  personId: string;
+  mediaType: string;
+  /** The image itself, base64 — small, capped, and checked on the way in. */
+  base64: string;
+  updatedAt: string;
+}
+
 export interface ContentNote {
   id: string;
   contentId: string;
@@ -145,6 +154,27 @@ CREATE TABLE IF NOT EXISTS calendar_tokens (
   person_id TEXT PRIMARY KEY,
   token TEXT NOT NULL UNIQUE,
   created_at TEXT NOT NULL
+);
+
+/*
+ * A person's own photograph, for the avatar.
+ *
+ * Here rather than in the directory sheet because it is the person's to set
+ * and the sheet is the company's to maintain — and because nobody wants to
+ * paste base64 into a spreadsheet cell. The bytes are base64 TEXT rather than
+ * a BLOB so the same statement works on SQLite and Postgres, which is the
+ * trade this whole store makes.
+ *
+ * Small on purpose: the client resizes to a square before it uploads and the
+ * API refuses anything over the cap, so a table of 200 of these is a few
+ * megabytes rather than a few hundred.
+ */
+CREATE TABLE IF NOT EXISTS person_photos (
+  person_id TEXT PRIMARY KEY,
+  /** image/png, image/jpeg or image/webp — checked against the bytes. */
+  media_type TEXT NOT NULL,
+  base64 TEXT NOT NULL,
+  updated_at TEXT NOT NULL
 );
 
 /*
@@ -984,6 +1014,47 @@ export class HubStore {
       ok: row.ok === 1 || row.ok === true,
       problem: row.problem ? String(row.problem) : undefined,
     }));
+  }
+
+  // --- Profile photos ----------------------------------------------------
+
+  /** One person's photograph, or nothing if they never set one. */
+  async photo(personId: string): Promise<PersonPhoto | undefined> {
+    const row = await this.db.get(`SELECT * FROM person_photos WHERE person_id = ?`, [personId]) as Record<string, unknown> | undefined;
+    if (!row) return undefined;
+    return {
+      personId,
+      mediaType: String(row.media_type),
+      base64: String(row.base64),
+      updatedAt: String(row.updated_at),
+    };
+  }
+
+  /**
+   * When each person's photo last changed, without the photos themselves.
+   *
+   * This is what the team list carries. The bytes are fetched one at a time
+   * from their own endpoint so the browser can cache them; sending two
+   * hundred photographs with every page load to draw the dozen on screen is
+   * the thing this avoids.
+   */
+  async photoStamps(): Promise<Record<string, string>> {
+    const rows = await this.db.all(`SELECT person_id, updated_at FROM person_photos`) as Record<string, unknown>[];
+    return Object.fromEntries(rows.map((r) => [String(r.person_id), String(r.updated_at)]));
+  }
+
+  async setPhoto(personId: string, mediaType: string, base64: string): Promise<PersonPhoto> {
+    await this.db.run(`INSERT INTO person_photos (person_id, media_type, base64, updated_at)
+         VALUES (?, ?, ?, ?)
+         ON CONFLICT(person_id) DO UPDATE SET
+           media_type = excluded.media_type,
+           base64 = excluded.base64,
+           updated_at = excluded.updated_at`, [personId, mediaType, base64, now()]);
+    return (await this.photo(personId))!;
+  }
+
+  async deletePhoto(personId: string): Promise<void> {
+    await this.db.run(`DELETE FROM person_photos WHERE person_id = ?`, [personId]);
   }
 
   async calendarToken(personId: string): Promise<string> {

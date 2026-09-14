@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { devViewer, setDevViewer, useApi } from "../lib/api";
 import { TODAY, monthKey } from "../lib/date";
@@ -7,7 +7,7 @@ import { Icon } from "../lib/icons";
 import { CustomisationProvider, EditBar, Slot, useCustom } from "../lib/custom";
 import { useAppearance } from "../lib/appearance";
 import { useDialog } from "../lib/dialog";
-import { ViewerProvider, useViewer } from "../lib/viewer";
+import { ACCOUNT_CHANGED, ViewerProvider, useViewer } from "../lib/viewer";
 import type {
   ContentItem,
   Inbox,
@@ -34,14 +34,18 @@ const ROLE_LABELS: Record<Me["role"], string> = {
  * Dev-only account switcher. With SSO in front the account comes from the
  * proxy and this disappears; it is here so the Hub can be shown and tested
  * as any of the team without an identity provider.
+ *
+ * Inside the account menu rather than standing in the sidebar: it is the one
+ * control on this page that will not exist in production, and a permanent
+ * dropdown for it made the foot of every page look like a settings form.
  */
-function AccountSwitch({ people }: { people: Person[] }) {
+function AccountSwitch({ people, id = "account" }: { people: Person[]; id?: string }) {
   const { me } = useViewer();
   return (
     <div className="viewer-switch">
-      <label htmlFor="account">Signed in as (demo)</label>
+      <label htmlFor={id}>Switch profile (demo)</label>
       <select
-        id="account"
+        id={id}
         value={me.email}
         onChange={(e) => {
           setDevViewer(e.target.value);
@@ -67,6 +71,106 @@ function AccountSwitch({ people }: { people: Person[] }) {
             ))}
         </optgroup>
       </select>
+    </div>
+  );
+}
+
+/**
+ * Who you are, at the foot of the sidebar, in one row.
+ *
+ * The row itself is the whole of it: a photograph or initials, a name, a
+ * role, and a cog. Everything else — the address you are signed in with, the
+ * way into your own settings, and in this build the profile switcher — is
+ * behind the name, where an account menu is in every other application
+ * somebody uses all day.
+ *
+ * The cog is a link rather than a menu item because Settings is a page, and
+ * one press should land on it. It sits to the right of the row, separate
+ * from the button that opens the menu, so neither swallows the other.
+ */
+function AccountFoot({ people }: { people: Person[] }) {
+  const { me, person } = useViewer();
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement | null>(null);
+  const button = useRef<HTMLButtonElement | null>(null);
+
+  // Click away and Escape close it, as they close the bell.
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => {
+      const on = e.target as Node;
+      if (box.current?.contains(on) || button.current?.contains(on)) return;
+      setOpen(false);
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      button.current?.focus();
+    };
+    document.addEventListener("mousedown", away);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("mousedown", away);
+      document.removeEventListener("keydown", key);
+    };
+  }, [open]);
+
+  return (
+    <div className="account">
+      {open && (
+        <div className="account-menu" ref={box} role="dialog" aria-label="Your account">
+          <div className="account-menu-head">
+            {person && <Avatar id={person.id} name={person.name} size="lg" />}
+            <div className="account-menu-who">
+              <b>{me.name}</b>
+              <span className="muted small">{me.email}</span>
+              <span className="muted small">
+                {ROLE_LABELS[me.role]}
+                {me.role !== "forecaster" &&
+                  me.verticals !== "all" &&
+                  ` · ${me.verticals.length} verticals`}
+              </span>
+            </div>
+          </div>
+
+          <NavLink className="account-menu-link" to="/settings" onClick={() => setOpen(false)}>
+            <Icon name="settings" size={16} />
+            Settings
+          </NavLink>
+          <NavLink
+            className="account-menu-link"
+            to="/notifications"
+            onClick={() => setOpen(false)}
+          >
+            <Icon name="bell" size={16} />
+            Your alerts
+          </NavLink>
+
+          {/* Not in production: with SSO in front, you are who the proxy says
+              you are and there is nothing to switch. */}
+          <AccountSwitch people={people} id="account-menu-switch" />
+        </div>
+      )}
+
+      <div className="account-row">
+        <button
+          className="account-open"
+          ref={button}
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-haspopup="dialog"
+        >
+          {person && <Avatar id={person.id} name={person.name} />}
+          <span className="account-who">
+            <b>{me.name}</b>
+            <small>{ROLE_LABELS[me.role]}</small>
+          </span>
+          <Icon name="chevron-down" size={12} className="account-caret" />
+        </button>
+        <NavLink className="account-cog" to="/settings" title="Settings">
+          <Icon name="settings" size={16} label="Settings" />
+        </NavLink>
+      </div>
     </div>
   );
 }
@@ -129,13 +233,11 @@ function sections({
   outstanding,
   mySessions,
   forecasters,
-  unread,
 }: {
   overdue: number;
   outstanding: number;
   mySessions: number;
   forecasters: number;
-  unread: number;
 }): Section[] {
   return [
     {
@@ -290,24 +392,6 @@ function sections({
       group: "team",
       slot: "nav.item.subscribe",
     },
-    /*
-     * In the sidebar as well as on the bell. The bell hangs off the sidebar,
-     * which a phone does not have — so the page needs a way in that survives
-     * the layout, and "what am I being emailed about" is a thing people look
-     * for in a menu rather than by clicking a bell.
-     *
-     * Under Settings rather than with the team: it is a page about your own
-     * preferences — which alerts reach you, and by which channel — not about
-     * anybody else.
-     */
-    {
-      to: "/notifications",
-      label: "Alerts",
-      icon: "bell",
-      group: "settings",
-      slot: "nav.item.notifications",
-      badge: unread > 0 ? String(unread) : undefined,
-    },
   ];
 }
 
@@ -319,7 +403,7 @@ function sections({
  * from it. The counts are nought because only the icons are wanted.
  */
 export const NAV_ICONS: Record<string, string> = Object.fromEntries(
-  sections({ overdue: 0, outstanding: 0, mySessions: 0, forecasters: 0, unread: 0 })
+  sections({ overdue: 0, outstanding: 0, mySessions: 0, forecasters: 0 })
     .filter((s) => s.slot)
     .map((s) => [s.slot as string, s.icon]),
 );
@@ -499,9 +583,6 @@ function useSections(content: ContentItem[]): Section[] {
   // The server decides which views this account may see, including whether
   // drafts are among them.
   const views = useApi<ViewLink[]>("/views");
-  // An account with no forecaster record has no inbox, which is a 403 — so
-  // the count is simply nought rather than an error in the sidebar.
-  const inbox = useApi<Inbox>("/notifications");
   // The Resources drawer, which an admin fills in from the studio rather
   // than by asking for a deploy.
   const resources = useApi<{ links: ResourceLink[] }>("/resources");
@@ -514,7 +595,6 @@ function useSections(content: ContentItem[]): Section[] {
     outstanding: scope.filter(isOutstanding).length,
     mySessions: person ? (sessions.data?.length ?? 0) : 0,
     forecasters: new Set(content.map((c) => c.forecasterId)).size,
-    unread: inbox.data?.unread ?? 0,
   });
 
   const built = [...(views.data ?? [])]
@@ -549,7 +629,7 @@ function useSections(content: ContentItem[]): Section[] {
 }
 
 function Sidebar({ content, onSearch }: { content: ContentItem[]; onSearch: () => void }) {
-  const { me, person, people } = useViewer();
+  const { people } = useViewer();
   const items = useSections(content);
   // ⌘ on a Mac, Ctrl everywhere else. Read once: it never changes mid-session.
   const mac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
@@ -590,20 +670,7 @@ function Sidebar({ content, onSearch }: { content: ContentItem[]; onSearch: () =
       </nav>
 
       <div className="sidebar-foot">
-        <AccountSwitch people={people} />
-        <div style={{ marginTop: 14 }}>
-          <span className="who">
-            {person && <Avatar id={person.id} name={person.name} />}
-            <span>
-              {me.name}
-              <br />
-              {ROLE_LABELS[me.role]}
-              {me.role !== "forecaster" &&
-                me.verticals !== "all" &&
-                ` · ${me.verticals.length} verticals`}
-            </span>
-          </span>
-        </div>
+        <AccountFoot people={people} />
       </div>
     </aside>
   );
@@ -633,6 +700,7 @@ function NavSheet({
   me,
   person,
   people,
+  unread,
 }: {
   close: () => void;
   rest: Section[];
@@ -641,6 +709,8 @@ function NavSheet({
   /** Absent for somebody signed in who is not on the forecast team. */
   person?: Person;
   people: Person[];
+  /** How many alerts are unread, for the row that leads to them. */
+  unread: number;
 }) {
   const box = useRef<HTMLDivElement | null>(null);
   useDialog(box, close);
@@ -685,6 +755,18 @@ function NavSheet({
           <Icon name="search" size={18} />
           Search everything
         </button>
+        {/* On a phone there is no sidebar, so no bell and no cog. Both of the
+            things they lead to are here instead — written out rather than
+            taken from the menu, because neither is a section of the app. */}
+        <NavLink className="sheet-link" to="/notifications" onClick={close}>
+          <Icon name="bell" size={18} />
+          Your alerts
+          {unread > 0 && <span className="count">{unread}</span>}
+        </NavLink>
+        <NavLink className="sheet-link" to="/settings" onClick={close}>
+          <Icon name="settings" size={18} />
+          Settings
+        </NavLink>
         <AccountSwitch people={people} />
       </div>
     </>
@@ -697,8 +779,14 @@ function MobileNav({ content, onSearch }: { content: ContentItem[]; onSearch: ()
   const items = useSections(content);
   const location = useLocation();
   const rest = items.filter((s) => !s.primary);
-  // "More" carries the dot when something behind it wants attention.
-  const restBadge = rest.some((s) => s.badge && s.badge !== "0");
+  // An account with no forecaster record has no inbox, which is a 403 — so
+  // the count is simply nought rather than an error at the foot of the screen.
+  const inbox = useApi<Inbox>("/notifications");
+  const unread = inbox.data?.unread ?? 0;
+  // "More" carries the dot when something behind it wants attention — now
+  // including unread alerts, which live behind it since the bell does not
+  // exist at this width.
+  const restBadge = unread > 0 || rest.some((s) => s.badge && s.badge !== "0");
   // An external item is never "where you are", however its URL starts.
   const onRest = rest.some(
     (s) => !s.href && location.pathname.startsWith(s.to) && s.to !== "/",
@@ -714,6 +802,7 @@ function MobileNav({ content, onSearch }: { content: ContentItem[]; onSearch: ()
           me={me}
           person={person}
           people={people}
+          unread={unread}
         />
       )}
 
@@ -758,6 +847,25 @@ export default function Layout() {
   const me = useApi<Me>("/me");
   const people = useApi<Person[]>("/people");
   const content = useApi<ContentItem[]>("/content");
+
+  /*
+   * Somebody changed their own account — a new photograph, so far.
+   *
+   * The account and the team are read once, here, and handed down; a page
+   * deep in the tree that changes one of them has no way to say so except
+   * this. Without it the avatar in the corner keeps the old picture until the
+   * next full page load, which reads as the upload having failed.
+   */
+  const { reload: reloadMe } = me;
+  const { reload: reloadPeople } = people;
+  useEffect(() => {
+    const again = () => {
+      reloadMe();
+      reloadPeople();
+    };
+    window.addEventListener(ACCOUNT_CHANGED, again);
+    return () => window.removeEventListener(ACCOUNT_CHANGED, again);
+  }, [reloadMe, reloadPeople]);
 
   // Nobody chosen yet in dev mode: the API has no identity to work from.
   if (me.error && !devViewer()) {

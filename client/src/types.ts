@@ -29,6 +29,14 @@ export interface Person {
   vertical?: string;
   department?: string;
   region: string;
+  /**
+   * When this person last changed their photo, if they have one.
+   *
+   * The stamp rather than the image: the bytes live at /photos/<id> so the
+   * browser can cache them, and this is what makes that cache safe — a new
+   * photo is a new URL.
+   */
+  photoAt?: string;
 }
 
 export interface ContentItem {

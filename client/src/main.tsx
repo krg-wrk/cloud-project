@@ -25,6 +25,7 @@ import Views from "./routes/studio/Views";
 import Pages from "./routes/studio/Pages";
 import Look from "./routes/studio/Look";
 import Resources from "./routes/studio/Resources";
+import Settings from "./routes/settings/Settings";
 import Subscribe from "./routes/Subscribe";
 import { TeamMember } from "./routes/Team";
 import Today from "./routes/Today";
@@ -59,6 +60,10 @@ const router = createBrowserRouter([
       { path: "trends/:id", element: <TrendDetail /> },
       { path: "subscribe", element: <Subscribe /> },
       { path: "notifications", element: <Notifications /> },
+
+      // Everything a person sets for themselves: their photograph, which
+      // alerts reach them, how the Hub looks on this screen.
+      { path: "settings", element: <Settings /> },
 
       // The Forecast Lab: where a forecast is made rather than tracked. Two
       // of these are concepts and say so on the page; the brief builder works.

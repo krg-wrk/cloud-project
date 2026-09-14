@@ -2,6 +2,7 @@ import type { CSSProperties } from "react";
 import type { EventType, Status } from "../types";
 import { EVENT_LABELS, STATUS_LABELS, initials, personHue } from "../lib/domain";
 import { Icon } from "../lib/icons";
+import { usePhoto } from "../lib/viewer";
 
 /*
  * A pill carries an icon rather than a plain dot: the status is then readable
@@ -26,6 +27,18 @@ export function EventPill({ type }: { type: EventType }) {
   );
 }
 
+/**
+ * A person, as a small round mark.
+ *
+ * Their photograph if they have set one, their initials on a colour derived
+ * from their id if they have not. The initials stay in the markup underneath
+ * either way: a photo that fails to load — an expired cache, a blocked
+ * request — falls back to them rather than to a hole.
+ *
+ * `photo` is looked up rather than passed, because an avatar turns up in a
+ * table cell, a card and a sidebar, and threading a URL through every one of
+ * those would mean every list knowing about photographs.
+ */
 export function Avatar({
   id,
   name,
@@ -33,16 +46,18 @@ export function Avatar({
 }: {
   id: string;
   name: string;
-  size?: "lg";
+  size?: "lg" | "xl";
 }) {
+  const photo = usePhoto(id);
   return (
     <span
-      className={size === "lg" ? "avatar lg" : "avatar"}
+      className={size ? `avatar ${size}` : "avatar"}
       style={{ "--hue": personHue(id) } as CSSProperties}
       title={name}
       aria-hidden
     >
       {initials(name)}
+      {photo && <img className="avatar-photo" src={photo} alt="" loading="lazy" />}
     </span>
   );
 }

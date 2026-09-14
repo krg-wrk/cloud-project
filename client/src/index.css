@@ -453,6 +453,165 @@ button {
   color: var(--ink-45);
 }
 
+/* --- The account, at the foot of the sidebar ------------------------------
+ *
+ * One row: who you are, and a cog. Everything else is behind the name, in a
+ * menu that opens upward — there is nothing below it to open into.
+ * -------------------------------------------------------------------------- */
+
+.account {
+  position: relative;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+
+.account-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.account-open {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1;
+  min-width: 0;
+  padding: 6px 7px;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  background: none;
+  font: inherit;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.account-open:hover,
+.account-open[aria-expanded="true"] {
+  border-color: var(--rule);
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+
+.account-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.account-who b {
+  font-size: 12.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-who small {
+  font-size: 10.5px;
+  color: var(--ink-45);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-caret {
+  margin-left: auto;
+  color: var(--ink-45);
+  flex: none;
+}
+
+.account-cog {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius);
+  color: var(--ink-45);
+}
+
+.account-cog:hover {
+  border-color: var(--rule);
+  background: var(--paper);
+  color: var(--accent);
+  box-shadow: var(--shadow);
+}
+
+.account-cog.active {
+  border-color: var(--rule);
+  background: var(--paper);
+  color: var(--accent);
+}
+
+/* Upward, because the row it belongs to is the last thing on the screen. */
+.account-menu {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  padding: 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-lift);
+}
+
+.account-menu-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 11px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--rule);
+}
+
+.account-menu-who {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.4;
+}
+
+.account-menu-who b {
+  font-size: 13px;
+}
+
+.account-menu-who span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-menu-link {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px;
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.account-menu-link:hover {
+  background: var(--sunken);
+  color: var(--accent);
+}
+
+.account-menu-link.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.account-menu .viewer-switch {
+  margin-top: 10px;
+}
+
 .viewer-switch {
   display: flex;
   flex-direction: column;
@@ -931,6 +1090,7 @@ button {
 }
 
 .avatar {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -945,12 +1105,35 @@ button {
   color: hsl(var(--hue) 32% 30%);
   box-shadow: inset 0 0 0 1px hsl(var(--hue) 22% 78%);
   flex: none;
+  overflow: hidden;
+}
+
+/*
+ * The photograph, laid over the initials rather than instead of them.
+ *
+ * A request that fails leaves an <img> with no pixels, and underneath it the
+ * initials are still drawn — so a photo the browser cannot fetch degrades to
+ * the mark it replaced instead of to an empty circle.
+ */
+.avatar-photo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
 }
 
 .avatar.lg {
   width: 44px;
   height: 44px;
   font-size: 15px;
+}
+
+.avatar.xl {
+  width: 72px;
+  height: 72px;
+  font-size: 24px;
 }
 
 .who {
@@ -7479,4 +7662,103 @@ a.inbox-title:hover {
   font-style: normal;
   font-variant-numeric: tabular-nums;
   color: var(--ink-45);
+}
+
+/* --- Settings -------------------------------------------------------------
+ *
+ * One page of sections rather than a settings area with pages in it: there
+ * are four of these and there will never be forty. The jump links at the top
+ * are what makes it a page you can send somebody to a part of.
+ * -------------------------------------------------------------------------- */
+
+.settings-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 22px;
+}
+
+.settings-jump-link {
+  padding: 5px 11px;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink-70);
+  font-size: 12px;
+}
+
+.settings-jump-link:hover {
+  border-color: var(--rule-strong);
+  color: var(--accent);
+}
+
+.settings-section {
+  margin-bottom: 34px;
+  /* So a jump link does not land the heading under the top of the window. */
+  scroll-margin-top: 16px;
+}
+
+/* Your photograph, and the name it belongs to. */
+.photo-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.photo-what {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 220px;
+  flex: 1;
+}
+
+.photo-what b {
+  font-family: var(--display);
+  font-size: 16px;
+}
+
+.photo-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 2px;
+}
+
+/*
+ * The file input is a label wearing a button, because a bare file input
+ * cannot be styled and cannot be made to look like the button beside it. The
+ * input itself is still in the markup and still reachable — `.sr-only` hides
+ * it from the eye, not from the keyboard — so the label is a real control
+ * rather than a div with a click handler.
+ */
+.photo-actions .btn:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* What the Hub knows about you that you cannot change here. */
+.settings-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px 20px;
+  margin: 18px 0 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--rule);
+}
+
+.settings-facts dt {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+  color: var(--ink-45);
+}
+
+.settings-facts dd {
+  margin: 3px 0 0;
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
 }

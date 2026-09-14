@@ -51,6 +51,7 @@ const PAGES = [
   ["What's on", "/whats-on", "#/whats-on"],
   ["Calendar feed", "/subscribe", "#/subscribe"],
   ["Notifications", "/notifications", "#/notifications"],
+  ["Settings", "/settings", "#/settings"],
   ["Studio", "/studio/connections", "#/studio/connections"],
   ["Freshness", "/studio/freshness", "#/studio/freshness"],
   ["Notify admin", "/studio/notifications", "#/studio/notifications"],

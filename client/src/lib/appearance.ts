@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useApi } from "./api";
+import { usePreferences } from "./preferences";
 
 /**
  * The colours and icons an admin has changed, applied to the running app.
@@ -95,6 +96,7 @@ export const APPEARANCE_CHANGED = "hub:appearance";
 
 export function useAppearance(): Appearance {
   const stored = useApi<Appearance>("/appearance");
+  const mine = usePreferences();
   const look = stored.data ?? NO_APPEARANCE;
   const tokens = look.tokens ?? [];
   // The colours as a string, so the effect runs when what was chosen actually
@@ -106,9 +108,17 @@ export function useAppearance(): Appearance {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key, tokens.length]);
 
+  /*
+   * The studio's switch, and then yours.
+   *
+   * A person may turn the wash off for themselves; nobody may turn it back on
+   * once an admin has turned it off. So the two combine one way only, and the
+   * setting reads as what it is rather than as a race between two switches.
+   */
+  const washOn = look.gradients !== false && mine.wash !== "off";
   useEffect(() => {
-    applyGradients(look.gradients !== false);
-  }, [look.gradients]);
+    applyGradients(washOn);
+  }, [washOn]);
 
   const { reload } = stored;
   useEffect(() => {

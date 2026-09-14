@@ -110,7 +110,11 @@ export default function NotificationBell() {
                   Mark all read
                 </button>
               )}
+              {/* Two ways out: the whole inbox, and the settings that fill it. */}
               <Link className="btn small" to="/notifications" onClick={() => setOpen(false)}>
+                See all
+              </Link>
+              <Link className="btn small" to="/settings" onClick={() => setOpen(false)}>
                 Settings
               </Link>
             </div>
@@ -119,7 +123,7 @@ export default function NotificationBell() {
           {inbox.rows.length === 0 ? (
             <p className="bell-none">
               Nothing yet. Deadlines and the Monday digest appear here &mdash; and by email or
-              Google Chat if you ask for them in <Link to="/notifications">settings</Link>.
+              Google Chat if you ask for them in <Link to="/settings">settings</Link>.
             </p>
           ) : (
             <ul className="bell-list">

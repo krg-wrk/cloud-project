@@ -638,12 +638,258 @@
     border-top: 1px solid var(--line);
   }
 
-  .as-label {
+  /* --- The account, at the foot of the rail -------------------------------
+   *
+   * One row: who you are, and a cog. Everything else is behind the name, in a
+   * menu that opens upward — there is nothing below it to open into.
+   * ---------------------------------------------------------------------- */
+
+  .rail-foot {
+    position: relative;
+  }
+
+  .account-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .account-open {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex: 1;
+    min-width: 0;
+    padding: 6px 7px;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    background: none;
+    font: inherit;
+    color: var(--ink);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .account-open:hover,
+  .account-open[aria-expanded="true"] {
+    border-color: var(--line);
+    background: var(--paper);
+    box-shadow: var(--shadow);
+  }
+
+  .account-who {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.35;
+  }
+
+  .account-who b {
+    font-size: 12.5px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .account-who small {
+    font-size: 10.5px;
+    color: var(--ink-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .account-caret {
+    margin-left: auto;
+    color: var(--ink-soft);
+    flex: none;
+  }
+
+  .account-cog {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    flex: none;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    color: var(--ink-soft);
+  }
+
+  .account-cog:hover,
+  .account-cog.on {
+    border-color: var(--line);
+    background: var(--paper);
+    color: var(--accent);
+  }
+
+  .account-menu {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    z-index: 40;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--paper);
+    box-shadow: var(--shadow-lift);
+  }
+
+  .account-menu-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 11px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .account-menu-who {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    line-height: 1.4;
+  }
+
+  .account-menu-who b {
+    font-size: 13px;
+  }
+
+  .account-menu-who .body {
+    font-size: 11.5px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .account-menu-link {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 8px 9px;
+    border-radius: var(--radius-sm);
+    color: var(--ink);
+    font-size: 13px;
+    text-decoration: none;
+  }
+
+  .account-menu-link:hover {
+    background: var(--sunken);
+    color: var(--accent);
+  }
+
+  .viewer-switch {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 12px;
+    border-top: 1px solid var(--line);
+  }
+
+  .viewer-switch label {
     font-size: 9.5px;
     font-weight: 500;
     letter-spacing: 0.17em;
     text-transform: uppercase;
     color: var(--ink-soft);
+  }
+
+  /* --- Settings ------------------------------------------------------------
+   *
+   * One page of sections rather than a settings area with pages in it.
+   * ---------------------------------------------------------------------- */
+
+  /* `flex-direction: row` said out loud: the rail's own `nav` rule above sets
+     a column, and these are pills across the top. */
+  .settings-jump {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 22px;
+  }
+
+  .settings-jump-link {
+    padding: 5px 11px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--paper);
+    color: var(--ink-mid);
+    font-size: 12px;
+    text-decoration: none;
+  }
+
+  .settings-jump-link:hover {
+    border-color: var(--line-firm);
+    color: var(--accent);
+  }
+
+  .settings-section {
+    margin-bottom: 34px;
+    scroll-margin-top: 16px;
+  }
+
+  .photo-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+
+  .photo-what {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 220px;
+    flex: 1;
+  }
+
+  .photo-what > b {
+    font-family: var(--display);
+    font-size: 16px;
+  }
+
+  .photo-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 4px 0 2px;
+  }
+
+  /* The file input is a label wearing a button: a bare file input cannot be
+     styled to match the button beside it. The input is still in the markup
+     and still reachable by keyboard — `.sr-only` hides it from the eye only. */
+  .photo-actions .toggle:focus-within {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .settings-facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px 20px;
+    margin: 18px 0 10px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+
+  .settings-facts dt {
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.17em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .settings-facts dd {
+    margin: 3px 0 0;
+    font-size: 13.5px;
+    overflow-wrap: anywhere;
   }
 
   select {
@@ -921,6 +1167,8 @@
   }
 
   .face {
+    position: relative;
+    overflow: hidden;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -939,6 +1187,23 @@
     width: 44px;
     height: 44px;
     font-size: 15px;
+  }
+
+  .face.xl {
+    width: 72px;
+    height: 72px;
+    font-size: 24px;
+  }
+
+  /* The photograph over the initials, so one that will not load falls back to
+     the mark it replaced rather than to an empty circle. */
+  .face-photo {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
   }
 
   .tag {
@@ -6950,11 +7215,10 @@
       </button>
     </div>
     <nav id="nav" class="nav-scroll"></nav>
-    <div class="rail-foot">
-      <div class="as-label">Signed in as (demo)</div>
-      <select id="as"></select>
-      <div class="role-line" id="role-line"></div>
-    </div>
+    <!-- One row: who you are, and a cog. Everything else — the address, the
+         way into your own settings, and in this demo the profile switcher —
+         is behind the name, where an account menu belongs. -->
+    <div class="rail-foot" id="account"></div>
   </aside>
   <main id="view" tabindex="-1"></main>
   <div id="edit-bar"></div>
@@ -7078,6 +7342,8 @@
     data: "M4 6.5C4 5.1 7.6 4 12 4s8 1.1 8 2.5S16.4 9 12 9 4 7.9 4 6.5ZM4 6.5v11C4 18.9 7.6 20 12 20s8-1.1 8-2.5v-11M4 12c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5M9 16.5h.01M12 16.5h.01",
     proof: "M9 12.5l2 2 4.5-4.5M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z",
     copy: "M9 9V5.5A1.5 1.5 0 0 1 10.5 4h8A1.5 1.5 0 0 1 20 5.5v8a1.5 1.5 0 0 1-1.5 1.5H15M5.5 9h8A1.5 1.5 0 0 1 15 10.5v8a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 4 18.5v-8A1.5 1.5 0 0 1 5.5 9Z",
+    camera:
+      "M4 7.5h3L8.5 5h7L17 7.5h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1ZM12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z",
   };
 
   /** Presentational by default: the label beside it carries the meaning. */
@@ -7110,19 +7376,25 @@
    * trend profiles credit people by name, not by an id in the people list,
    * and looking one up there would fall back to the wrong person.
    */
-  function faceFor(name, seed, big) {
+  function faceFor(name, seed, big, photo) {
     const label = (name || seed || "?")
       .split(/\s+/)
       .slice(0, 2)
       .map((w) => w[0].toUpperCase())
       .join("");
-    return `<span class="face${big ? " big" : ""}" style="--c:hsl(${hue(
-      seed,
-    )} 55% 45%)">${label}</span>`;
+    /*
+     * The photograph is laid over the initials rather than instead of them,
+     * so an image that will not load falls back to the mark it replaced
+     * instead of to an empty circle.
+     */
+    const over = photo ? `<img class="face-photo" src="${esc(photo)}" alt="" />` : "";
+    return `<span class="face${big ? " big" : ""}${
+      big === "xl" ? " xl" : ""
+    }" style="--c:hsl(${hue(seed)} 55% 45%)">${label}${over}</span>`;
   }
 
   function face(id, big) {
-    return faceFor(person(id)?.name, id, big);
+    return faceFor(person(id)?.name, id, big, photos.get(id));
   }
 
   const day = (d) => new Date(d + "T00:00:00Z");
@@ -7478,6 +7750,15 @@
   const entries = new Map();
   const reviews = new Map();
   const details = new Map();
+  /**
+   * Profile photographs, by person id, as small data URLs.
+   *
+   * Shared like everything else this page writes, so a photo somebody uploads
+   * is one everybody looking at the page sees. The real Hub keeps these in
+   * its own table and serves the bytes from an endpoint the browser can
+   * cache; there is no server here, so the picture itself is the record.
+   */
+  const photos = new Map();
   /** What the Hub adds to a trend profile: a note, links, a cover image. */
   const trendExtras = new Map();
 
@@ -7872,6 +8153,16 @@
         researchLinks: Array.isArray(body.researchLinks) ? body.researchLinks : [],
       }),
     );
+    watch("photos", (id, body) => {
+      // Only something that looks like an image the page drew itself. The
+      // shared store is writable by anyone reading the page, and this string
+      // becomes the src of an <img>.
+      if (typeof body.dataUrl === "string" && /^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(body.dataUrl)) {
+        photos.set(id, body.dataUrl);
+      } else {
+        photos.delete(id);
+      }
+    });
     watch("trends", (id, body) =>
       trendExtras.set(id, { ...body, links: Array.isArray(body.links) ? body.links : [] }),
     );
@@ -8145,24 +8436,6 @@
       ],
       "nav.item.whats-on": ["#/whats-on", "whats-on", "", "whats-on", false, "team"],
       "nav.item.subscribe": ["#/subscribe", "subscribe", "", "subscribe", false, "team"],
-      /*
-       * In the rail as well as on the bell. The bell hangs off the rail,
-       * which a phone does not have — so the page needs a way in that
-       * survives the layout, and "what am I being emailed about" is a thing
-       * people look for in a menu rather than by clicking a bell.
-       *
-       * Under Settings rather than with the team: it is a page about your own
-       * preferences — which alerts reach you, and by which channel — not
-       * about anybody else.
-       */
-      "nav.item.notifications": [
-        "#/notifications",
-        "notifications",
-        unreadCount(me.id) || "",
-        "bell",
-        false,
-        "settings",
-      ],
     };
   }
 
@@ -8206,7 +8479,7 @@
     if (first === "lab") return "lab";
     if (first === "data") return "data";
     if (["team", "workshops", "whats-on", "subscribe"].includes(first)) return "team";
-    if (first === "studio" || first === "notifications") return "settings";
+    if (["studio", "notifications", "settings"].includes(first)) return "settings";
     return "work";
   }
 
@@ -8356,29 +8629,91 @@
 
     renderTabs(links, here);
 
+    renderAccount();
+  }
+
+  /** Whether the account menu at the foot of the rail is open. */
+  let accountOpen = false;
+
+  /**
+   * Who you are, at the foot of the rail, in one row.
+   *
+   * The row is the whole of it: a photograph or initials, a name, a role, and
+   * a cog that goes to Settings. The address you are signed in with and — in
+   * this demo only — the profile switcher are behind the name, in a menu that
+   * opens upward because there is nothing below it to open into.
+   */
+  function renderAccount() {
+    const v = viewer();
+    const here = (location.hash || "#/").slice(2).split("?")[0].split("#")[0];
+    const group = (role, label) =>
+      `<optgroup label="${label}">` +
+      people
+        .filter((p) => p.role === role)
+        .map(
+          (p) =>
+            `<option value="${p.id}"${p.id === viewerId ? " selected" : ""}>${esc(p.name)} — ${esc(
+              p.email,
+            )}</option>`,
+        )
+        .join("") +
+      `</optgroup>`;
+
+    document.getElementById("account").innerHTML = `
+      ${
+        accountOpen
+          ? `<div class="account-menu" id="account-menu" role="dialog" aria-label="Your account">
+              <div class="account-menu-head">
+                ${face(v.person.id, true)}
+                <div class="account-menu-who">
+                  <b>${esc(v.person.name)}</b>
+                  <span class="body">${esc(v.person.email)}</span>
+                  <span class="body">${ROLE_LABELS[v.role]}${
+                    v.role !== "forecaster" && v.verticals !== "all"
+                      ? ` · ${v.verticals.length} verticals`
+                      : ""
+                  }</span>
+                </div>
+              </div>
+              <a class="account-menu-link" href="#/settings" data-account-go>${icon(
+                "settings",
+                16,
+              )}Settings</a>
+              <a class="account-menu-link" href="#/notifications" data-account-go>${icon(
+                "bell",
+                16,
+              )}Your alerts</a>
+              <div class="viewer-switch">
+                <label for="as">Switch profile (demo)</label>
+                <select id="as">${group("forecaster", "Forecasters")}${group(
+                  "commissioning-manager",
+                  "Commissioning managers",
+                )}</select>
+              </div>
+            </div>`
+          : ""
+      }
+      <div class="account-row">
+        <button class="account-open" id="account-open" aria-expanded="${accountOpen}"
+          aria-haspopup="dialog">
+          ${face(v.person.id)}
+          <span class="account-who"><b>${esc(v.person.name)}</b><small>${
+            ROLE_LABELS[v.role]
+          }</small></span>
+          ${icon("chevron-down", 12, "account-caret")}
+        </button>
+        <a class="account-cog${here === "settings" ? " on" : ""}" href="#/settings"
+          title="Settings" aria-label="Settings">${icon("settings", 16)}</a>
+      </div>`;
+
     const sel = document.getElementById("as");
-    if (!sel.options.length) {
-      const group = (role, label) =>
-        `<optgroup label="${label}">` +
-        people
-          .filter((p) => p.role === role)
-          .map((p) => `<option value="${p.id}">${esc(p.name)} — ${esc(p.email)}</option>`)
-          .join("") +
-        `</optgroup>`;
-      sel.innerHTML = group("forecaster", "Forecasters") + group("commissioning-manager", "Commissioning managers");
+    if (sel) {
       sel.addEventListener("change", () => {
         viewerId = sel.value;
+        accountOpen = false;
         render();
       });
     }
-    sel.value = viewerId;
-
-    // The view follows the account, so say which account and what it can do.
-    const v = viewer();
-    document.getElementById("role-line").innerHTML =
-      `<span class="who">${face(v.person.id)}<span>${esc(v.person.name)}<br />${
-        ROLE_LABELS[v.role]
-      }${v.role !== "forecaster" && v.verticals !== "all" ? ` · ${v.verticals.length} verticals` : ""}</span></span>`;
   }
 
   /**
@@ -11156,7 +11491,6 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             slotNav("nav.item.team", "Forecasters"),
             slotNav("nav.item.whats-on", "What’s on"),
             slotNav("nav.item.subscribe", "Add to your calendar"),
-            slotNav("nav.item.notifications", "Alerts"),
           ],
         },
       ],
@@ -11447,7 +11781,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     },
     {
       id: "notifications",
-      label: "Notification settings",
+      label: "Your alerts",
       path: "/notifications",
       groups: [
         {
@@ -11455,7 +11789,22 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           label: "Page heading",
           slots: [
             slotTitle("notifications.eyebrow", "You"),
-            slotTitle("notifications.title", "What the Hub tells you"),
+            slotTitle("notifications.title", "Alerts"),
+          ],
+        },
+      ],
+    },
+    {
+      id: "settings",
+      label: "Settings",
+      path: "/settings",
+      groups: [
+        {
+          id: "settings.head",
+          label: "Page heading",
+          slots: [
+            slotTitle("settings.eyebrow", "You"),
+            slotTitle("settings.title", "Settings"),
           ],
         },
       ],
@@ -12132,8 +12481,36 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     settings: "dusk",
   };
 
+  /**
+   * The wash, for you, in this browser.
+   *
+   * The studio's switch above is everybody's; this is a personal override of
+   * it, kept in local storage like the folded menu groups. It only ever turns
+   * the wash off — turning back on something an admin turned off would make
+   * their switch a suggestion rather than a setting.
+   */
+  const WASH_KEY = "forecasters-hub.wash";
+
+  function readMyWash() {
+    try {
+      return localStorage.getItem(WASH_KEY) === "off" ? "off" : "default";
+    } catch {
+      return "default";
+    }
+  }
+
+  function writeMyWash(value) {
+    try {
+      localStorage.setItem(WASH_KEY, value);
+    } catch {
+      // The choice lasts for this page load, which is no worse than before.
+    }
+    applyGradients();
+  }
+
   function applyGradients() {
-    document.documentElement.dataset.gradients = lookGradients ? "on" : "off";
+    const on = lookGradients && readMyWash() !== "off";
+    document.documentElement.dataset.gradients = on ? "on" : "off";
   }
 
   /** WCAG relative luminance, for the contrast figure beside each swatch. */
@@ -15177,6 +15554,66 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     render();
   }
 
+  /**
+   * A photograph, resized here and kept with everything else this page writes.
+   *
+   * Scaled to a 256px square in the browser before it is stored, exactly as
+   * the real Hub does it: a picture off a phone is four megabytes and eight
+   * megapixels, and what gets drawn is a circle 25 pixels across.
+   */
+  const PHOTO_SIDE = 256;
+
+  function readSquareJpeg(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const side = Math.min(img.naturalWidth, img.naturalHeight);
+          if (!side) throw new Error("That file could not be read as an image.");
+          const canvas = document.createElement("canvas");
+          canvas.width = PHOTO_SIDE;
+          canvas.height = PHOTO_SIDE;
+          const ctx = canvas.getContext("2d");
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(
+            img,
+            (img.naturalWidth - side) / 2,
+            (img.naturalHeight - side) / 2,
+            side,
+            side,
+            0,
+            0,
+            PHOTO_SIDE,
+            PHOTO_SIDE,
+          );
+          resolve(canvas.toDataURL("image/jpeg", 0.82));
+        } catch (err) {
+          reject(err);
+        } finally {
+          URL.revokeObjectURL(url);
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("That file could not be read as an image."));
+      };
+      img.src = url;
+    });
+  }
+
+  function savePhoto(personId, dataUrl) {
+    photos.set(personId, dataUrl);
+    store?.collection("photos").doc(personId).set({ dataUrl }).catch(() => {});
+    render();
+  }
+
+  function removePhoto(personId) {
+    photos.delete(personId);
+    store?.collection("photos").doc(personId).set({ dataUrl: "" }).catch(() => {});
+    render();
+  }
+
   function markNoticeRead(personId, key) {
     const set = new Set(readSet(personId));
     if (key) set.add(key);
@@ -15217,36 +15654,28 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
   function pageNotifications() {
     const v = viewer();
     const me = v.person.id;
-    const prefs = prefsFor(me);
-    const saved = notifyPrefs.has(me);
     const read = readSet(me);
     const rows = noticesFor(me);
     const unread = rows.filter((n) => !read.has(n.key)).length;
-    const anythingOn = NOTICE_KINDS.some(([kind]) => (prefs.on[kind] ?? []).length > 0);
-
-    const ready = {
-      inApp: [true, "Always on. Notices appear on the bell beside the WGSN mark, and in full on this page."],
-      email: [
-        false,
-        "This demo is one file with no server, so nothing can send email from it. In the deployed Hub an admin points it at a Workspace relay and this turns on — your choice here is still recorded.",
-      ],
-      chat: [
-        false,
-        "Same: no server here to post to a Chat space. The deployed Hub sends to the team space, or to your own if you give it a webhook.",
-      ],
-    };
 
     return `
       <div class="head">
         <div>
           ${slot("notifications.eyebrow", { tag: "div", cls: "eyebrow" })}
           ${slot("notifications.title", { tag: "h1" })}
-          <p class="lede">The Hub is a website, so it can only tell you something while you are
-            looking at it. These are the things worth knowing when you are not — and you choose
-            which of them reach you, and how.</p>
+          <p class="lede">Deadlines coming up, the Monday digest, and anything waiting for you to
+            look at it. Which of these reach you — and whether by email, chat or only here — is
+            yours to choose in <a href="#/settings">Settings</a>.</p>
         </div>
+        <a class="toggle" href="#/settings">${icon("settings", 15)}Alert settings</a>
       </div>
 
+      ${inboxHtml(me, read, rows, unread)}`;
+  }
+
+  /** The inbox itself, which is all the alerts page is. */
+  function inboxHtml(me, read, rows, unread) {
+    return `
       <div class="panel" style="margin-bottom:14px">
         <div class="sec-head" style="margin-bottom:11px">
           <h2>What you have been told${unread ? ` <span class="mono-tag">${unread} new</span>` : ""}</h2>
@@ -15281,8 +15710,36 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                 )
                 .join("")}</ul>`
         }
-      </div>
+      </div>`;
+  }
 
+  /**
+   * The Alerts section of Settings: which notices reach you, and where.
+   *
+   * The grid is kinds down the side, channels across. Tick the cells you
+   * want — "email me about deadlines but leave the digest in the Hub" is the
+   * preference most people actually have, and a single switch per channel
+   * cannot express it.
+   */
+  function alertSettingsHtml() {
+    const me = viewer().person.id;
+    const prefs = prefsFor(me);
+    const saved = notifyPrefs.has(me);
+    const anythingOn = NOTICE_KINDS.some(([kind]) => (prefs.on[kind] ?? []).length > 0);
+
+    const ready = {
+      inApp: [true, "Always on. Notices appear on the bell beside the WGSN mark, and in full on this page."],
+      email: [
+        false,
+        "This demo is one file with no server, so nothing can send email from it. In the deployed Hub an admin points it at a Workspace relay and this turns on — your choice here is still recorded.",
+      ],
+      chat: [
+        false,
+        "Same: no server here to post to a Chat space. The deployed Hub sends to the team space, or to your own if you give it a webhook.",
+      ],
+    };
+
+    return `
       <div class="panel" style="margin-bottom:14px">
         <div class="sec-head" style="margin-bottom:11px">
           <h2>Where to send what</h2>
@@ -15360,6 +15817,128 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       </div>`;
   }
 
+  /**
+   * Everything a person can set for themselves, on one page.
+   *
+   * One page with sections rather than a page each: there are four of these
+   * and there will never be forty, and a settings area you have to navigate
+   * is worse than a settings page you scroll.
+   */
+  function pageSettings() {
+    const v = viewer();
+    const me = v.person;
+    const mine = readMyWash();
+    const has = photos.has(me.id);
+
+    return `
+      <div class="head">
+        <div>
+          ${slot("settings.eyebrow", { tag: "div", cls: "eyebrow" })}
+          ${slot("settings.title", { tag: "h1" })}
+          <p class="lede">Your photograph, which alerts reach you and how the Hub looks on this
+            screen. Everything here is yours alone — nobody else sees a change you make on this
+            page, except your photograph.</p>
+        </div>
+      </div>
+
+      <!-- Buttons rather than anchors: the whole page is addressed by its
+           hash, so a second hash in a link is not a fragment the browser can
+           scroll to. These scroll the section into view themselves. -->
+      <nav class="settings-jump" aria-label="Settings sections">
+        <button class="settings-jump-link" data-jump="you">You</button>
+        <button class="settings-jump-link" data-jump="alerts">Alerts</button>
+        <button class="settings-jump-link" data-jump="look">How it looks</button>
+        <button class="settings-jump-link" data-jump="calendar">Your calendar</button>
+      </nav>
+
+      <section class="settings-section" id="you">
+        <div class="sec-head"><h2>You</h2></div>
+        <div class="panel">
+          <div class="photo-row">
+            ${face(me.id, "xl")}
+            <div class="photo-what">
+              <b>${esc(me.name)}</b>
+              <span class="body">${
+                has
+                  ? "Your photograph, shown wherever your name appears in the Hub."
+                  : "No photograph yet, so your initials stand in wherever your name appears."
+              }</span>
+              <div class="photo-actions">
+                <label class="toggle">${icon("camera", 15)}${
+                  has ? "Change photo" : "Upload a photo"
+                }<input type="file" class="sr-only" id="photo-file"
+                    accept="image/png,image/jpeg,image/webp" /></label>
+                ${has ? `<button class="toggle" data-photo-remove>Remove</button>` : ""}
+                <span class="body" id="photo-note"></span>
+              </div>
+              <span class="body">Cropped to a square and scaled down in your browser, so nothing
+                large is stored. Only you can change yours — and on this shared page, everybody
+                looking at it sees it.</span>
+            </div>
+          </div>
+
+          <dl class="settings-facts">
+            <div><dt>Name</dt><dd>${esc(me.name)}</dd></div>
+            <div><dt>Email</dt><dd>${esc(me.email)}</dd></div>
+            <div><dt>Role</dt><dd>${esc(ROLE_LABELS[v.role])}</dd></div>
+            ${me.forecasterRole ? `<div><dt>Level</dt><dd>${esc(me.forecasterRole)}</dd></div>` : ""}
+            ${me.vertical ? `<div><dt>Vertical</dt><dd>${esc(me.vertical)}</dd></div>` : ""}
+            ${me.region ? `<div><dt>Region</dt><dd>${esc(me.region)}</dd></div>` : ""}
+          </dl>
+          <p class="body">Your name, role and department come from the team&rsquo;s own records
+            rather than from the Hub, so they are read here and changed there. Your photograph is
+            the Hub&rsquo;s, and yours.</p>
+        </div>
+      </section>
+
+      <section class="settings-section" id="alerts">
+        <div class="sec-head"><h2>Alerts</h2></div>
+        <p class="body" style="margin:-4px 0 12px">Everything the Hub has already told you is in
+          <a href="#/notifications">your alerts</a>.</p>
+        ${alertSettingsHtml()}
+      </section>
+
+      <section class="settings-section" id="look">
+        <div class="sec-head"><h2>How it looks</h2></div>
+        <div class="panel">
+          <div class="panel-label">On this screen</div>
+          <p class="body">Kept in this browser rather than on your account, because it is a
+            setting about the screen in front of you: change it on a laptop and your phone is
+            untouched.</p>
+          <label class="check gradient-switch">
+            <input type="checkbox" data-my-wash${
+              mine !== "off" && lookGradients ? " checked" : ""
+            }${lookGradients ? "" : " disabled"} />
+            <span><b>Iridescent wash behind the pages</b><small>${
+              lookGradients
+                ? "A very pale field of colour that stays put while the page scrolls, and a gradient behind each page title. Off gives you flat paper."
+                : "Turned off for everybody in the studio, so there is nothing to switch here."
+            }</small></span>
+          </label>
+          ${
+            mine === "off" && lookGradients
+              ? `<div class="none" style="text-align:left;margin-top:12px">Off, for you, in this
+                  browser. Everybody else still sees whatever the studio set.</div>`
+              : ""
+          }
+        </div>
+      </section>
+
+      <section class="settings-section" id="calendar">
+        <div class="sec-head"><h2>Your calendar</h2></div>
+        <div class="panel">
+          <div class="panel-label">Deadlines in your own calendar</div>
+          <p class="body">Your submission and publication dates, as a feed Google Calendar or
+            Outlook can subscribe to. The address is private to you and can be reissued if it
+            gets out.</p>
+          <p style="margin-top:10px"><a class="toggle" href="#/subscribe">${icon(
+            "subscribe",
+            15,
+          )}Set up the feed</a></p>
+        </div>
+      </section>`;
+  }
+
   /** The bell in the rail: how much is new, and the panel behind it. */
   function bellHtml() {
     const me = viewer().person.id;
@@ -15383,14 +15962,15 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           <b>Notifications</b>
           <div class="bell-head-actions">
             ${unread ? `<button class="toggle small" data-nt-read="">Mark all read</button>` : ""}
-            <a class="toggle small" href="#/notifications" data-nt-close>Settings</a>
+            <a class="toggle small" href="#/notifications" data-nt-close>See all</a>
+            <a class="toggle small" href="#/settings" data-nt-close>Settings</a>
           </div>
         </div>
         ${
           rows.length === 0
             ? `<p class="bell-none">Nothing yet. Deadlines and the Monday digest appear here — and
                 by email or Google Chat if you ask for them in
-                <a href="#/notifications" data-nt-close>settings</a>.</p>`
+                <a href="#/settings" data-nt-close>settings</a>.</p>`
             : `<ul class="bell-list">${rows
                 .map(
                   (n) => `
@@ -16309,6 +16889,9 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       case "notifications":
         html = pageNotifications();
         break;
+      case "settings":
+        html = pageSettings();
+        break;
       case "studio":
         html = pageStudio(parts[1] ?? "connections", params);
         break;
@@ -16402,6 +16985,51 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         render();
       }),
     );
+
+    view.querySelectorAll("[data-jump]").forEach((el) =>
+      el.addEventListener("click", () => {
+        document
+          .getElementById(el.dataset.jump)
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }),
+    );
+
+    // The wash, for you, in this browser — the personal half of that switch.
+    view.querySelectorAll("[data-my-wash]").forEach((el) =>
+      el.addEventListener("change", () => {
+        writeMyWash(el.checked ? "default" : "off");
+        render();
+      }),
+    );
+
+    /*
+     * A photograph, resized in the browser before it is stored.
+     *
+     * The note beside the button is written directly rather than through a
+     * re-render, because the render would replace the input mid-read.
+     */
+    const photoFile = view.querySelector("#photo-file");
+    if (photoFile) {
+      photoFile.addEventListener("change", async () => {
+        const chosen = photoFile.files?.[0];
+        if (!chosen) return;
+        const note = view.querySelector("#photo-note");
+        const say = (text) => {
+          if (note) note.textContent = text;
+        };
+        if (chosen.size > 12 * 1024 * 1024) {
+          say("That file is very large. Pick a photograph rather than a raw image.");
+          return;
+        }
+        say("Working…");
+        try {
+          const dataUrl = await readSquareJpeg(chosen);
+          savePhoto(viewer().person.id, dataUrl);
+        } catch (err) {
+          say(err?.message ?? "That photo could not be read.");
+        }
+      });
+    }
     view.querySelectorAll("[data-look-wash]").forEach((el) =>
       el.addEventListener("change", () => {
         lookWashes[el.dataset.lookWash] = el.value;
@@ -17540,6 +18168,32 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       paletteOpen = false;
       renderPalette(false);
       if (hit) location.hash = hit.to;
+      return;
+    }
+
+    /*
+     * The account menu at the foot of the rail.
+     *
+     * Delegated here for the same reason as the bell: it lives outside the
+     * element a page render replaces.
+     */
+    if (e.target.closest("#account-open")) {
+      accountOpen = !accountOpen;
+      renderAccount();
+      return;
+    }
+    if (e.target.closest("[data-account-go]")) {
+      accountOpen = false;
+      renderAccount();
+      // and on to the link's own href.
+    } else if (accountOpen && !e.target.closest("#account-menu")) {
+      accountOpen = false;
+      renderAccount();
+    }
+
+    const dropPhoto = e.target.closest("[data-photo-remove]");
+    if (dropPhoto) {
+      removePhoto(viewer().person.id);
       return;
     }
 

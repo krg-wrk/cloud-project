@@ -102,6 +102,20 @@ export async function send<T>(
   return parsed as T;
 }
 
+/**
+ * The address of something the browser fetches for itself — an `<img>`, not a
+ * `fetch`.
+ *
+ * A tag cannot carry the dev switcher's header, so in dev mode the account
+ * rides in the query string instead, which is the other thing the server
+ * already accepts. Behind SSO there is nothing to add: the proxy stamps every
+ * request from this origin, image requests included.
+ */
+export function assetUrl(path: string, params: Record<string, string | undefined> = {}): string {
+  const email = devViewer();
+  return `/api${path}${query({ ...params, ...(email ? { as: email } : {}) })}`;
+}
+
 /** Builds an /api query string, dropping empty values. */
 export function query(params: Record<string, string | undefined>): string {
   const search = new URLSearchParams();

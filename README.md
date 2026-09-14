@@ -40,7 +40,8 @@ Set `HUB_DB_URL` when it is time for Postgres — see
 | Data | `/data` | The analysis that sits beside the schedule rather than in it |
 | Proof Point Library | `/data/proof-points` | 10,235 data callouts matched against every trend profile, with the reasoning and the owner's decision |
 | Review proof points | `/data/review` | The deciding half of the same thing: one card at a time, arrow keys, rejection reasons |
-| What the Hub tells you | `/notifications` | Your inbox, and which notices reach you by which channel |
+| Alerts | `/notifications` | Your inbox: everything the Hub has told you |
+| Settings | `/settings` | Yours alone: your photograph, which alerts reach you and how the Hub looks on this screen |
 | Learning | `/workshops`, `/workshops/ws-201` | The workshop and knowledge-sharing programme, with sign-ups |
 | What's on | `/whats-on` | Leave, public holidays, shows |
 | Studio | `/studio` | Admin: connect a data source, build views of it, choose who sees them, and change the wording of the built-in pages |
@@ -1103,10 +1104,12 @@ reason for somebody to turn the whole thing off:
 
 Not an admin, and not a global switch. Some of this team lives in Google
 Chat, some in email, and some want the bell in the corner and nothing else.
-`/notifications` is a grid — the three kinds down the side, three channels
-across — because "email me about deadlines but leave the digest in the Hub"
-is the preference most people actually have, and one switch per channel
-cannot express it.
+The Alerts section of `/settings` is a grid — the three kinds down the side,
+three channels across — because "email me about deadlines but leave the
+digest in the Hub" is the preference most people actually have, and one
+switch per channel cannot express it. `/notifications` is the other half: the
+inbox those choices fill, reached from the bell, from the account menu, and
+from a phone where there is no bell to click.
 
 **The default is the bell and nothing that leaves the building.** Somebody who
 has never opened the settings gets the in-app notices, which cost them

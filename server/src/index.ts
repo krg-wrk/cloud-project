@@ -71,7 +71,22 @@ if (source instanceof SmartsheetSource) {
 }
 
 app.use(cors());
-app.use(express.json());
+
+/*
+ * Bodies stay small — 100KB, Express's own default — everywhere except the
+ * one endpoint that takes an image.
+ *
+ * A photograph arrives base64 inside JSON, so 96KB of picture is about 130KB
+ * of request. Raising the limit for the whole API to suit one route would
+ * quietly raise it for every route that takes a note or a filter, so the
+ * bigger limit is granted by path and nowhere else. The endpoint still checks
+ * the image itself; this only decides what is allowed to reach it.
+ */
+const body = express.json();
+const bodyWithPhoto = express.json({ limit: "200kb" });
+app.use((req, res, next) =>
+  (req.path === "/api/my/photo" ? bodyWithPhoto : body)(req, res, next),
+);
 
 // The feed is fetched by Google, not by a signed-in browser, so it is mounted
 // before the identity middleware and authenticates on its URL token instead.
@@ -115,15 +130,25 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
+/*
+ * The last word on anything that threw.
+ *
+ * A fault of ours is a 500; a fault in the request is not. Express's own body
+ * parser marks a body that is too large or malformed with a status of its
+ * own, and reporting those as 500 sends somebody looking for a broken server
+ * when what they have is a file too big to send.
+ */
 app.use(
   (
-    err: Error,
+    err: Error & { status?: number; statusCode?: number },
     _req: express.Request,
     res: express.Response,
     _next: express.NextFunction,
   ) => {
-    console.error(err);
-    res.status(500).json({ error: err.message });
+    const said = err.status ?? err.statusCode;
+    const status = typeof said === "number" && said >= 400 && said < 600 ? said : 500;
+    if (status >= 500) console.error(err);
+    res.status(status).json({ error: err.message });
   },
 );
 
