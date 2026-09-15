@@ -481,7 +481,14 @@ export interface DirectoryPerson {
 export interface DirectoryPage {
   by: string;
   q: string;
-  facets: { key: string; label: string }[];
+  /** What each facet has been narrowed to. A missing key means everything. */
+  filters: Record<string, string>;
+  /** Every facet, with the values that actually feature and how many each holds. */
+  facets: {
+    key: string;
+    label: string;
+    values: { value: string; count: number }[];
+  }[];
   counts: {
     people: number;
     feedLeads: number;

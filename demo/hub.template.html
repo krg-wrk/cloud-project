@@ -3008,7 +3008,13 @@
   .dir-groups {
     display: flex;
     flex-direction: column;
-    gap: 26px;
+    /* The tight gap, which a shut group wants; an open one adds its own
+       margin back on top, because a flex gap cannot vary per child. */
+    gap: 10px;
+  }
+
+  .dir-group:not(.shut) {
+    margin-block: 8px;
   }
 
   /*
@@ -3033,12 +3039,76 @@
     }
   }
 
+  /*
+   * Folded, the panel is just its heading — so it loses most of its height.
+   *
+   * The whole reason to fold is to turn the page into a contents page you can
+   * read without scrolling, so a shut group is as close to one line as it can
+   * be, and the gap between groups closes up with it.
+   */
+  .dir-group.shut {
+    padding: 9px 18px;
+  }
+
+  /* A real button rather than a div with a handler: it folds the group, so it
+     has to be reachable by keyboard and announced as what it is. */
   .dir-group-head {
     display: flex;
     align-items: baseline;
     gap: 10px;
-    padding-bottom: 8px;
+    width: 100%;
+    padding: 0 0 8px;
+    border: none;
     border-bottom: 1px solid var(--ink);
+    background: none;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .dir-group.shut .dir-group-head {
+    padding-bottom: 0;
+    border-bottom: none;
+  }
+
+  .dir-group-head:hover h2 {
+    color: var(--accent);
+  }
+
+  /* One glyph, two states: a quarter turn is the whole difference. */
+  .dir-fold {
+    flex: none;
+    align-self: center;
+    color: var(--ink-soft);
+    transition: transform 0.15s ease;
+  }
+
+  .dir-group.shut .dir-fold {
+    transform: rotate(-90deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dir-fold {
+      transition: none;
+    }
+  }
+
+  /* The dropdowns, on their own row under the search and the grouping. */
+  .dir-narrow {
+    margin-top: -10px;
+  }
+
+  .dir-narrow select {
+    min-width: 150px;
+    max-width: 230px;
+  }
+
+  .dir-foldbar {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
   }
 
   .dir-group-head h2 {
@@ -10613,12 +10683,64 @@
     return q.trim().toLowerCase().split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
   };
 
+  /*
+   * The values a facet actually has, with how many people each holds.
+   *
+   * Built from the directory rather than from a list somebody maintains, so a
+   * new knowledge network appears in the dropdown the moment the first person
+   * is tagged into it. "Those that feature" is the point: a menu of forty
+   * regions where thirty-eight are empty is a menu nobody can use.
+   */
+  function dirValues(people, facet) {
+    const counts = new Map();
+    for (const p of people) {
+      for (const v of facet[2](p)) counts.set(v, (counts.get(v) ?? 0) + 1);
+    }
+    return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }
+
+  /**
+   * Filters combine with AND across facets — "Fashion Design *and*
+   * Sustainability" is the narrower question, which is what picking a second
+   * dropdown asks for. Within one facet a person matches on any of their
+   * values, because somebody genuinely covers three categories.
+   */
+  const dirPasses = (p, filters) =>
+    DIR_FACETS.every(([key, , of]) => !filters[key] || of(p).includes(filters[key]));
+
+  /** Which groups are folded, per facet, kept in this browser. */
+  const DIR_FOLDED_KEY = "forecasters-hub.directory-folded";
+
+  function readDirFolded() {
+    try {
+      return JSON.parse(localStorage.getItem(DIR_FOLDED_KEY) ?? "{}");
+    } catch {
+      return {};
+    }
+  }
+
+  function writeDirFolded(next) {
+    try {
+      localStorage.setItem(DIR_FOLDED_KEY, JSON.stringify(next));
+    } catch {
+      // The choice lasts for this page load, which is no worse than before.
+    }
+    render();
+  }
+
   function pageTeam(params) {
+    const v = viewer();
     const by = params.get("by") ?? "team";
     const q = params.get("q") ?? "";
     const facet = DIR_FACETS.find((f) => f[0] === by) ?? DIR_FACETS[0];
+    const filters = Object.fromEntries(
+      DIR_FACETS.map(([key]) => [key, params.get(key) ?? ""]).filter(([, value]) => value),
+    );
     const here = directory.filter((p) => p.availability !== "gone");
-    const found = here.filter((p) => dirMatches(p, q));
+    const searched = here.filter((p) => dirMatches(p, q));
+    const found = searched.filter((p) => dirPasses(p, filters));
+    const narrowed = q.trim().length > 0 || Object.keys(filters).length > 0;
+    const folded = readDirFolded();
 
     const by_ = new Map();
     const missing = [];
@@ -10666,7 +10788,12 @@
           </div>
           <div class="dir-work">
             ${open ? `<a class="dir-open" href="#/deadlines?forecaster=${hub.id}">${open} open${
-              late ? `<b> · ${late} late</b>` : ""
+              // How much work somebody is carrying is shared — the content
+              // calendar is a team artefact. Being *late* is not: it is
+              // performance, and a directory that prints it beside a hundred
+              // and fifty names has turned a phone book into a leaderboard.
+              // Same rule as the team's numbers on Performance.
+              v.isManager && late ? `<b> · ${late} late</b>` : ""
             }</a>` : ""}
             ${p.email ? `<a class="dir-mail" href="mailto:${esc(p.email)}">${icon("mail", 14)}<span class="sr-only">Email ${esc(p.name)}</span></a>` : ""}
           </div>
@@ -10703,19 +10830,78 @@
         </div>
       </div>
 
+      <!-- Narrowing, one dropdown per facet. Each is counted with every other
+           filter applied but not its own, so you can still see that there are
+           eleven people in Beauty before switching to it. -->
+      <div class="filters dir-narrow">
+        ${DIR_FACETS.map(([key, label]) => {
+          const others = { ...filters };
+          delete others[key];
+          const values = dirValues(
+            searched.filter((p) => dirPasses(p, others)),
+            DIR_FACETS.find((f) => f[0] === key),
+          );
+          const total = values.reduce((n, [, count]) => n + count, 0);
+          return `<label class="field"><span>${label}</span>
+            <select data-dir-filter="${key}">
+              <option value="">All (${total})</option>
+              ${values
+                .map(
+                  ([value, count]) =>
+                    `<option value="${esc(value)}"${
+                      filters[key] === value ? " selected" : ""
+                    }>${esc(value)} (${count})</option>`,
+                )
+                .join("")}
+            </select></label>`;
+        }).join("")}
+        ${
+          narrowed
+            ? `<div class="filters-right"><button class="toggle" data-dir-clear>Clear ${
+                Object.keys(filters).length + (q ? 1 : 0)
+              } ${Object.keys(filters).length + (q ? 1 : 0) === 1 ? "filter" : "filters"}</button></div>`
+            : ""
+        }
+      </div>
+
       ${
         groups.length
-          ? `<div class="dir-groups">${groups
-              .map(
-                ([name, list]) => `
-            <section class="dir-group">
-              <div class="dir-group-head"><h2>${esc(name)}</h2>
-                <span class="count">${list.length}</span></div>
-              <div class="dir-rows">${list.map(row).join("")}</div>
-            </section>`,
-              )
+          ? `${
+              groups.length > 1
+                ? `<div class="dir-foldbar">
+                    <span class="body">${groups.length} groups${
+                      groups.filter(([name]) => folded[`${by}:${name}`]).length
+                        ? ` · ${groups.filter(([name]) => folded[`${by}:${name}`]).length} folded`
+                        : ""
+                    }</span>
+                    <button class="link-button" data-dir-foldall="${
+                      groups.some(([name]) => !folded[`${by}:${name}`]) ? "shut" : "open"
+                    }">${
+                      groups.some(([name]) => !folded[`${by}:${name}`])
+                        ? "Collapse all"
+                        : "Expand all"
+                    }</button>
+                  </div>`
+                : ""
+            }
+            <div class="dir-groups">${groups
+              .map(([name, list]) => {
+                const open = !folded[`${by}:${name}`];
+                return `
+            <section class="dir-group${open ? "" : " shut"}">
+              <button class="dir-group-head" aria-expanded="${open}"
+                data-dir-fold="${esc(name)}">${icon("chevron-down", 13, "dir-fold")}
+                <h2>${esc(name)}</h2>
+                <span class="count">${list.length}</span></button>
+              ${open ? `<div class="dir-rows">${list.map(row).join("")}</div>` : ""}
+            </section>`;
+              })
               .join("")}</div>`
-          : `<p class="none">Nobody matches “${esc(q)}”. The directory covers names, teams,
+          : `<p class="none">${
+              q
+                ? `Nobody matches &ldquo;${esc(q)}&rdquo;`
+                : "Nobody is in every one of those at once"
+            }. The directory covers names, teams,
               the categories people cover, knowledge networks and regions.</p>`
       }`;
   }
@@ -18263,12 +18449,45 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     view.querySelectorAll("[data-dir-by]").forEach((el) =>
       el.addEventListener("click", () => setParam("by", el.dataset.dirBy)),
     );
+    // A tag on a row narrows to it, which is the same thing its dropdown does.
     view.querySelectorAll("[data-dir-facet]").forEach((el) =>
+      el.addEventListener("click", () => setParam(el.dataset.dirFacet, el.dataset.dirValue)),
+    );
+    view.querySelectorAll("[data-dir-filter]").forEach((el) =>
+      el.addEventListener("change", () => setParam(el.dataset.dirFilter, el.value)),
+    );
+    view.querySelectorAll("[data-dir-clear]").forEach((el) =>
       el.addEventListener("click", () => {
         const { parts, params } = route();
-        params.set("by", el.dataset.dirFacet);
-        params.set("q", el.dataset.dirValue);
-        go("/" + parts.join("/") + "?" + params.toString());
+        params.delete("q");
+        for (const [key] of DIR_FACETS) params.delete(key);
+        const rest = params.toString();
+        go("/" + parts.join("/") + (rest ? "?" + rest : ""));
+      }),
+    );
+
+    /* Folding a group away, and folding the lot. */
+    view.querySelectorAll("[data-dir-fold]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const { params } = route();
+        const key = `${params.get("by") ?? "team"}:${el.dataset.dirFold}`;
+        const next = readDirFolded();
+        if (next[key]) delete next[key];
+        else next[key] = true;
+        writeDirFolded(next);
+      }),
+    );
+    view.querySelectorAll("[data-dir-foldall]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const shut = el.dataset.dirFoldall === "shut";
+        const by = route().params.get("by") ?? "team";
+        const next = readDirFolded();
+        view.querySelectorAll("[data-dir-fold]").forEach((head) => {
+          const key = `${by}:${head.dataset.dirFold}`;
+          if (shut) next[key] = true;
+          else delete next[key];
+        });
+        writeDirFolded(next);
       }),
     );
 

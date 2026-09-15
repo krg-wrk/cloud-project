@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useApi } from "../lib/api";
 import { Slot } from "../lib/custom";
 import { Icon } from "../lib/icons";
+import { useViewer } from "../lib/viewer";
 import { isOutstanding, isOverdue } from "../lib/domain";
 import type { ContentItem, DirectoryPage, DirectoryPerson, Person } from "../types";
 import { Avatar, ErrorNote, Loading } from "../components/bits";
@@ -39,13 +40,54 @@ const BADGE = {
   deiBoard: { label: "DEI board", icon: "people" },
 };
 
+/** The facet filters the page carries, as the query string spells them. */
+const FILTER_KEYS = ["team", "tag", "knowledge", "region", "role"] as const;
+
+/**
+ * Which groups a person has folded away, kept per facet.
+ *
+ * Per facet because the groups are different under each one: having decided
+ * you never need to see Insight while grouping by team should not fold
+ * something unrelated when you switch to knowledge networks. The same
+ * arrangement the sidebar's menu groups use, and for the same reason — what
+ * is worth remembering is the closing, not the opening.
+ */
+const FOLDED_KEY = "forecasters-hub.directory-folded";
+
+function readFolded(): Record<string, boolean> {
+  try {
+    return JSON.parse(localStorage.getItem(FOLDED_KEY) ?? "{}") as Record<string, boolean>;
+  } catch {
+    // Blocked or corrupt storage: everything open, which is the default anyway.
+    return {};
+  }
+}
+
+function writeFolded(next: Record<string, boolean>) {
+  try {
+    localStorage.setItem(FOLDED_KEY, JSON.stringify(next));
+  } catch {
+    // The choice lasts for this page load, which is no worse than before.
+  }
+}
+
 export default function Directory() {
   const [params, setParams] = useSearchParams();
+  const { isManager } = useViewer();
   const by = params.get("by") ?? "team";
   const q = params.get("q") ?? "";
 
+  // Folded groups, held here rather than read on every render so that
+  // toggling one repaints without going back to storage for the whole map.
+  const [folded, setFolded] = useState(readFolded);
+
+  const filterQuery = FILTER_KEYS.map((key) => [key, params.get(key) ?? ""] as const)
+    .filter(([, value]) => value)
+    .map(([key, value]) => `&f_${key}=${encodeURIComponent(value)}`)
+    .join("");
+
   const page = useApi<DirectoryPage>(
-    `/directory?by=${encodeURIComponent(by)}${q ? `&q=${encodeURIComponent(q)}` : ""}`,
+    `/directory?by=${encodeURIComponent(by)}${q ? `&q=${encodeURIComponent(q)}` : ""}${filterQuery}`,
   );
   // The schedule's own people and their work, so a directory row can say what
   // somebody is carrying and link to it.
@@ -82,7 +124,21 @@ export default function Directory() {
   if (!page.data) return <Loading what="the directory" />;
 
   const { counts, groups, facets, total } = page.data;
-  const filtered = q.trim().length > 0;
+  const active = FILTER_KEYS.filter((key) => params.get(key));
+  const filtered = q.trim().length > 0 || active.length > 0;
+
+  const keyOf = (name: string) => `${by}:${name}`;
+  const openCount = groups.filter((g) => !folded[keyOf(g.name)]).length;
+
+  const foldAll = (shut: boolean) => {
+    const next = { ...folded };
+    for (const group of groups) {
+      if (shut) next[keyOf(group.name)] = true;
+      else delete next[keyOf(group.name)];
+    }
+    setFolded(next);
+    writeFolded(next);
+  };
 
   return (
     <>
@@ -139,10 +195,45 @@ export default function Directory() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/*
+        Narrowing, one dropdown per facet.
+        The options are the values that actually feature, with their counts,
+        rather than a list somebody maintains: a new knowledge network shows up
+        the moment the first person is tagged into it. Picking two narrows to
+        the overlap, so "Fashion Design" and "Sustainability" is the question
+        it looks like.
+      */}
+      <div className="filters dir-narrow">
+        {facets.map((f) => (
+          <label className="field" key={f.key}>
+            <span className="field-label">{f.label}</span>
+            <select value={params.get(f.key) ?? ""} onChange={(e) => set(f.key, e.target.value)}>
+              <option value="">All ({f.values.reduce((n, v) => n + v.count, 0)})</option>
+              {f.values.map((v) => (
+                <option key={v.value} value={v.value}>
+                  {v.value} ({v.count})
+                </option>
+              ))}
+            </select>
+          </label>
+        ))}
         {filtered && (
           <div className="filters-right">
-            <button className="btn small" onClick={() => set("q", "")}>
-              Clear
+            <button
+              className="btn small"
+              onClick={() => {
+                const next = new URLSearchParams(params);
+                next.delete("q");
+                for (const key of FILTER_KEYS) next.delete(key);
+                setParams(next, { replace: true });
+              }}
+            >
+              {(() => {
+                const n = active.length + (q ? 1 : 0);
+                return `Clear ${n} ${n === 1 ? "filter" : "filters"}`;
+              })()}
             </button>
           </div>
         )}
@@ -150,37 +241,75 @@ export default function Directory() {
 
       {groups.length === 0 && (
         <p className="none">
-          Nobody matches “{q}”. The directory covers names, teams, the categories people
-          cover, knowledge networks and regions.
+          {/* Narrowing by dropdown alone leaves nothing to quote, and
+              “Nobody matches “”” is how that used to read. */}
+          {q
+            ? `Nobody matches “${q}”`
+            : "Nobody is in every one of those at once"}
+          . The directory covers names, teams, the categories people cover, knowledge
+          networks and regions.
         </p>
       )}
 
+      {/*
+        Folded, the page becomes its own contents page: forty headings with
+        counts, which is a list you can read, rather than four hundred rows,
+        which is a list you scroll past.
+      */}
+      {groups.length > 1 && (
+        <div className="dir-foldbar">
+          <span className="muted small">
+            {groups.length} {groups.length === 1 ? "group" : "groups"}
+            {openCount < groups.length && ` · ${groups.length - openCount} folded`}
+          </span>
+          <button className="link-button" onClick={() => foldAll(openCount > 0)}>
+            {openCount > 0 ? "Collapse all" : "Expand all"}
+          </button>
+        </div>
+      )}
+
       <div className="dir-groups">
-        {groups.map((group) => (
-          <section className="dir-group" key={group.name}>
-            <div className="dir-group-head">
-              <h2>{group.name}</h2>
-              <span className="count">{group.people.length}</span>
-            </div>
-            <div className="dir-rows">
-              {group.people.map((person) => (
-                <Row
-                  key={person.id}
-                  person={person}
-                  hub={person.email ? hubBy.get(person.email) : undefined}
-                  work={workOf}
-                  by={by}
-                  onFacet={(key, value) => {
-                    const next = new URLSearchParams(params);
-                    next.set("by", key);
-                    next.set("q", value);
-                    setParams(next, { replace: true });
-                  }}
-                />
-              ))}
-            </div>
-          </section>
-        ))}
+        {groups.map((group) => {
+          const open = !folded[keyOf(group.name)];
+          return (
+            <section className={open ? "dir-group" : "dir-group shut"} key={group.name}>
+              <button
+                className="dir-group-head"
+                aria-expanded={open}
+                onClick={() => {
+                  const next = { ...folded };
+                  if (open) next[keyOf(group.name)] = true;
+                  else delete next[keyOf(group.name)];
+                  setFolded(next);
+                  writeFolded(next);
+                }}
+              >
+                <Icon name="chevron-down" size={13} className="dir-fold" />
+                <h2>{group.name}</h2>
+                <span className="count">{group.people.length}</span>
+              </button>
+              {open && (
+                <div className="dir-rows">
+                  {group.people.map((person) => (
+                    <Row
+                      key={person.id}
+                      person={person}
+                      hub={person.email ? hubBy.get(person.email) : undefined}
+                      work={workOf}
+                      by={by}
+                      showLate={isManager}
+                      onFacet={(key, value) => {
+                        const next = new URLSearchParams(params);
+                        next.set(key, value);
+                        setParams(next, { replace: true });
+                      }}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
+          );
+        })}
       </div>
     </>
   );
@@ -191,12 +320,26 @@ function Row({
   hub,
   work,
   by,
+  showLate,
   onFacet,
 }: {
   person: DirectoryPerson;
   hub?: Person;
   work: Map<string, { open: number; late: number }>;
   by: string;
+  /**
+   * Whether this viewer may see that somebody is behind.
+   *
+   * How much work a person is carrying is shared — the content calendar is a
+   * team artefact and anybody can look up anybody's deadlines. Being *late*
+   * is not: it is performance, it belongs in the conversation between
+   * somebody and their manager, and a directory that prints it beside a
+   * hundred and fifty names has turned a phone book into a leaderboard.
+   *
+   * So it follows the same rule as the team's numbers on Performance —
+   * managers and admins — rather than a second, looser one for the same fact.
+   */
+  showLate: boolean;
   onFacet: (key: string, value: string) => void;
 }) {
   const theirs = hub ? work.get(hub.id) : undefined;
@@ -261,7 +404,8 @@ function Row({
       <div className="dir-work">
         {theirs && theirs.open > 0 && (
           <Link to={`/deadlines?forecaster=${hub!.id}`} className="dir-open">
-            {theirs.open} open{theirs.late > 0 && <b> · {theirs.late} late</b>}
+            {theirs.open} open
+            {showLate && theirs.late > 0 && <b> · {theirs.late} late</b>}
           </Link>
         )}
         {person.email && (

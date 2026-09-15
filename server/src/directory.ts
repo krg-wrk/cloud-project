@@ -257,6 +257,59 @@ export function matches(person: DirectoryPerson, query: string): boolean {
   return q.split(/\s+/).every((word) => hay.includes(word));
 }
 
+/**
+ * The values a facet actually has, with how many people each one holds.
+ *
+ * Built from the directory rather than from a list somebody maintains, so a
+ * new knowledge network appears in the dropdown the moment the first person
+ * is tagged into it and a retired one disappears when the last person leaves.
+ * "Those that feature" is the whole point: a menu of forty regions where
+ * thirty-eight are empty is a menu nobody can use.
+ */
+export function facetValues(
+  people: DirectoryPerson[],
+  facet: FacetKey,
+): { value: string; count: number }[] {
+  const counts = new Map<string, number>();
+  for (const person of people) {
+    for (const value of FACETS[facet].of(person)) {
+      counts.set(value, (counts.get(value) ?? 0) + 1);
+    }
+  }
+  return [...counts.entries()]
+    .map(([value, count]) => ({ value, count }))
+    // Biggest first, like the groups: the question is usually about a big
+    // team, and forty options alphabetically buries them.
+    .sort((a, b) => b.count - a.count || a.value.localeCompare(b.value));
+}
+
+/** What a facet has been narrowed to, per facet key. Absent means everything. */
+export type FacetFilters = Partial<Record<FacetKey, string>>;
+
+/**
+ * Does this person survive the chosen filters?
+ *
+ * Filters combine with AND across facets — "Fashion Design" *and*
+ * "Sustainability" is the narrower question, which is what somebody picking a
+ * second dropdown is asking for. Within one facet a person matches if any of
+ * their values match, because a person genuinely covers three categories.
+ */
+export function passesFilters(person: DirectoryPerson, filters: FacetFilters): boolean {
+  return (Object.entries(filters) as [FacetKey, string][]).every(
+    ([key, want]) => !want || FACETS[key].of(person).includes(want),
+  );
+}
+
+/** The filters the query string is asking for, ignoring anything unknown. */
+export function readFilters(query: Record<string, unknown>): FacetFilters {
+  const filters: FacetFilters = {};
+  for (const key of Object.keys(FACETS) as FacetKey[]) {
+    const value = query[`f_${key}`];
+    if (typeof value === "string" && value.trim()) filters[key] = value;
+  }
+  return filters;
+}
+
 export interface DirectoryCounts {
   people: number;
   feedLeads: number;
@@ -300,13 +353,34 @@ export function createDirectoryRouter(data: DataSource): Router {
       // dead address by picking the first match.
       const includeGone = req.query.gone === "1";
 
+      const filters = readFilters(req.query as Record<string, unknown>);
+
       const here = all.filter((p) => includeGone || p.availability !== "gone");
-      const found = here.filter((p) => matches(p, q));
+      const searched = here.filter((p) => matches(p, q));
+      const found = searched.filter((p) => passesFilters(p, filters));
 
       res.json({
         by: facet,
         q,
-        facets: Object.entries(FACETS).map(([key, f]) => ({ key, label: f.label })),
+        filters,
+        /*
+         * Each dropdown is counted with every filter *except its own* applied.
+         * Counting it against its own choice would leave one option in the
+         * menu — the one already picked — and no way to see that there are
+         * eleven people in Beauty before switching to it.
+         */
+        facets: (Object.keys(FACETS) as FacetKey[]).map((key) => {
+          const others = { ...filters };
+          delete others[key];
+          return {
+            key,
+            label: FACETS[key].label,
+            values: facetValues(
+              searched.filter((p) => passesFilters(p, others)),
+              key,
+            ),
+          };
+        }),
         counts: countsOf(found),
         total: here.length,
         groups: groupBy(found, facet),

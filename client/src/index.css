@@ -7466,7 +7466,13 @@ a.inbox-title:hover {
 .dir-groups {
   display: flex;
   flex-direction: column;
-  gap: 26px;
+  /* The tight gap, which a shut group wants; an open one adds its own margin
+     back on top, because a flex gap cannot vary per child. */
+  gap: 10px;
+}
+
+.dir-group:not(.shut) {
+  margin-block: 8px;
 }
 
 /*
@@ -7492,13 +7498,80 @@ a.inbox-title:hover {
   }
 }
 
+/*
+ * Folded, the panel is just its heading — so it loses most of its height.
+ *
+ * The first cut only dropped the padding *under* the heading, which left a
+ * 60px panel for a 20px line and twelve of them still filling a screen. The
+ * whole reason to fold is to turn the page into a contents page you can read
+ * without scrolling, so a shut group is as close to one line as it can be,
+ * and the gap between groups closes up with it.
+ */
+.dir-group.shut {
+  padding: 9px 18px;
+}
+
+/* A real button rather than a div with a handler: it folds the group, so it
+   has to be reachable by keyboard and announced as what it is. */
 .dir-group-head {
   display: flex;
   align-items: baseline;
   gap: 10px;
-  padding-bottom: 8px;
+  width: 100%;
+  padding: 0 0 8px;
   margin-bottom: 2px;
+  border: none;
   border-bottom: 1px solid var(--ink);
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dir-group.shut .dir-group-head {
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+.dir-group-head:hover h2 {
+  color: var(--accent);
+}
+
+/* One glyph, two states: a quarter turn is the whole difference. */
+.dir-fold {
+  flex: none;
+  align-self: center;
+  color: var(--ink-45);
+  transition: transform 0.15s ease;
+}
+
+.dir-group.shut .dir-fold {
+  transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dir-fold {
+    transition: none;
+  }
+}
+
+/* The dropdowns, on their own row under the search and the grouping. */
+.dir-narrow {
+  margin-top: -10px;
+}
+
+.dir-narrow select {
+  min-width: 150px;
+  max-width: 230px;
+}
+
+.dir-foldbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .dir-group-head h2 {

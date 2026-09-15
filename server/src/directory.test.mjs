@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { countsOf, groupBy, matches, multi, readDirectory } from "./directory.js";
+import {
+  countsOf,
+  facetValues,
+  groupBy,
+  matches,
+  multi,
+  passesFilters,
+  readFilters,
+  readDirectory,
+} from "./directory.js";
 
 /**
  * Reading the Content Directory.
@@ -125,4 +134,58 @@ test("the counts count what the page says they count", () => {
   assert.equal(counts.feedLeads, 1);
   assert.equal(counts.away, 2);
   assert.equal(counts.teams, 4);
+});
+
+/**
+ * Narrowing by facet: the dropdowns.
+ *
+ * The rule that matters is the AND across facets and the OR inside one —
+ * "Fashion Design and Signals" is narrower, but somebody tagged Womenswear
+ * *and* Apparel matches either.
+ */
+
+test("a dropdown offers the values that feature, commonest first", () => {
+  const values = facetValues(people, "region");
+  assert.deepEqual(
+    values.map((v) => v.value),
+    ["EMEA", "APAC", "NAM"],
+  );
+  assert.equal(values[0].count, 2);
+});
+
+test("a facet nobody has recorded offers nothing rather than an empty option", () => {
+  // Only Maren has a knowledge network; "Not recorded" is a group, not a value.
+  const values = facetValues(people, "knowledge");
+  assert.deepEqual(
+    values.map((v) => v.value).sort(),
+    ["Macro", "Signals"],
+  );
+});
+
+test("two facets narrow together", () => {
+  const maren = people.find((p) => p.id === "maren-ashdown");
+  assert.ok(passesFilters(maren, { team: "Fashion Design", knowledge: "Signals" }));
+  // She is in Fashion Design, but Beauty is somebody else's team.
+  assert.ok(!passesFilters(maren, { team: "Beauty", knowledge: "Signals" }));
+});
+
+test("several values in one cell all match their own facet", () => {
+  const maren = people.find((p) => p.id === "maren-ashdown");
+  assert.ok(passesFilters(maren, { tag: "Womenswear" }));
+  assert.ok(passesFilters(maren, { tag: "Apparel" }));
+  assert.ok(!passesFilters(maren, { tag: "Knitwear" }));
+});
+
+test("no filter at all keeps everybody", () => {
+  assert.equal(people.filter((p) => passesFilters(p, {})).length, people.length);
+});
+
+test("the query string only yields filters the directory actually has", () => {
+  const filters = readFilters({
+    f_team: "Beauty",
+    f_knowledge: "  ",
+    f_haircut: "Beauty",
+    by: "team",
+  });
+  assert.deepEqual(filters, { team: "Beauty" });
 });
