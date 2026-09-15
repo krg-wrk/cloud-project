@@ -5,6 +5,7 @@ import { Slot } from "../../lib/custom";
 import { Icon } from "../../lib/icons";
 import type { WeaveResult } from "../../types";
 import ConceptNote from "./ConceptNote";
+import PageIntro from "../../components/PageIntro";
 
 /**
  * Forecast Builder — a node workspace, and a concept that says so.
@@ -356,7 +357,9 @@ export default function Builder() {
         <div>
           <Slot id="builder.eyebrow" as="div" className="eyebrow" />
           <Slot id="builder.title" as="h1" className="page-title" />
-          <Slot id="builder.sub" as="p" className="page-sub" />
+          <PageIntro>
+            <Slot id="builder.sub" as="span" />
+          </PageIntro>
         </div>
         <div className="head-actions">
           <button className="btn" onClick={() => setGraph(starter())}>

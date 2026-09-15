@@ -9,6 +9,7 @@ import { useViewer } from "../../lib/viewer";
 import type { LibraryPage, ProofPointDetail, ProofPointRow, Quality } from "../../types";
 import { ErrorNote, Loading } from "../../components/bits";
 import ShareLink from "../../components/ShareLink";
+import PageIntro from "../../components/PageIntro";
 
 /**
  * The Proof Point Library.
@@ -492,7 +493,9 @@ export default function ProofPoints() {
         <div>
           <Slot id="proof.eyebrow" as="div" className="eyebrow" />
           <Slot id="proof.title" as="h1" className="page-title" />
-          <Slot id="proof.sub" as="p" className="page-sub" />
+          <PageIntro>
+            <Slot id="proof.sub" as="span" />
+          </PageIntro>
         </div>
         <div className="head-figures">
           {custom.group("proof.figure").map((slot) => {

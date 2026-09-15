@@ -21,6 +21,7 @@ import { useViewer } from "../lib/viewer";
 import type { Person, SessionWithSignUps } from "../types";
 import { Avatar, ErrorNote, Loading } from "../components/bits";
 import ShareLink from "../components/ShareLink";
+import PageIntro from "../components/PageIntro";
 
 /** How the sign-up control reads in each state. */
 const ACTION_LABEL: Record<SignUpState, string | null> = {
@@ -256,11 +257,11 @@ export default function Workshops() {
         <div>
           <div className="eyebrow">Workshops · masterclasses · lunch &amp; learns</div>
           <h1 className="page-title">Learning</h1>
-          <p className="page-sub">
+          <PageIntro>
             What is coming up across the team, and what you can put your name
             down for. Sessions with a limit fill up, so the waitlist moves you
             into a place when someone drops out.
-          </p>
+          </PageIntro>
         </div>
         <ShareLink label="Copy link" />
       </div>

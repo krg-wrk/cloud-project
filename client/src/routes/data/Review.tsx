@@ -7,6 +7,7 @@ import { useRemembered } from "../../lib/remember";
 import { useViewer } from "../../lib/viewer";
 import type { LibraryPage, Quality, ReviewQueue, ReviewRow } from "../../types";
 import { ErrorNote, Loading } from "../../components/bits";
+import PageIntro from "../../components/PageIntro";
 
 /**
  * Deciding about suggested proof points, one at a time.
@@ -175,7 +176,9 @@ export default function Review() {
         <div>
           <Slot id="review.eyebrow" as="div" className="eyebrow" />
           <Slot id="review.title" as="h1" className="page-title" />
-          <Slot id="review.sub" as="p" className="page-sub" />
+          <PageIntro>
+            <Slot id="review.sub" as="span" />
+          </PageIntro>
         </div>
         <div className="head-figures">
           <div className="figure">

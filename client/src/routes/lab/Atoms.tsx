@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Slot } from "../../lib/custom";
 import { Icon } from "../../lib/icons";
 import ConceptNote from "./ConceptNote";
+import PageIntro from "../../components/PageIntro";
 
 /**
  * Add Atoms — a concept, and it says so.
@@ -47,7 +48,9 @@ export default function Atoms() {
         <div>
           <Slot id="atoms.eyebrow" as="div" className="eyebrow" />
           <Slot id="atoms.title" as="h1" className="page-title" />
-          <Slot id="atoms.sub" as="p" className="page-sub" />
+          <PageIntro>
+            <Slot id="atoms.sub" as="span" />
+          </PageIntro>
         </div>
       </div>
 

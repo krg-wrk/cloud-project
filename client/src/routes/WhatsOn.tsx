@@ -7,6 +7,7 @@ import type { CalendarEvent, EventType, Person } from "../types";
 import BackLink from "../components/BackLink";
 import { ErrorNote, EventPill, Loading } from "../components/bits";
 import ShareLink from "../components/ShareLink";
+import PageIntro from "../components/PageIntro";
 
 export default function WhatsOn() {
   const [params, setParams] = useSearchParams();
@@ -54,10 +55,10 @@ export default function WhatsOn() {
         <div>
           <div className="eyebrow">Leave · holidays · workshops · shows</div>
           <h1 className="page-title">What&rsquo;s on</h1>
-          <p className="page-sub">
+          <PageIntro>
             Everything that sits alongside the deadlines, so nobody plans a
             submission for a week they are away.
-          </p>
+          </PageIntro>
         </div>
         <ShareLink label="Copy link" />
       </div>

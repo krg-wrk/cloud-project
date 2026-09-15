@@ -5,6 +5,7 @@ import { Icon } from "../lib/icons";
 import { Slot } from "../lib/custom";
 import type { Inbox as InboxData } from "../types";
 import { ago } from "./studio/Freshness";
+import PageIntro from "../components/PageIntro";
 
 /**
  * Your alerts: everything the Hub has told you.
@@ -21,11 +22,11 @@ export default function Notifications() {
         <div>
           <Slot id="notifications.eyebrow" as="div" className="eyebrow" />
           <Slot id="notifications.title" as="h1" className="page-title" />
-          <p className="page-sub">
+          <PageIntro>
             Deadlines coming up, the Monday digest, and anything waiting for you to look at
             it. Which of these reach you &mdash; and whether by email, chat or only here
             &mdash; is yours to choose in <Link to="/settings">Settings</Link>.
-          </p>
+          </PageIntro>
         </div>
         <Link className="btn" to="/settings">
           <Icon name="settings" size={15} /> Alert settings

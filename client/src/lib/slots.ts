@@ -194,7 +194,7 @@ export const SLOT_PAGES: SlotPage[] = [
           {
             id: "deadlines.sub",
             label:
-              "Every commissioned forecast and the date its copy is due. Filter it, then send the link — whoever opens it sees the same list.",
+              "Every commissioned forecast and the date its copy is due. Narrow it with the filters, then copy the web address — anyone you send it to opens the list already filtered, rather than having to set it up themselves.",
             kind: "sub",
             hint: "The line under the title",
           },

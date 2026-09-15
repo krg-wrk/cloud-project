@@ -7,6 +7,7 @@ import { Icon } from "../../lib/icons";
 import { useViewer } from "../../lib/viewer";
 import type { ContentItem, Person } from "../../types";
 import { Loading } from "../../components/bits";
+import PageIntro from "../../components/PageIntro";
 
 /**
  * Briefing a freelancer, from what the Hub already knows.
@@ -292,7 +293,9 @@ export default function Brief() {
         <div>
           <Slot id="brief.eyebrow" as="div" className="eyebrow" />
           <Slot id="brief.title" as="h1" className="page-title" />
-          <Slot id="brief.sub" as="p" className="page-sub" />
+          <PageIntro>
+            <Slot id="brief.sub" as="span" />
+          </PageIntro>
         </div>
       </div>
 

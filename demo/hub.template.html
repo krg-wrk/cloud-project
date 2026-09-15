@@ -840,6 +840,415 @@
     color: var(--ink-soft);
   }
 
+  /* --- The explanation under a page title -----------------------------------
+   *
+   * Collapsed it is one small button; open it is the paragraph it always was.
+   * The saving is about fifty pixels at the top of every page, every time —
+   * the difference between the work being on screen when a page loads and not.
+   * ------------------------------------------------------------------------ */
+
+  .page-intro {
+    margin-top: 8px;
+  }
+
+  .page-intro-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 8px 2px 5px;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: none;
+    font: inherit;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+
+  .page-intro-toggle:hover {
+    border-color: var(--line);
+    background: var(--paper);
+    color: var(--accent);
+  }
+
+  .page-intro .lede {
+    margin-top: 6px;
+  }
+
+  /* --- Performance: the shape behind the numbers ----------------------------
+   *
+   * Four things a grid of tiles cannot do: show a proportion, show a share of
+   * a whole, show a team at a glance, and say what any of the words mean.
+   * Each gets the least drawing that answers its question.
+   * ------------------------------------------------------------------------ */
+
+  .perf-pair {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 14px;
+    margin-bottom: 26px;
+  }
+
+  .perf-pair > .panel {
+    margin-bottom: 0;
+  }
+
+  /* A panel that carries a note beside its label rather than under it. */
+  .panel-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .panel-head .panel-label {
+    margin-bottom: 10px;
+  }
+
+  /* What a metric means, on its own tile rather than only the selected one. */
+  .kpi-what {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+
+  .mix {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .mix-bar {
+    display: flex;
+    height: 16px;
+    gap: 2px;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+
+  .mix-slice {
+    flex-basis: 0;
+    min-width: 3px;
+    background: var(--slice, var(--accent));
+  }
+
+  .mix-keys {
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+  }
+
+  .mix-key {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 14px;
+    align-items: baseline;
+    padding: 8px 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .mix-key:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+
+  /* A part that did not happen still gets its row, because "none co-owned" is
+     itself a reading — but it steps back so the eye finds the ones that did. */
+  .mix-key.zero {
+    color: var(--ink-soft);
+  }
+
+  .mix-key dt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+  }
+
+  .mix-num {
+    margin: 0;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mix-num b {
+    font-family: var(--sans);
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+  }
+
+  .mix-dot {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 3px;
+    background: var(--slice, var(--accent));
+  }
+
+  /* The sentence spans both columns on a row of its own, so the figures line
+     up in a column and the prose still reads as prose. */
+  .mix-what {
+    grid-column: 1 / -1;
+    margin: 2px 0 0;
+    text-align: left;
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--ink-soft);
+  }
+
+  .ring-wrap {
+    display: grid;
+    grid-template-columns: 124px minmax(0, 1fr);
+    gap: 18px;
+    align-items: center;
+  }
+
+  .ring {
+    width: 124px;
+    height: 124px;
+    /* -90deg so the first slice starts at twelve o'clock, which is where an
+       eye starts reading a dial. */
+    transform: rotate(-90deg);
+  }
+
+  .ring-track {
+    fill: none;
+    stroke: var(--sunken);
+    stroke-width: 14;
+  }
+
+  .ring-arc {
+    fill: none;
+    stroke-width: 14;
+    stroke-linecap: butt;
+  }
+
+  /* The two labels sit inside the rotated <svg>, so they come back the other
+     way to read level. */
+  .ring-total,
+  .ring-caption {
+    transform: rotate(90deg);
+    transform-origin: 60px 60px;
+    text-anchor: middle;
+    fill: var(--ink);
+  }
+
+  .ring-total {
+    font-family: var(--sans);
+    font-size: 26px;
+    font-weight: 500;
+    letter-spacing: -0.04em;
+  }
+
+  .ring-caption {
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    fill: var(--ink-soft);
+  }
+
+  .team-panel {
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+    overflow: hidden;
+  }
+
+  .team-grade {
+    margin: 0;
+    padding: 8px 16px;
+    border-top: 1px solid var(--line);
+    background: var(--ground);
+    font-family: var(--sans);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .team-panel > section:first-child .team-grade {
+    border-top: none;
+  }
+
+  .team-row {
+    display: grid;
+    grid-template-columns: minmax(0, 148px) minmax(0, 104px) minmax(0, 1fr) 76px;
+    gap: 14px;
+    align-items: center;
+    width: 100%;
+    padding: 9px 16px;
+    border: none;
+    border-top: 1px solid var(--line);
+    background: none;
+    font: inherit;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .team-row:hover {
+    background: var(--ground);
+  }
+
+  .team-row.on {
+    background: var(--accent-wash);
+    box-shadow: inset 3px 0 0 var(--accent);
+  }
+
+  .team-name,
+  .team-vertical {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .team-you {
+    margin-left: 7px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .team-vertical {
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+
+  .team-track {
+    display: block;
+    height: 10px;
+    border-radius: 999px;
+    background: var(--sunken);
+    overflow: hidden;
+  }
+
+  .team-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--accent-soft);
+  }
+
+  .team-row.on .team-fill {
+    background: var(--accent);
+  }
+
+  .team-value {
+    text-align: right;
+    font-family: var(--mono);
+    font-size: 12.5px;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .team-foot {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    padding: 9px 16px;
+    border-top: 1px solid var(--line);
+    background: var(--ground);
+  }
+
+  .glossary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    /* Each group is its own height rather than stretched to the tallest in
+       its row: a ragged foot reads better than three columns of dead white. */
+    align-items: start;
+    gap: 14px;
+  }
+
+  .glossary > section {
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+  }
+
+  .glossary-group {
+    margin: 0 0 10px;
+    font-family: var(--sans);
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .glossary dl {
+    margin: 0;
+  }
+
+  .glossary dl > div {
+    padding: 9px 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .glossary dl > div:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+
+  .glossary dt {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .glossary dd {
+    margin: 3px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--ink-mid);
+  }
+
+  .glossary-tag {
+    padding: 1px 7px;
+    border: 1px solid var(--line-firm);
+    border-radius: 999px;
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  @media (max-width: 720px) {
+    .ring-wrap {
+      grid-template-columns: 1fr;
+      justify-items: center;
+    }
+
+    .ring-wrap .mix-keys {
+      width: 100%;
+    }
+
+    /* The vertical and the bar are the first two things worth losing: the
+       name and the number are the row. */
+    .team-row {
+      grid-template-columns: minmax(0, 1fr) 76px;
+    }
+
+    .team-vertical,
+    .team-track {
+      display: none;
+    }
+  }
+
   /* --- Settings ------------------------------------------------------------
    *
    * One page of sections rather than a settings area with pages in it.
@@ -891,7 +1300,7 @@
   }
 
   .photo-what > b {
-    font-family: var(--display);
+    font-family: var(--sans);
     font-size: 16px;
   }
 
@@ -2990,7 +3399,6 @@
     padding: 0 9px;
     border: none;
     border-radius: 9px;
-    box-shadow: inset 3px 0 0 var(--c);
     background: color-mix(in srgb, var(--c) 16%, var(--paper));
     color: var(--ink);
     font: inherit;
@@ -3002,7 +3410,7 @@
 
   .cal-span:hover {
     background: color-mix(in srgb, var(--c) 30%, var(--paper));
-    box-shadow: inset 3px 0 0 var(--c), var(--shadow);
+    box-shadow: var(--shadow);
   }
 
   .cal-span .icon {
@@ -3088,20 +3496,17 @@
   }
 
   /*
-   * The accent down the left is an inset shadow rather than a border.
-   *
-   * A `border-left` squares off the two corners it touches, so a "rounded"
-   * chip still read as a block with a bar stuck to it. An inset shadow paints
-   * inside the border-box and follows the radius, so the whole shape stays
-   * round and the colour still reads.
+   * No accent down the left edge. It was a `border-left`, then an inset shadow
+   * to stop the border squaring off the corners — but even rounded it read as
+   * an opening bracket stuck to the front of every entry. The tinted ground
+   * and the coloured icon already say which kind of thing it is.
    */
   .mark {
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 3px 7px 3px 9px;
+    padding: 3px 9px;
     border-radius: 9px;
-    box-shadow: inset 3px 0 0 var(--c);
     background: color-mix(in srgb, var(--c) 9%, transparent);
     font-size: 11px;
     line-height: 1.32;
@@ -3113,7 +3518,7 @@
 
   .mark:hover {
     background: color-mix(in srgb, var(--c) 20%, transparent);
-    box-shadow: inset 3px 0 0 var(--c), var(--shadow);
+    box-shadow: var(--shadow);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -3999,58 +4404,6 @@
     border-top: 1px solid var(--line);
     font-size: 11.5px;
     color: var(--ink-soft);
-  }
-
-  .team-bars {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .team-bar {
-    display: grid;
-    grid-template-columns: minmax(120px, 200px) minmax(0, 1fr) 54px;
-    align-items: center;
-    gap: 12px;
-    font-size: 13px;
-  }
-
-  .team-bar-name {
-    color: var(--ink-mid);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  .team-bar.mine .team-bar-name {
-    color: var(--ink);
-    font-weight: 500;
-  }
-
-  .team-bar-you {
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    color: var(--accent);
-  }
-
-  .team-bar-track {
-    height: 15px;
-    background: var(--sunken);
-    overflow: hidden;
-  }
-
-  .team-bar-fill {
-    display: block;
-    height: 100%;
-  }
-
-  .team-bar-value {
-    font-family: var(--mono);
-    font-size: 12.5px;
-    color: var(--ink);
-    text-align: right;
   }
 
   /* ---- Icons ------------------------------------------------------------- */
@@ -7597,6 +7950,7 @@
     data: "M4 6.5C4 5.1 7.6 4 12 4s8 1.1 8 2.5S16.4 9 12 9 4 7.9 4 6.5ZM4 6.5v11C4 18.9 7.6 20 12 20s8-1.1 8-2.5v-11M4 12c0 1.4 3.6 2.5 8 2.5s8-1.1 8-2.5M9 16.5h.01M12 16.5h.01",
     proof: "M9 12.5l2 2 4.5-4.5M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z",
     copy: "M9 9V5.5A1.5 1.5 0 0 1 10.5 4h8A1.5 1.5 0 0 1 20 5.5v8a1.5 1.5 0 0 1-1.5 1.5H15M5.5 9h8A1.5 1.5 0 0 1 15 10.5v8a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 4 18.5v-8A1.5 1.5 0 0 1 5.5 9Z",
+    info: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 11v5.5M12 7.6h.01",
     camera:
       "M4 7.5h3L8.5 5h7L17 7.5h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1ZM12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z",
   };
@@ -9268,8 +9622,9 @@
         <div>
           ${slot("deadlines.eyebrow", { tag: "div", cls: "eyebrow" })}
           ${slot("deadlines.title", { tag: "h1" })}
-          <p class="lede">Every commissioned piece and the date its copy is due. Filter it, then send
-            the link — whoever opens it sees the same list.</p>
+          <p class="lede">Every commissioned piece and the date its copy is due. Narrow it with
+            the filters, then copy the web address — anyone you send it to opens the list already
+            filtered, rather than having to set it up themselves.</p>
         </div>
       </div>
 
@@ -10073,7 +10428,7 @@
         <div>
           <div class="eyebrow">${esc(c.type)} · ${esc(c.season)}</div>
           <h1>${esc(c.title)}</h1>
-          <p class="lede">Due with ${esc(nameOf(c.managerId))} on <strong>${long(
+          <p class="lede keep">Due with ${esc(nameOf(c.managerId))} on <strong>${long(
             c.submissionDate,
           )}</strong> (${rel(c.submissionDate)}), publishing ${long(c.publicationDate)}.</p>
         </div>
@@ -10861,7 +11216,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         <div>
           <div class="eyebrow">${kindLabel} · ${long(session.date)} · ${session.startTime}–${session.endTime}</div>
           <h1>${esc(session.title)}</h1>
-          <p class="lede">Hosted by ${esc(host)} · ${esc(session.location)}${
+          <p class="lede keep">Hosted by ${esc(host)} · ${esc(session.location)}${
             state === "past" ? "" : ` · ${rel(session.date)}`
           }</p>
         </div>
@@ -11128,10 +11483,240 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           : ""
       }
       ${m.awaitingData ? `<span class="kpi-awaiting">Awaiting data</span>` : changeLine(m) + sparkline(m.series)}
+      <!-- What it means, under the number. It was only ever shown for the one
+           metric somebody had selected — the metric they already understood
+           well enough to click. -->
+      <span class="kpi-what">${esc(de.description)}</span>
       <span class="kpi-source">${
         de.notKpi ? "Tracked, not a KPI" : de.source === "supplied" ? "Supplied" : ""
       }</span>
     </button>`;
+  }
+
+  /*
+   * The three panels a grid of tiles cannot be.
+   *
+   * Not new numbers — every one of these is already on the page as a tile.
+   * What was missing was the two questions a tile cannot answer: how the
+   * output breaks down, and what any of these words mean.
+   */
+
+  const OWNERSHIP_PARTS = [
+    ["sole-owned", "Solely owned", "var(--accent)", "You are the only person in the Owner column."],
+    ["co-owned", "Co-owned", "var(--accent-soft)", "You and at least one other forecaster own it together."],
+    [
+      "byline-contributions",
+      "Byline",
+      "var(--warn)",
+      "You are credited on the byline but do not own it. Not a KPI on its own.",
+    ],
+    ["freelance", "Freelance", "var(--review)", "Commissioned out, with you named alongside the freelancer."],
+  ];
+
+  const TIER_PARTS = [
+    ["tier-1", "Tier 1 — Decide", "var(--accent)"],
+    ["tier-2", "Tier 2 — Understand", "var(--teal)"],
+    ["tier-3", "Tier 3 — Track", "var(--warn)"],
+  ];
+
+  const kpiValue = (results, id) =>
+    results.find((m) => m.definition.id === id)?.value ?? 0;
+
+  /**
+   * How the output breaks down, as one stacked bar.
+   *
+   * One bar rather than four tiles because the point is the proportions:
+   * eight solely owned out of ten is a different year from four and four, and
+   * two numbers side by side make you do that arithmetic yourself. The
+   * figures are written out underneath, because a bar is for the shape and a
+   * number is for the meeting.
+   */
+  function ownershipMix(results) {
+    const parts = OWNERSHIP_PARTS.map(([id, label, colour, what]) => ({
+      id,
+      label,
+      colour,
+      what,
+      value: kpiValue(results, id),
+    }));
+    const total = parts.reduce((n, p) => n + p.value, 0);
+    if (!total) {
+      return `<p class="body">Nothing owned or credited in this range, so there is no mix to
+        show.</p>`;
+    }
+
+    return `<div class="mix">
+      <div class="mix-bar" role="img" aria-label="${esc(
+        parts.map((p) => `${p.label} ${p.value}`).join(", "),
+      )}">${parts
+        .filter((p) => p.value > 0)
+        .map(
+          (p) =>
+            // The flex basis carries the proportion, so the bar is the data
+            // rather than a picture of it.
+            `<span class="mix-slice" style="--slice:${p.colour};flex-grow:${p.value}"
+              title="${esc(p.label)}: ${p.value} of ${total}"></span>`,
+        )
+        .join("")}</div>
+      <dl class="mix-keys">${parts
+        .map(
+          (p) => `<div class="mix-key${p.value ? "" : " zero"}">
+            <dt><span class="mix-dot" style="--slice:${p.colour}"></span>${esc(p.label)}</dt>
+            <dd class="mix-num"><b>${p.value}</b> <span class="body">${Math.round(
+              (p.value / total) * 100,
+            )}%</span></dd>
+            <dd class="mix-what">${esc(p.what)}</dd>
+          </div>`,
+        )
+        .join("")}</dl>
+    </div>`;
+  }
+
+  /**
+   * The tier mix, as a ring.
+   *
+   * Three numbers that always sum to the whole, which is the one shape a ring
+   * is genuinely better at than a bar: the question is "how much of my year
+   * was Tier 1", and that is an angle rather than a length. One circle per
+   * tier and a stroke-dasharray, so there is no library and no path
+   * arithmetic to get wrong.
+   */
+  function tierRing(results) {
+    const tiers = TIER_PARTS.map(([id, label, colour]) => ({
+      id,
+      label,
+      colour,
+      value: kpiValue(results, id),
+    }));
+    const total = tiers.reduce((n, t) => n + t.value, 0);
+    if (!total) return `<p class="body">No tiered work in this range.</p>`;
+
+    // A circle of radius 50 has a circumference of 2πr; every arc is a slice
+    // of it, laid end to end by pushing each offset along by what came before.
+    const R = 50;
+    const C = 2 * Math.PI * R;
+    let used = 0;
+
+    return `<div class="ring-wrap">
+      <svg class="ring" viewBox="0 0 120 120" role="img" aria-label="${esc(
+        tiers.map((t) => `${t.label}: ${t.value}`).join(", "),
+      )}">
+        <circle cx="60" cy="60" r="${R}" class="ring-track"></circle>
+        ${tiers
+          .map((t) => {
+            const length = (t.value / total) * C;
+            const offset = used;
+            used += length;
+            if (!t.value) return "";
+            return `<circle cx="60" cy="60" r="${R}" class="ring-arc" style="stroke:${t.colour}"
+              stroke-dasharray="${length} ${C - length}" stroke-dashoffset="${-offset}"></circle>`;
+          })
+          .join("")}
+        <text x="60" y="58" class="ring-total">${total}</text>
+        <text x="60" y="74" class="ring-caption">pieces</text>
+      </svg>
+      <dl class="mix-keys">${tiers
+        .map(
+          (t) => `<div class="mix-key">
+            <dt><span class="mix-dot" style="--slice:${t.colour}"></span>${esc(t.label)}</dt>
+            <dd class="mix-num"><b>${t.value}</b> <span class="body">${Math.round(
+              (t.value / total) * 100,
+            )}%</span></dd>
+          </div>`,
+        )
+        .join("")}</dl>
+    </div>`;
+  }
+
+  /**
+   * A manager's team, by grade, with the number being looked at beside each.
+   *
+   * The dropdown above is still there, and it is right for "show me Rina". It
+   * is wrong for "how is the team doing", which is the question a manager
+   * opens this page with — a list answers it before anybody clicks anything.
+   *
+   * Grouped by grade because output is read against the average for a grade:
+   * putting a Strategist's twelve next to a Director's three without that
+   * context is how a number becomes an accusation. Ranking happens inside
+   * each grade, where it is a comparison.
+   */
+  function teamPanel(rows, definition, selectedId) {
+    const known = ["Director", "Head Of", "Senior", "Strategist"];
+    const groups = new Map();
+    for (const row of rows) {
+      const grade = row.person.forecasterRole ?? "Unlisted";
+      groups.set(grade, [...(groups.get(grade) ?? []), row]);
+    }
+    const best = Math.max(1, ...rows.map((r) => r.value ?? 0));
+    const ordered = [...groups.entries()].sort(
+      (a, b) =>
+        (known.indexOf(a[0]) + 1 || 99) - (known.indexOf(b[0]) + 1 || 99) ||
+        a[0].localeCompare(b[0]),
+    );
+
+    return `<div class="team-panel">${ordered
+      .map(
+        ([grade, people]) => `<section>
+          <h3 class="team-grade">${esc(grade)}</h3>
+          ${[...people]
+            .sort((a, b) =>
+              definition.better === "lower"
+                ? (a.value ?? 0) - (b.value ?? 0)
+                : (b.value ?? 0) - (a.value ?? 0),
+            )
+            .map(
+              (row) => `<button class="team-row${row.person.id === selectedId ? " on" : ""}"
+                data-kpi-pick="${row.person.id}" aria-pressed="${row.person.id === selectedId}">
+                <span class="team-name">${esc(row.person.name)}</span>
+                <span class="team-vertical">${esc(row.person.vertical ?? "")}</span>
+                <!-- The bar is the comparison; the number is the fact. -->
+                <span class="team-track" aria-hidden="true"><span class="team-fill"
+                  style="width:${((row.value ?? 0) / best) * 100}%"></span></span>
+                <span class="team-value">${fmtMetric(row.value, definition.unit)}</span>
+              </button>`,
+            )
+            .join("")}
+        </section>`,
+      )
+      .join("")}
+      <p class="body team-foot">${icon("info", 12)} ${esc(definition.label)}, this range, ${
+        definition.better === "lower" ? "least" : "most"
+      } first within each grade. Pick anyone to open their whole set of numbers.</p>
+    </div>`;
+  }
+
+  /**
+   * What every metric means, in one place.
+   *
+   * It existed as a column in a deck and a tab in a spreadsheet, which is two
+   * places nobody looks while staring at a number they do not recognise. The
+   * definitions are the metrics' own, so there is no second copy to fall out
+   * of step.
+   */
+  function glossary(results) {
+    const groups = [...new Set(results.map((m) => m.definition.group))];
+    return `<div class="glossary">${groups
+      .map(
+        (group) => `<section>
+          <h3 class="glossary-group">${esc(group)}</h3>
+          <dl>${results
+            .filter((m) => m.definition.group === group)
+            .map(
+              (m) => `<div>
+                <dt>${esc(m.definition.label)}${
+                  m.definition.notKpi ? `<span class="glossary-tag">not a KPI</span>` : ""
+                }${
+                  m.definition.source === "supplied"
+                    ? `<span class="glossary-tag">supplied</span>`
+                    : ""
+                }</dt>
+                <dd>${esc(m.definition.description)}</dd>
+              </div>`,
+            )
+            .join("")}</dl>
+        </section>`,
+      )
+      .join("")}</div>`;
   }
 
   function periodChart(m) {
@@ -11226,19 +11811,14 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     const selected = results.find((m) => m.definition.id === selectedId) ?? results[0];
     const groups = [...new Set(results.map((m) => m.definition.group))];
 
+    // Unsorted: the panel ranks within each grade, which is the only ranking
+    // that compares like with like.
     const teamRows = v.isManager
-      ? roster
-          .map((p) => ({
-            person: p,
-            value: metricValue(selected.definition, p.id, range.from, range.to),
-          }))
-          .sort((a, b) => {
-            if (a.value === null) return 1;
-            if (b.value === null) return -1;
-            return selected.definition.better === "higher" ? b.value - a.value : a.value - b.value;
-          })
+      ? roster.map((p) => ({
+          person: p,
+          value: metricValue(selected.definition, p.id, range.from, range.to),
+        }))
       : [];
-    const teamMax = Math.max(...teamRows.map((r) => r.value ?? 0), 1);
 
     return `
       <div class="head">
@@ -11277,6 +11857,24 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         <div class="filters-right">${long(range.from)} — ${long(range.to)}</div>
       </div>
 
+      <!-- How the output breaks down, and how the year was shaped. Side by
+           side because they answer the same question from two directions:
+           what kind of work, and what weight of work. -->
+      <div class="perf-pair">
+        <section class="panel">
+          <div class="panel-head"><div class="panel-label">How the work is owned</div>
+            <span class="signup-note">${
+              subject.forecasterRole ? `${esc(subject.forecasterRole)} · ` : ""
+            }this range</span></div>
+          ${ownershipMix(results)}
+        </section>
+        <section class="panel">
+          <div class="panel-head"><div class="panel-label">Tier mix</div>
+            <span class="signup-note">Tier 1 decide · 2 understand · 3 track</span></div>
+          ${tierRing(results)}
+        </section>
+      </div>
+
       ${groups
         .map(
           (g) => `<section class="sec">
@@ -11305,30 +11903,23 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       </section>
 
       ${
-        v.isManager && !selected.awaitingData
+        v.isManager && teamRows.length
           ? `<section class="sec">
-              <div class="sec-head"><h2>${esc(selected.definition.label)} across the team</h2>
-                <span class="signup-note">${
-                  selected.definition.better === "higher" ? "Most first" : "Least first"
-                }</span></div>
-              <div class="team-bars">${teamRows
-                .map(
-                  (r) => `<div class="team-bar${r.person.id === who ? " mine" : ""}">
-                    <span class="team-bar-name">${esc(r.person.name)}${
-                      r.person.id === who ? `<span class="team-bar-you"> selected</span>` : ""
-                    }</span>
-                    <span class="team-bar-track"><span class="team-bar-fill" style="width:${
-                      Math.max(r.value === null ? 0 : 0.8, ((r.value ?? 0) / teamMax) * 100)
-                    }%;background:${
-                      r.person.id === who ? "var(--accent)" : "var(--accent-soft)"
-                    }"></span></span>
-                    <span class="team-bar-value">${fmtMetric(r.value, selected.definition.unit)}</span>
-                  </div>`,
-                )
-                .join("")}</div>
+              <div class="sec-head"><h2>${esc(
+                selected.definition.label,
+              )} across your team</h2>
+                <span class="signup-note">By grade, because output is read against the average
+                  for a grade</span></div>
+              ${teamPanel(teamRows, selected.definition, who)}
             </section>`
           : ""
-      }`;
+      }
+
+      <section class="sec">
+        <div class="sec-head"><h2>What each of these means</h2>
+          <span class="signup-note">${long(range.from)} — ${long(range.to)}</span></div>
+        ${glossary(results)}
+      </section>`;
   }
 
   /* ---- trends ------------------------------------------------------------ */
@@ -11648,7 +12239,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         <div>
           <div class="eyebrow">${t.types.map(esc).join(" · ") || "Trend profile"}${years}</div>
           <h1>${esc(t.title)}</h1>
-          ${t.description ? `<p class="lede">${esc(t.description)}</p>` : ""}
+          ${t.description ? `<p class="lede keep">${esc(t.description)}</p>` : ""}
         </div>
         <div class="pill-stack">${statePill(t)}${callPill(t.call)}</div>
       </div>
@@ -13014,6 +13605,77 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     document.documentElement.dataset.gradients = on ? "on" : "off";
   }
 
+  /*
+   * The explanation under a page title, and whether it starts open.
+   *
+   * Kept next to the wash because it is the same kind of setting: about this
+   * screen, not about the account, and off by default because the people who
+   * need the sentence read it once and the people who do not are everybody
+   * else, every day. The text is never removed — it is hidden, so browser
+   * find and a screen reader still reach it.
+   */
+  const INTRO_KEY = "forecasters-hub.intros";
+
+  function readMyIntros() {
+    try {
+      return localStorage.getItem(INTRO_KEY) === "on" ? "on" : "off";
+    } catch {
+      return "off";
+    }
+  }
+
+  function writeMyIntros(value) {
+    try {
+      localStorage.setItem(INTRO_KEY, value);
+    } catch {
+      // The choice lasts for this page load, which is no worse than before.
+    }
+    render();
+  }
+
+  /**
+   * Fold the lede under a page title behind a small button.
+   *
+   * Done here, once, rather than at each of the two dozen places a page head
+   * is written: the demo builds its HTML as strings, and a wrapper every page
+   * had to remember to use is a wrapper some page would forget.
+   */
+  function foldPageIntros(root) {
+    const open = readMyIntros() === "on";
+    // `.keep` is a lede that is the page's own content rather than an
+    // explanation of it — a deadline, a host and a room, a trend's summary.
+    // Folding those away would hide the thing somebody came to read.
+    root.querySelectorAll(".head > div > .lede:not(.keep)").forEach((lede, i) => {
+      const id = `page-intro-${i}`;
+      const wrap = document.createElement("div");
+      wrap.className = open ? "page-intro open" : "page-intro";
+      const button = document.createElement("button");
+      button.className = "page-intro-toggle";
+      button.type = "button";
+      button.setAttribute("aria-expanded", String(open));
+      button.setAttribute("aria-controls", id);
+      button.innerHTML = `${icon("info", 13)}${open ? "Hide this" : "What this page is for"}`;
+      button.addEventListener("click", () => writeMyIntros(open ? "off" : "on"));
+
+      // A note about the demo that follows the lede belongs to the same
+      // explanation, so it folds with it rather than being the tall paragraph
+      // left behind by the one that folded.
+      const notes = [];
+      let next = lede.nextElementSibling;
+      while (next && next.classList.contains("signup-note")) {
+        const after = next.nextElementSibling;
+        notes.push(next);
+        next = after;
+      }
+
+      lede.replaceWith(wrap);
+      wrap.append(button, lede, ...notes);
+      lede.id = id;
+      lede.hidden = !open;
+      notes.forEach((note) => (note.hidden = !open));
+    });
+  }
+
   /** WCAG relative luminance, for the contrast figure beside each swatch. */
   function lookContrast(hex) {
     const n = parseInt(hex.slice(1), 16);
@@ -13849,7 +14511,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             view.state === "draft" ? "Draft — only admins can see this" : esc(view.section)
           }</div>
           <h1>${icon(view.icon, 26)} ${esc(view.label)}</h1>
-          ${view.description ? `<p class="lede">${esc(view.description)}</p>` : ""}
+          ${view.description ? `<p class="lede keep">${esc(view.description)}</p>` : ""}
         </div>
         <div class="figures inline">
           <div class="figure"><b>${applied.total}</b><span>${
@@ -16332,6 +16994,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     const v = viewer();
     const me = v.person;
     const mine = readMyWash();
+    const intros = readMyIntros();
     const has = photos.has(me.id);
 
     return `
@@ -16425,6 +17088,15 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                   browser. Everybody else still sees whatever the studio set.</div>`
               : ""
           }
+
+          <label class="check gradient-switch">
+            <input type="checkbox" data-my-intros${intros === "on" ? " checked" : ""} />
+            <span><b>The explanation under each page title</b><small>Every page can say what it
+              is for in a sentence or two. Off, that sits behind a small button and the page
+              starts with the work. The button is on every page, so this is the same switch — it
+              is here as well because a setting you found by accident is one you cannot find
+              again.</small></span>
+          </label>
         </div>
       </section>
 
@@ -17410,6 +18082,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     const caret = document.activeElement?.selectionStart;
 
     view.innerHTML = html;
+    foldPageIntros(view);
     document.getElementById("edit-bar").innerHTML = editBar();
     document.getElementById("bell-wrap").innerHTML = bellHtml();
     renderNav();
@@ -17497,6 +18170,11 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         writeMyWash(el.checked ? "default" : "off");
         render();
       }),
+    );
+
+    // The same switch as the button under every page title.
+    view.querySelectorAll("[data-my-intros]").forEach((el) =>
+      el.addEventListener("change", () => writeMyIntros(el.checked ? "on" : "off")),
     );
 
     /*
@@ -18248,6 +18926,9 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     );
     view.querySelectorAll("[data-kpi-person]").forEach((el) =>
       el.addEventListener("change", () => setParam("person", el.value)),
+    );
+    view.querySelectorAll("[data-kpi-pick]").forEach((el) =>
+      el.addEventListener("click", () => setParam("person", el.dataset.kpiPick)),
     );
 
     // Personal entries ------------------------------------------------------

@@ -8,6 +8,7 @@ import type { TrendCall, TrendList } from "../types";
 import { ErrorNote, Loading } from "../components/bits";
 import { TrendImage } from "../components/TrendImage";
 import ShareLink from "../components/ShareLink";
+import PageIntro from "../components/PageIntro";
 
 /** The trend types, as the TFDB sheet lists them. A profile can carry several. */
 export const TREND_TYPES = ["Design & Aesthetic", "Lifestyle", "Product / Item", "Systemic"];
@@ -137,7 +138,9 @@ export default function Trends() {
             className="eyebrow"
           />
           <Slot id="trends.title" as="h1" className="page-title" />
-          <Slot id="trends.sub" as="p" className="page-sub" />
+          <PageIntro>
+            <Slot id="trends.sub" as="span" />
+          </PageIntro>
         </div>
         <div className="head-figures">
           {/* Which figures, in what order, called what — the admin's. */}

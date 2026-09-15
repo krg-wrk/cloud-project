@@ -8,6 +8,7 @@ import { useAppearance } from "../../lib/appearance";
 import type { Me } from "../../types";
 import AlertSettings from "./Alerts";
 import Photo from "./Photo";
+import PageIntro from "../../components/PageIntro";
 
 /**
  * Everything a person can set for themselves, on one page.
@@ -54,11 +55,11 @@ export default function Settings() {
         <div>
           <Slot id="settings.eyebrow" as="div" className="eyebrow" />
           <Slot id="settings.title" as="h1" className="page-title" />
-          <p className="page-sub">
+          <PageIntro>
             Your photograph, which alerts reach you and how the Hub looks on this screen.
             Everything here is yours alone &mdash; nobody else sees a change you make on this
             page, except your photograph.
-          </p>
+          </PageIntro>
         </div>
       </div>
 
@@ -172,6 +173,25 @@ export default function Settings() {
               Off, for you, in this browser. Everybody else still sees whatever the studio set.
             </p>
           )}
+
+          <label className="check gradient-switch">
+            <input
+              type="checkbox"
+              checked={mine.intros === "on"}
+              onChange={(e) =>
+                writePreferences({ ...mine, intros: e.target.checked ? "on" : "off" })
+              }
+            />
+            <span>
+              <b>The explanation under each page title</b>
+              <small>
+                Every page can say what it is for in a sentence or two. Off, that sits behind
+                a small button and the page starts with the work. The button is on every page,
+                so this is the same switch — it is here as well because a setting you found by
+                accident is one you cannot find again.
+              </small>
+            </span>
+          </label>
         </div>
       </section>
 

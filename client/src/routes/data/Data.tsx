@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { useApi } from "../../lib/api";
 import { Slot } from "../../lib/custom";
 import { Icon } from "../../lib/icons";
+import PageIntro from "../../components/PageIntro";
 
 /**
  * Data: the things the team works out about the team's work.
@@ -39,7 +40,9 @@ export default function Data() {
         <div>
           <Slot id="data.eyebrow" as="div" className="eyebrow" />
           <Slot id="data.title" as="h1" className="page-title" />
-          <Slot id="data.sub" as="p" className="page-sub" />
+          <PageIntro>
+            <Slot id="data.sub" as="span" />
+          </PageIntro>
         </div>
       </div>
 

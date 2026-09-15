@@ -23,11 +23,20 @@ export interface Preferences {
    * a suggestion rather than a setting.
    */
   wash: "default" | "off";
+  /**
+   * The explanation under each page title.
+   *
+   * Shut by default: the people who use the Hub every day outnumber the ones
+   * meeting it, and a paragraph on every page pushes the thing they came for
+   * a screen down. Opening one opens them all, which is the point — it is a
+   * decision about the Hub, not about a page.
+   */
+  intros: "on" | "off";
   /** Whether the sidebar's account menu has been opened before. */
   seenAccountMenu?: boolean;
 }
 
-export const DEFAULT_PREFERENCES: Preferences = { wash: "default" };
+export const DEFAULT_PREFERENCES: Preferences = { wash: "default", intros: "off" };
 
 const KEY = "forecasters-hub.preferences";
 
@@ -39,6 +48,7 @@ export function readPreferences(): Preferences {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? "{}") as Partial<Preferences>;
     return {
       wash: raw.wash === "off" ? "off" : "default",
+      intros: raw.intros === "on" ? "on" : "off",
       seenAccountMenu: raw.seenAccountMenu === true,
     };
   } catch {

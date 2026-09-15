@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { MetricDefinition, MetricResult, Person } from "../types";
+import type { MetricDefinition, MetricResult } from "../types";
 
 /**
  * Charts for the KPI page.
@@ -249,53 +249,6 @@ export function PeriodBars({ result }: { result: MetricResult }) {
           </>
         )}
       </div>
-    </div>
-  );
-}
-
-/**
- * One metric across the team, ranked. The signed-in person's own bar takes
- * the accent; everyone else takes the lighter step. Values are labelled on
- * every bar, and names are on the axis, so nothing depends on colour.
- */
-export function TeamBars({
-  rows,
-  definition,
-  highlightId,
-}: {
-  rows: { personId: string; value: number | null; person: Person | null }[];
-  definition: MetricDefinition;
-  highlightId?: string;
-}) {
-  const max = Math.max(...rows.map((r) => r.value ?? 0), definition.target ?? 0, 1);
-
-  return (
-    <div className="team-bars">
-      {rows.map((row) => {
-        const mine = row.personId === highlightId;
-        const width = ((row.value ?? 0) / max) * 100;
-        return (
-          <div className={`team-bar${mine ? " mine" : ""}`} key={row.personId}>
-            <span className="team-bar-name">
-              {row.person?.name ?? row.personId}
-              {mine && <span className="team-bar-you"> you</span>}
-            </span>
-            <span className="team-bar-track">
-              <span
-                className="team-bar-fill"
-                style={{
-                  width: `${Math.max(row.value === null ? 0 : 0.8, width)}%`,
-                  background: mine ? ACCENT : ACCENT_SOFT,
-                }}
-              />
-            </span>
-            <span className="team-bar-value">
-              {formatValue(row.value, definition.unit)}
-              {row.value === null && <span className="team-bar-none"> no data</span>}
-            </span>
-          </div>
-        );
-      })}
     </div>
   );
 }

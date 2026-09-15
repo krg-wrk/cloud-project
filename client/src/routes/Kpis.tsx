@@ -5,8 +5,10 @@ import { formatLong } from "../lib/date";
 import { useViewer } from "../lib/viewer";
 import type { KpiResponse, MetricResult, TeamKpiResponse } from "../types";
 import { ErrorNote, Loading } from "../components/bits";
-import { PeriodBars, SeriesTable, SparkBars, TeamBars, formatValue } from "../components/charts";
+import { PeriodBars, SeriesTable, SparkBars, formatValue } from "../components/charts";
+import { Glossary, OwnershipMix, TeamPanel, TierRing } from "../components/PerfPanels";
 import ShareLink from "../components/ShareLink";
+import PageIntro from "../components/PageIntro";
 
 const RANGES: { value: string; label: string }[] = [
   { value: "this-quarter", label: "This quarter" },
@@ -98,6 +100,11 @@ function MetricTile({
         </>
       )}
 
+      {/* What it means, under the number.
+          It was only ever shown for the one metric somebody had selected,
+          which is the metric they already understood well enough to click. */}
+      <span className="kpi-what">{definition.description}</span>
+
       <span className="kpi-source">
         {definition.notKpi ? "Tracked, not a KPI" : definition.source === "supplied" ? "Supplied" : ""}
       </span>
@@ -163,11 +170,11 @@ export default function Kpis() {
               : "KPIs"}
           </div>
           <h1 className="page-title">Performance</h1>
-          <p className="page-sub">
+          <PageIntro>
             {isManager
               ? "How the work is going, per forecaster and across the team. Output is read against the average for the person's grade, and the range and metric both live in the URL."
               : "How your year is going. Output is read against the average for your grade rather than against zero, and the range and metric both live in the URL."}
-          </p>
+          </PageIntro>
         </div>
         <ShareLink label="Copy link" />
       </div>
@@ -245,6 +252,34 @@ export default function Kpis() {
         <SeriesTable results={results} />
       ) : (
         <>
+          {/*
+            How the output breaks down, and how the year was shaped.
+            Side by side because they answer the same question from two
+            directions: what kind of work, and what weight of work.
+          */}
+          {results.length > 0 && (
+            <div className="perf-pair">
+              <section className="card">
+                <div className="card-head">
+                  <h2 className="card-title">How the work is owned</h2>
+                  <span className="muted small">
+                    {subject?.forecasterRole ? `${subject.forecasterRole} · ` : ""}
+                    this range
+                  </span>
+                </div>
+                <OwnershipMix results={results} />
+              </section>
+
+              <section className="card">
+                <div className="card-head">
+                  <h2 className="card-title">Tier mix</h2>
+                  <span className="muted small">Tier 1 decide · 2 understand · 3 track</span>
+                </div>
+                <TierRing results={results} />
+              </section>
+            </div>
+          )}
+
           {groups.map((group) => (
             <section className="section" key={group}>
               <div className="section-head">
@@ -299,21 +334,45 @@ export default function Kpis() {
             </section>
           )}
 
-          {isManager && selected && team.data?.definition && !selected.awaitingData && (
+          {/*
+            One team section, not two. This used to be a flat league table as
+            well, ranking the same rows on the same metric — the same numbers
+            printed twice, once sorted and once grouped. The grouping is the
+            reading that survives, because a Strategist's twelve against a
+            Director's three is not a comparison; ranking now happens inside
+            each grade, where it is one.
+          */}
+          {isManager && team.data?.definition && team.data.rows.length > 0 && (
             <section className="section">
               <div className="section-head">
                 <h2 className="section-title">
-                  {team.data.definition.label} across the team
+                  {team.data.definition.label} across your team
                 </h2>
                 <span style={{ fontSize: 12, color: "var(--ink-45)" }}>
-                  {team.data.definition.better === "higher" ? "Most first" : "Least first"}
+                  By grade, because output is read against the average for a grade
                 </span>
               </div>
-              <TeamBars
+              <TeamPanel
                 rows={team.data.rows}
-                definition={team.data.definition}
-                highlightId={person}
+                metricLabel={team.data.definition.label}
+                unit={team.data.definition.unit}
+                better={team.data.definition.better}
+                selectedId={person}
+                youId={me.personId ?? ""}
+                onPick={(id) => setParam("person", id)}
               />
+            </section>
+          )}
+
+          {results.length > 0 && (
+            <section className="section">
+              <div className="section-head">
+                <h2 className="section-title">What each of these means</h2>
+                <span style={{ fontSize: 12, color: "var(--ink-45)" }}>
+                  {kpis.data && `${formatLong(kpis.data.range.from)} — ${formatLong(kpis.data.range.to)}`}
+                </span>
+              </div>
+              <Glossary results={results} />
             </section>
           )}
 

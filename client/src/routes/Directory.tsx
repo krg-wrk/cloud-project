@@ -6,6 +6,7 @@ import { Icon } from "../lib/icons";
 import { isOutstanding, isOverdue } from "../lib/domain";
 import type { ContentItem, DirectoryPage, DirectoryPerson, Person } from "../types";
 import { Avatar, ErrorNote, Loading } from "../components/bits";
+import PageIntro from "../components/PageIntro";
 
 /**
  * The team, as a directory rather than a list of forecasters.
@@ -89,7 +90,9 @@ export default function Directory() {
         <div>
           <Slot id="team.eyebrow" as="div" className="eyebrow" />
           <Slot id="team.title" as="h1" className="page-title" />
-          <Slot id="team.sub" as="p" className="page-sub" />
+          <PageIntro>
+            <Slot id="team.sub" as="span" />
+          </PageIntro>
         </div>
         <div className="head-figures">
           <div className="figure">

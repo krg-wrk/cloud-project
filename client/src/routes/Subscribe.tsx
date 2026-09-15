@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { send } from "../lib/api";
 import { useViewer } from "../lib/viewer";
+import PageIntro from "../components/PageIntro";
 
 /**
  * Getting the Hub into Google Calendar.
@@ -51,10 +52,10 @@ export default function Subscribe() {
           <div>
             <div className="eyebrow">Calendar</div>
             <h1 className="page-title">Add to your calendar</h1>
-            <p className="page-sub">
+            <PageIntro>
               This account isn&rsquo;t linked to a forecaster record, so there is no personal
               feed for it.
-            </p>
+            </PageIntro>
           </div>
         </div>
       </>

@@ -52,6 +52,7 @@ import Kanban, {
 } from "./Kanban";
 import EntryForm from "../components/EntryForm";
 import ShareLink from "../components/ShareLink";
+import PageIntro from "../components/PageIntro";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 /**
@@ -434,14 +435,14 @@ export default function CalendarView() {
                   : "One day"}
           </div>
           <h1 className="page-title">Calendar</h1>
-          <p className="page-sub">
+          <PageIntro>
             Submission deadlines, publication dates and everything in the diary
             that sits around them. Anything running over more than a day is drawn
             once, across the days it covers. Click a date for that day on its own,
             and an entry for the piece itself. The view, the date and the filters
             are all in the URL, so whatever you are looking at can be pasted
             straight into Slack.
-          </p>
+          </PageIntro>
         </div>
       </div>
 

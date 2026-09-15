@@ -2,6 +2,7 @@ import { NavLink, Outlet } from "react-router-dom";
 import { Icon } from "../../lib/icons";
 import { useViewer } from "../../lib/viewer";
 import { ErrorNote } from "../../components/bits";
+import PageIntro from "../../components/PageIntro";
 
 /**
  * The studio.
@@ -35,12 +36,12 @@ export default function Studio() {
           <h1 className="page-title">
             <Icon name="studio" size={26} /> Studio
           </h1>
-          <p className="page-sub">
+          <PageIntro>
             Point the Hub at a data source and build views of it for whoever needs them, and
             change the wording and layout of the pages that come built in. All of it without a
             deploy, and every view gets a real address so a link to one is a link anyone it is
             meant for can open.
-          </p>
+          </PageIntro>
         </div>
       </div>
 

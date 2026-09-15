@@ -9,6 +9,7 @@ import type { ContentItem, Person, Taxonomy } from "../types";
 import type { ReactNode } from "react";
 import { ErrorNote, Loading, StatusPill, Who } from "../components/bits";
 import ShareLink from "../components/ShareLink";
+import PageIntro from "../components/PageIntro";
 
 /** Columns that hold a figure or a date, so they set in the mono face. */
 const NUMERIC = new Set([
@@ -68,7 +69,9 @@ export default function Deadlines() {
         <div>
           <Slot id="deadlines.eyebrow" as="div" className="eyebrow" />
           <Slot id="deadlines.title" as="h1" className="page-title" />
-          <Slot id="deadlines.sub" as="p" className="page-sub" />
+          <PageIntro>
+            <Slot id="deadlines.sub" as="span" />
+          </PageIntro>
         </div>
       </div>
 
