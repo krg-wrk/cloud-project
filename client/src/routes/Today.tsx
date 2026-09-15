@@ -17,6 +17,7 @@ import {
 import { useViewer } from "../lib/viewer";
 import type { ContentItem, Schedule, SessionWithSignUps } from "../types";
 import { ErrorNote, EventPill, Loading, StatusPill, Who } from "../components/bits";
+import PageIntro from "../components/PageIntro";
 
 function DeadlineRow({
   item,
@@ -105,11 +106,9 @@ export default function Today() {
           <h1 className="page-title">
             <Slot id="today.greeting" />, {firstName}
           </h1>
-          <Slot
-            id={isManager ? "today.sub.team" : "today.sub.mine"}
-            as="p"
-            className="page-sub"
-          />
+          <PageIntro>
+            <Slot id={isManager ? "today.sub.team" : "today.sub.mine"} as="span" />
+          </PageIntro>
         </div>
         <Link to={`/calendar/${monthKey(TODAY)}`} className="btn">
           Open the calendar
