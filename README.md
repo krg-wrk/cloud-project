@@ -85,6 +85,34 @@ point, which is a pushed history entry — whereas changing a filter replaces
 one, so typing six letters in a search box does not put six entries behind
 you.
 
+### The calendar, and the board
+
+Four views of the same schedule, all at the same address: **Month**, **Week**,
+**Day** and **Board**. The board is a fourth button rather than a sixth menu
+item deliberately — it reads the same schedule and obeys the same filters, so
+it is a *view* of the calendar, not a page of its own, and the menu stays the
+length it is.
+
+A month grid answers "what lands on the 14th". A board answers "how much is
+still to write, and who is holding it", which is the question a commissioning
+manager actually opens the Hub with. Its three controls are all in the URL,
+like every other filter, so a board somebody has set up the way they think is
+a link they can send:
+
+- **Columns** — cut by status (the workflow order, every status present even
+  when empty), month, content type, forecaster or vertical.
+- **Looking ahead** — one, three or six months from the anchor. Three by
+  default: a month is right for the grid and too narrow for a board, where
+  grouping by month would give you one column.
+- **On each card** — nine fields to tick, four on by default. Untick them all
+  and a card is its title, which is a perfectly good board.
+
+Hovering a calendar entry for a moment brings up what it is without opening
+it: who owns it, what type it is, both its dates, its status. It waits 420ms,
+because a preview that appears the instant a pointer crosses something turns
+a scan across a month into a strobe; a keyboard gets it on focus with no wait,
+and Escape closes it.
+
 ## Workshops and knowledge sharing
 
 `/workshops` is the one part of the Hub people write to rather than read.

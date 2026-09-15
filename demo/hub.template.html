@@ -1393,6 +1393,228 @@
     color: var(--ink-soft);
   }
 
+  /* --- The board ----------------------------------------------------------
+   *
+   * The same schedule the grid draws, cut into columns instead of dates. A
+   * view of the calendar rather than a page of its own — the same filters,
+   * the same address, one more button.
+   * ---------------------------------------------------------------------- */
+
+  .board-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    gap: 10px 14px;
+    padding: 13px 15px;
+    margin-bottom: 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+  }
+
+  .board-bar .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .board-bar .field > span {
+    font-size: 9.5px;
+    font-weight: 500;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+  }
+
+  .board-bar select {
+    width: auto;
+    min-width: 150px;
+  }
+
+  /* The menu hangs off this, so it is what the menu is positioned against. */
+  .card-fields {
+    position: relative;
+  }
+
+  .card-fields-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 40;
+    min-width: 220px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--paper);
+    box-shadow: var(--shadow-lift);
+  }
+
+  .card-fields-menu .check {
+    margin-top: 0;
+    padding: 3px 0;
+    font-size: 13px;
+  }
+
+  /*
+   * Columns scroll sideways rather than shrinking. Grouped by forecaster
+   * there may be a dozen, and a dozen columns squeezed into a laptop is a
+   * dozen columns nobody can read. A board scrolls; that is what boards do.
+   */
+  .kanban-scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 6px;
+  }
+
+  .kanban {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    min-width: min-content;
+  }
+
+  .kanban-col {
+    display: flex;
+    flex-direction: column;
+    flex: none;
+    width: 260px;
+    max-height: 68vh;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--sunken);
+    overflow: hidden;
+  }
+
+  .kanban-col-head {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex: none;
+    padding: 11px 13px 10px;
+    border-bottom: 1px solid var(--line);
+    background: var(--paper);
+    /* The column's own colour as a rule along the top, where a status board
+       wants the eye to land. The accent for every other cut. */
+    box-shadow: inset 0 3px 0 var(--col-colour, var(--accent));
+  }
+
+  .kanban-col-head h2 {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .kanban-count {
+    margin-left: auto;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-soft);
+  }
+
+  .kanban-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .kanban-none {
+    margin: 4px 2px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+
+  .kanban-card {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    padding: 11px 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--paper);
+    color: var(--ink);
+    box-shadow: var(--shadow);
+    text-decoration: none;
+    transition:
+      box-shadow 0.14s ease,
+      border-color 0.14s ease;
+  }
+
+  .kanban-card:hover {
+    border-color: var(--line-firm);
+    box-shadow: var(--shadow-lift);
+  }
+
+  /* Past its deadline and still not in: a red edge rather than a red card, so
+     a column of late work is readable rather than alarming. */
+  .kanban-card.late {
+    box-shadow: inset 3px 0 0 var(--late), var(--shadow);
+  }
+
+  .kanban-card.late:hover {
+    box-shadow: inset 3px 0 0 var(--late), var(--shadow-lift);
+  }
+
+  .kanban-title {
+    font-weight: 500;
+    font-size: 13px;
+    line-height: 1.35;
+  }
+
+  .kanban-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 12px;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+
+  .kanban-meta > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .kanban-meta .icon {
+    flex: none;
+    opacity: 0.75;
+  }
+
+  .kanban-late {
+    color: var(--late);
+    font-weight: 500;
+  }
+
+  .kanban-note {
+    font-size: 11.5px;
+    line-height: 1.45;
+    color: var(--ink-mid);
+    padding-top: 7px;
+    border-top: 1px solid var(--line);
+    /* Two lines of a note is a hint; the whole of one is the piece's own page. */
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .kanban-card {
+      transition: none;
+    }
+  }
+
+  @media (max-width: 560px) {
+    .kanban-col {
+      width: 82vw;
+    }
+  }
+
   /* --- The wash -------------------------------------------------------------
    *
    * A soft iridescent field behind the content column, fixed so the page moves
@@ -2765,9 +2987,10 @@
     gap: 5px;
     height: 18px;
     margin: 0 3px;
-    padding: 0 6px;
+    padding: 0 9px;
     border: none;
-    border-left: 3px solid var(--c);
+    border-radius: 9px;
+    box-shadow: inset 3px 0 0 var(--c);
     background: color-mix(in srgb, var(--c) 16%, var(--paper));
     color: var(--ink);
     font: inherit;
@@ -2779,6 +3002,7 @@
 
   .cal-span:hover {
     background: color-mix(in srgb, var(--c) 30%, var(--paper));
+    box-shadow: inset 3px 0 0 var(--c), var(--shadow);
   }
 
   .cal-span .icon {
@@ -2863,16 +3087,39 @@
     font-weight: 500;
   }
 
+  /*
+   * The accent down the left is an inset shadow rather than a border.
+   *
+   * A `border-left` squares off the two corners it touches, so a "rounded"
+   * chip still read as a block with a bar stuck to it. An inset shadow paints
+   * inside the border-box and follows the radius, so the whole shape stays
+   * round and the colour still reads.
+   */
   .mark {
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 3px 6px;
-    border-left: 3px solid var(--c);
+    padding: 3px 7px 3px 9px;
+    border-radius: 9px;
+    box-shadow: inset 3px 0 0 var(--c);
     background: color-mix(in srgb, var(--c) 9%, transparent);
     font-size: 11px;
     line-height: 1.32;
     overflow: hidden;
+    transition:
+      background 0.14s ease,
+      box-shadow 0.14s ease;
+  }
+
+  .mark:hover {
+    background: color-mix(in srgb, var(--c) 20%, transparent);
+    box-shadow: inset 3px 0 0 var(--c), var(--shadow);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mark {
+      transition: none;
+    }
   }
 
   .mark .icon {
@@ -8643,6 +8890,9 @@
     renderAccount();
   }
 
+  /** Whether the board's "on each card" menu is open. */
+  let cardsOpen = false;
+
   /** Whether the account menu at the foot of the rail is open. */
   let accountOpen = false;
 
@@ -9115,7 +9365,64 @@
     ["month", "Month"],
     ["week", "Week"],
     ["day", "Day"],
+    ["board", "Board"],
   ];
+
+  /** What the board's columns are cut on. */
+  const GROUPINGS = [
+    ["status", "Status"],
+    ["month", "Month"],
+    ["type", "Content type"],
+    ["forecaster", "Forecaster"],
+    ["vertical", "Vertical"],
+  ];
+
+  /**
+   * How far ahead the board looks.
+   *
+   * A month is right for the grid and too narrow for a board: grouped by
+   * month it would be one column, and a board is for seeing what is coming
+   * rather than what is here. Three months is a commissioning cycle.
+   */
+  const BOARD_RANGES = [
+    [1, "This month"],
+    [3, "3 months"],
+    [6, "6 months"],
+  ];
+
+  const DEFAULT_RANGE = 3;
+
+  /** Everything a card can carry, in the order a card shows them. */
+  const CARD_FIELDS = [
+    ["status", "Status"],
+    ["forecaster", "Forecaster"],
+    ["manager", "Commissioning manager"],
+    ["type", "Content type"],
+    ["vertical", "Vertical"],
+    ["season", "Season"],
+    ["submission", "Submission date"],
+    ["publication", "Publication date"],
+    ["notes", "Notes"],
+  ];
+
+  const DEFAULT_CARD_FIELDS = ["status", "forecaster", "vertical", "submission"];
+
+  /** The chosen fields from the URL — null means nobody has chosen. */
+  function readCardFields(value) {
+    if (value === null) return DEFAULT_CARD_FIELDS;
+    const asked = new Set(value.split(",").filter(Boolean));
+    // Order comes from CARD_FIELDS, not the URL: a card should look the same
+    // whichever order somebody happened to tick the boxes in.
+    return CARD_FIELDS.map(([id]) => id).filter((id) => asked.has(id));
+  }
+
+  /** Back to a URL value. The default stays out, so a plain board is a clean link. */
+  function writeCardFields(fields) {
+    const same =
+      fields.length === DEFAULT_CARD_FIELDS.length &&
+      DEFAULT_CARD_FIELDS.every((f) => fields.includes(f));
+    return same ? "" : fields.join(",");
+  }
 
   /**
    * Where the week view should open when you switch to it.
@@ -9172,12 +9479,31 @@
     const thisWeek = weekGrid(anchor);
     const rows = view === "week" ? [thisWeek] : weeks;
 
+    /*
+     * The board's own three controls, all in the URL for the reason every
+     * other filter is: a board somebody has set up the way they think is a
+     * link they can send, not a thing the next person has to rebuild.
+     */
+    const askedBy = params.get("by");
+    const groupBy = GROUPINGS.some(([g]) => g === askedBy) ? askedBy : "status";
+    const askedMonths = Number(params.get("months"));
+    const rangeMonths = BOARD_RANGES.some(([m]) => m === askedMonths) ? askedMonths : DEFAULT_RANGE;
+    const cardFields = readCardFields(params.get("cards"));
+
     const period =
-      view === "month" ? monthName(key) : view === "week" ? weekName(anchor) : long(anchor);
+      view === "board"
+        ? rangeMonths === 1
+          ? monthName(key)
+          : `${monthName(key)} — ${monthName(monthShift(key, rangeMonths - 1))}`
+        : view === "month"
+          ? monthName(key)
+          : view === "week"
+            ? weekName(anchor)
+            : long(anchor);
 
     /** Prev/next steps by whatever the view is showing. */
     const stepTo = (n) =>
-      view === "month"
+      view === "month" || view === "board"
         ? monthShift(key, n)
         : addDays(anchor, n * (view === "week" ? 7 : 1));
 
@@ -9324,6 +9650,120 @@
       }
     }
 
+    /**
+     * The schedule as a board.
+     *
+     * The same forecasts the grid draws, stacked in columns instead of dates.
+     * A month grid answers "what lands on the 14th"; a board answers "how
+     * much is still to write, and who is holding it".
+     */
+    const boardView = () => {
+      const from = key + "-01";
+      const lastKey = monthShift(key, rangeMonths - 1);
+      const [ly, lm] = lastKey.split("-").map(Number);
+      const to = new Date(Date.UTC(ly, lm, 0)).toISOString().slice(0, 10);
+
+      const inRange = scope.filter((c) => {
+        const d = c.submissionDate || c.publicationDate || "";
+        return d >= from && d <= to;
+      });
+
+      if (!inRange.length) {
+        return `<div class="none">${icon("board", 20)}<p>Nothing in this range. Widen it with
+          the control above, or clear a filter.</p></div>`;
+      }
+
+      let columns;
+      if (groupBy === "status") {
+        // Every status gets a column even when it is empty: an empty "At risk"
+        // is information, and a board whose columns move about as the data
+        // changes is one nobody can learn the shape of.
+        columns = Object.keys(STATUS).map((id) => ({
+          key: id,
+          label: STATUS[id][0],
+          colour: STATUS[id][1],
+          items: inRange.filter((c) => c.status === id),
+        }));
+      } else {
+        const keyOf = (c) => {
+          if (groupBy === "month") return (c.submissionDate || c.publicationDate || TODAY).slice(0, 7);
+          if (groupBy === "type") return c.type || "Unset";
+          if (groupBy === "forecaster") return c.forecasterId || "";
+          return c.vertical || "Unset";
+        };
+        const labelOf = (k) => {
+          if (groupBy === "month") return monthName(k);
+          if (groupBy === "forecaster") return k ? person(k)?.name ?? k : "Unassigned";
+          return k;
+        };
+        const groups = new Map();
+        for (const c of inRange) groups.set(keyOf(c), [...(groups.get(keyOf(c)) ?? []), c]);
+        columns = [...groups.keys()]
+          .sort((a, b) =>
+            groupBy === "month"
+              ? a.localeCompare(b)
+              : labelOf(a).localeCompare(labelOf(b), "en", { numeric: true }),
+          )
+          .map((k) => ({ key: k, label: labelOf(k), items: groups.get(k) }));
+      }
+
+      const shown = new Set(cardFields);
+      const late = (c) =>
+        c.status !== "published" && c.status !== "submitted" && c.submissionDate < TODAY;
+
+      const fact = (title, ico, text, cls) =>
+        text ? `<span title="${esc(title)}"${cls ? ` class="${cls}"` : ""}>${icon(ico, 12)}${esc(text)}</span>` : "";
+
+      const card = (c) => `
+        <a class="kanban-card${late(c) ? " late" : ""}" href="#/content/${esc(c.id)}">
+          <span class="kanban-title">${esc(c.title)}</span>
+          ${shown.has("status") ? statusChip(c.status) : ""}
+          <span class="kanban-meta">
+            ${shown.has("forecaster") ? fact("Forecaster", "people", person(c.forecasterId)?.name ?? "") : ""}
+            ${shown.has("manager") ? fact("Commissioning manager", "review", person(c.managerId)?.name ?? "") : ""}
+            ${shown.has("type") ? fact("Content type", "note", c.type) : ""}
+            ${shown.has("vertical") ? fact("Vertical", "tier", c.vertical) : ""}
+            ${shown.has("season") ? fact("Season", "calendar", c.season) : ""}
+            ${
+              shown.has("submission")
+                ? fact(
+                    "Submission deadline",
+                    "deadlines",
+                    c.submissionDate
+                      ? short(c.submissionDate) + (late(c) ? ` · ${rel(c.submissionDate)}` : "")
+                      : "",
+                    late(c) ? "kanban-late" : "",
+                  )
+                : ""
+            }
+            ${shown.has("publication") ? fact("Publication date", "published", c.publicationDate ? short(c.publicationDate) : "") : ""}
+          </span>
+          ${shown.has("notes") && c.notes ? `<span class="kanban-note">${esc(c.notes)}</span>` : ""}
+        </a>`;
+
+      const byDate = (a, b) =>
+        (a.submissionDate || a.publicationDate || "9999").localeCompare(
+          b.submissionDate || b.publicationDate || "9999",
+        );
+
+      return `<div class="kanban-scroll"><div class="kanban">${columns
+        .map(
+          (col) => `
+          <section class="kanban-col">
+            <header class="kanban-col-head"${col.colour ? ` style="--col-colour:${col.colour}"` : ""}>
+              <h2>${esc(col.label)}</h2>
+              <span class="kanban-count">${col.items.length}</span>
+            </header>
+            <div class="kanban-cards">${
+              col.items.length
+                ? [...col.items].sort(byDate).map(card).join("")
+                : `<p class="kanban-none">Nothing here</p>`
+            }</div>
+          </section>`,
+        )
+        .join("")}</div></div>`;
+    };
+
     const markChip = (m) => {
       const inner =
         `${icon(m.iconName, 12)}${m.kicker ? `<em>${esc(m.kicker)}</em>` : ""}` +
@@ -9416,13 +9856,15 @@
       <div class="head">
         <div>
           <div class="eyebrow">${
-            view === "month"
-              ? `${medium(key + "-01")} — ${medium(
-                  new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10),
-                )}`
-              : view === "week"
-                ? "One week"
-                : "One day"
+            view === "board"
+              ? `${rangeMonths === 1 ? "One month" : rangeMonths + " months"}, as a board`
+              : view === "month"
+                ? `${medium(key + "-01")} — ${medium(
+                    new Date(Date.UTC(y, m, 0)).toISOString().slice(0, 10),
+                  )}`
+                : view === "week"
+                  ? "One week"
+                  : "One day"
           }</div>
           <h1>Calendar</h1>
           <p class="lede">Submission deadlines, publication dates and the diary around them.
@@ -9514,7 +9956,49 @@
         </div>
       </div>
 
-      ${view === "day" ? dayView(anchor) : `
+      ${
+        view === "board"
+          ? `<div class="board-bar">
+              <label class="field"><span>Columns</span>
+                <select data-board-by>${GROUPINGS.map(
+                  ([g, label]) =>
+                    `<option value="${g}"${g === groupBy ? " selected" : ""}>${label}</option>`,
+                ).join("")}</select></label>
+              <label class="field"><span>Looking ahead</span>
+                <select data-board-months>${BOARD_RANGES.map(
+                  ([m, label]) =>
+                    `<option value="${m}"${m === rangeMonths ? " selected" : ""}>${label}</option>`,
+                ).join("")}</select></label>
+              <div class="field card-fields">
+                <span>On each card</span>
+                <button class="toggle" data-cards-open aria-expanded="${cardsOpen}">
+                  ${icon("cards", 14)}${cardFields.length} ${
+                    cardFields.length === 1 ? "field" : "fields"
+                  }${icon("chevron-down", 12)}</button>
+                ${
+                  cardsOpen
+                    ? `<div class="card-fields-menu" role="group" aria-label="What each card shows">
+                        ${CARD_FIELDS.map(
+                          ([id, label]) =>
+                            `<label class="check"><input type="checkbox" data-card-field="${id}"${
+                              cardFields.includes(id) ? " checked" : ""
+                            } /><span>${label}</span></label>`,
+                        ).join("")}
+                        ${
+                          cardFields.length === 0
+                            ? `<p class="body" style="margin:6px 2px 0">Nothing ticked, so a card
+                                is just its title — which is a perfectly good board.</p>`
+                            : ""
+                        }
+                      </div>`
+                    : ""
+                }
+              </div>
+            </div>
+            ${boardView()}`
+          : view === "day"
+            ? dayView(anchor)
+            : `
       <div class="cal-scroll">
       <div class="cal${view === "week" ? " week-view" : ""}">
         <div class="cal-head">${["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -17678,9 +18162,37 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         else p.set("view", next);
         // Switching view keeps you on the same date rather than jumping to today.
         const on =
-          next === "month" ? anchor.slice(0, 7) : next === "week" ? weekAnchor(anchor) : anchor;
+          next === "month" || next === "board"
+            ? anchor.slice(0, 7)
+            : next === "week"
+              ? weekAnchor(anchor)
+              : anchor;
         const qs = p.toString();
         go(`/calendar/${on}` + (qs ? "?" + qs : ""));
+      }),
+    );
+
+    // The board ------------------------------------------------------------
+    view.querySelectorAll("[data-board-by]").forEach((el) =>
+      el.addEventListener("change", () => setParam("by", el.value)),
+    );
+    view.querySelectorAll("[data-board-months]").forEach((el) =>
+      el.addEventListener("change", () => setParam("months", el.value)),
+    );
+    view.querySelectorAll("[data-cards-open]").forEach((el) =>
+      el.addEventListener("click", () => {
+        cardsOpen = !cardsOpen;
+        render();
+      }),
+    );
+    view.querySelectorAll("[data-card-field]").forEach((el) =>
+      el.addEventListener("change", () => {
+        const id = el.dataset.cardField;
+        const { params: p } = route();
+        const now = readCardFields(p.get("cards"));
+        const next = now.includes(id) ? now.filter((f) => f !== id) : [...now, id];
+        // The menu stays open: nobody ticks exactly one box and walks away.
+        setParam("cards", writeCardFields(next));
       }),
     );
 
@@ -18278,6 +18790,11 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       bellOpen = false;
       document.getElementById("bell-wrap").innerHTML = bellHtml();
     }
+    if (cardsOpen && !e.target.closest(".card-fields")) {
+      cardsOpen = false;
+      render();
+    }
+
     if (e.target.closest("[data-sheet-go]") || e.target.closest("#scrim")) {
       sheetOpen = false;
       renderNav();

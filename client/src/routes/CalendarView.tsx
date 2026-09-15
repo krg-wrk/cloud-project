@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { send, useApi, query } from "../lib/api";
 import {
@@ -40,7 +40,16 @@ import type {
   SessionWithSignUps,
 } from "../types";
 import BackLink from "../components/BackLink";
-import { ErrorNote, Loading } from "../components/bits";
+import { ErrorNote, Loading, StatusPill } from "../components/bits";
+import { HoverPreview, useHoverPreview } from "../components/HoverPreview";
+import Kanban, {
+  CARD_FIELDS,
+  GROUPINGS,
+  readCardFields,
+  writeCardFields,
+  type CardField,
+  type GroupBy,
+} from "./Kanban";
 import EntryForm from "../components/EntryForm";
 import ShareLink from "../components/ShareLink";
 
@@ -51,13 +60,29 @@ const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
  */
 const MAX_CHIPS = 3;
 
-type View = "month" | "week" | "day";
+type View = "month" | "week" | "day" | "board";
 
 const VIEWS: { id: View; label: string }[] = [
   { id: "month", label: "Month" },
   { id: "week", label: "Week" },
   { id: "day", label: "Day" },
+  { id: "board", label: "Board" },
 ];
+
+/**
+ * How far ahead the board looks.
+ *
+ * A month is the right default for the grid and too narrow for a board:
+ * grouped by month it would be one column, and a board is for seeing what is
+ * coming rather than what is here. Three months is a commissioning cycle.
+ */
+const RANGES: { months: number; label: string }[] = [
+  { months: 1, label: "This month" },
+  { months: 3, label: "3 months" },
+  { months: 6, label: "6 months" },
+];
+
+const DEFAULT_RANGE = 3;
 
 /**
  * The path segment is a month key in the month view and a full date in the
@@ -77,7 +102,9 @@ function anchorDate(segment: string | undefined): string {
 
 /** What the path segment should be for a view anchored on this date. */
 function segmentFor(view: View, date: string): string {
-  return view === "month" ? monthKey(date) : date;
+  // The board is month-anchored like the month grid: it starts from a month
+  // and runs forward, so a link to one names the month it starts in.
+  return view === "month" || view === "board" ? monthKey(date) : date;
 }
 
 /**
@@ -278,11 +305,39 @@ export default function CalendarView() {
     mine: params.get("mine") !== "0",
   };
 
+  /*
+   * The board's own three controls, all in the URL for the reason every other
+   * filter is: a board somebody has set up the way they think is a link they
+   * can send, not a thing the next person has to rebuild.
+   */
+  const askedGroup = params.get("by");
+  const groupBy: GroupBy = GROUPINGS.some((g) => g.id === askedGroup)
+    ? (askedGroup as GroupBy)
+    : "status";
+  const askedRange = Number(params.get("months"));
+  const rangeMonths = RANGES.some((r) => r.months === askedRange) ? askedRange : DEFAULT_RANGE;
+  const cardFields = readCardFields(params.get("cards"));
+
   const grid = monthGrid(key);
   const week = weekGrid(anchor);
-  // Fetch what the view shows: the whole month grid, the week, or the day.
-  const from = view === "month" ? grid[0][0] : view === "week" ? week[0] : anchor;
-  const to = view === "month" ? grid[5][6] : view === "week" ? week[6] : anchor;
+  // Fetch what the view shows: the board's range, the whole month grid, the
+  // week, or the day.
+  const from =
+    view === "board"
+      ? firstOfMonth(key)
+      : view === "month"
+        ? grid[0][0]
+        : view === "week"
+          ? week[0]
+          : anchor;
+  const to =
+    view === "board"
+      ? lastOfMonth(shiftMonth(key, rangeMonths - 1))
+      : view === "month"
+        ? grid[5][6]
+        : view === "week"
+          ? week[6]
+          : anchor;
   const { data, error, loading } = useApi<Schedule>(
     `/schedule${query({ from, to, forecaster: forecaster || undefined })}`,
   );
@@ -321,7 +376,7 @@ export default function CalendarView() {
   /** Prev/next steps by whatever the view is showing. */
   function step(delta: number) {
     const next =
-      view === "month"
+      view === "month" || view === "board"
         ? shiftMonth(key, delta)
         : addDays(anchor, delta * (view === "week" ? 7 : 1));
     navigate({ pathname: `/calendar/${next}`, search: params.toString() });
@@ -345,7 +400,15 @@ export default function CalendarView() {
   }
 
   const periodLabel =
-    view === "month" ? monthLabel(key) : view === "week" ? weekLabel(anchor) : formatLong(anchor);
+    view === "board"
+      ? rangeMonths === 1
+        ? monthLabel(key)
+        : `${monthLabel(key)} — ${monthLabel(shiftMonth(key, rangeMonths - 1))}`
+      : view === "month"
+        ? monthLabel(key)
+        : view === "week"
+          ? weekLabel(anchor)
+          : formatLong(anchor);
 
   if (error) return <ErrorNote message={error} />;
 
@@ -362,11 +425,13 @@ export default function CalendarView() {
       <div className="page-head">
         <div>
           <div className="eyebrow">
-            {view === "month"
-              ? `${formatMedium(firstOfMonth(key))} — ${formatMedium(lastOfMonth(key))}`
-              : view === "week"
-                ? "One week"
-                : "One day"}
+            {view === "board"
+              ? `${rangeMonths === 1 ? "One month" : `${rangeMonths} months`}, as a board`
+              : view === "month"
+                ? `${formatMedium(firstOfMonth(key))} — ${formatMedium(lastOfMonth(key))}`
+                : view === "week"
+                  ? "One week"
+                  : "One day"}
           </div>
           <h1 className="page-title">Calendar</h1>
           <p className="page-sub">
@@ -482,6 +547,45 @@ export default function CalendarView() {
         </div>
       </div>
 
+      {/*
+        The board's controls, only when the board is showing. In their own bar
+        rather than in the filter row above, because those filters narrow
+        *what* is on the page and these decide *how it is cut* — and mixing
+        the two makes a row of eight controls nobody reads.
+      */}
+      {view === "board" && (
+        <div className="board-bar">
+          <div className="field">
+            <label htmlFor="by">Columns</label>
+            <select id="by" value={groupBy} onChange={(e) => setParam("by", e.target.value)}>
+              {GROUPINGS.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="months">Looking ahead</label>
+            <select
+              id="months"
+              value={String(rangeMonths)}
+              onChange={(e) => setParam("months", e.target.value)}
+            >
+              {RANGES.map((r) => (
+                <option key={r.months} value={String(r.months)}>
+                  {r.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <CardFieldsPicker
+            chosen={cardFields}
+            onChange={(next) => setParam("cards", writeCardFields(next))}
+          />
+        </div>
+      )}
+
       {adding && (
         <EntryForm
           defaultDate={anchor > TODAY ? anchor : TODAY}
@@ -497,7 +601,14 @@ export default function CalendarView() {
         <Loading what="the month" />
       ) : (
         <>
-          {view === "day" ? (
+          {view === "board" ? (
+            <Kanban
+              items={feed.content}
+              by={groupBy}
+              fields={cardFields}
+              people={data.people}
+            />
+          ) : view === "day" ? (
             <DayView
               date={anchor}
               chips={chipsForDay(anchor, feed, show, true)}
@@ -673,7 +784,184 @@ function SpanBar({
   );
 }
 
-/** One single-day chip. */
+/**
+ * Which fields a card carries.
+ *
+ * A menu rather than nine checkboxes laid out in the bar: the choice is made
+ * once and then left alone for weeks, and nine permanently visible tickboxes
+ * would shout louder than the board they configure.
+ *
+ * Click away or press Escape to close, as every other menu in the Hub does.
+ */
+function CardFieldsPicker({
+  chosen,
+  onChange,
+}: {
+  chosen: CardField[];
+  onChange: (next: CardField[]) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => {
+      if (!box.current?.contains(e.target as Node)) setOpen(false);
+    };
+    const key = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", away);
+    document.addEventListener("keydown", key);
+    return () => {
+      document.removeEventListener("mousedown", away);
+      document.removeEventListener("keydown", key);
+    };
+  }, [open]);
+
+  const toggle = (id: CardField) =>
+    onChange(chosen.includes(id) ? chosen.filter((f) => f !== id) : [...chosen, id]);
+
+  return (
+    <div className="field card-fields" ref={box}>
+      <label htmlFor="card-fields">On each card</label>
+      <button
+        className="btn"
+        id="card-fields"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-haspopup="true"
+      >
+        <Icon name="cards" size={14} />
+        {chosen.length} {chosen.length === 1 ? "field" : "fields"}
+        <Icon name="chevron-down" size={12} />
+      </button>
+      {open && (
+        <div className="card-fields-menu" role="group" aria-label="What each card shows">
+          {CARD_FIELDS.map((f) => (
+            <label className="check" key={f.id}>
+              <input
+                type="checkbox"
+                checked={chosen.includes(f.id)}
+                onChange={() => toggle(f.id)}
+              />
+              <span>{f.label}</span>
+            </label>
+          ))}
+          {chosen.length === 0 && (
+            <p className="muted small" style={{ margin: "6px 2px 0" }}>
+              Nothing ticked, so a card is just its title — which is a
+              perfectly good board.
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * What a chip is, spelled out — the body of its hover preview.
+ *
+ * Every line is something the chip itself had no room for. There is no point
+ * previewing the title back at somebody who is already pointing at it, so the
+ * title is the heading and the rest is what they came for.
+ */
+function chipDetail(chip: Chip, people: Schedule["people"]): ReactNode {
+  const row = (label: string, value: ReactNode) =>
+    value ? (
+      <div key={label}>
+        <dt>{label}</dt>
+        <dd>{value}</dd>
+      </div>
+    ) : null;
+
+  switch (chip.kind) {
+    case "submission":
+    case "publication": {
+      const item = chip.item;
+      const due = chip.kind === "submission" ? item.submissionDate : item.publicationDate;
+      return (
+        <>
+          <dl className="preview-facts">
+            {row("Forecaster", personName(people, item.forecasterId))}
+            {row("Type", item.type)}
+            {row("Vertical", item.vertical)}
+            {row("Season", item.season)}
+            {row(
+              chip.kind === "submission" ? "Copy due" : "Publishes",
+              due ? `${formatLong(due)} · ${relativeDays(due)}` : "",
+            )}
+            {row(
+              chip.kind === "submission" ? "Publishes" : "Copy due",
+              chip.kind === "submission"
+                ? item.publicationDate && formatMedium(item.publicationDate)
+                : item.submissionDate && formatMedium(item.submissionDate),
+            )}
+          </dl>
+          <div className="preview-foot">
+            <StatusPill status={item.status} />
+            {item.noteCount ? (
+              <span className="muted small">
+                {item.noteCount} {item.noteCount === 1 ? "note" : "notes"}
+              </span>
+            ) : null}
+          </div>
+        </>
+      );
+    }
+    case "review":
+      return (
+        <dl className="preview-facts">
+          {row("Peer review", chip.review.iAmReviewer ? "You are reviewing" : "Your piece")}
+          {row("With", personName(people, chip.review.reviewerId))}
+          {row("Arranged by", chip.review.arrangedBy)}
+          {row("Note", chip.review.note)}
+        </dl>
+      );
+    case "session":
+      return (
+        <dl className="preview-facts">
+          {row("Kind", KIND_LABELS[chip.session.kind])}
+          {row("When", `${chip.session.startTime}–${chip.session.endTime}`)}
+          {row("Where", chip.session.online ? `${chip.session.location} · online` : chip.session.location)}
+          {row("Host", chip.session.hostId ? personName(people, chip.session.hostId) : chip.session.hostExternal)}
+          {row("Going", chip.session.going.length ? `${chip.session.going.length} signed up` : "")}
+          {row("About", chip.session.summary)}
+        </dl>
+      );
+    case "event":
+      return (
+        <dl className="preview-facts">
+          {row("Kind", EVENT_LABELS[chip.event.type])}
+          {row("Who", chip.event.personId ? personName(people, chip.event.personId) : chip.event.region)}
+          {row(
+            "When",
+            chip.event.startDate === chip.event.endDate
+              ? formatLong(chip.event.startDate)
+              : `${formatMedium(chip.event.startDate)} — ${formatMedium(chip.event.endDate)}`,
+          )}
+          {row("Where", chip.event.location)}
+          {row("Note", chip.event.notes)}
+        </dl>
+      );
+    case "entry":
+      return (
+        <dl className="preview-facts">
+          {row("Yours", "A reminder you added")}
+          {row(
+            "When",
+            chip.entry.date === chip.entry.endDate
+              ? formatLong(chip.entry.date)
+              : `${formatMedium(chip.entry.date)} — ${formatMedium(chip.entry.endDate)}`,
+          )}
+          {row("Note", chip.entry.note)}
+        </dl>
+      );
+  }
+}
+
+/** One single-day chip, with a preview behind a moment's hover. */
 function ChipView({
   chip,
   people,
@@ -684,6 +972,7 @@ function ChipView({
   onRemoveEntry: (id: string) => void;
 }) {
   const { kicker, title, icon, colour } = chipLabel(chip, people);
+  const preview = useHoverPreview();
   const style = { "--chip-color": colour } as CSSProperties;
   const body = (
     <>
@@ -692,27 +981,54 @@ function ChipView({
       <span className="chip-title">{title}</span>
     </>
   );
+
+  /*
+   * The panel, and the `title` attribute it replaces.
+   *
+   * Both are kept: the browser tooltip is what a touch device and a stuck
+   * pointer still get, and it costs nothing. The panel opens faster and says
+   * more, so in practice it is the one people see.
+   */
+  const panel = (
+    <HoverPreview at={preview.at}>
+      <b className="preview-title">{title}</b>
+      <span className="preview-what" style={style}>
+        <Icon name={icon} size={12} />
+        {chipMeaning(chip)}
+      </span>
+      {chipDetail(chip, people)}
+    </HoverPreview>
+  );
+
   if (chip.kind === "entry") {
     return (
-      <button
-        className="cal-chip cal-chip-button"
-        style={style}
-        title={`${chip.entry.title}${chip.entry.note ? ` — ${chip.entry.note}` : ""} (yours — click to remove)`}
-        onClick={() => onRemoveEntry(chip.entry.id)}
-      >
-        {body}
-      </button>
+      <>
+        <button
+          className="cal-chip cal-chip-button"
+          style={style}
+          title={`${chip.entry.title}${chip.entry.note ? ` — ${chip.entry.note}` : ""} (yours — click to remove)`}
+          onClick={() => onRemoveEntry(chip.entry.id)}
+          {...preview.handlers()}
+        >
+          {body}
+        </button>
+        {panel}
+      </>
     );
   }
   return (
-    <Link
-      className="cal-chip"
-      style={style}
-      to={chipHref(chip)}
-      title={`${title} — ${chipMeaning(chip)}`}
-    >
-      {body}
-    </Link>
+    <>
+      <Link
+        className="cal-chip"
+        style={style}
+        to={chipHref(chip)}
+        title={`${title} — ${chipMeaning(chip)}`}
+        {...preview.handlers()}
+      >
+        {body}
+      </Link>
+      {panel}
+    </>
   );
 }
 

@@ -39,6 +39,7 @@ const PAGES = [
   ["Today", "/", "#/"],
   ["Deadlines", "/deadlines", "#/deadlines"],
   ["Calendar", "/calendar/2026-09", "#/calendar/2026-09"],
+  ["Board", "/calendar/2026-09?view=board", "#/calendar/2026-09?view=board"],
   ["Trends", "/trends", "#/trends"],
   ["Performance", "/performance", "#/performance"],
   ["Forecast Builder", "/lab/builder", "#/lab/builder"],

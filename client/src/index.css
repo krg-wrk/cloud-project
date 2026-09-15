@@ -1535,6 +1535,14 @@ table.schedule .overdue {
   flex: none;
 }
 
+/*
+ * A bar across the week, as a pill.
+ *
+ * The accent down the left was a `border-left`, which squares off the two
+ * corners it touches — so a "rounded" chip still read as a block with a bar
+ * stuck to it. An inset shadow paints inside the border-box and follows the
+ * radius, so the whole shape stays round and the colour still reads.
+ */
 .cal-span {
   pointer-events: auto;
   display: flex;
@@ -1542,9 +1550,9 @@ table.schedule .overdue {
   gap: 5px;
   height: 18px;
   margin: 0 3px;
-  padding: 0 6px;
-  border-radius: var(--radius-sm);
-  border-left: 3px solid var(--chip-color, var(--ink-45));
+  padding: 0 9px;
+  border-radius: 9px;
+  box-shadow: inset 3px 0 0 var(--chip-color, var(--ink-45));
   background: color-mix(in srgb, var(--chip-color, var(--ink-45)) 16%, var(--paper));
   color: var(--ink);
   font-size: 11px;
@@ -1555,6 +1563,7 @@ table.schedule .overdue {
 
 .cal-span:hover {
   background: color-mix(in srgb, var(--chip-color, var(--ink-45)) 30%, var(--paper));
+  box-shadow: inset 3px 0 0 var(--chip-color, var(--ink-45)), var(--shadow);
 }
 
 .cal-span .icon {
@@ -1577,9 +1586,7 @@ table.schedule .overdue {
 }
 
 .cal-span-button {
-  border-top: none;
-  border-right: none;
-  border-bottom: none;
+  border: none;
   font: inherit;
   font-size: 11px;
   cursor: pointer;
@@ -1626,24 +1633,36 @@ table.schedule .overdue {
   font-weight: 500;
 }
 
+/* Same move as the bar above: the accent is an inset shadow, so the corners
+   stay round rather than being squared off by a border. */
 .cal-chip {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 6px;
-  border-radius: var(--radius-sm);
+  padding: 3px 7px 3px 9px;
+  border-radius: 9px;
   font-size: 11px;
   line-height: 1.32;
-  border-left: 3px solid var(--chip-color, var(--ink-45));
+  box-shadow: inset 3px 0 0 var(--chip-color, var(--ink-45));
   background: color-mix(in srgb, var(--chip-color, var(--ink-45)) 9%, transparent);
   color: var(--ink);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition:
+    background 0.14s ease,
+    box-shadow 0.14s ease;
 }
 
 .cal-chip:hover {
   background: color-mix(in srgb, var(--chip-color, var(--ink-45)) 20%, transparent);
+  box-shadow: inset 3px 0 0 var(--chip-color, var(--ink-45)), var(--shadow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cal-chip {
+    transition: none;
+  }
 }
 
 .cal-chip .icon {
@@ -1668,6 +1687,7 @@ table.schedule .overdue {
 
 .cal-more {
   align-self: flex-start;
+  border-radius: 999px;
   border: none;
   background: transparent;
   font: inherit;
@@ -7818,4 +7838,304 @@ a.inbox-title:hover {
   margin: 3px 0 0;
   font-size: 13.5px;
   overflow-wrap: anywhere;
+}
+
+/* --- The hover preview ----------------------------------------------------
+ *
+ * What a calendar chip is, without opening it. Fixed rather than absolute,
+ * because the month grid scrolls sideways inside `overflow: auto` and an
+ * absolutely positioned panel would be clipped by it.
+ * -------------------------------------------------------------------------- */
+
+.hover-preview {
+  position: fixed;
+  z-index: 70;
+  width: min(320px, calc(100vw - 24px));
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-lift);
+  /* It follows a pointer around; it must never be in that pointer's way. */
+  pointer-events: none;
+  font-size: 12.5px;
+  line-height: 1.5;
+  animation: preview-in 0.12s ease-out;
+}
+
+@keyframes preview-in {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hover-preview {
+    animation: none;
+  }
+}
+
+.preview-title {
+  display: block;
+  font-family: var(--display);
+  font-size: 14.5px;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+
+/* What kind of thing it is, in the thing's own colour. */
+.preview-what {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 3px;
+  font-size: 11px;
+  font-weight: 500;
+  color: color-mix(in srgb, var(--chip-color, var(--accent)) 76%, var(--ink));
+}
+
+.preview-facts {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 12px;
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--rule);
+}
+
+/* Each fact is its own row: a `<div>` wrapping a dt/dd pair, so the grid
+   places the label and the value side by side without a nth-child dance. */
+.preview-facts > div {
+  display: contents;
+}
+
+.preview-facts dt {
+  font-size: 9.5px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-45);
+  padding-top: 2px;
+  white-space: nowrap;
+}
+
+.preview-facts dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.preview-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+/* --- The board ------------------------------------------------------------
+ *
+ * The same schedule the grid draws, cut into columns instead of dates. It is
+ * a view of the calendar rather than a page of its own — the same filters,
+ * the same address, one more button.
+ * -------------------------------------------------------------------------- */
+
+.board-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 14px;
+  padding: 13px 15px;
+  margin-bottom: 16px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+}
+
+/* The menu hangs off this, so it is the thing the menu is positioned against. */
+.card-fields {
+  position: relative;
+}
+
+.card-fields-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  min-width: 220px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-lift);
+}
+
+.card-fields-menu .check {
+  margin-top: 0;
+  padding: 3px 0;
+  font-size: 13px;
+}
+
+/*
+ * Columns scroll sideways rather than shrinking.
+ *
+ * Grouped by forecaster there may be a dozen, and a dozen columns squeezed
+ * into a laptop is a dozen columns nobody can read. A board scrolls; that is
+ * what boards do.
+ */
+.kanban-scroll {
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  padding-bottom: 6px;
+}
+
+.kanban {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  min-width: min-content;
+}
+
+.kanban-col {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  width: 260px;
+  max-height: 68vh;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--sunken);
+  overflow: hidden;
+}
+
+.kanban-col-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: none;
+  padding: 11px 13px 10px;
+  border-bottom: 1px solid var(--rule);
+  background: var(--paper);
+  /* The column's own colour as a rule along the top, where a status board
+     wants the eye to land. Falls back to the accent for every other cut. */
+  box-shadow: inset 0 3px 0 var(--col-colour, var(--accent));
+}
+
+.kanban-col-head h2 {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.kanban-count {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-45);
+}
+
+.kanban-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.kanban-none {
+  margin: 4px 2px;
+  font-size: 12px;
+  color: var(--ink-45);
+}
+
+.kanban-card {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 11px 12px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+  transition:
+    box-shadow 0.14s ease,
+    border-color 0.14s ease;
+}
+
+.kanban-card:hover {
+  border-color: var(--rule-strong);
+  box-shadow: var(--shadow-lift);
+}
+
+/* Past its deadline and still not in: a red edge rather than a red card, so
+   a column of late work is readable rather than alarming. */
+.kanban-card.late {
+  box-shadow: inset 3px 0 0 var(--status-at-risk), var(--shadow);
+}
+
+.kanban-card.late:hover {
+  box-shadow: inset 3px 0 0 var(--status-at-risk), var(--shadow-lift);
+}
+
+.kanban-title {
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 1.35;
+  text-wrap: pretty;
+}
+
+.kanban-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 11.5px;
+  color: var(--ink-45);
+}
+
+.kanban-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.kanban-meta .icon {
+  flex: none;
+  opacity: 0.75;
+}
+
+.kanban-late {
+  color: var(--status-at-risk);
+  font-weight: 500;
+}
+
+.kanban-note {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: var(--ink-70);
+  padding-top: 7px;
+  border-top: 1px solid var(--rule);
+  /* Two lines of a note is a hint; the whole of one is the piece's own page. */
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kanban-card {
+    transition: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .kanban-col {
+    width: 82vw;
+  }
 }
