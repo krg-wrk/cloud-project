@@ -8,6 +8,7 @@ import { isOutstanding, isOverdue } from "../lib/domain";
 import type { ContentItem, DirectoryPage, DirectoryPerson, Person } from "../types";
 import { Avatar, ErrorNote, Loading } from "../components/bits";
 import PageIntro from "../components/PageIntro";
+import ExportButton from "../components/ExportButton";
 
 /**
  * The team, as a directory rather than a list of forecasters.
@@ -219,8 +220,29 @@ export default function Directory() {
             </select>
           </label>
         ))}
-        {filtered && (
-          <div className="filters-right">
+        <div className="filters-right">
+          {/* Flattened: a person in three groups is one row here, not three. */}
+          <ExportButton
+            label="The team"
+            rows={[...new Map(groups.flatMap((g) => g.people).map((p) => [p.id, p])).values()]}
+            columns={[
+              { header: "Name", value: (p) => p.name },
+              { header: "Email", value: (p) => p.email },
+              { header: "Role", value: (p) => p.role },
+              { header: "Team", value: (p) => p.team },
+              { header: "What they cover", value: (p) => p.tags.join("; ") },
+              { header: "Knowledge networks", value: (p) => p.knowledge.join("; ") },
+              { header: "Region", value: (p) => p.region },
+              { header: "Country", value: (p) => p.country },
+              { header: "Feed lead", value: (p) => (p.feedLead ? "Yes" : "No") },
+              { header: "DEI board", value: (p) => (p.deiBoard ? "Yes" : "No") },
+              // Away, never why: the reason is nobody else's business, and an
+              // export is the easiest way for one to escape.
+              { header: "Availability", value: (p) => (p.availability === "away" ? "Away" : "Here") },
+            ]}
+            small
+          />
+          {filtered && (
             <button
               className="btn small"
               onClick={() => {
@@ -235,8 +257,8 @@ export default function Directory() {
                 return `Clear ${n} ${n === 1 ? "filter" : "filters"}`;
               })()}
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {groups.length === 0 && (

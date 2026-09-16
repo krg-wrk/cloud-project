@@ -9,6 +9,7 @@ import type { ContentItem, Person, Taxonomy } from "../types";
 import type { ReactNode } from "react";
 import { ErrorNote, Loading, StatusPill, Who } from "../components/bits";
 import ShareLink from "../components/ShareLink";
+import ExportButton from "../components/ExportButton";
 import PageIntro from "../components/PageIntro";
 
 /** Columns that hold a figure or a date, so they set in the mono face. */
@@ -152,6 +153,23 @@ export default function Deadlines() {
           <span style={{ fontSize: 12, color: "var(--ink-45)" }}>
             {rows.length} forecasts · {upcoming.length} still to come
           </span>
+          {/* The file holds what the filters left, not the whole sheet. */}
+          <ExportButton
+            label="Deadlines"
+            rows={rows}
+            columns={[
+              { header: "Title", value: (r) => r.title },
+              { header: "Type", value: (r) => r.type },
+              { header: "Vertical", value: (r) => r.vertical },
+              { header: "Season", value: (r) => r.season },
+              { header: "Forecaster", value: (r) => personName(people.data ?? [], r.forecasterId) },
+              { header: "Status", value: (r) => STATUS_LABELS[r.status] },
+              { header: "Submission date", value: (r) => r.submissionDate },
+              { header: "Publication date", value: (r) => r.publicationDate },
+              { header: "Late", value: (r) => (isOverdue(r) ? "Yes" : "No") },
+            ]}
+            small
+          />
           <ShareLink label="Copy link" />
         </div>
       </div>

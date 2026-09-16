@@ -8557,3 +8557,40 @@ a.inbox-title:hover {
   text-transform: uppercase;
   color: var(--ink-45);
 }
+
+/* --- Taking a list out ----------------------------------------------------
+ *
+ * The dialog is only ever seen where the browser refused the download, which
+ * is the shared preview rather than the Hub proper. It borrows the proof
+ * point dialog's frame so there is one modal look rather than two.
+ * -------------------------------------------------------------------------- */
+
+.csv-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(760px, 94vw);
+  padding: 0 20px 20px;
+}
+
+.csv-dialog .pp-dialog-head {
+  margin: 0 -20px;
+}
+
+.csv-dialog > .btn {
+  align-self: flex-start;
+}
+
+.csv-text {
+  width: 100%;
+  min-height: 300px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-sm);
+  background: var(--ground);
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre;
+  resize: vertical;
+}

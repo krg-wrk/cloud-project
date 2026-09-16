@@ -17,6 +17,7 @@ import { personHue } from "../lib/domain";
 import type { Field, ViewPage, ViewSpec } from "../types";
 import { ErrorNote, Loading } from "../components/bits";
 import ShareLink from "../components/ShareLink";
+import ExportButton from "../components/ExportButton";
 import type { CSSProperties } from "react";
 
 /**
@@ -81,6 +82,18 @@ export default function CustomView() {
           </span>
         )}
         <span className="view-source-right">
+          {/* Every column the dataset has, not only the ones this layout
+              shows: a card view naming three fields is a display decision,
+              and an export is for the spreadsheet afterwards. */}
+          <ExportButton
+            label={view.label}
+            rows={rows}
+            columns={fields.map((f) => ({
+              header: f.name,
+              value: (row: Record<string, string>) => row[f.key],
+            }))}
+            small
+          />
           <ShareLink />
         </span>
       </div>

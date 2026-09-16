@@ -6753,6 +6753,40 @@
     cursor: pointer;
   }
 
+  /* The export dialog, which only appears here — a sandboxed page cannot save
+     a file, so the text is offered instead. Borrows the frame above so there
+     is one modal look rather than two. */
+  .csv-dialog {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: min(760px, 94vw);
+    padding: 0 20px 20px;
+  }
+
+  .csv-dialog .pp-dialog-head {
+    margin: 0 -20px;
+  }
+
+  .csv-dialog > .toggle {
+    align-self: flex-start;
+  }
+
+  .csv-text {
+    width: 100%;
+    min-height: 300px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.5;
+    white-space: pre;
+    resize: vertical;
+  }
+
   .pp-dialog {
     position: fixed;
     z-index: 61;
@@ -8021,6 +8055,7 @@
     proof: "M9 12.5l2 2 4.5-4.5M6 3h12a1 1 0 0 1 1 1v16a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z",
     copy: "M9 9V5.5A1.5 1.5 0 0 1 10.5 4h8A1.5 1.5 0 0 1 20 5.5v8a1.5 1.5 0 0 1-1.5 1.5H15M5.5 9h8A1.5 1.5 0 0 1 15 10.5v8a1.5 1.5 0 0 1-1.5 1.5h-8A1.5 1.5 0 0 1 4 18.5v-8A1.5 1.5 0 0 1 5.5 9Z",
     info: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM12 11v5.5M12 7.6h.01",
+    download: "M12 3.5v11M7.5 10.5 12 15l4.5-4.5M4.5 17.5v1a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-1",
     camera:
       "M4 7.5h3L8.5 5h7L17 7.5h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1ZM12 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z",
   };
@@ -9725,7 +9760,21 @@
           )}</select></label>
         <div class="filters-right">${rows.length} pieces · ${
           rows.filter((c) => c.submissionDate >= TODAY).length
-        } still to come</div>
+        } still to come${exportable(
+          "Deadlines",
+          [
+            ["Title", (c) => c.title],
+            ["Type", (c) => c.type],
+            ["Vertical", (c) => c.vertical],
+            ["Season", (c) => c.season],
+            ["Forecaster", (c) => nameOf(c.forecasterId)],
+            ["Status", (c) => (STATUS[c.status] ?? [c.status])[0]],
+            ["Submission date", (c) => c.submissionDate],
+            ["Publication date", (c) => c.publicationDate],
+            ["Late", (c) => (isLate(c) ? "Yes" : "No")],
+          ],
+          rows,
+        )}</div>
       </div>
 
       ${
@@ -10855,6 +10904,25 @@
                 .join("")}
             </select></label>`;
         }).join("")}
+        <div class="filters-right">${exportable(
+          "The team",
+          [
+            ["Name", (p) => p.name],
+            ["Email", (p) => p.email],
+            ["Role", (p) => p.role],
+            ["Team", (p) => p.team],
+            ["What they cover", (p) => (p.tags ?? []).join("; ")],
+            ["Knowledge networks", (p) => (p.knowledge ?? []).join("; ")],
+            ["Region", (p) => p.region],
+            ["Country", (p) => p.country],
+            ["Feed lead", (p) => (p.feedLead ? "Yes" : "No")],
+            ["DEI board", (p) => (p.deiBoard ? "Yes" : "No")],
+            // Away, never why: the reason is nobody else's business, and an
+            // export is the easiest way for one to escape.
+            ["Availability", (p) => (p.availability === "away" ? "Away" : "Here")],
+          ],
+          found,
+        )}</div>
         ${
           narrowed
             ? `<div class="filters-right"><button class="toggle" data-dir-clear>Clear ${
@@ -12040,7 +12108,21 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                   .join("")}</select></label>`
             : ""
         }
-        <div class="filters-right">${long(range.from)} — ${long(range.to)}</div>
+        <div class="filters-right">${long(range.from)} — ${long(range.to)}${exportable(
+          `Performance — ${subject.name}`,
+          [
+            ["Metric", (m) => m.definition.label],
+            ["Group", (m) => m.definition.group],
+            ...(results[0]?.series ?? []).map((point, i) => [
+              point.label,
+              (m) => m.series[i]?.value ?? "",
+            ]),
+            ["Range total", (m) => m.value ?? ""],
+            ["Role average", (m) => m.benchmark ?? ""],
+            ["Target", (m) => m.definition.target ?? ""],
+          ],
+          results,
+        )}</div>
       </div>
 
       <!-- How the output breaks down, and how the year was shaped. Side by
@@ -17967,6 +18049,91 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
    * Its own address — ?open=s000123 — so it can be sent to someone, and so
    * the back button closes it rather than leaving the page.
    */
+  /* ---- Taking a list out -------------------------------------------------
+   *
+   * The same rule as the Hub: the file holds exactly what the screen holds,
+   * filters and all. Each page that can be exported stashes the rows it just
+   * drew in `lastExport`, and the button uses that — which is both simpler
+   * than recomputing the filters and, more to the point, guaranteed to agree
+   * with what somebody is looking at.
+   *
+   * A sandboxed page cannot save a file, and this one is always sandboxed, so
+   * the text is offered to copy instead.
+   * ---------------------------------------------------------------------- */
+
+  let lastExport = null;
+
+  /** One cell, escaped — including the leading = that a spreadsheet runs. */
+  function csvCell(value) {
+    if (value === null || value === undefined) return "";
+    const text = String(value);
+    const safe = /^[=+\-@\t\r]/.test(text) ? `'${text}` : text;
+    return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+  }
+
+  function toCsv(rows, columns) {
+    const lines = [columns.map((c) => csvCell(c[0])).join(",")];
+    for (const row of rows) lines.push(columns.map((c) => csvCell(c[1](row))).join(","));
+    return lines.join("\r\n");
+  }
+
+  /** Remember what this page is showing, so the button has something to take. */
+  function exportable(label, columns, rows) {
+    lastExport = { label, columns, rows };
+    return rows.length
+      ? `<button class="toggle" data-export>${icon("download", 14)}Export ${rows.length} ${
+          rows.length === 1 ? "row" : "rows"
+        }</button>`
+      : "";
+  }
+
+  function showCsv() {
+    if (!lastExport) return;
+    const text = toCsv(lastExport.rows, lastExport.columns);
+    const wrap = document.createElement("div");
+    wrap.innerHTML = `
+      <button class="pp-scrim" data-csv-close aria-label="Close"></button>
+      <div class="pp-dialog csv-dialog" role="dialog" aria-modal="true"
+        aria-label="${esc(lastExport.label)} as CSV">
+        <div class="pp-dialog-head">
+          <h2>${esc(lastExport.label)}, as CSV</h2>
+          <button class="toggle" data-csv-close>Close</button>
+        </div>
+        <p class="body">This page cannot save a file to your computer &mdash; it is running
+          inside a shared preview. Copy the text and paste it into a blank spreadsheet; the
+          columns land in the right places. In the Hub proper this is a download.</p>
+        <textarea class="csv-text" readonly></textarea>
+        <button class="toggle" data-csv-copy>Copy it all</button>
+      </div>`;
+    // Set as a value rather than in the markup, so a cell holding a closing
+    // textarea tag cannot end the field and become page structure.
+    //
+    // A textarea normalises CRLF to LF on the way in, so what is shown here
+    // has LF endings while `text` keeps the CRLF the format asks for. The
+    // copy button below uses `text` rather than reading the field back, so
+    // what reaches the clipboard is the file rather than the display of it.
+    wrap.querySelector(".csv-text").value = text;
+    document.body.append(wrap);
+
+    const shut = () => wrap.remove();
+    wrap.querySelectorAll("[data-csv-close]").forEach((el) => el.addEventListener("click", shut));
+    document.addEventListener("keydown", function esc_(e) {
+      if (e.key === "Escape") {
+        shut();
+        document.removeEventListener("keydown", esc_);
+      }
+    });
+    wrap.querySelector("[data-csv-copy]").addEventListener("click", async (e) => {
+      try {
+        await navigator.clipboard.writeText(text);
+        e.target.textContent = "Copied";
+      } catch {
+        wrap.querySelector(".csv-text").select();
+      }
+    });
+    wrap.querySelector(".csv-text").focus();
+  }
+
   function proofDialog(id) {
     const point = PROOF.points.find((p) => p.id === id);
     if (!point) return "";
@@ -18453,6 +18620,11 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     view.querySelectorAll("[data-dir-facet]").forEach((el) =>
       el.addEventListener("click", () => setParam(el.dataset.dirFacet, el.dataset.dirValue)),
     );
+    // Export, which is on several pages and always takes what that page drew.
+    view.querySelectorAll("[data-export]").forEach((el) =>
+      el.addEventListener("click", showCsv),
+    );
+
     view.querySelectorAll("[data-dir-filter]").forEach((el) =>
       el.addEventListener("change", () => setParam(el.dataset.dirFilter, el.value)),
     );

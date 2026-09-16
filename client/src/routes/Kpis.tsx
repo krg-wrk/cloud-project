@@ -8,6 +8,7 @@ import { ErrorNote, Loading } from "../components/bits";
 import { PeriodBars, SeriesTable, SparkBars, formatValue } from "../components/charts";
 import { Glossary, OwnershipMix, TeamPanel, TierRing } from "../components/PerfPanels";
 import ShareLink from "../components/ShareLink";
+import ExportButton from "../components/ExportButton";
 import PageIntro from "../components/PageIntro";
 
 const RANGES: { value: string; label: string }[] = [
@@ -240,6 +241,24 @@ export default function Kpis() {
               {formatLong(kpis.data.range.from)} — {formatLong(kpis.data.range.to)}
             </span>
           )}
+          {/* One row per metric, one column per period, plus the range total
+              — the shape somebody is going to paste into a deck anyway. */}
+          <ExportButton
+            label={`Performance — ${subject?.name ?? "everyone"}`}
+            rows={results}
+            columns={[
+              { header: "Metric", value: (r) => r.definition.label },
+              { header: "Group", value: (r) => r.definition.group },
+              ...(results[0]?.series ?? []).map((point, i) => ({
+                header: point.label,
+                value: (r: MetricResult) => r.series[i]?.value ?? "",
+              })),
+              { header: "Range total", value: (r) => r.value ?? "" },
+              { header: "Role average", value: (r) => r.benchmark ?? "" },
+              { header: "Target", value: (r) => r.definition.target ?? "" },
+            ]}
+            small
+          />
           <button className={showTable ? "btn accent" : "btn"} onClick={() => setShowTable((v) => !v)}>
             {showTable ? "Charts" : "Table"}
           </button>
