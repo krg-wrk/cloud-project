@@ -301,7 +301,14 @@ function digestNotices(world: World): Notice[] {
   return out;
 }
 
-const BUILDERS: Record<NoticeKind, (world: World) => Notice[]> = {
+/*
+ * The three the Hub works out for itself.
+ *
+ * Rules are not here: they need the rules an admin wrote, which is not part
+ * of the world the Hub reads from the sheet. They are built alongside in
+ * `ruleNotices` and added to the same run.
+ */
+const BUILDERS: Record<Exclude<NoticeKind, "rule">, (world: World) => Notice[]> = {
   digest: digestNotices,
   deadline: deadlineNotices,
   review: reviewNotices,
@@ -314,7 +321,8 @@ const BUILDERS: Record<NoticeKind, (world: World) => Notice[]> = {
  * what a schedule that runs deadlines daily but the digest weekly needs.
  */
 export function buildNotices(world: World, only?: NoticeKind[]): Notice[] {
-  const kinds = only ?? (Object.keys(BUILDERS) as NoticeKind[]);
+  const own = Object.keys(BUILDERS) as (keyof typeof BUILDERS)[];
+  const kinds = only ? own.filter((k) => only.includes(k)) : own;
   const out = kinds.flatMap((kind) => BUILDERS[kind](world));
   return out.sort(
     (a, b) => b.urgency - a.urgency || a.personId.localeCompare(b.personId) || a.key.localeCompare(b.key),

@@ -8,6 +8,18 @@ import { Channels, chatWebhookLooksRight } from "./channels.js";
 import { runNotifications, summarise } from "./run.js";
 import { gather } from "./schedule.js";
 import {
+  RULE_AUDIENCES,
+  RULE_AUDIENCE_LABELS,
+  RULE_FIELDS,
+  RULE_OPS,
+  RULE_OP_LABELS,
+  ruleNotices,
+  type AutomationRule,
+  type RuleAudience,
+  type RuleCondition,
+  type RuleOp,
+} from "./rules.js";
+import {
   CHANNELS,
   CHANNEL_LABELS,
   KIND_HINTS,
@@ -190,6 +202,104 @@ export function createNotifyRouter(
     }
   });
 
+  /* ---- The rules an admin writes -----------------------------------------
+   *
+   * Admin only, both ways: a rule tells other people things, so writing one
+   * is not something a manager does for their own team.
+   * ---------------------------------------------------------------------- */
+
+  router.get("/notifications/rules", async (req: ViewerRequest, res, next) => {
+    if (req.viewer!.role !== "admin") {
+      res.status(403).json({ error: "Only an admin can see the rules." });
+      return;
+    }
+    try {
+      res.json({
+        rules: await store.automationRules(),
+        // The vocabulary, so the builder is drawn from the server's own list
+        // rather than a copy that can drift out of step with it.
+        fields: RULE_FIELDS,
+        ops: RULE_OPS.map((op) => ({ op, label: RULE_OP_LABELS[op] })),
+        audiences: RULE_AUDIENCES.map((a) => ({ value: a, label: RULE_AUDIENCE_LABELS[a] })),
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.put("/notifications/rules/:id", async (req: ViewerRequest, res, next) => {
+    const viewer = req.viewer!;
+    if (viewer.role !== "admin") {
+      res.status(403).json({ error: "Only an admin can write a rule." });
+      return;
+    }
+    try {
+      const rule = readRule(req.params.id, req.body);
+      if (typeof rule === "string") {
+        res.status(400).json({ error: rule });
+        return;
+      }
+      res.json(await store.saveAutomationRule(rule, viewer.email));
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.delete("/notifications/rules/:id", async (req: ViewerRequest, res, next) => {
+    if (req.viewer!.role !== "admin") {
+      res.status(403).json({ error: "Only an admin can remove a rule." });
+      return;
+    }
+    try {
+      const ok = await store.dropAutomationRule(req.params.id);
+      if (!ok) {
+        res.status(404).json({ error: "No rule with that id." });
+        return;
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /**
+   * What a rule would say today, without saying it.
+   *
+   * The whole point. A rule that turns out to match four hundred pieces is a
+   * rule nobody wants to have switched on first and counted afterwards, and
+   * this is the difference between an admin trying one and an admin not
+   * daring to.
+   */
+  router.post("/notifications/rules/preview", async (req: ViewerRequest, res, next) => {
+    if (req.viewer!.role !== "admin") {
+      res.status(403).json({ error: "Only an admin can preview a rule." });
+      return;
+    }
+    try {
+      const rule = readRule("preview", { ...req.body, enabled: true });
+      if (typeof rule === "string") {
+        res.status(400).json({ error: rule });
+        return;
+      }
+      const on = today();
+      const [content, people] = await Promise.all([data.listContent(), data.listPeople()]);
+      const notices = ruleNotices(content, people, [{ ...rule, createdAt: on, updatedAt: on, updatedBy: "" }], on);
+      const names = new Map(people.map((p: Person) => [p.id, p.name]));
+      res.json({
+        matched: notices.length,
+        // A handful, named, rather than a count on its own: "12 pieces" is
+        // not enough to tell whether the rule means what you think.
+        examples: notices.slice(0, 8).map((n) => ({
+          who: names.get(n.personId) ?? n.personId,
+          body: n.body,
+          link: n.link,
+        })),
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
   /** What the last runs did, and what each channel can do. An admin's view. */
   router.get("/notifications/log", async (req: ViewerRequest, res, next) => {
     const viewer = req.viewer!;
@@ -213,6 +323,77 @@ export function createNotifyRouter(
   });
 
   return router;
+}
+
+/**
+ * A rule, rebuilt field by field from whatever a client sent.
+ *
+ * Returns the rule, or one sentence saying why not — the messages are for an
+ * admin looking at a form, so they say what to do rather than what failed.
+ *
+ * The refusal worth noting is the empty condition list. A rule with no
+ * conditions matches every piece of work on the sheet, so switching one on
+ * would tell the whole team about all four hundred at once. That is not a
+ * validation nicety; it is the difference between a useful feature and an
+ * incident.
+ */
+export function readRule(
+  id: string,
+  body: unknown,
+): (Omit<AutomationRule, "createdAt" | "updatedAt" | "updatedBy">) | string {
+  const raw = (body ?? {}) as Record<string, unknown>;
+  const label = String(raw.label ?? "").trim().slice(0, 80);
+  if (!label) return "Give the rule a name — it is what people see as the subject.";
+
+  const message = String(raw.message ?? "").trim().slice(0, 400);
+  if (!message) return "Say what the rule should tell them.";
+
+  const fields = new Set(RULE_FIELDS.map((f) => f.key));
+  const when: RuleCondition[] = (Array.isArray(raw.when) ? raw.when : [])
+    .map((x) => x as Record<string, unknown>)
+    .filter(
+      (x) =>
+        typeof x.field === "string" &&
+        fields.has(x.field) &&
+        RULE_OPS.includes(x.op as RuleOp),
+    )
+    .slice(0, 8)
+    .map((x) => ({
+      field: String(x.field),
+      op: x.op as RuleOp,
+      value: typeof x.value === "string" ? x.value.slice(0, 120) : undefined,
+    }));
+
+  if (when.length === 0) {
+    return "A rule needs at least one condition — without one it would match every piece on the sheet.";
+  }
+  // An operator that compares needs something to compare against.
+  const blank = when.find(
+    (c) => !["empty", "not-empty"].includes(c.op) && !(c.value ?? "").trim(),
+  );
+  if (blank) {
+    const name = RULE_FIELDS.find((f) => f.key === blank.field)?.label ?? blank.field;
+    return `Give "${name} ${RULE_OP_LABELS[blank.op]}" something to compare against.`;
+  }
+
+  const tell = RULE_AUDIENCES.includes(raw.tell as RuleAudience)
+    ? (raw.tell as RuleAudience)
+    : "owner";
+  const namedEmail =
+    typeof raw.namedEmail === "string" ? raw.namedEmail.trim().toLowerCase() : "";
+  if (tell === "named" && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(namedEmail)) {
+    return "Telling one named person needs their email address.";
+  }
+
+  return {
+    id,
+    label,
+    enabled: raw.enabled !== false,
+    when,
+    tell,
+    namedEmail: tell === "named" ? namedEmail : undefined,
+    message,
+  };
 }
 
 function kindsFrom(value: unknown): NoticeKind[] | undefined {

@@ -8837,3 +8837,91 @@ tr[data-tone] > td {
   box-shadow: inset 3px 0 0 var(--tone);
   background: var(--tone-wash);
 }
+
+/* --- Rules an admin writes ------------------------------------------------
+ *
+ * The form is the filter row with two more controls on it, because a rule is
+ * a condition and the studio already has a shape for one.
+ * -------------------------------------------------------------------------- */
+
+.rule-list {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rule-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.rule-item:first-child {
+  border-top: none;
+  padding-top: 4px;
+}
+
+/* Off is still readable — it is a rule somebody wrote and may turn on again
+   — but it should not look like one that is running. */
+.rule-item.off {
+  opacity: 0.55;
+}
+
+.rule-item p {
+  margin: 3px 0 0;
+}
+
+.rule-form {
+  padding-top: 6px;
+}
+
+.rule-form textarea {
+  width: 100%;
+  min-height: 60px;
+  padding: 9px 11px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+
+.rule-form code {
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: var(--sunken);
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+/* What it would say, before it says it — the difference between an admin
+   trying a rule and an admin not daring to. */
+.rule-preview {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--rule);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--ground);
+}
+
+.rule-preview ul {
+  margin: 8px 0 0;
+  padding-left: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+}
+
+.rule-preview ul li {
+  padding-left: 11px;
+  border-left: 2px solid var(--rule);
+}

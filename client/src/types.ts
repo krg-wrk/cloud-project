@@ -959,3 +959,34 @@ export interface SavedView {
   path: string;
   createdAt: string;
 }
+
+/** One condition of an automation rule: the same shape a filter has. */
+export interface RuleCondition {
+  field: string;
+  op: "is" | "is-not" | "contains" | "gt" | "lt" | "empty" | "not-empty";
+  value?: string;
+}
+
+/**
+ * Something an admin asked the Hub to watch the schedule for.
+ *
+ * Every action is "tell somebody" — a rule cannot change a status, a date or
+ * anything else. That is the design rather than a first cut: a rule that
+ * quietly edits data is what makes people distrust a tool they cannot see
+ * the inside of, and the Hub's one writing path already asks for
+ * confirmation and keeps an audit row.
+ */
+export interface AutomationRule {
+  id: string;
+  label: string;
+  enabled: boolean;
+  /** Every one has to hold. An empty list is refused — it would match all. */
+  when: RuleCondition[];
+  tell: "owner" | "manager" | "named";
+  namedEmail?: string;
+  /** `{title}`, `{days}` and `{status}` are filled in from the piece. */
+  message: string;
+  createdAt: string;
+  updatedAt: string;
+  updatedBy: string;
+}

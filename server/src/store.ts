@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Db } from "./db.js";
+import type { AutomationRule } from "./notify/rules.js";
 import type {
   CellChange,
   ForecastDetails,
@@ -246,6 +247,28 @@ CREATE INDEX IF NOT EXISTS proof_point_decisions_trend
  * wording uses. Not for credentials: those go in an environment variable or
  * the studio's own secret column.
  */
+/*
+ * Rules an admin wrote for the Hub to watch the schedule for.
+ *
+ * The conditions are one JSON column rather than a row per condition: a rule
+ * is never queried across — it is read whole, every run — and a join table
+ * would buy nothing but a migration the first time a condition gains a field.
+ */
+CREATE TABLE IF NOT EXISTS automation_rules (
+  id TEXT PRIMARY KEY,
+  label TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  /** [{ field, op, value }] — every one has to hold. */
+  when_json TEXT NOT NULL,
+  /** owner, manager or named. */
+  tell TEXT NOT NULL,
+  named_email TEXT,
+  message TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  updated_by TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS hub_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
@@ -372,6 +395,88 @@ export class HubStore {
    */
   get connection(): Db {
     return this.db;
+  }
+
+  // --- Automation rules --------------------------------------------------
+
+  async automationRules(): Promise<AutomationRule[]> {
+    const rows = (await this.db.all(
+      `SELECT id, label, enabled, when_json, tell, named_email, message,
+              created_at, updated_at, updated_by
+         FROM automation_rules ORDER BY created_at`,
+    )) as Record<string, string>[];
+    return rows.map((r) => ({
+      id: r.id,
+      label: r.label,
+      // SQLite gives 0/1 here and Postgres a real boolean, so neither shape
+      // is assumed: anything that is not truthy either way is off.
+      enabled: (r.enabled as unknown) === true || Number(r.enabled) === 1,
+      when: JSON.parse(r.when_json) as AutomationRule["when"],
+      tell: r.tell as AutomationRule["tell"],
+      namedEmail: r.named_email ?? undefined,
+      message: r.message,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+      updatedBy: r.updated_by,
+    }));
+  }
+
+  async saveAutomationRule(
+    rule: Omit<AutomationRule, "createdAt" | "updatedAt" | "updatedBy">,
+    by: string,
+  ): Promise<AutomationRule> {
+    const stamp = now();
+    const existing = (await this.automationRules()).find((r) => r.id === rule.id);
+    const row: AutomationRule = {
+      ...rule,
+      createdAt: existing?.createdAt ?? stamp,
+      updatedAt: stamp,
+      updatedBy: by,
+    };
+    const params = [
+      row.id,
+      row.label,
+      row.enabled ? 1 : 0,
+      JSON.stringify(row.when),
+      row.tell,
+      row.namedEmail ?? null,
+      row.message,
+      row.createdAt,
+      row.updatedAt,
+      row.updatedBy,
+    ];
+    if (existing) {
+      await this.db.run(
+        `UPDATE automation_rules SET label = ?, enabled = ?, when_json = ?, tell = ?,
+                named_email = ?, message = ?, updated_at = ?, updated_by = ?
+          WHERE id = ?`,
+        [
+          row.label,
+          row.enabled ? 1 : 0,
+          JSON.stringify(row.when),
+          row.tell,
+          row.namedEmail ?? null,
+          row.message,
+          row.updatedAt,
+          row.updatedBy,
+          row.id,
+        ],
+      );
+    } else {
+      await this.db.run(
+        `INSERT INTO automation_rules
+           (id, label, enabled, when_json, tell, named_email, message,
+            created_at, updated_at, updated_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        params,
+      );
+    }
+    return row;
+  }
+
+  async dropAutomationRule(id: string): Promise<boolean> {
+    const res = await this.db.run(`DELETE FROM automation_rules WHERE id = ?`, [id]);
+    return (res.changes ?? 0) > 0;
   }
 
   // --- Saved views -------------------------------------------------------

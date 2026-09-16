@@ -1,6 +1,7 @@
 import type { Person } from "../types.js";
 import type { HubStore } from "../store.js";
 import { buildNotices, type World } from "./build.js";
+import { ruleNotices } from "./rules.js";
 import type { Channels } from "./channels.js";
 import { defaultPrefs, type Delivery, type Notice, type NoticeKind } from "./types.js";
 
@@ -52,6 +53,15 @@ export async function runNotifications(
   const dry = options.dry ?? false;
   const people = new Map(world.people.map((p) => [p.id, p]));
   let notices = buildNotices(world, options.only);
+
+  // The rules an admin wrote, alongside the three the Hub works out for
+  // itself. Read here rather than folded into the world because they are the
+  // Hub's own, not the sheet's.
+  if (!options.only || options.only.includes("rule")) {
+    const rules = await store.automationRules();
+    notices = [...notices, ...ruleNotices(world.content, world.people, rules, world.today)];
+  }
+
   if (options.personId) notices = notices.filter((n) => n.personId === options.personId);
 
   const deliveries: Delivery[] = [];
