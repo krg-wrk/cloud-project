@@ -195,10 +195,47 @@ export interface FieldRoles {
   meta?: string[];
 }
 
+/**
+ * The tones a formatting rule can paint a row.
+ *
+ * A closed list rather than a colour picker, and that is the whole design.
+ * The Hub's palette already means something — red is at risk, amber is
+ * waiting, green is done — and a view where somebody chose their own red for
+ * "fine" would break that meaning everywhere it is read. Six named tones,
+ * each the colour the rest of the Hub already uses for that idea.
+ */
+export type Tone = "at-risk" | "waiting" | "done" | "accent" | "mine" | "quiet";
+
+export const TONES: Tone[] = ["at-risk", "waiting", "done", "accent", "mine", "quiet"];
+
+/**
+ * Colour a row when it matches.
+ *
+ * The same field, operator and value a filter uses, so there is one
+ * vocabulary to learn rather than two: a rule is a filter that tints instead
+ * of hiding. Rules are tried in order and the first match wins, which is what
+ * lets "late" beat "due this week" without either needing to know about the
+ * other.
+ *
+ * `label` is not decoration. Colour alone is not a signal somebody colour
+ * blind can read, so the words go on the row as well — a rule with no label
+ * shows its own condition instead.
+ */
+export interface FormatRule {
+  field: string;
+  op: FilterOp;
+  value?: string;
+  tone: Tone;
+  /** What the colour means, in words: "Late", "Needs a score". */
+  label?: string;
+}
+
 export interface ViewSpec {
   layout: Layout;
   fields: FieldRoles;
   filters: Filter[];
+  /** Conditional formatting. Absent on views built before it existed. */
+  rules?: FormatRule[];
   sort?: { field: string; direction: "asc" | "desc" };
   /** Rows per page; 0 for all of them. */
   pageSize: number;

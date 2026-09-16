@@ -8752,3 +8752,88 @@ a.inbox-title:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* --- Colouring a row by rule ----------------------------------------------
+ *
+ * Six named tones, each the colour the rest of the Hub already uses for that
+ * idea — red is at risk here because red is at risk everywhere. A rule cannot
+ * pick its own colour, which is the point: a view where somebody chose their
+ * own red for "fine" would break the meaning everywhere else it is read.
+ *
+ * The mark is a bar down the leading edge and a very pale wash, not a filled
+ * row. Forty filled rows are a heat map nobody can read a word on, and the
+ * text has to keep its contrast against whatever sits behind it.
+ * -------------------------------------------------------------------------- */
+
+[data-tone] {
+  --tone: var(--ink-45);
+  --tone-wash: transparent;
+}
+
+[data-tone="at-risk"] {
+  --tone: var(--status-at-risk);
+  --tone-wash: rgb(184 52 31 / 6%);
+}
+
+[data-tone="waiting"] {
+  --tone: var(--status-in-review);
+  --tone-wash: rgb(135 93 19 / 7%);
+}
+
+[data-tone="done"] {
+  --tone: var(--status-published);
+  --tone-wash: rgb(37 107 72 / 6%);
+}
+
+[data-tone="accent"] {
+  --tone: var(--accent);
+  --tone-wash: rgb(76 85 120 / 6%);
+}
+
+[data-tone="mine"] {
+  --tone: var(--mine);
+  --tone-wash: rgb(142 59 116 / 6%);
+}
+
+[data-tone="quiet"] {
+  --tone: var(--ink-45);
+  --tone-wash: rgb(105 105 111 / 5%);
+}
+
+/* A table row cannot take a box-shadow reliably across browsers, so the bar
+   goes on its first cell — which is the leading edge either way. */
+tr[data-tone] > td:first-child {
+  box-shadow: inset 3px 0 0 var(--tone);
+}
+
+tr[data-tone] > td {
+  background: var(--tone-wash);
+}
+
+.view-card[data-tone],
+.view-row[data-tone],
+.board-card[data-tone] {
+  box-shadow: inset 3px 0 0 var(--tone), var(--shadow);
+  background: var(--tone-wash);
+}
+
+.view-card[data-tone]:hover,
+.view-row[data-tone]:hover,
+.board-card[data-tone]:hover {
+  box-shadow: inset 3px 0 0 var(--tone), var(--shadow-lift);
+}
+
+/* A chip is too small for a bar and a wash both, so it takes the colour. */
+.cal-chip[data-tone] {
+  background: var(--tone-wash);
+  box-shadow: inset 2px 0 0 var(--tone);
+}
+
+/* A rule's own row in the builder wears its colour, so the list of rules
+   reads as the thing it produces rather than as five dropdowns. */
+.rule-row[data-tone] {
+  padding-left: 10px;
+  border-radius: var(--radius-sm);
+  box-shadow: inset 3px 0 0 var(--tone);
+  background: var(--tone-wash);
+}

@@ -4476,6 +4476,77 @@
     color: var(--ink-soft);
   }
 
+  /* --- Colouring a row by rule --------------------------------------------
+   *
+   * Six named tones, each the colour the rest of the Hub already uses for
+   * that idea — red is at risk here because red is at risk everywhere. A rule
+   * cannot pick its own colour, which is the point.
+   *
+   * The mark is a bar down the leading edge and a very pale wash, not a
+   * filled row: forty filled rows are a heat map nobody can read a word on.
+   * ------------------------------------------------------------------------ */
+
+  [data-tone] {
+    --tone: var(--ink-soft);
+    --tone-wash: transparent;
+  }
+
+  [data-tone="at-risk"] {
+    --tone: var(--late);
+    --tone-wash: color-mix(in srgb, var(--late) 7%, transparent);
+  }
+
+  [data-tone="waiting"] {
+    --tone: var(--warn);
+    --tone-wash: color-mix(in srgb, var(--warn) 8%, transparent);
+  }
+
+  [data-tone="done"] {
+    --tone: var(--ok);
+    --tone-wash: color-mix(in srgb, var(--ok) 7%, transparent);
+  }
+
+  [data-tone="accent"] {
+    --tone: var(--accent);
+    --tone-wash: color-mix(in srgb, var(--accent) 7%, transparent);
+  }
+
+  [data-tone="mine"] {
+    --tone: var(--mine);
+    --tone-wash: color-mix(in srgb, var(--mine) 7%, transparent);
+  }
+
+  [data-tone="quiet"] {
+    --tone: var(--ink-soft);
+    --tone-wash: color-mix(in srgb, var(--ink-soft) 6%, transparent);
+  }
+
+  /* A table row cannot take a box-shadow reliably, so the bar goes on its
+     first cell — which is the leading edge either way. */
+  tr[data-tone] > td:first-child {
+    box-shadow: inset 3px 0 0 var(--tone);
+  }
+
+  tr[data-tone] > td {
+    background: var(--tone-wash);
+  }
+
+  .view-card[data-tone],
+  .view-row[data-tone],
+  .board-card[data-tone] {
+    box-shadow: inset 3px 0 0 var(--tone), var(--shadow);
+    background: var(--tone-wash);
+  }
+
+  /* A rule's own row in the builder wears its colour, so the list of rules
+     reads as the thing it produces rather than as five dropdowns. */
+  .rule-row[data-tone] {
+    padding-left: 10px;
+    border-radius: var(--radius-sm);
+    box-shadow: inset 3px 0 0 var(--tone);
+    background: var(--tone-wash);
+  }
+
   /* ---- Icons ------------------------------------------------------------- */
 
   /*
@@ -13789,6 +13860,69 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     return { total, rows: out };
   }
 
+  /*
+   * Conditional formatting: a filter that tints instead of hiding.
+   *
+   * The same field, operator and value a filter uses, so there is one
+   * vocabulary rather than two. Rules are tried in order and the first match
+   * wins, which is what lets "late" beat "due this week" without either
+   * needing to know about the other.
+   *
+   * The tones are a closed list on purpose. The Hub's palette already means
+   * something — red is at risk, amber is waiting, green is done — and a view
+   * where somebody chose their own red for "fine" would break that meaning on
+   * every other page.
+   */
+  const TONES = ["at-risk", "waiting", "done", "accent", "mine", "quiet"];
+
+  const TONE_LABELS = {
+    "at-risk": "At risk — red",
+    waiting: "Waiting — amber",
+    done: "Done — green",
+    accent: "Worth a look — dusk",
+    mine: "Mine — magenta",
+    quiet: "Quieter — grey",
+  };
+
+  const RULE_OP_WORDS = {
+    is: "is",
+    "is-not": "is not",
+    contains: "contains",
+    empty: "is empty",
+    "not-empty": "is filled in",
+    before: "is before",
+    after: "is after",
+    gt: "is over",
+    lt: "is under",
+    mine: "is mine",
+  };
+
+  /** The first rule this row matches, if any. */
+  function toneFor(row, spec, me) {
+    return (spec.rules ?? []).find((rule) => filterMatches(row, rule, me));
+  }
+
+  /** A rule's own words, or its condition read back when it was given none. */
+  function ruleWords(rule, fields) {
+    if (rule.label?.trim()) return rule.label.trim();
+    const name = fields.find((f) => f.key === rule.field)?.name ?? rule.field;
+    const op = RULE_OP_WORDS[rule.op] ?? rule.op;
+    return rule.value?.trim() ? `${name} ${op} ${rule.value.trim()}` : `${name} ${op}`;
+  }
+
+  /**
+   * A row's tone as attributes.
+   *
+   * `data-tone` carries the colour and `title` the words for it, because
+   * colour on its own is not a signal somebody colour blind can read — and
+   * because "why is this one red" is the first question anybody asks.
+   */
+  function toneAttrs(row, spec, fields) {
+    const rule = toneFor(row, spec, myIdentities());
+    if (!rule) return "";
+    return ` data-tone="${esc(rule.tone)}" title="${esc(ruleWords(rule, fields))}"`;
+  }
+
   /** Whether this viewer may open this view. Admins see drafts; nobody else. */
   function canSeeView(view) {
     const v = viewer();
@@ -13828,6 +13962,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     layout: "table",
     fields: { columns: [], meta: [] },
     filters: [],
+    rules: [],
     pageSize: 100,
   });
 
@@ -14765,6 +14900,75 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           <p class="signup-note">0 shows every matching row.</p>
         </section>
 
+        <!-- After "which rows" on purpose: a rule is about the rows that got
+             through, not about which ones did. -->
+        <section class="builder-step">
+          <div class="sec-head"><h2>${icon("score")} Colour by rule</h2></div>
+          <p class="signup-note">${
+            (b.spec.rules ?? []).length === 0
+              ? "No rules — every row is drawn the same. A rule tints a row rather than hiding it, which is the difference between this and a filter."
+              : "Tried top to bottom; the first one that matches wins. Put the narrow rules above the broad ones."
+          }</p>
+          ${(b.spec.rules ?? [])
+            .map((r, i) => {
+              const field = fields.find((x) => x.key === r.field);
+              const needsValue = !["empty", "not-empty", "mine"].includes(r.op);
+              return `<div class="filter-row rule-row" data-tone="${esc(r.tone)}">
+                <select data-r-field="${i}">${fields
+                  .map(
+                    (x) =>
+                      `<option value="${esc(x.key)}"${x.key === r.field ? " selected" : ""}>${esc(
+                        x.name,
+                      )}</option>`,
+                  )
+                  .join("")}</select>
+                <select data-r-op="${i}">${Object.keys(OP_LABELS)
+                  .map(
+                    (op) =>
+                      `<option value="${op}"${op === r.op ? " selected" : ""}>${OP_LABELS[op]}</option>`,
+                  )
+                  .join("")}</select>
+                ${
+                  needsValue
+                    ? field?.options
+                      ? `<select data-r-value="${i}"><option value="">Choose…</option>${field.options
+                          .map(
+                            (o) =>
+                              `<option value="${esc(o)}"${o === r.value ? " selected" : ""}>${esc(
+                                o,
+                              )}</option>`,
+                          )
+                          .join("")}</select>`
+                      : `<input data-r-value="${i}" value="${esc(r.value ?? "")}"
+                          placeholder="${field?.type === "date" ? "2026-09-01" : "value"}" />`
+                    : `<span class="signup-note">${
+                        r.op === "mine" ? "matched against whoever is signed in" : ""
+                      }</span>`
+                }
+                <select data-r-tone="${i}">${TONES.map(
+                  (t) =>
+                    `<option value="${t}"${t === r.tone ? " selected" : ""}>${esc(
+                      TONE_LABELS[t],
+                    )}</option>`,
+                ).join("")}</select>
+                <!-- The words matter as much as the colour: somebody colour
+                     blind reads this, and nobody reads a colour they were not
+                     told the meaning of. Left empty, the rule reads its own
+                     condition back. -->
+                <input data-r-label="${i}" maxlength="40" value="${esc(r.label ?? "")}"
+                  placeholder="What it means, e.g. Late" />
+                <button class="toggle" data-r-up="${i}" aria-label="Move this rule up">&uarr;</button>
+                <button class="toggle" data-r-down="${i}" aria-label="Move this rule down">&darr;</button>
+                <button class="toggle danger" data-r-del="${i}"
+                  aria-label="Remove this rule">${icon("trash", 14)}</button>
+              </div>`;
+            })
+            .join("")}
+          <button class="toggle" data-r-add="1"${
+            fields.length && (b.spec.rules ?? []).length < 12 ? "" : " disabled"
+          }>${icon("plus", 14)}Add a rule</button>
+        </section>
+
         <section class="builder-step">
           <div class="sec-head"><h2>${icon("people")} Who sees it</h2></div>
           <div class="field"><span>Roles</span>
@@ -14920,11 +15124,11 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       case "cards":
         return viewCards(spec, fields, rows);
       case "list":
-        return viewList(spec, rows);
+        return viewList(spec, rows, fields);
       case "calendar":
         return viewCalendar(spec, rows);
       case "board":
-        return viewBoard(spec, rows);
+        return viewBoard(spec, rows, fields);
       default:
         return viewTable(spec, fields, rows);
     }
@@ -14942,7 +15146,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       <tbody>${rows
         .map(
           (row, i) =>
-            `<tr>${columns
+            `<tr${toneAttrs(row, spec, fields)}>${columns
               .map((c, j) => {
                 const value = viewCell(row, c);
                 const url = j === 0 && link ? webOnly(viewCell(row, link)) : typeOf(c) === "url" ? webOnly(value) : "";
@@ -15000,13 +15204,15 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
             }
           </div>`;
         return url
-          ? `<a class="view-card" href="${esc(url)}" target="_blank" rel="noreferrer noopener">${inner}</a>`
-          : `<div class="view-card">${inner}</div>`;
+          ? `<a class="view-card"${toneAttrs(row, spec, fields)} href="${esc(
+              url,
+            )}" target="_blank" rel="noreferrer noopener">${inner}</a>`
+          : `<div class="view-card"${toneAttrs(row, spec, fields)}>${inner}</div>`;
       })
       .join("")}</div>`;
   }
 
-  function viewList(spec, rows) {
+  function viewList(spec, rows, fields = []) {
     const f = spec.fields;
     return `<div class="view-rows">${rows
       .map((row, i) => {
@@ -15024,8 +15230,10 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           </div>
           ${f.status && viewCell(row, f.status) ? `<span class="tag">${esc(viewCell(row, f.status))}</span>` : ""}`;
         return url
-          ? `<a class="view-row" href="${esc(url)}" target="_blank" rel="noreferrer noopener">${inner}</a>`
-          : `<div class="view-row">${inner}</div>`;
+          ? `<a class="view-row"${toneAttrs(row, spec, fields)} href="${esc(
+              url,
+            )}" target="_blank" rel="noreferrer noopener">${inner}</a>`
+          : `<div class="view-row"${toneAttrs(row, spec, fields)}>${inner}</div>`;
       })
       .join("")}</div>`;
   }
@@ -15132,7 +15340,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       }`;
   }
 
-  function viewBoard(spec, rows) {
+  function viewBoard(spec, rows, fields = []) {
     const group = spec.fields.group ?? spec.fields.status;
     if (!group) {
       return `<div class="none">${icon("board", 20)}<p>This view has no column to group by yet,
@@ -15158,7 +15366,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           }</b></div>
           ${items
             .map(
-              (row, i) => `<div class="board-card">
+              (row, i) => `<div class="board-card"${toneAttrs(row, spec, fields)}>
                 <div class="board-card-title">${esc(viewCell(row, spec.fields.title) || "Untitled")}</div>
                 ${
                   spec.fields.subtitle && viewCell(row, spec.fields.subtitle)
@@ -19730,6 +19938,63 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         render();
       }),
     );
+    /* The rules, which are filters that tint rather than hide. */
+    view.querySelectorAll("[data-r-add]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const cols = datasets.get(builder.datasetId)?.fields ?? [];
+        if (!cols.length) return;
+        builder.spec.rules = [
+          ...(builder.spec.rules ?? []),
+          { field: cols[0].key, op: "is", value: "", tone: "at-risk" },
+        ];
+        render();
+      }),
+    );
+    for (const [attr, dataKey, field] of [
+      ["data-r-field", "rField", "field"],
+      ["data-r-op", "rOp", "op"],
+      ["data-r-tone", "rTone", "tone"],
+    ]) {
+      view.querySelectorAll(`[${attr}]`).forEach((el) =>
+        el.addEventListener("change", () => {
+          builder.spec.rules[Number(el.dataset[dataKey])][field] = el.value;
+          render();
+        }),
+      );
+    }
+    view.querySelectorAll("[data-r-value]").forEach((el) =>
+      el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
+        builder.spec.rules[Number(el.dataset.rValue)].value = el.value;
+        if (el.tagName === "SELECT") render();
+      }),
+    );
+    view.querySelectorAll("[data-r-label]").forEach((el) =>
+      // Typing here does not re-render, for the same reason the name field
+      // does not: it would take the cursor away mid-word.
+      el.addEventListener("input", () => {
+        builder.spec.rules[Number(el.dataset.rLabel)].label = el.value;
+      }),
+    );
+    // Order is meaning here — first match wins — so it has to be changeable.
+    for (const [attr, by] of [["data-r-up", -1], ["data-r-down", 1]]) {
+      view.querySelectorAll(`[${attr}]`).forEach((el) =>
+        el.addEventListener("click", () => {
+          const rules = builder.spec.rules;
+          const i = Number(el.dataset[by < 0 ? "rUp" : "rDown"]);
+          const to = i + by;
+          if (to < 0 || to >= rules.length) return;
+          [rules[i], rules[to]] = [rules[to], rules[i]];
+          render();
+        }),
+      );
+    }
+    view.querySelectorAll("[data-r-del]").forEach((el) =>
+      el.addEventListener("click", () => {
+        builder.spec.rules.splice(Number(el.dataset.rDel), 1);
+        render();
+      }),
+    );
+
     view.querySelectorAll("[data-b-role-all]").forEach((el) =>
       el.addEventListener("click", () => {
         builder.audience.roles = "all";

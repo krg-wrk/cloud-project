@@ -6,12 +6,15 @@ import type {
   Dataset,
   Field,
   FilterOp,
+  FormatRule,
   Layout,
   Me,
   Preview,
+  Tone,
   ViewDef,
   ViewSpec,
 } from "../../types";
+import { TONES, TONE_LABELS } from "../../types";
 import { ErrorNote } from "../../components/bits";
 import { Body } from "../CustomView";
 
@@ -87,7 +90,7 @@ const ROLE_OPTIONS: Me["role"][] = ["forecaster", "commissioning-manager", "admi
 const ICON_CHOICES = Object.keys(ICON_PATHS);
 
 export function blankSpec(): ViewSpec {
-  return { layout: "table", fields: { columns: [], meta: [] }, filters: [], pageSize: 100 };
+  return { layout: "table", fields: { columns: [], meta: [] }, filters: [], rules: [], pageSize: 100 };
 }
 
 export default function ViewBuilder({
@@ -382,6 +385,15 @@ export default function ViewBuilder({
           <p className="muted small">0 shows every matching row.</p>
         </section>
 
+        {/* After "which rows" on purpose: a rule is about the rows that got
+            through, not about which ones did. */}
+        <section className="builder-step">
+          <h2 className="section-title">
+            <Icon name="score" /> Colour by rule
+          </h2>
+          <Rules spec={spec} fields={fields} onChange={setSpec} />
+        </section>
+
         <section className="builder-step">
           <h2 className="section-title">
             <Icon name="people" /> Who sees it
@@ -653,6 +665,161 @@ function Filters({
         }
       >
         <Icon name="plus" /> Add a filter
+      </button>
+    </>
+  );
+}
+
+/**
+ * Colour a row when it matches.
+ *
+ * The same three controls a filter has, plus a colour and a word for it — a
+ * rule is a filter that tints instead of hiding, and saying so is cheaper
+ * than teaching a second vocabulary.
+ *
+ * The colours are a closed list. That is the design rather than a shortcut:
+ * the Hub's palette already means something, so a view where somebody picked
+ * their own red for "fine" would break that meaning on every other page.
+ */
+function Rules({
+  spec,
+  fields,
+  onChange,
+}: {
+  spec: ViewSpec;
+  fields: Field[];
+  onChange: (spec: ViewSpec) => void;
+}) {
+  const rules = spec.rules ?? [];
+
+  function update(i: number, patch: Partial<FormatRule>) {
+    onChange({ ...spec, rules: rules.map((r, j) => (i === j ? { ...r, ...patch } : r)) });
+  }
+
+  /** Order is meaning here, so it has to be changeable. */
+  function move(i: number, by: number) {
+    const to = i + by;
+    if (to < 0 || to >= rules.length) return;
+    const next = [...rules];
+    [next[i], next[to]] = [next[to], next[i]];
+    onChange({ ...spec, rules: next });
+  }
+
+  return (
+    <>
+      {rules.length === 0 ? (
+        <p className="muted small">
+          No rules &mdash; every row is drawn the same. A rule tints a row rather than hiding
+          it, which is the difference between this and a filter.
+        </p>
+      ) : (
+        <p className="muted small">
+          Tried top to bottom; the first one that matches wins. Put the narrow rules above the
+          broad ones.
+        </p>
+      )}
+      {rules.map((rule, i) => {
+        const field = fields.find((f) => f.key === rule.field);
+        const needsValue = !["empty", "not-empty", "mine"].includes(rule.op);
+        return (
+          <div className="filter-row rule-row" key={i} data-tone={rule.tone}>
+            <select
+              value={rule.field}
+              onChange={(e) => update(i, { field: e.target.value })}
+              aria-label="Column"
+            >
+              {fields.map((f) => (
+                <option key={f.key} value={f.key}>
+                  {f.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={rule.op}
+              onChange={(e) => update(i, { op: e.target.value as FilterOp })}
+              aria-label="Test"
+            >
+              {(Object.keys(OP_LABELS) as FilterOp[]).map((op) => (
+                <option key={op} value={op}>
+                  {OP_LABELS[op]}
+                </option>
+              ))}
+            </select>
+            {needsValue ? (
+              field?.options ? (
+                <select
+                  value={rule.value ?? ""}
+                  onChange={(e) => update(i, { value: e.target.value })}
+                  aria-label="Value"
+                >
+                  <option value="">Choose&hellip;</option>
+                  {field.options.map((o) => (
+                    <option key={o} value={o}>
+                      {o}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  value={rule.value ?? ""}
+                  placeholder={field?.type === "date" ? "2026-09-01" : "value"}
+                  onChange={(e) => update(i, { value: e.target.value })}
+                  aria-label="Value"
+                />
+              )
+            ) : (
+              <span className="muted small">
+                {rule.op === "mine" ? "matched against whoever is signed in" : ""}
+              </span>
+            )}
+            <select
+              value={rule.tone}
+              onChange={(e) => update(i, { tone: e.target.value as Tone })}
+              aria-label="Colour"
+            >
+              {TONES.map((t) => (
+                <option key={t} value={t}>
+                  {TONE_LABELS[t]}
+                </option>
+              ))}
+            </select>
+            {/* The words matter as much as the colour: somebody colour blind
+                reads this and nobody reads a colour they were not told the
+                meaning of. Left empty, the rule reads its own condition back. */}
+            <input
+              value={rule.label ?? ""}
+              placeholder="What it means, e.g. Late"
+              maxLength={40}
+              onChange={(e) => update(i, { label: e.target.value })}
+              aria-label="What the colour means"
+            />
+            <button className="btn" onClick={() => move(i, -1)} aria-label="Move this rule up">
+              &uarr;
+            </button>
+            <button className="btn" onClick={() => move(i, 1)} aria-label="Move this rule down">
+              &darr;
+            </button>
+            <button
+              className="btn danger"
+              onClick={() => onChange({ ...spec, rules: rules.filter((_, j) => j !== i) })}
+              aria-label="Remove this rule"
+            >
+              <Icon name="trash" />
+            </button>
+          </div>
+        );
+      })}
+      <button
+        className="btn"
+        disabled={fields.length === 0 || rules.length >= 12}
+        onClick={() =>
+          onChange({
+            ...spec,
+            rules: [...rules, { field: fields[0].key, op: "is", value: "", tone: "at-risk" }],
+          })
+        }
+      >
+        <Icon name="plus" /> Add a rule
       </button>
     </>
   );

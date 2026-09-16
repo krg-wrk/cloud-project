@@ -1,5 +1,5 @@
 import type { Viewer } from "../auth.js";
-import type { Audience, Field, Filter, ViewSpec } from "./types.js";
+import type { Audience, Field, Filter, FormatRule, ViewSpec } from "./types.js";
 
 /**
  * Turning a view's spec into rows.
@@ -10,8 +10,8 @@ import type { Audience, Field, Filter, ViewSpec } from "./types.js";
  * would then be a way round both.
  */
 
-/** Who the viewer is, as the `mine` filter needs them. */
-function identities(viewer: Viewer, viewerName?: string): string[] {
+/** Who the viewer is, as the `mine` filter and `mine` rules need them. */
+export function identities(viewer: Viewer, viewerName?: string): string[] {
   return [viewer.email, viewer.personId ?? "", viewerName ?? ""]
     .filter(Boolean)
     .map((s) => s.toLowerCase());
@@ -193,15 +193,71 @@ export function usedFields(spec: ViewSpec, fields: Field[]): Field[] {
   return fields.filter((x) => names.has(x.key));
 }
 
-/** Only the keys a view draws, so a row does not carry the whole sheet. */
+/**
+ * Which formatting rule a row matches, if any.
+ *
+ * First match wins, so the order rules are written in is the order they are
+ * tried — that is what lets "late" sit above "due this week" and beat it
+ * without either rule needing to mention the other.
+ *
+ * Worked out here rather than in the browser because the rules run against
+ * the whole row, and the browser is only sent the columns the view draws. A
+ * rule on a column the layout does not show would otherwise silently never
+ * match.
+ */
+export function toneFor(
+  row: Record<string, string>,
+  spec: ViewSpec,
+  me: string[],
+): FormatRule | undefined {
+  return (spec.rules ?? []).find((rule) => matches(row, rule, me));
+}
+
+/** A rule's own words, or its condition read back when it was given none. */
+export function ruleWords(rule: FormatRule, fields: Field[]): string {
+  if (rule.label?.trim()) return rule.label.trim();
+  const name = fields.find((f) => f.key === rule.field)?.name ?? rule.field;
+  const op = OP_WORDS[rule.op] ?? rule.op;
+  return rule.value?.trim() ? `${name} ${op} ${rule.value.trim()}` : `${name} ${op}`;
+}
+
+const OP_WORDS: Record<string, string> = {
+  is: "is",
+  "is-not": "is not",
+  contains: "contains",
+  empty: "is empty",
+  "not-empty": "is filled in",
+  before: "is before",
+  after: "is after",
+  gt: "is over",
+  lt: "is under",
+  mine: "is mine",
+};
+
+/**
+ * Only the keys a view draws, so a row does not carry the whole sheet.
+ *
+ * Plus the tone, where a rule matched: `_tone` is the colour and `_why` the
+ * words for it, because colour on its own is not a signal everybody can read.
+ */
 export function project(
   rows: Record<string, string>[],
   fields: Field[],
+  spec?: ViewSpec,
+  me: string[] = [],
+  allFields: Field[] = fields,
 ): Record<string, string>[] {
   return rows.map((row) => {
     const out: Record<string, string> = { _row: row._row ?? "" };
     for (const field of fields) {
       out[field.key] = display(row[field.key] ?? "", field.type);
+    }
+    if (spec) {
+      const rule = toneFor(row, spec, me);
+      if (rule) {
+        out._tone = rule.tone;
+        out._why = ruleWords(rule, allFields);
+      }
     }
     return out;
   });

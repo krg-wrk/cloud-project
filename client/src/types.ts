@@ -422,10 +422,42 @@ export interface FieldRoles {
   meta?: string[];
 }
 
+/**
+ * The tones a formatting rule can paint a row.
+ *
+ * A closed list rather than a colour picker: the Hub's palette already means
+ * something — red is at risk, amber is waiting, green is done — and a view
+ * where somebody chose their own red for "fine" would break that meaning
+ * everywhere else it is read.
+ */
+export type Tone = "at-risk" | "waiting" | "done" | "accent" | "mine" | "quiet";
+
+export const TONES: Tone[] = ["at-risk", "waiting", "done", "accent", "mine", "quiet"];
+
+export const TONE_LABELS: Record<Tone, string> = {
+  "at-risk": "At risk — red",
+  waiting: "Waiting — amber",
+  done: "Done — green",
+  accent: "Worth a look — dusk",
+  mine: "Mine — magenta",
+  quiet: "Quieter — grey",
+};
+
+/** A filter that tints instead of hiding. First match wins. */
+export interface FormatRule {
+  field: string;
+  op: Filter["op"];
+  value?: string;
+  tone: Tone;
+  /** What the colour means, in words — colour alone is not a signal. */
+  label?: string;
+}
+
 export interface ViewSpec {
   layout: Layout;
   fields: FieldRoles;
   filters: Filter[];
+  rules?: FormatRule[];
   sort?: { field: string; direction: "asc" | "desc" };
   pageSize: number;
 }

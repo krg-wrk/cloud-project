@@ -4,6 +4,7 @@ import { connectorCatalogue, createConnectors, DatasetReader } from "./connector
 import {
   applySpec,
   canSeeView,
+  identities,
   project,
   RESERVED_SLUGS,
   slugify,
@@ -15,10 +16,13 @@ import {
   EVERYONE,
   FILTER_OPS,
   LAYOUTS,
+  TONES,
   type Audience,
   type ConnectorKind,
   type Filter,
+  type FormatRule,
   type Layout,
+  type Tone,
   type SlotPatch,
   type ViewDef,
   type ViewPage,
@@ -60,6 +64,26 @@ function readSpec(body: unknown): ViewSpec {
       value: typeof x.value === "string" ? x.value : undefined,
     }));
 
+  // Same shape as a filter, plus a tone from the closed list. A tone the
+  // client made up is dropped rather than honoured: the palette means
+  // something, and a view inventing its own red would break that meaning.
+  const rules: FormatRule[] = (Array.isArray(raw.rules) ? raw.rules : [])
+    .map((x) => x as Record<string, unknown>)
+    .filter(
+      (x) =>
+        typeof x.field === "string" &&
+        FILTER_OPS.includes(x.op as Filter["op"]) &&
+        TONES.includes(x.tone as Tone),
+    )
+    .slice(0, 12)
+    .map((x) => ({
+      field: String(x.field),
+      op: x.op as Filter["op"],
+      value: typeof x.value === "string" ? x.value : undefined,
+      tone: x.tone as Tone,
+      label: typeof x.label === "string" ? x.label.trim().slice(0, 40) : undefined,
+    }));
+
   const sortRaw = (raw.sort ?? null) as Record<string, unknown> | null;
   const sort =
     sortRaw && typeof sortRaw.field === "string" && sortRaw.field.trim() !== ""
@@ -87,6 +111,7 @@ function readSpec(body: unknown): ViewSpec {
       meta: list(f.meta),
     },
     filters,
+    rules,
     sort,
     // 0 means every row; anything silly is clamped rather than refused.
     pageSize: Number.isFinite(size) ? Math.max(0, Math.min(2000, Math.trunc(size))) : 100,
@@ -216,7 +241,15 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
         fields,
         source,
         total: applied.total,
-        rows: project(applied.rows, fields),
+        // The rules run against the whole row rather than the projected one,
+        // so a rule can key off a column the layout does not draw.
+        rows: project(
+          applied.rows,
+          fields,
+          view.spec,
+          identities(viewer, viewerName),
+          dataset.fields,
+        ),
       };
     } catch (err) {
       return {
@@ -715,7 +748,13 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
         source: { dataset: dataset.label, connection: connection.label, kind: connection.kind },
         total: applied.total,
         sourceRows: rows.length,
-        rows: project(applied.rows, fields),
+        rows: project(
+          applied.rows,
+          fields,
+          spec,
+          identities(viewer, req.viewer?.name),
+          dataset.fields,
+        ),
       });
     } catch (err) {
       if (err instanceof Error) {

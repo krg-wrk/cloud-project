@@ -164,6 +164,20 @@ function when(value: string): string {
   return ISO_DATE.test(value) ? formatMedium(value.slice(0, 10)) : value;
 }
 
+/**
+ * The tone a formatting rule gave this row, as attributes.
+ *
+ * `data-tone` carries the colour and `title` the words for it, because colour
+ * on its own is not a signal somebody colour blind can read — and because
+ * "why is this one red" is the first question anybody asks.
+ *
+ * The tone is worked out on the server, against the whole row: a rule can key
+ * off a column the layout never draws, which it could not do here.
+ */
+function tone(row: Record<string, string>) {
+  return row._tone ? { "data-tone": row._tone, title: row._why } : {};
+}
+
 /** A row's stable key: the source row id, or its position as a fallback. */
 const rowKey = (row: Record<string, string>, i: number) => row._row || String(i);
 
@@ -216,7 +230,7 @@ function Table({
         </thead>
         <tbody>
           {rows.map((row, i) => (
-            <tr key={rowKey(row, i)}>
+            <tr key={rowKey(row, i)} {...tone(row)}>
               {columns.map((c, j) => {
                 const value = cell(row, c);
                 const type = typeOf(c);
@@ -311,6 +325,7 @@ function Cards({
           <a
             key={rowKey(row, i)}
             className="view-card"
+            {...tone(row)}
             href={url}
             target="_blank"
             rel="noreferrer noopener"
@@ -318,7 +333,7 @@ function Cards({
             {body}
           </a>
         ) : (
-          <div key={rowKey(row, i)} className="view-card">
+          <div key={rowKey(row, i)} className="view-card" {...tone(row)}>
             {body}
           </div>
         );
@@ -355,6 +370,7 @@ function Rows({ spec, rows }: { spec: ViewSpec; rows: Record<string, string>[] }
           <a
             key={rowKey(row, i)}
             className="view-row"
+            {...tone(row)}
             href={url}
             target="_blank"
             rel="noreferrer noopener"
@@ -362,7 +378,7 @@ function Rows({ spec, rows }: { spec: ViewSpec; rows: Record<string, string>[] }
             {inner}
           </a>
         ) : (
-          <div key={rowKey(row, i)} className="view-row">
+          <div key={rowKey(row, i)} className="view-row" {...tone(row)}>
             {inner}
           </div>
         );
@@ -478,7 +494,10 @@ function MonthGrid({
                         <span
                           className="cal-chip"
                           key={rowKey(row, i)}
-                          title={cell(row, spec.fields.title)}
+                          data-tone={row._tone || undefined}
+                          title={[cell(row, spec.fields.title), row._why]
+                            .filter(Boolean)
+                            .join(" — ")}
                         >
                           <span className="chip-title">
                             {cell(row, spec.fields.title) || "Untitled"}
@@ -558,7 +577,7 @@ function Board({ spec, rows }: { spec: ViewSpec; rows: Record<string, string>[] 
             <b>{items.length}</b>
           </div>
           {items.map((row, i) => (
-            <div className="board-card" key={rowKey(row, i)}>
+            <div className="board-card" key={rowKey(row, i)} {...tone(row)}>
               <div className="board-card-title">{cell(row, spec.fields.title) || "Untitled"}</div>
               {spec.fields.subtitle && cell(row, spec.fields.subtitle) && (
                 <div className="board-card-sub">{cell(row, spec.fields.subtitle)}</div>
