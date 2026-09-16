@@ -18,6 +18,7 @@ import type { Field, ViewPage, ViewSpec } from "../types";
 import { ErrorNote, Loading } from "../components/bits";
 import ShareLink from "../components/ShareLink";
 import SaveView from "../components/SaveView";
+import MailView from "../components/MailView";
 import ExportButton from "../components/ExportButton";
 import type { CSSProperties } from "react";
 
@@ -96,6 +97,7 @@ export default function CustomView() {
             small
           />
           <SaveView suggest={view.label} />
+          <MailView viewId={view.id} />
           <ShareLink />
         </span>
       </div>

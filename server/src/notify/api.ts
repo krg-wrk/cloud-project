@@ -4,7 +4,10 @@ import type { ProofPointLibrary } from "../proofPoints/library.js";
 import type { SignUps } from "../signUps.js";
 import type { HubStore } from "../store.js";
 import type { DataSource, Person } from "../types.js";
-import { Channels, chatWebhookLooksRight } from "./channels.js";
+import { canSeeView } from "../studio/query.js";
+import type { ViewRunner } from "../studio/run.js";
+import type { StudioStore } from "../studio/store.js";
+import { Channels, chatWebhookLooksRight, emailReady } from "./channels.js";
 import { runNotifications, summarise } from "./run.js";
 import { gather } from "./schedule.js";
 import {
@@ -19,6 +22,8 @@ import {
   type RuleCondition,
   type RuleOp,
 } from "./rules.js";
+import { CADENCES, cadenceWords, type Cadence } from "./viewMail.js";
+import { sendViewMail } from "./viewRun.js";
 import {
   CHANNELS,
   CHANNEL_LABELS,
@@ -44,6 +49,8 @@ export function createNotifyRouter(
   store: HubStore,
   signUps: SignUps,
   library: ProofPointLibrary,
+  studio: StudioStore,
+  runner: ViewRunner,
 ): Router {
   const router = Router();
   const channels = new Channels(store);
@@ -322,7 +329,131 @@ export function createNotifyRouter(
     }
   });
 
+  /* ---- Views somebody has asked to be sent -------------------------------
+   *
+   * A person's own, always. There is no route here that subscribes anybody
+   * else, and that is the design rather than an omission: a view is run *as*
+   * somebody, and posting one person's rows to another is the one thing this
+   * must never do.
+   * ---------------------------------------------------------------------- */
+
+  /** What this person has asked for, and whether email can go at all. */
+  router.get("/notifications/views", async (req: ViewerRequest, res, next) => {
+    const person = requirePerson(req, res);
+    if (!person) return;
+    try {
+      const mails = await store.viewMailsFor(person);
+      const views = await studio.listViews();
+      res.json({
+        ready: emailReady(),
+        // Only the views this account may actually open, so the picker cannot
+        // offer something that would refuse itself at send time.
+        views: views
+          .filter((v) => canSeeView(v.audience, v.state, req.viewer!))
+          .map((v) => ({ id: v.id, slug: v.slug, label: v.label, section: v.section })),
+        mails: mails.map((m) => ({
+          ...m,
+          view: views.find((v) => v.id === m.viewId)?.label ?? "a view that has been deleted",
+          words: cadenceWords(m),
+        })),
+      });
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /** Ask for a view, or change when it comes. */
+  router.put("/notifications/views/:viewId", async (req: ViewerRequest, res, next) => {
+    const person = requirePerson(req, res);
+    if (!person) return;
+    try {
+      const view = await studio.view(req.params.viewId);
+      if (!view || !canSeeView(view.audience, view.state, req.viewer!)) {
+        res.status(404).json({ error: "No view with that id, or it is not yours to see." });
+        return;
+      }
+      const asked = readViewMail(req.body);
+      if (typeof asked === "string") {
+        res.status(400).json({ error: asked });
+        return;
+      }
+      res.json(
+        await store.saveViewMail({
+          ...asked,
+          personId: person,
+          email: req.viewer!.email,
+          viewId: view.id,
+        }),
+      );
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  router.delete("/notifications/views/:id", async (req: ViewerRequest, res, next) => {
+    const person = requirePerson(req, res);
+    if (!person) return;
+    try {
+      const gone = await store.dropViewMail(req.params.id, person);
+      res.status(gone ? 204 : 404).end();
+    } catch (err) {
+      next(err);
+    }
+  });
+
+  /**
+   * Send one now, to check it.
+   *
+   * Nothing else in the Hub lets somebody see what an email will look like
+   * before they have waited a day for it, and "I think I set it up right" is
+   * not a state to leave anybody in. It sends only to the person asking, and
+   * deliberately does not record the send: a test at four in the afternoon
+   * must not eat tomorrow morning's real one.
+   */
+  router.post("/notifications/views/:id/now", async (req: ViewerRequest, res, next) => {
+    const person = requirePerson(req, res);
+    if (!person) return;
+    try {
+      const mail = (await store.viewMailsFor(person)).find((m) => m.id === req.params.id);
+      if (!mail) {
+        res.status(404).json({ error: "You have not asked for that one." });
+        return;
+      }
+      const result = await sendViewMail(mail, { data, studio, runner, store }, new Date(), false);
+      res.json(result);
+    } catch (err) {
+      next(err);
+    }
+  });
+
   return router;
+}
+
+/**
+ * What a client asked for, rebuilt rather than trusted.
+ *
+ * An hour outside the day, or a cadence the Hub does not have, is refused
+ * rather than clamped: this decides when something leaves the building, and
+ * quietly turning 25 into 23 would be a schedule nobody asked for.
+ */
+export function readViewMail(
+  body: unknown,
+): { cadence: Cadence; weekday: number; hour: number; enabled: boolean } | string {
+  const raw = (body ?? {}) as Record<string, unknown>;
+  const cadence = raw.cadence as Cadence;
+  if (!CADENCES.includes(cadence)) return "Choose how often it should come.";
+
+  const hour = Number(raw.hour);
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) {
+    return "Choose an hour of the day between 0 and 23.";
+  }
+
+  const weekday = raw.weekday === undefined ? 1 : Number(raw.weekday);
+  if (!Number.isInteger(weekday) || weekday < 0 || weekday > 6) {
+    return "Choose a day of the week.";
+  }
+
+  return { cadence, weekday, hour, enabled: raw.enabled !== false };
 }
 
 /**

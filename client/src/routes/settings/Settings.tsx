@@ -11,6 +11,7 @@ import AlertSettings from "./Alerts";
 import Photo from "./Photo";
 import PageIntro from "../../components/PageIntro";
 import { announceSavedChange, useSavedViews } from "../../components/SaveView";
+import { announceMailChange, useViewMails } from "../../components/MailView";
 
 /**
  * Everything a person can set for themselves, on one page.
@@ -36,6 +37,7 @@ const SECTIONS = [
   { id: "you", label: "You" },
   { id: "alerts", label: "Alerts" },
   { id: "saved", label: "Saved views" },
+  { id: "mailed", label: "Emailed to you" },
   { id: "look", label: "How it looks" },
   { id: "calendar", label: "Your calendar" },
 ];
@@ -150,6 +152,13 @@ export default function Settings() {
         <SavedViews />
       </section>
 
+      <section className="settings-section" id="mailed">
+        <div className="section-head">
+          <h2>Emailed to you</h2>
+        </div>
+        <MailedViews />
+      </section>
+
       <section className="settings-section" id="look">
         <div className="section-head">
           <h2>How it looks</h2>
@@ -233,6 +242,86 @@ export default function Settings() {
  * forty of them gets tidied. Removing is the only action here — renaming
  * belongs beside the thing being renamed, where you can see what it holds.
  */
+/**
+ * The views this person has asked to be sent, listed in one place.
+ *
+ * Subscribing happens on the view itself, where somebody is already looking
+ * at the thing they want posted to them. This is the other half: what you
+ * have signed up for, all together, so stopping one does not mean remembering
+ * which view it was on.
+ *
+ * It is also where a failure surfaces. A relay that refused at eight this
+ * morning has nowhere else to say so — the mail that would have carried the
+ * news is the one that did not go.
+ */
+function MailedViews() {
+  const mails = useViewMails();
+  const [busy, setBusy] = useState("");
+  const rows = mails.data?.mails ?? [];
+
+  if (mails.data && !mails.data.ready) {
+    return (
+      <div className="card">
+        <p className="studio-note">
+          Nothing is sending email in this deployment yet, so there is nothing to sign up
+          for. An admin points <code className="mono">NOTIFY_EMAIL_URL</code> at a Workspace
+          relay; until then the button does not appear on a view.
+        </p>
+      </div>
+    );
+  }
+
+  if (rows.length === 0) {
+    return (
+      <div className="card">
+        <p className="studio-note">
+          None yet. Open any view built in the studio and press <b>Email me this</b> beside
+          it. It is built fresh for you each time it goes, so what arrives is what you would
+          see if you opened the view yourself.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card">
+      <ul className="saved-rows">
+        {rows.map((m) => (
+          <li key={m.id}>
+            <span className="saved-row-link">
+              <Icon name="mail" size={13} />
+              <span>
+                <b>{m.view}</b>
+                <small>
+                  {m.words}
+                  {m.lastSentOn && ` · last sent ${m.lastSentOn}`}
+                  {m.lastProblem && ` · it did not go: ${m.lastProblem}`}
+                </small>
+              </span>
+            </span>
+            <button
+              className="btn small danger"
+              disabled={busy === m.id}
+              aria-label={`Stop emailing ${m.view}`}
+              onClick={async () => {
+                setBusy(m.id);
+                try {
+                  await send(`/notifications/views/${m.id}`, "DELETE");
+                  announceMailChange();
+                } finally {
+                  setBusy("");
+                }
+              }}
+            >
+              Stop
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function SavedViews() {
   const saved = useSavedViews();
   const [busy, setBusy] = useState("");

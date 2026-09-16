@@ -288,7 +288,15 @@ export interface ViewLink {
 
 /** A view plus its rows, which is what the runtime route returns. */
 export interface ViewPage {
-  view: ViewLink & { description?: string; spec: ViewSpec };
+  /**
+   * The view's own id travels with the page as well as its slug.
+   *
+   * A slug is the address and can be renamed; the id is what a subscription
+   * is keyed by, so the page that offers "email me this" needs it. There is
+   * nothing to protect here — it identifies a view whose rows are already on
+   * the screen.
+   */
+  view: ViewLink & { id: string; description?: string; spec: ViewSpec };
   fields: Field[];
   /** The dataset's label and where it comes from, shown as provenance. */
   source: { dataset: string; connection: string; kind: ConnectorKind };

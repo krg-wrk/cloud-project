@@ -6,6 +6,9 @@ import { Channels } from "./channels.js";
 import type { World } from "./build.js";
 import { runNotifications, summarise } from "./run.js";
 import type { NoticeKind } from "./types.js";
+import { runViewMails } from "./viewRun.js";
+import type { StudioStore } from "../studio/store.js";
+import type { ViewRunner } from "../studio/run.js";
 
 /**
  * When the runs happen, if they happen at all.
@@ -39,6 +42,8 @@ export function startSchedule(
   store: HubStore,
   signUps: SignUps,
   library: ProofPointLibrary,
+  studio: StudioStore,
+  runner: ViewRunner,
 ): Schedule {
   if (process.env.NOTIFY_SCHEDULE !== "1") {
     return {
@@ -52,6 +57,31 @@ export function startSchedule(
 
   const tick = async () => {
     const at = new Date();
+
+    /*
+     * The views people asked for go first, and on their own clock.
+     *
+     * Everything else here happens at one hour the deployment sets. A view
+     * subscription carries the hour somebody chose for it, so it is checked
+     * on every tick rather than behind the notices' gate — and it is checked
+     * before the early return below, which would otherwise skip it entirely
+     * for twenty-three hours of the day.
+     */
+    try {
+      const sent = await runViewMails({ data, studio, runner, store }, at);
+      const failed = sent.filter((s) => s.problem);
+      if (sent.length) {
+        console.log(
+          `notify: ${sent.length - failed.length} view${
+            sent.length - failed.length === 1 ? "" : "s"
+          } emailed` + (failed.length ? `, ${failed.length} could not be sent` : ""),
+        );
+        for (const bad of failed) console.error(`  ${bad.to} — ${bad.view}: ${bad.problem}`);
+      }
+    } catch (err) {
+      console.error("notify: the view mails failed —", (err as Error).message);
+    }
+
     if (at.getHours() !== HOUR) return;
     const today = at.toISOString().slice(0, 10);
     // Monday is 1. The digest carries the review notice, so Monday sends all three.

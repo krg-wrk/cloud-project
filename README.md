@@ -324,11 +324,12 @@ GOOGLE_SHEETS_KEY=...             # a service-account JSON key, named by a studi
 GEMINI_API_KEY=...                # AI note drafting; without it the button says so
 NOTIFY_SCHEDULE=1                 # let notifications send themselves
 NOTIFY_HOUR=8                     # the hour they go, local time
-NOTIFY_EMAIL_URL=...              # a Workspace relay taking {to, subject, text}
+NOTIFY_EMAIL_URL=...              # a Workspace relay taking {to, subject, text, html}
 NOTIFY_CHAT_WEBHOOK=...           # the team's Google Chat space
 HUB_URL=https://forecasters...    # so a notice can carry a link people can click
 HUB_DB_URL=postgres://...         # Postgres instead of the SQLite file
 HUB_DB_POOL=10                    # how many Postgres connections, if 10 is wrong
+SEED_WRITES=1                     # the write-back screens against the sample data
 ```
 
 Column titles are mapped in one place — the `COLUMNS` object at the top of
@@ -357,10 +358,16 @@ column.
 
 **Off unless you turn it on.** `SMARTSHEET_WRITE=1`. Without it the source
 reports no write capability at all, so there is no object to call and the API
-refuses before it builds a request. The seed source never has one. Switching
-it on reads the sheet at startup, so a write flag set against a sheet the
-token cannot see fails at boot with a message rather than the first time a
-manager presses Apply.
+refuses before it builds a request. Switching it on reads the sheet at
+startup, so a write flag set against a sheet the token cannot see fails at
+boot with a message rather than the first time a manager presses Apply.
+
+`SEED_WRITES=1` turns the same screens on against the sample data, so the
+write-back path can be developed and looked at without a Smartsheet token —
+it was otherwise the only part of the Hub nobody could see locally. The
+stand-in speaks the sheet's own words, refuses a stale confirmation the same
+way, and names itself as something obviously not real in every confirmation.
+Nothing leaves the process and nothing survives a restart.
 
 **Managers and admins only**, and a manager only in a vertical they oversee.
 A forecaster cannot change even their own row — they can still say whatever
@@ -378,6 +385,25 @@ This will change 2 cells on Commissioning schedule (sheet 614183…), row 901:
 
 Only *Apply to the sheet* changes anything, and it sends that description back
 with the change so the two cannot disagree.
+
+### Several at once
+
+A season slips and forty deadlines move. Ticking rows on the deadlines table
+brings up a bar over it: a status and the two planned dates, with the same two
+steps and the same per-row permission check. Notes and the actual submission
+date are deliberately not there — a note is per piece by definition, and
+thirty things did not all land on the same day.
+
+A box left blank is left alone rather than cleared, which is the opposite of
+the single-row form and has to be: this one starts empty against rows that all
+say something different.
+
+It is capped at fifty, because a cap is the difference between a mis-click and
+an incident. Partial success is the normal outcome and is reported as such —
+the sheet is written a row at a time whatever this does, so an all-or-nothing
+promise would be a lie, and each refusal is named rather than counted. Rows
+outside your verticals are skipped rather than failing the batch: selecting
+everything on screen and setting a status is the point.
 
 ### Two vocabularies, kept apart
 
@@ -1191,7 +1217,9 @@ Each channel says, in words, what it can do:
 - **In the Hub** always works. It is a row in the Hub's own database, shown on
   the bell beside the wordmark and in full on the page.
 - **Email** goes through an HTTP endpoint — `NOTIFY_EMAIL_URL` — that takes
-  `{to, subject, text}`. Not SMTP: WGSN runs on Google Workspace, so the short
+  `{to, subject, text, html}`, of which only the first three matter for a
+  notice; `html` carries the table when a whole view is being sent, and a
+  script that ignores it still sends a readable message. Not SMTP: WGSN runs on Google Workspace, so the short
   path to an address that will not be marked as spam is a ten-line Apps Script
   web app calling `MailApp.sendEmail`. That also keeps the mail credentials
   out of the Hub entirely — the Hub holds a URL, the script holds the right to
@@ -1235,6 +1263,36 @@ Off by default, for the same reason writing to Smartsheet is: it acts on the
 world with nobody pressing anything, and a proof of concept that mailed two
 hundred people because somebody ran it on a laptop would be the last time the
 team trusted it.
+
+### A view in your inbox
+
+Every view built in the studio can be sent to you on a morning you choose —
+every weekday, every day, or once a week, at an hour you pick. The button is
+on the view itself, beside **Save this view**, and everything you have signed
+up for is listed together at `/settings#mailed`.
+
+You subscribe yourself, and there is no route that subscribes anybody else.
+That is the design rather than an omission. A view is run *as* somebody: its
+audience decides who may open it at all, and its filters can narrow it to the
+signed-in person's own work — so there is no such thing as "the rows of this
+view" without a person to be. Each mail is therefore a fresh run against the
+recipient's real permissions, rebuilt from the access sheet at the moment of
+sending. Somebody who leaves the team, or loses a vertical, stops receiving
+rows they can no longer open without anybody having to remember to
+unsubscribe them, and a view narrowed after you subscribed simply stops
+arriving.
+
+The mail carries a table and says it is a prompt rather than a record: when it
+was made, and a link to the view, which is live. It is capped at 25 rows with
+a line saying how many more there are — nobody scrolls an email to row ninety.
+A view whose source stopped answering sends that news instead of nothing, on
+the morning it broke rather than a fortnight later.
+
+It rides on the same fifteen-minute check as the notices, but on its own hour
+rather than `NOTIFY_HOUR`, and the last-sent date is what makes four ticks in
+an hour into one mail. **Send one now** on the view sends a copy without
+recording it, so checking at four in the afternoon does not eat tomorrow
+morning's.
 
 ### Trying it without emailing anybody
 

@@ -561,13 +561,42 @@ export interface ViewLink {
 
 /** A view and its rows, as the generic renderer receives them. */
 export interface ViewPage {
-  view: ViewLink & { description?: string; spec: ViewSpec };
+  /** The id as well as the slug: a subscription is keyed by the id. */
+  view: ViewLink & { id: string; description?: string; spec: ViewSpec };
   fields: Field[];
   source: { dataset: string; connection: string; kind: ConnectorKind };
   total: number;
   rows: Record<string, string>[];
   /** Set when the source would not answer, so the page can say why. */
   error?: string;
+}
+
+/* ---- A view, emailed ----------------------------------------------------- */
+
+/** A view somebody has asked to be sent, as the API returns it. */
+export interface ViewMail {
+  id: string;
+  viewId: string;
+  cadence: "daily" | "weekdays" | "weekly";
+  /** For `weekly`. 0 is Sunday, as JavaScript counts them. */
+  weekday: number;
+  hour: number;
+  enabled: boolean;
+  lastSentOn?: string;
+  /** Why the last one did not go, when it did not. */
+  lastProblem?: string;
+  /** The view's label, resolved by the server so the list reads as words. */
+  view: string;
+  /** The schedule in words, so the client does not build the sentence twice. */
+  words: string;
+}
+
+export interface ViewMails {
+  /** Whether anything is sending email at all in this deployment. */
+  ready: boolean;
+  /** Only the views this account may open, so the picker cannot offer a refusal. */
+  views: { id: string; slug: string; label: string; section: string }[];
+  mails: ViewMail[];
 }
 
 /** What the builder's preview returns: the same shape, plus the source size. */

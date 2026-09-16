@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAdmin, type Viewer, type ViewerRequest } from "../auth.js";
-import { connectorCatalogue, createConnectors, DatasetReader } from "./connectors.js";
+import { connectorCatalogue } from "./connectors.js";
 import {
   applySpec,
   canSeeView,
@@ -10,6 +10,7 @@ import {
   slugify,
   usedFields,
 } from "./query.js";
+import { ViewRunner } from "./run.js";
 import type { StudioStore } from "./store.js";
 import {
   CONNECTOR_KINDS,
@@ -145,19 +146,22 @@ function readAudience(body: unknown): Audience {
   };
 }
 
-export function createStudioRouter(studio: StudioStore, data: DataSource): Router {
+/**
+ * The studio's routes.
+ *
+ * The runner is passed in rather than made here, because the scheduler holds
+ * the same one: a view posted to somebody's inbox has to be the view on their
+ * screen, and two runners would mean two caches and two answers.
+ */
+export function createStudioRouter(
+  studio: StudioStore,
+  data: DataSource,
+  runner = new ViewRunner(studio, data),
+): Router {
   const router = Router();
-  const connectors = createConnectors(data);
-  const reader = new DatasetReader(connectors, (id) => studio.secretFor(id));
-
-  /** A dataset plus its connection, or a 404 written for a person. */
-  async function resolve(datasetId: string) {
-    const dataset = await studio.dataset(datasetId);
-    if (!dataset) return { error: "No dataset with that id." } as const;
-    const connection = await studio.connection(dataset.connectionId);
-    if (!connection) return { error: "That dataset's connection has been removed." } as const;
-    return { dataset, connection } as const;
-  }
+  const reader = runner.reader;
+  const connectors = runner.connectors;
+  const resolve = (datasetId: string) => runner.resolve(datasetId);
 
   // --- Runtime: what the team sees --------------------------------------
 
@@ -200,68 +204,11 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
         res.status(404).json({ error: "No view at that address, or it is not yours to see." });
         return;
       }
-      res.json(await pageFor(view, viewer, req.viewer?.name));
+      res.json(await runner.for(view, viewer, req.viewer?.name));
     } catch (err) {
       next(err);
     }
   });
-
-  async function pageFor(view: ViewDef, viewer: Viewer, viewerName?: string): Promise<ViewPage> {
-    const found = await resolve(view.datasetId);
-    const shell = {
-      view: {
-        slug: view.slug,
-        label: view.label,
-        icon: view.icon,
-        section: view.section,
-        order: view.order,
-        state: view.state,
-        description: view.description,
-        spec: view.spec,
-      },
-    };
-    if ("error" in found) {
-      return {
-        ...shell,
-        fields: [],
-        source: { dataset: "—", connection: "—", kind: "smartsheet" },
-        total: 0,
-        rows: [],
-        error: found.error,
-      };
-    }
-    const { dataset, connection } = found;
-    const source = { dataset: dataset.label, connection: connection.label, kind: connection.kind };
-    try {
-      const rows = await reader.rows(connection, dataset.ref, dataset.refreshSeconds);
-      const fields = usedFields(view.spec, dataset.fields);
-      const applied = applySpec(rows, view.spec, viewer, viewerName, dataset.fields);
-      return {
-        ...shell,
-        fields,
-        source,
-        total: applied.total,
-        // The rules run against the whole row rather than the projected one,
-        // so a rule can key off a column the layout does not draw.
-        rows: project(
-          applied.rows,
-          fields,
-          view.spec,
-          identities(viewer, viewerName),
-          dataset.fields,
-        ),
-      };
-    } catch (err) {
-      return {
-        ...shell,
-        fields: dataset.fields,
-        source,
-        total: 0,
-        rows: [],
-        error: err instanceof Error ? err.message : "The source could not be read.",
-      };
-    }
-  }
 
   /**
    * The wording and layout of the built-in pages.

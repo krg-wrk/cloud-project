@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Db } from "./db.js";
 import type { AutomationRule } from "./notify/rules.js";
+import type { ViewMail } from "./notify/viewMail.js";
 import type {
   CellChange,
   ForecastDetails,
@@ -309,6 +310,45 @@ CREATE TABLE IF NOT EXISTS saved_views (
 
 CREATE INDEX IF NOT EXISTS saved_views_by_person ON saved_views (email, created_at DESC);
 
+/*
+ * A view somebody has asked to be sent, on a morning they chose.
+ *
+ * Keyed by person rather than by view, and a person subscribes only
+ * themselves. That is the whole access story: a view is run *as* somebody,
+ * its audience decides whether they may open it and its filters may narrow it
+ * to their own work — so the only way to send a correct one is to run it
+ * again for each recipient at the moment of sending. Letting an admin add
+ * other people to a list would mean posting one person's rows to another,
+ * which is the single thing this must never do.
+ *
+ * The last-sent date is a date rather than a timestamp, and it is what stops
+ * a thing going twice: the scheduler wakes every fifteen minutes, and four
+ * copies of Monday's list is worse than none.
+ */
+CREATE TABLE IF NOT EXISTS view_mails (
+  id TEXT PRIMARY KEY,
+  /** Who gets it. Also who it is run as. */
+  person_id TEXT NOT NULL,
+  email TEXT NOT NULL,
+  /** The studio view's id, not its slug: a slug can be renamed. */
+  view_id TEXT NOT NULL,
+  /** daily, weekdays or weekly. */
+  cadence TEXT NOT NULL,
+  /** For weekly: 0 is Sunday, as JavaScript counts them. */
+  weekday INTEGER NOT NULL DEFAULT 1,
+  hour INTEGER NOT NULL DEFAULT 8,
+  enabled INTEGER NOT NULL DEFAULT 1,
+  /** The last date it went, so a fifteen-minute tick cannot send it twice. */
+  last_sent_on TEXT,
+  /** Why the last one did not go, when it did not. */
+  last_problem TEXT,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS view_mails_by_person ON view_mails (person_id);
+CREATE UNIQUE INDEX IF NOT EXISTS view_mails_one_each ON view_mails (person_id, view_id);
+
 CREATE TABLE IF NOT EXISTS notify_prefs (
   person_id TEXT PRIMARY KEY,
   on_json TEXT NOT NULL,
@@ -477,6 +517,144 @@ export class HubStore {
   async dropAutomationRule(id: string): Promise<boolean> {
     const res = await this.db.run(`DELETE FROM automation_rules WHERE id = ?`, [id]);
     return (res.changes ?? 0) > 0;
+  }
+
+  // --- Views somebody has asked to be sent --------------------------------
+
+  private static asViewMail(r: Record<string, string>): ViewMail {
+    return {
+      id: r.id,
+      personId: r.person_id,
+      email: r.email,
+      viewId: r.view_id,
+      cadence: r.cadence as ViewMail["cadence"],
+      weekday: Number(r.weekday),
+      hour: Number(r.hour),
+      // SQLite gives 0/1 and Postgres a real boolean, so neither is assumed.
+      enabled: (r.enabled as unknown) === true || Number(r.enabled) === 1,
+      lastSentOn: r.last_sent_on ?? undefined,
+      lastProblem: r.last_problem ?? undefined,
+      createdAt: r.created_at,
+      updatedAt: r.updated_at,
+    };
+  }
+
+  private static readonly VIEW_MAIL_COLUMNS = `id, person_id, email, view_id, cadence, weekday,
+              hour, enabled, last_sent_on, last_problem, created_at, updated_at`;
+
+  /** Every subscription there is — what the scheduler walks. */
+  async viewMails(): Promise<ViewMail[]> {
+    const rows = (await this.db.all(
+      `SELECT ${HubStore.VIEW_MAIL_COLUMNS} FROM view_mails ORDER BY created_at`,
+    )) as Record<string, string>[];
+    return rows.map(HubStore.asViewMail);
+  }
+
+  /** One person's, for their settings page. */
+  async viewMailsFor(personId: string): Promise<ViewMail[]> {
+    const rows = (await this.db.all(
+      `SELECT ${HubStore.VIEW_MAIL_COLUMNS} FROM view_mails
+        WHERE person_id = ? ORDER BY created_at`,
+      [personId],
+    )) as Record<string, string>[];
+    return rows.map(HubStore.asViewMail);
+  }
+
+  /**
+   * Subscribe, or change an existing subscription.
+   *
+   * One row per person per view, so asking twice moves the time rather than
+   * arriving twice. Changing the time clears `last_sent_on`: somebody who
+   * moves a mail from eight to four in the afternoon means today, and a
+   * leftover date from this morning would silently eat the first one.
+   */
+  async saveViewMail(
+    mail: Omit<ViewMail, "id" | "createdAt" | "updatedAt" | "lastSentOn" | "lastProblem">,
+  ): Promise<ViewMail> {
+    const stamp = now();
+    const existing = (await this.viewMailsFor(mail.personId)).find(
+      (m) => m.viewId === mail.viewId,
+    );
+    const moved =
+      existing &&
+      (existing.cadence !== mail.cadence ||
+        existing.hour !== mail.hour ||
+        existing.weekday !== mail.weekday);
+
+    if (existing) {
+      await this.db.run(
+        `UPDATE view_mails SET email = ?, cadence = ?, weekday = ?, hour = ?, enabled = ?,
+                updated_at = ?${moved ? ", last_sent_on = NULL, last_problem = NULL" : ""}
+          WHERE id = ?`,
+        [
+          mail.email.toLowerCase(),
+          mail.cadence,
+          mail.weekday,
+          mail.hour,
+          mail.enabled ? 1 : 0,
+          stamp,
+          existing.id,
+        ],
+      );
+      return {
+        ...existing,
+        ...mail,
+        email: mail.email.toLowerCase(),
+        lastSentOn: moved ? undefined : existing.lastSentOn,
+        lastProblem: moved ? undefined : existing.lastProblem,
+        updatedAt: stamp,
+      };
+    }
+
+    const row: ViewMail = {
+      ...mail,
+      email: mail.email.toLowerCase(),
+      id: randomUUID(),
+      createdAt: stamp,
+      updatedAt: stamp,
+    };
+    await this.db.run(
+      `INSERT INTO view_mails
+         (id, person_id, email, view_id, cadence, weekday, hour, enabled, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        row.id,
+        row.personId,
+        row.email,
+        row.viewId,
+        row.cadence,
+        row.weekday,
+        row.hour,
+        row.enabled ? 1 : 0,
+        row.createdAt,
+        row.updatedAt,
+      ],
+    );
+    return row;
+  }
+
+  /** Scoped to the person, so an id from elsewhere unsubscribes nobody. */
+  async dropViewMail(id: string, personId: string): Promise<boolean> {
+    const res = await this.db.run(`DELETE FROM view_mails WHERE id = ? AND person_id = ?`, [
+      id,
+      personId,
+    ]);
+    return (res.changes ?? 0) > 0;
+  }
+
+  /**
+   * Record that one went, or why it did not.
+   *
+   * The date is written either way. A relay that is refusing should not be
+   * retried every fifteen minutes for the rest of the day — the person is
+   * told what happened on their settings page, and tomorrow it tries again.
+   */
+  async markViewMailSent(id: string, on: string, problem?: string): Promise<void> {
+    await this.db.run(`UPDATE view_mails SET last_sent_on = ?, last_problem = ? WHERE id = ?`, [
+      on,
+      problem ?? null,
+      id,
+    ]);
   }
 
   // --- Saved views -------------------------------------------------------

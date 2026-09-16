@@ -20,6 +20,7 @@ import { ProofPointLibrary } from "./proofPoints/library.js";
 import { SignUps } from "./signUps.js";
 import { HubStore } from "./store.js";
 import { createStudioRouter } from "./studio/api.js";
+import { ViewRunner } from "./studio/run.js";
 import { StudioStore } from "./studio/store.js";
 
 const app = express();
@@ -40,6 +41,15 @@ const store = new HubStore(db);
 // Connections, datasets and views: configuration, in the same database.
 const studio = new StudioStore(db);
 const signUps = new SignUps(store);
+/*
+ * One view runner, shared.
+ *
+ * Both the studio's routes and the scheduler that emails views hold this
+ * same object. Two would mean two dataset caches, and so two answers to
+ * "what does this sheet say" — with the table in somebody's inbox quietly
+ * disagreeing with the one on their screen.
+ */
+const viewRunner = new ViewRunner(studio, data);
 const drafter = createNoteDrafter();
 const auth = readAuthConfig();
 // Read once at boot: the pipeline writes it weekly and nothing edits it here.
@@ -126,9 +136,9 @@ app.use(
     people: await data.listPeople(),
   })),
   createApiRouter(data, store, signUps, drafter, proofPoints),
-  createStudioRouter(studio, data),
+  createStudioRouter(studio, data, viewRunner),
   createProofPointRouter(proofPoints, data, store),
-  createNotifyRouter(data, store, signUps, proofPoints),
+  createNotifyRouter(data, store, signUps, proofPoints, studio, viewRunner),
   createSearchRouter(data, studio, proofPoints),
   createResourcesRouter(store),
   createAppearanceRouter(store),
@@ -144,7 +154,7 @@ app.use(
  * hundred people because somebody ran it locally would be the last time the
  * team trusted it. An admin can always run it by hand, dry first.
  */
-const schedule = startSchedule(data, store, signUps, proofPoints);
+const schedule = startSchedule(data, store, signUps, proofPoints, studio, viewRunner);
 
 // In production the built client is served from the same origin, and every
 // unknown path falls through to index.html so deep links like

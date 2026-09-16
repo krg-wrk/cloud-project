@@ -50,6 +50,43 @@ export function chatWebhookLooksRight(url: string): boolean {
 /** How long to wait on a channel before giving up on this notice. */
 const TIMEOUT_MS = 8_000;
 
+/** Whether email can go at all, for the parts of the Hub that send their own. */
+export function emailReady(): boolean {
+  return Boolean(EMAIL_URL);
+}
+
+/**
+ * Send one email that is not a notice.
+ *
+ * A notice is a title and a sentence; a view is a table. Rather than bend
+ * `Notice` into a shape that carries markup, the few things that send their
+ * own mail use this and pass a body they built themselves. The relay contract
+ * is unchanged apart from `html`, which an older script simply ignores.
+ *
+ * Returns the reason it did not go, rather than throwing, for the same reason
+ * `send` does: one refusal must not stop the rest of the run.
+ */
+export async function sendEmail(
+  to: string,
+  subject: string,
+  text: string,
+  html?: string,
+): Promise<string | undefined> {
+  if (!EMAIL_URL) return "no email relay is configured";
+  try {
+    const res = await fetch(EMAIL_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ to, subject, text, html }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (res.ok) return undefined;
+    return `${res.status} — ${reason(await res.text().catch(() => ""))}`;
+  } catch (err) {
+    return (err as Error).message;
+  }
+}
+
 export class Channels {
   constructor(private store: HubStore) {}
 
