@@ -137,7 +137,11 @@ export default function Datasets() {
                           ? "Re-read columns"
                           : "Read columns"}
                     </button>
-                    <button className="btn danger" onClick={() => void remove(dataset)}>
+                    <button
+                      className="btn danger"
+                      onClick={() => void remove(dataset)}
+                      aria-label={`Remove the dataset ${dataset.label}`}
+                    >
                       <Icon name="trash" />
                     </button>
                   </div>

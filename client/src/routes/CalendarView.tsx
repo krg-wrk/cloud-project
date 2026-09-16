@@ -52,6 +52,7 @@ import Kanban, {
 } from "./Kanban";
 import EntryForm from "../components/EntryForm";
 import ShareLink from "../components/ShareLink";
+import SaveView from "../components/SaveView";
 import PageIntro from "../components/PageIntro";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -506,6 +507,7 @@ export default function CalendarView() {
             <Icon name="plus" />
             {adding ? "Close" : "Add a reminder"}
           </button>
+          <SaveView suggest="Calendar" />
           <ShareLink />
         </div>
       </div>

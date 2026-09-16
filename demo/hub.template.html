@@ -7895,6 +7895,7 @@
     <span class="urlbar-host">forecasters.wgsn.com</span
     ><span class="urlbar-path" id="url-path">/</span>
   </div>
+  <button class="copy-btn" id="save-view" title="Save this filtered view"></button>
   <button class="copy-btn" id="copy">Copy link to this view</button>
 </div>
 
@@ -9278,6 +9279,21 @@
         ]);
       links.splice(insertAt, 0, ...rows);
     }
+    /*
+     * Saved views, in their own heading under the pages they are cuts of.
+     *
+     * Only when there are any: a heading over nothing is worse than no
+     * heading, and somebody who has never saved one should not be told the
+     * feature exists by an empty box.
+     */
+    const savedRows = readSaved();
+    if (savedRows.length) {
+      links.push(["Saved", null, "saved", null, null, false]);
+      links.push(
+        ...savedRows.map((v) => [esc(v.label), `#${v.path}`, `saved:${v.id}`, "", "score", false]),
+      );
+    }
+
     if (viewer().isAdmin) {
       // Under Settings, with Alerts: both are about your own setup rather
       // than about a section of the work.
@@ -9502,7 +9518,69 @@
   function renderUrl() {
     const raw = location.hash.replace(/^#/, "") || "/";
     document.getElementById("url-path").textContent = raw;
+    renderSaveButton();
   }
+
+  /* ---- Saving a filtered view --------------------------------------------
+   *
+   * What is saved is the address and nothing else — no copy of the rows, no
+   * snapshot — which is what makes it honest: a saved view opens whatever is
+   * true today. It is the string the Copy link button hands you, with a name
+   * on it, which is why it sits beside that button.
+   *
+   * Per person and kept in this browser. In the Hub proper these live on the
+   * server so they follow somebody between their laptop and their phone;
+   * there is no server here, and the behaviour a viewer sees is the same.
+   * ---------------------------------------------------------------------- */
+
+  const SAVED_KEY = "forecasters-hub.saved-views";
+
+  function readSaved() {
+    try {
+      const all = JSON.parse(localStorage.getItem(SAVED_KEY) ?? "{}");
+      return Array.isArray(all[viewerId]) ? all[viewerId] : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function writeSaved(rows) {
+    try {
+      const all = JSON.parse(localStorage.getItem(SAVED_KEY) ?? "{}");
+      all[viewerId] = rows;
+      localStorage.setItem(SAVED_KEY, JSON.stringify(all));
+    } catch {
+      // The choice lasts for this page load, which is no worse than before.
+    }
+    renderSaveButton();
+    render();
+  }
+
+  const herePath = () => location.hash.replace(/^#/, "") || "/";
+
+  function renderSaveButton() {
+    const btn = document.getElementById("save-view");
+    if (!btn) return;
+    const saved = readSaved().find((v) => v.path === herePath());
+    btn.innerHTML = `${icon("score", 13)}${saved ? "Saved" : "Save this view"}`;
+    btn.classList.toggle("done", Boolean(saved));
+  }
+
+  document.getElementById("save-view").addEventListener("click", () => {
+    const path = herePath();
+    const rows = readSaved();
+    const at = rows.findIndex((v) => v.path === path);
+    if (at >= 0) {
+      if (window.confirm(`Remove the saved view "${rows[at].label}"?`)) {
+        rows.splice(at, 1);
+        writeSaved(rows);
+      }
+      return;
+    }
+    const label = window.prompt("Save this view as", document.querySelector("h1")?.textContent?.trim() ?? "");
+    if (!label || !label.trim()) return;
+    writeSaved([{ id: uid() + uid(), label: label.trim(), path }, ...rows]);
+  });
 
   document.getElementById("copy").addEventListener("click", async (e) => {
     const btn = e.currentTarget;

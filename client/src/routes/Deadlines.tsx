@@ -9,6 +9,7 @@ import type { ContentItem, Person, Taxonomy } from "../types";
 import type { ReactNode } from "react";
 import { ErrorNote, Loading, StatusPill, Who } from "../components/bits";
 import ShareLink from "../components/ShareLink";
+import SaveView from "../components/SaveView";
 import ExportButton from "../components/ExportButton";
 import PageIntro from "../components/PageIntro";
 
@@ -170,6 +171,7 @@ export default function Deadlines() {
             ]}
             small
           />
+          <SaveView suggest="Deadlines" />
           <ShareLink label="Copy link" />
         </div>
       </div>

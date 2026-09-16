@@ -912,3 +912,18 @@ export interface WeaveResult {
   /** How many terms a row had to carry to be counted. */
   threshold: number;
 }
+
+/**
+ * A filtered page somebody named so they can come back to it.
+ *
+ * Only an address and a label — never a copy of the rows. A saved view opens
+ * whatever is true today, which is the difference between this and the
+ * spreadsheet tab somebody keeps beside it.
+ */
+export interface SavedView {
+  id: string;
+  label: string;
+  /** Path and query, relative: "/deadlines?vertical=Womenswear". */
+  path: string;
+  createdAt: string;
+}

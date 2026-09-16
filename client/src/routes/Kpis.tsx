@@ -8,6 +8,7 @@ import { ErrorNote, Loading } from "../components/bits";
 import { PeriodBars, SeriesTable, SparkBars, formatValue } from "../components/charts";
 import { Glossary, OwnershipMix, TeamPanel, TierRing } from "../components/PerfPanels";
 import ShareLink from "../components/ShareLink";
+import SaveView from "../components/SaveView";
 import ExportButton from "../components/ExportButton";
 import PageIntro from "../components/PageIntro";
 
@@ -177,6 +178,7 @@ export default function Kpis() {
               : "How your year is going. Output is read against the average for your grade rather than against zero, and the range and metric both live in the URL."}
           </PageIntro>
         </div>
+        <SaveView suggest="Performance" />
         <ShareLink label="Copy link" />
       </div>
 

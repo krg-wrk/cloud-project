@@ -17,6 +17,7 @@ import { personHue } from "../lib/domain";
 import type { Field, ViewPage, ViewSpec } from "../types";
 import { ErrorNote, Loading } from "../components/bits";
 import ShareLink from "../components/ShareLink";
+import SaveView from "../components/SaveView";
 import ExportButton from "../components/ExportButton";
 import type { CSSProperties } from "react";
 
@@ -94,6 +95,7 @@ export default function CustomView() {
             }))}
             small
           />
+          <SaveView suggest={view.label} />
           <ShareLink />
         </span>
       </div>

@@ -1,6 +1,12 @@
 import { randomUUID } from "node:crypto";
 import type { Db } from "./db.js";
-import type { CellChange, ForecastDetails, ResearchLink, TrendExtras } from "./types.js";
+import type {
+  CellChange,
+  ForecastDetails,
+  ResearchLink,
+  SavedView,
+  TrendExtras,
+} from "./types.js";
 import {
   CHANNELS,
   DEFAULT_ON,
@@ -256,6 +262,30 @@ CREATE TABLE IF NOT EXISTS hub_settings (
  * the channels might, and a migration per notification type is not a trade
  * worth making for something nothing queries across.
  */
+/*
+ * A filtered page somebody wants to come back to.
+ *
+ * The Hub's whole argument is that a view is an address, which makes a saved
+ * view a named address and nothing more — no copy of the rows, no snapshot,
+ * no second way for a list to be out of date. Opening one is opening the URL,
+ * so it shows whatever is true today.
+ *
+ * Held on the server rather than in the browser because the point is that it
+ * follows somebody: the cut you saved at your desk is the one on your phone.
+ * Keyed by email rather than person id, because somebody signed in but not on
+ * the forecast team can still save a view.
+ */
+CREATE TABLE IF NOT EXISTS saved_views (
+  id TEXT PRIMARY KEY,
+  email TEXT NOT NULL,
+  label TEXT NOT NULL,
+  /** Path and query only — never a host, so a saved view cannot leave. */
+  path TEXT NOT NULL,
+  created_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS saved_views_by_person ON saved_views (email, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS notify_prefs (
   person_id TEXT PRIMARY KEY,
   on_json TEXT NOT NULL,
@@ -342,6 +372,54 @@ export class HubStore {
    */
   get connection(): Db {
     return this.db;
+  }
+
+  // --- Saved views -------------------------------------------------------
+
+  async savedViews(email: string): Promise<SavedView[]> {
+    const rows = (await this.db.all(
+      `SELECT id, label, path, created_at FROM saved_views
+        WHERE email = ? ORDER BY created_at DESC`,
+      [email.toLowerCase()],
+    )) as Record<string, string>[];
+    return rows.map((r) => ({
+      id: r.id,
+      label: r.label,
+      path: r.path,
+      createdAt: r.created_at,
+    }));
+  }
+
+  async saveView(email: string, label: string, path: string): Promise<SavedView> {
+    const saved: SavedView = {
+      id: randomUUID(),
+      label,
+      path,
+      createdAt: now(),
+    };
+    await this.db.run(
+      `INSERT INTO saved_views (id, email, label, path, created_at) VALUES (?, ?, ?, ?, ?)`,
+      [saved.id, email.toLowerCase(), saved.label, saved.path, saved.createdAt],
+    );
+    return saved;
+  }
+
+  /** Renaming is the only edit: the address is what was saved. */
+  async renameSavedView(email: string, id: string, label: string): Promise<boolean> {
+    const res = await this.db.run(
+      `UPDATE saved_views SET label = ? WHERE id = ? AND email = ?`,
+      [label, id, email.toLowerCase()],
+    );
+    return (res.changes ?? 0) > 0;
+  }
+
+  /** Scoped by email as well as id, so nobody can delete somebody else's. */
+  async dropSavedView(email: string, id: string): Promise<boolean> {
+    const res = await this.db.run(`DELETE FROM saved_views WHERE id = ? AND email = ?`, [
+      id,
+      email.toLowerCase(),
+    ]);
+    return (res.changes ?? 0) > 0;
   }
 
   // --- Notes -------------------------------------------------------------

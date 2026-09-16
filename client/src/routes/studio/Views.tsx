@@ -141,7 +141,11 @@ export default function Views() {
                     >
                       <Icon name="copy" /> Duplicate
                     </button>
-                    <button className="btn danger" onClick={() => void remove(view)}>
+                    <button
+                      className="btn danger"
+                      onClick={() => void remove(view)}
+                      aria-label={`Remove the view ${view.label}`}
+                    >
                       <Icon name="trash" />
                     </button>
                   </div>

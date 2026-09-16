@@ -163,7 +163,11 @@ export default function Connections() {
                     <button className="btn" onClick={() => setEditing(connection.id)}>
                       <Icon name="edit" /> Edit
                     </button>
-                    <button className="btn danger" onClick={() => void remove(connection)}>
+                    <button
+                      className="btn danger"
+                      onClick={() => void remove(connection)}
+                      aria-label={`Remove the connection ${connection.label}`}
+                    >
                       <Icon name="trash" />
                     </button>
                   </div>

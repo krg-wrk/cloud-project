@@ -135,6 +135,21 @@ export interface ResearchLink {
 }
 
 /**
+ * A filtered page somebody named so they can come back to it.
+ *
+ * Only an address and a label — never a copy of the rows. A saved view opens
+ * whatever is true today, which is the difference between this and the
+ * spreadsheet tab somebody keeps beside it.
+ */
+export interface SavedView {
+  id: string;
+  label: string;
+  /** Path and query, relative: "/deadlines?vertical=Womenswear&status=at-risk". */
+  path: string;
+  createdAt: string;
+}
+
+/**
  * A published trend profile, as the TFDB sheet holds it.
  *
  * The sheet is Snowflake-linked and read-only here: the profile itself is

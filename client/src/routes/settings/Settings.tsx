@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { useApi } from "../../lib/api";
+import { send, useApi } from "../../lib/api";
 import { Slot } from "../../lib/custom";
 import { Icon } from "../../lib/icons";
 import { announceAccountChange, useViewer } from "../../lib/viewer";
@@ -9,6 +10,7 @@ import type { Me } from "../../types";
 import AlertSettings from "./Alerts";
 import Photo from "./Photo";
 import PageIntro from "../../components/PageIntro";
+import { announceSavedChange, useSavedViews } from "../../components/SaveView";
 
 /**
  * Everything a person can set for themselves, on one page.
@@ -33,6 +35,7 @@ const ROLE_LABELS: Record<Me["role"], string> = {
 const SECTIONS = [
   { id: "you", label: "You" },
   { id: "alerts", label: "Alerts" },
+  { id: "saved", label: "Saved views" },
   { id: "look", label: "How it looks" },
   { id: "calendar", label: "Your calendar" },
 ];
@@ -140,6 +143,13 @@ export default function Settings() {
         <AlertSettings />
       </section>
 
+      <section className="settings-section" id="saved">
+        <div className="section-head">
+          <h2>Saved views</h2>
+        </div>
+        <SavedViews />
+      </section>
+
       <section className="settings-section" id="look">
         <div className="section-head">
           <h2>How it looks</h2>
@@ -213,5 +223,63 @@ export default function Settings() {
         </div>
       </section>
     </>
+  );
+}
+
+/**
+ * Every filtered page this person has named, in one place.
+ *
+ * The star beside a page is where saving happens; this is where a list of
+ * forty of them gets tidied. Removing is the only action here — renaming
+ * belongs beside the thing being renamed, where you can see what it holds.
+ */
+function SavedViews() {
+  const saved = useSavedViews();
+  const [busy, setBusy] = useState("");
+  const rows = saved.data ?? [];
+
+  if (rows.length === 0) {
+    return (
+      <div className="card">
+        <p className="studio-note">
+          None yet. Filter any list — the deadlines, the calendar, a view built in the studio —
+          and press <b>Save this view</b> beside it. What gets saved is the address rather than
+          the rows, so it opens whatever is true on the day you come back.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card">
+      <ul className="saved-rows">
+        {rows.map((v) => (
+          <li key={v.id}>
+            <Link to={v.path} className="saved-row-link">
+              <Icon name="score" size={13} />
+              <span>
+                <b>{v.label}</b>
+                <small>{v.path}</small>
+              </span>
+            </Link>
+            <button
+              className="btn small danger"
+              disabled={busy === v.id}
+              onClick={async () => {
+                setBusy(v.id);
+                try {
+                  await send(`/saved-views/${v.id}`, "DELETE");
+                  announceSavedChange();
+                } finally {
+                  setBusy("");
+                }
+              }}
+            >
+              Remove
+            </button>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

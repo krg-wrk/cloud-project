@@ -8594,3 +8594,161 @@ a.inbox-title:hover {
   white-space: pre;
   resize: vertical;
 }
+
+/* --- Saving a filtered view -----------------------------------------------
+ *
+ * A named address, so the menu is small on purpose: name it, or go to one you
+ * named before. Anything more belongs in Settings, where the whole list is.
+ * -------------------------------------------------------------------------- */
+
+.saveview {
+  position: relative;
+  display: inline-flex;
+}
+
+/* Saved: the star fills in. The icons are stroke-only by default, so this is
+   the one place that turns one solid. */
+.saveview .btn.on .icon {
+  fill: currentColor;
+  color: var(--accent);
+}
+
+.saveview-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 40;
+  width: 300px;
+  padding: 13px 14px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-card);
+  background: var(--paper);
+  box-shadow: var(--shadow-lift);
+  text-align: left;
+}
+
+.saveview-form {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.saveview-form input {
+  width: 100%;
+}
+
+.saveview-actions {
+  display: flex;
+  gap: 7px;
+}
+
+/* The address itself, so it reads as a link rather than a copy of the rows. */
+.saveview-path {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.45;
+  color: var(--ink-45);
+  overflow-wrap: anywhere;
+}
+
+.saveview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin-top: 13px;
+  padding-top: 11px;
+  border-top: 1px solid var(--rule);
+}
+
+.saveview-list .eyebrow {
+  margin-bottom: 4px;
+}
+
+.saveview-link {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 7px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.saveview-link:hover {
+  background: var(--sunken);
+  color: var(--accent);
+}
+
+.saveview-link .icon {
+  flex: none;
+  fill: currentColor;
+  color: var(--accent-soft);
+}
+
+.saveview-link span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The whole list of them, in Settings. */
+.saved-rows {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.saved-rows li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.saved-rows li:first-child {
+  border-top: none;
+  padding-top: 0;
+}
+
+.saved-row-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+}
+
+.saved-row-link:hover b {
+  color: var(--accent);
+}
+
+.saved-row-link .icon {
+  flex: none;
+  fill: currentColor;
+  color: var(--accent-soft);
+}
+
+.saved-row-link span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.saved-row-link b {
+  font-weight: 500;
+  font-size: 13.5px;
+}
+
+.saved-row-link small {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--ink-45);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
