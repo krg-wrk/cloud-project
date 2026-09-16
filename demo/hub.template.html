@@ -14461,6 +14461,11 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
                         v.state === "live" ? "Unpublish" : "Publish"
                       }</button>
                       <button class="toggle" data-view-edit="${v.id}">${icon("edit", 14)}Edit</button>
+                      <button class="toggle" data-view-dup="${v.id}"
+                        title="Copy this view as a draft and open it">${icon(
+                          "copy",
+                          14,
+                        )}Duplicate</button>
                       <button class="toggle danger" data-view-del="${v.id}">${icon("trash", 14)}</button>
                     </div>
                   </div>
@@ -19510,6 +19515,36 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
         render();
       }),
     );
+    /*
+     * Copy, then open the copy.
+     *
+     * Duplicating is never the goal — changing the thing you duplicated is —
+     * so landing back on the list would only mean one more click. The copy
+     * takes everything except identity: a free address, a label saying it is
+     * a copy, and the draft state, because a duplicate that went live the
+     * moment it was made would put an unfinished view in everybody's menu.
+     */
+    view.querySelectorAll("[data-view-dup]").forEach((el) =>
+      el.addEventListener("click", () => {
+        const source = views.get(el.dataset.viewDup);
+        if (!source) return;
+        const used = new Set([...views.values()].map((v) => v.slug));
+        let label = `${source.label} copy`;
+        for (let n = 2; used.has(slugify(label)); n++) label = `${source.label} copy ${n}`;
+        const id = `view-${Date.now().toString(36)}`;
+        saveStudio("studioViews", views, id, {
+          ...source,
+          id,
+          label,
+          slug: slugify(label),
+          order: (source.order ?? 0) + 1,
+          state: "draft",
+        });
+        startBuilder(id);
+        go(`/studio/views?build=${id}`);
+      }),
+    );
+
     view.querySelectorAll("[data-view-del]").forEach((el) =>
       el.addEventListener("click", () => {
         dropStudio("studioViews", views, el.dataset.viewDel);
@@ -19523,6 +19558,11 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       el.addEventListener(el.tagName === "SELECT" ? "change" : "input", () => {
         builder[el.dataset.b] = el.value;
         if (el.tagName === "SELECT") render();
+        // Typing does not re-render — that would fight the keystroke — so the
+        // one thing a keystroke can change about the rest of the form is
+        // updated by hand. Without this, naming a view left Create greyed out
+        // until you happened to touch a dropdown, which reads as broken.
+        else refreshBuilderSave();
       }),
     );
     view.querySelectorAll("[data-b-dataset]").forEach((el) =>
@@ -19638,6 +19678,12 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
           .filter((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
       }),
     );
+    /** Whether the view can be created yet, without redrawing the form. */
+    function refreshBuilderSave() {
+      const save = view.querySelector("[data-b-save]");
+      if (save && builder) save.disabled = !(builder.label ?? "").trim() || !builder.datasetId;
+    }
+
     view.querySelectorAll("[data-b-cancel]").forEach((el) =>
       el.addEventListener("click", () => {
         builder = null;

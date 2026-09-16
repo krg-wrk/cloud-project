@@ -40,6 +40,22 @@ export default function Views() {
     }
   }
 
+  /**
+   * Copy, then open the copy.
+   *
+   * Duplicating is never the goal — changing the thing you duplicated is — so
+   * landing on the list with a new row on it would only mean one more click.
+   */
+  async function duplicate(view: ViewDef) {
+    try {
+      const copy = (await send(`/studio/views/${view.id}/duplicate`, "POST")) as ViewDef;
+      views.reload();
+      setEditing(copy.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "It could not be copied.");
+    }
+  }
+
   if (editing === "new" || (editing && rows.some((v) => v.id === editing))) {
     return (
       <ViewBuilder
@@ -117,6 +133,13 @@ export default function Views() {
                     </button>
                     <button className="btn" onClick={() => setEditing(view.id)}>
                       <Icon name="edit" /> Edit
+                    </button>
+                    <button
+                      className="btn"
+                      onClick={() => void duplicate(view)}
+                      title="Copy this view as a draft and open it"
+                    >
+                      <Icon name="copy" /> Duplicate
                     </button>
                     <button className="btn danger" onClick={() => void remove(view)}>
                       <Icon name="trash" />

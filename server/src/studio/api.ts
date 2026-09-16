@@ -584,6 +584,56 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
     );
   });
 
+  /**
+   * A view, copied.
+   *
+   * Most views are a variation on one that already exists — the same sheet
+   * cut for a different vertical, the same columns with one filter changed —
+   * and rebuilding that by hand is ten fields of retyping with a typo in one
+   * of them. The copy takes everything except identity: a free slug, a label
+   * saying it is a copy, and the draft state, because a duplicate that went
+   * live the moment it was made would put an unfinished view in everybody's
+   * sidebar.
+   */
+  router.post("/studio/views/:id/duplicate", async (req: ViewerRequest, res) => {
+    const viewer = requireAdmin(req, res);
+    if (!viewer) return;
+    const source = await studio.view(req.params.id);
+    if (!source) {
+      res.status(404).json({ error: "No view with that id." });
+      return;
+    }
+
+    const named = await copyName(source.label, async (slug) =>
+      !RESERVED_SLUGS.has(slug) && (await studio.slugFree(slug, undefined)),
+    );
+    if (!named) {
+      res.status(409).json({ error: "Too many copies of that view already." });
+      return;
+    }
+    const { label, slug } = named;
+
+    res.status(201).json(
+      await studio.createView(
+        {
+          slug,
+          label,
+          icon: source.icon,
+          section: source.section,
+          // Straight after the one it came from, so it lands where it is
+          // expected rather than at the foot of the group.
+          order: source.order + 1,
+          datasetId: source.datasetId,
+          description: source.description,
+          spec: source.spec,
+          audience: source.audience,
+          state: "draft",
+        },
+        viewer.email,
+      ),
+    );
+  });
+
   router.put("/studio/views/:id", async (req: ViewerRequest, res) => {
     const viewer = requireAdmin(req, res);
     if (!viewer) return;
@@ -684,6 +734,33 @@ export function createStudioRouter(studio: StudioStore, data: DataSource): Route
   }
 
   return router;
+}
+
+/**
+ * What to call a copy, and where to put it.
+ *
+ * "Deadlines copy", then "Deadlines copy 2", then "copy 3" — counting rather
+ * than refusing, so pressing Duplicate twice does the obvious thing instead
+ * of returning an error about a slug. The label and the address are derived
+ * from each other so they never disagree.
+ *
+ * `isFree` is passed in rather than reached for, which is what makes this
+ * testable without a database: the rule being tested is the counting, not
+ * the storage.
+ *
+ * Gives up after fifty, at which point somebody is holding a key down.
+ */
+export async function copyName(
+  label: string,
+  isFree: (slug: string) => Promise<boolean>,
+  limit = 50,
+): Promise<{ label: string; slug: string } | null> {
+  for (let n = 1; n <= limit; n++) {
+    const next = n === 1 ? `${label} copy` : `${label} copy ${n}`;
+    const slug = slugify(next);
+    if (await isFree(slug)) return { label: next, slug };
+  }
+  return null;
 }
 
 function readSettings(raw: unknown): Record<string, string> {
