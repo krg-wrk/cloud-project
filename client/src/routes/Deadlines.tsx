@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { query, useApi } from "../lib/api";
 import { Slot, useCustom } from "../lib/custom";
@@ -5,12 +6,13 @@ import { useRemembered } from "../lib/remember";
 import { TODAY, formatShort, relativeDays } from "../lib/date";
 import { STATUS_LABELS, STATUS_ORDER, isOverdue, personName } from "../lib/domain";
 import { useViewer } from "../lib/viewer";
-import type { ContentItem, Person, Taxonomy } from "../types";
+import type { BulkResult, ContentItem, Person, Taxonomy } from "../types";
 import type { ReactNode } from "react";
 import { ErrorNote, Loading, StatusPill, Who } from "../components/bits";
 import ShareLink from "../components/ShareLink";
 import SaveView from "../components/SaveView";
 import ExportButton from "../components/ExportButton";
+import BulkSchedule, { BulkResultNote } from "../components/BulkSchedule";
 import PageIntro from "../components/PageIntro";
 
 /** Columns that hold a figure or a date, so they set in the mono face. */
@@ -50,7 +52,28 @@ export default function Deadlines() {
     dateField: "submissionDate" as const,
   };
 
-  const { data, error, loading } = useApi<ContentItem[]>(`/content${query(filters)}`);
+  const { data, error, loading, reload } = useApi<ContentItem[]>(`/content${query(filters)}`);
+
+  /*
+   * What is ticked, for changing several deadlines at once.
+   *
+   * A Set of ids rather than a flag on each row, so re-reading the schedule
+   * after a write does not lose the selection — and so a row that the filters
+   * have since moved out of view cannot stay silently ticked: the bar only
+   * ever sends the ids that are still on screen.
+   */
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  /*
+   * How the last bulk change went, held here rather than in the bar.
+   *
+   * The bar goes when the selection does, and the selection goes as soon as
+   * the change lands — those rows are done. But a change to a submission date
+   * changes what the table is sorted by, so the rows just written have often
+   * moved, sometimes off the page. The report is the only evidence left, so
+   * it stays until it is dismissed.
+   */
+  const [result, setResult] = useState<BulkResult | null>(null);
+  const canPick = me.canWriteSchedule;
 
   function setParam(name: string, value: string) {
     const next = new URLSearchParams(params);
@@ -64,6 +87,19 @@ export default function Deadlines() {
   const rows = data ?? [];
   const upcoming = rows.filter((r) => r.submissionDate >= TODAY);
   const columns = custom.group("deadlines.column");
+
+  // Only what is both ticked and still listed. A filter changed after ticking
+  // should narrow what happens, not hide rows that are about to be written.
+  const selected = canPick ? rows.filter((r) => picked.has(r.id)).map((r) => r.id) : [];
+  const allShown = rows.length > 0 && selected.length === rows.length;
+
+  function toggle(id: string) {
+    setPicked((was) => {
+      const next = new Set(was);
+      if (!next.delete(id)) next.add(id);
+      return next;
+    });
+  }
 
   return (
     <>
@@ -176,6 +212,23 @@ export default function Deadlines() {
         </div>
       </div>
 
+      {/*
+        The bar appears once something is ticked rather than sitting empty
+        above the table, so a page nobody is editing looks exactly as it did.
+      */}
+      {selected.length > 0 && (
+        <BulkSchedule
+          ids={selected}
+          onClear={() => setPicked(new Set())}
+          onApplied={(got) => {
+            setResult(got);
+            setPicked(new Set());
+            reload();
+          }}
+        />
+      )}
+      {result && <BulkResultNote result={result} onDismiss={() => setResult(null)} />}
+
       {loading || !data ? (
         <Loading what="deadlines" />
       ) : rows.length === 0 ? (
@@ -190,6 +243,20 @@ export default function Deadlines() {
           <table className="schedule">
             <thead>
               <tr>
+                {canPick && (
+                  <th scope="col" className="pick">
+                    <input
+                      type="checkbox"
+                      checked={allShown}
+                      aria-label={
+                        allShown ? "Clear the selection" : `Select all ${rows.length} forecasts`
+                      }
+                      onChange={() =>
+                        setPicked(allShown ? new Set() : new Set(rows.map((r) => r.id)))
+                      }
+                    />
+                  </th>
+                )}
                 {columns.map((slot) => (
                   <th scope="col" key={slot.id} className={NUMERIC.has(slot.id) ? "num" : undefined}>
                     <Slot id={slot.id} />
@@ -228,7 +295,19 @@ export default function Deadlines() {
                   "deadlines.column.status": <StatusPill status={item.status} />,
                 };
                 return (
-                  <tr key={item.id}>
+                  <tr key={item.id} className={picked.has(item.id) ? "picked" : undefined}>
+                    {canPick && (
+                      <td className="pick">
+                        <input
+                          type="checkbox"
+                          checked={picked.has(item.id)}
+                          // Named, because a column of unlabelled boxes is a
+                          // column of "checkbox, checkbox, checkbox" read aloud.
+                          aria-label={`Select ${item.title}`}
+                          onChange={() => toggle(item.id)}
+                        />
+                      </td>
+                    )}
                     {columns.map((slot) => (
                       <td
                         key={slot.id}

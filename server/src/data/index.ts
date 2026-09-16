@@ -17,6 +17,10 @@ import { SmartsheetSource } from "./smartsheetSource.js";
  * SMARTSHEET_WRITE=1      also lets commissioning managers change five
  *   columns of the commissioning sheet from the Hub. Off by default: this is
  *   the only thing the Hub does that edits somebody else's system.
+ *
+ * SEED_WRITES=1           turns the same screens on against the sample data,
+ *   for developing them without a Smartsheet token. Nothing leaves the
+ *   process and nothing survives a restart. Ignored unless DATA_SOURCE=seed.
  */
 export function createDataSource(): DataSource {
   const kind = process.env.DATA_SOURCE ?? "seed";

@@ -4,6 +4,7 @@ import type {
   CalendarEvent,
   DirectoryPerson,
   ContentItem,
+  ContentWriter,
   DataSource,
   KnowledgeSession,
   MetricDefinition,
@@ -24,6 +25,7 @@ import {
   signUps,
   trends,
 } from "./seed.js";
+import { SeedContentWriter } from "./seedWriter.js";
 
 /**
  * In-memory data source used for the POC and for local development, so the Hub
@@ -31,6 +33,26 @@ import {
  */
 export class SeedSource implements DataSource {
   readonly name = "seed";
+  readonly writes?: ContentWriter;
+
+  /**
+   * Writing is off unless it is asked for, even here.
+   *
+   * The seed source is what a Hub falls back to when nothing else is
+   * configured, so a deployment that had lost its Smartsheet settings would
+   * otherwise start offering managers a Change button that edited a copy of
+   * the sample data and threw it away on restart. `SEED_WRITES=1` is somebody
+   * saying they want the local version of that on purpose.
+   *
+   * The rows need addressing before they can be written, and seed rows have
+   * no sheet behind them — so each stands in as its own row id. The real
+   * source gets these from Smartsheet.
+   */
+  constructor() {
+    if (process.env.SEED_WRITES !== "1") return;
+    for (const item of content) item.sourceRowId ??= item.id;
+    this.writes = new SeedContentWriter(content);
+  }
 
   async listPeople(): Promise<Person[]> {
     return people;

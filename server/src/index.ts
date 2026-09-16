@@ -69,6 +69,10 @@ if (source instanceof SmartsheetSource) {
     );
     writeTarget = "off — the sheet could not be opened";
   }
+} else if (source.writes) {
+  // The seed source's stand-in, under SEED_WRITES=1. It names itself as
+  // something obviously not real, and that is what the line should say.
+  writeTarget = source.writes.target;
 }
 
 /*

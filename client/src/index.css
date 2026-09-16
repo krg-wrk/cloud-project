@@ -5407,6 +5407,149 @@ a.view-row:hover {
   font-size: 12.5px;
 }
 
+/* ---- Changing several rows at once ---------------------------------------
+ *
+ * The bar sits between the filters and the table, where the selection it
+ * describes is. It only exists while something is ticked, so it is styled as
+ * something that arrived rather than as part of the page furniture.
+ * -------------------------------------------------------------------------- */
+
+.bulk {
+  margin: 0 0 14px;
+  padding: 13px 15px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent-wash);
+}
+
+.bulk-bar {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.bulk-count {
+  /* Aligned with the boxes beside it rather than with their labels. */
+  padding-bottom: 7px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.bulk-bar .field {
+  min-width: 150px;
+}
+
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 1px;
+}
+
+.bulk-hint {
+  margin: 9px 0 0;
+}
+
+.bulk-confirm {
+  margin-top: 13px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+
+/* The report stands alone once the selection is gone, so it carries no form. */
+.bulk-result .sched-done {
+  align-items: baseline;
+  margin: 0;
+}
+
+.bulk-result .btn.small {
+  margin-left: auto;
+}
+
+.bulk-result .bulk-rows {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
+.bulk-rows {
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  /*
+   * Fifty rows is the cap, and fifty rows of confirmation is a page somebody
+   * scrolls past rather than reads. Capped at about eight rows tall so the
+   * Apply button stays where the eye already is.
+   */
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.bulk-rows li {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 12.5px;
+}
+
+.bulk-rows b {
+  min-width: 190px;
+  font-weight: 500;
+}
+
+.bulk-rows li.bad b {
+  color: var(--status-at-risk);
+}
+
+.bulk-same {
+  opacity: 0.6;
+}
+
+.bulk-cells {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px 14px;
+  color: var(--ink-45);
+}
+
+.bulk-cell {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+/* The arrow points the way the change goes, as in the single-row panel. */
+.bulk-cell .icon {
+  transform: rotate(180deg);
+  color: var(--ink-45);
+}
+
+/* The tick column: as narrow as a box, and not a heading anybody reads. */
+th.pick,
+td.pick {
+  width: 30px;
+  padding-right: 0;
+}
+
+td.pick input,
+th.pick input {
+  cursor: pointer;
+  accent-color: var(--accent);
+}
+
+/*
+ * A ticked row, marked on the row itself so it is still obvious once the
+ * checkbox has scrolled out of the left of a wide table.
+ */
+tr.picked > td {
+  background: var(--accent-wash);
+}
+
 .sched-log li.bad {
   color: var(--status-at-risk);
 }

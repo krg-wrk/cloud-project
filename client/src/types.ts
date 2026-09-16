@@ -120,6 +120,12 @@ export interface Me {
   person?: Person;
   seesWholeTeam: boolean;
   aiNotes: boolean;
+  /**
+   * Whether changing the sheet is worth offering at all. Says nothing about
+   * a particular row — the server checks each one — so it only decides
+   * whether the selection controls are drawn.
+   */
+  canWriteSchedule: boolean;
   calendarFeed: string | null;
 }
 
@@ -730,6 +736,40 @@ export interface SchedulePreview {
   /** Fields the server would not accept, and why. */
   refused: string[];
   expect: Record<string, string>;
+}
+
+/** One selected row, as the bulk preview describes it. */
+export interface BulkRow {
+  id: string;
+  title: string;
+  changes?: CellChange[];
+  /** Set when the row already says all of it, so there is nothing to do. */
+  already?: boolean;
+  /** Set instead of `changes` when this row may not be changed, and why. */
+  problem?: string;
+  expect?: Record<string, string>;
+}
+
+/** What changing several rows at once would do. Writes nothing. */
+export interface BulkPreview {
+  target: string | null;
+  rows: BulkRow[];
+  willChange: number;
+  already: number;
+  blocked: number;
+}
+
+/**
+ * How it went, row by row.
+ *
+ * Three lists rather than a count, because a batch that half worked is the
+ * normal outcome — the sheet is written a row at a time — and the only honest
+ * report of it names which rows landed in which pile.
+ */
+export interface BulkResult {
+  done: { id: string; title: string; changed: number }[];
+  failed: { id: string; title: string; problem: string }[];
+  already: { id: string; title: string }[];
 }
 
 /* ---- How fresh the data is ----------------------------------------------- */

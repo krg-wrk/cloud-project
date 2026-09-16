@@ -374,7 +374,7 @@ function statusOptionFor(
 }
 
 /** What to write when the column has no picklist to choose from. */
-const STATUS_LABELS: Record<Status, string> = {
+export const STATUS_LABELS: Record<Status, string> = {
   "not-started": "Not Started",
   "in-progress": "In Progress",
   submitted: "Submitted",

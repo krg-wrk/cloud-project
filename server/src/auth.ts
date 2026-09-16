@@ -107,6 +107,18 @@ export function canWriteSchedule(viewer: Viewer, item: ContentItem): boolean {
 }
 
 /**
+ * Whether changing the sheet is worth offering this person at all.
+ *
+ * Deliberately weaker than `canWriteSchedule`: it knows nothing about a
+ * particular row, so it can only say "a manager, so some rows". It decides
+ * whether the client draws the controls. Every row still goes through
+ * `canWriteSchedule` on the server, so a yes here buys nothing.
+ */
+export function mayWriteSomeSchedule(viewer: Viewer): boolean {
+  return viewer.active && isManager(viewer);
+}
+
+/**
  * A trend profile belongs to one forecaster, and may credit others. They own
  * what the Hub holds against it — the note, the links, the cover image — as
  * does an admin, and a manager whose verticals overlap the industries the
