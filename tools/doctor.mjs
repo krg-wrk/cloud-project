@@ -21,13 +21,25 @@
  */
 
 import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { join } from "node:path";
 
-const root = new URL("..", import.meta.url).pathname;
-const ok = (s) => `\x1b[32m${s}\x1b[0m`;
-const bad = (s) => `\x1b[31m${s}\x1b[0m`;
-const dim = (s) => `\x1b[2m${s}\x1b[0m`;
-const warn = (s) => `\x1b[33m${s}\x1b[0m`;
+// `.pathname` is a URL path, not a filesystem one: a folder called
+// "OneDrive - WGSN" arrives percent-encoded and nothing resolves.
+const root = fileURLToPath(new URL("..", import.meta.url));
+/*
+ * Colour, only when somebody is looking at a terminal.
+ *
+ * This output is meant to be pasted into a ticket or a message when something
+ * is wrong, and escape codes in a paste are unreadable. NO_COLOR is the
+ * convention; a pipe is the other half of it.
+ */
+const colour = process.stdout.isTTY && !process.env.NO_COLOR;
+const paint = (code) => (s) => (colour ? `\x1b[${code}m${s}\x1b[0m` : s);
+const ok = paint(32);
+const bad = paint(31);
+const dim = paint(2);
+const warn = paint(33);
 
 let problems = 0;
 const say = (mark, label, note = "") => console.log(`  ${mark} ${label}${note ? dim(` — ${note}`) : ""}`);
@@ -113,7 +125,17 @@ if (source !== "smartsheet") {
         continue;
       }
       if (!/^\d{6,25}$/.test(id.trim())) {
-        fail(label, `"${id}" is not a sheet id — it should be a long number`);
+        /*
+          Never echoed back.
+
+          A sheet id is digits, and a Smartsheet token is not — so the one
+          thing that reliably lands here is somebody pasting their token into
+          a sheet-id line by mistake. Printing "that is not a sheet id" with
+          the value attached would put a live credential in the output whose
+          whole purpose is to be pasted into a ticket. Its shape is enough to
+          recognise the mistake.
+        */
+        fail(label, `not a sheet id — ${shapeOf(id)}. It should be a long number, 6 to 25 digits`);
         continue;
       }
       if (!token) continue;
@@ -145,9 +167,17 @@ if (!gemini) {
   idle("AI note drafting", "no GEMINI_API_KEY — the button says so rather than hiding");
 } else {
   const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
-  const res = await ask(
-    `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(gemini)}`,
-  );
+  /*
+    The key goes in a header, not the query string.
+
+    Google accepts either, and `?key=` is the one that ends up in a proxy's
+    access log — a managed laptop inspecting TLS records the method and URL as
+    a matter of course, and does not record headers. server/src/ai.ts already
+    sends it as x-goog-api-key; this had been the one place that did not.
+  */
+  const res = await ask("https://generativelanguage.googleapis.com/v1beta/models", undefined, {
+    "x-goog-api-key": gemini,
+  });
   if (res.ok) good(`Gemini ${tail(gemini)}`, `answering — model ${model}`);
   else fail(`Gemini ${tail(gemini)}`, res.why);
 }
@@ -195,18 +225,54 @@ if (problems === 0) {
  * Never throws: a doctor that dies on the first unreachable host cannot
  * report on the nine things after it.
  */
-async function ask(url, token) {
+async function ask(url, token, extra = {}) {
   try {
     const res = await fetch(url, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extra },
       signal: AbortSignal.timeout(12_000),
     });
     if (res.ok) return { ok: true, body: await res.json().catch(() => ({})) };
     return { ok: false, why: reason(res.status, res.statusText) };
   } catch (err) {
-    const why = err instanceof Error ? err.message : "the request failed";
-    return { ok: false, why: `could not be reached — ${why}` };
+    return { ok: false, why: unreachable(err, url) };
   }
+}
+
+/**
+ * Why a request never got an answer, in words worth reading.
+ *
+ * "fetch failed" is what Node says for a wrong hostname, a firewall, a proxy
+ * and a captive portal alike, and it tells nobody anything. The cause is one
+ * level down, and the host is worth naming because the usual answer is that a
+ * VPN is off or a proxy is in the way.
+ */
+function unreachable(err, url) {
+  const code = err?.cause?.code ?? err?.code;
+  const where = hostOf(url);
+  if (err?.name === "TimeoutError") return `${where} did not answer within 12 seconds`;
+  if (code === "ENOTFOUND") return `${where} could not be found — check the address, a VPN, or DNS`;
+  if (code === "ECONNREFUSED") return `${where} refused the connection`;
+  if (code === "CERT_HAS_EXPIRED" || code === "UNABLE_TO_VERIFY_LEAF_SIGNATURE") {
+    return `${where} presented a certificate this machine will not accept — usually a proxy`;
+  }
+  if (code) return `${where} could not be reached — ${code}`;
+  return `${where} could not be reached — ${err instanceof Error ? err.message : "the request failed"}`;
+}
+
+/**
+ * A value's shape, for saying "that is not a sheet id" without repeating it.
+ *
+ * The thing most likely to be in the wrong box is a credential, so this says
+ * how long it is and roughly what it is made of, and never what it says.
+ */
+function shapeOf(value) {
+  const v = String(value).trim();
+  const kind = /^\d+$/.test(v)
+    ? "digits"
+    : /^[A-Za-z0-9]+$/.test(v)
+      ? "letters and digits"
+      : "mixed characters";
+  return `${v.length} ${kind}`;
 }
 
 /** A status code in words somebody can act on. */

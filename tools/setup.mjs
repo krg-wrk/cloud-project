@@ -13,14 +13,26 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { copyFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 
-const root = new URL("..", import.meta.url).pathname;
-const ok = (s) => `\x1b[32m${s}\x1b[0m`;
-const bad = (s) => `\x1b[31m${s}\x1b[0m`;
-const dim = (s) => `\x1b[2m${s}\x1b[0m`;
-const bold = (s) => `\x1b[1m${s}\x1b[0m`;
+// `.pathname` is a URL path, not a filesystem one: a folder called
+// "OneDrive - WGSN" arrives percent-encoded and nothing resolves.
+const root = fileURLToPath(new URL("..", import.meta.url));
+/*
+ * Colour, only when somebody is looking at a terminal.
+ *
+ * This output is meant to be pasted into a ticket or a message when something
+ * is wrong, and escape codes in a paste are unreadable. NO_COLOR is the
+ * convention; a pipe is the other half of it.
+ */
+const colour = process.stdout.isTTY && !process.env.NO_COLOR;
+const paint = (code) => (s) => (colour ? `\x1b[${code}m${s}\x1b[0m` : s);
+const ok = paint(32);
+const bad = paint(31);
+const dim = paint(2);
+const bold = paint(1);
 
 console.log(`\n${bold("Setting up the Forecasters Hub")}\n`);
 

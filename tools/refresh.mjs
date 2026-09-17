@@ -19,30 +19,67 @@
  */
 
 import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 
-const root = new URL("..", import.meta.url).pathname;
-const ok = (s) => `\x1b[32m${s}\x1b[0m`;
-const bad = (s) => `\x1b[31m${s}\x1b[0m`;
-const dim = (s) => `\x1b[2m${s}\x1b[0m`;
-const bold = (s) => `\x1b[1m${s}\x1b[0m`;
+// `.pathname` is a URL path, not a filesystem one: a folder called
+// "OneDrive - WGSN" arrives percent-encoded and nothing resolves.
+const root = fileURLToPath(new URL("..", import.meta.url));
+/*
+ * Colour, only when somebody is looking at a terminal.
+ *
+ * This output is meant to be pasted into a ticket or a message when something
+ * is wrong, and escape codes in a paste are unreadable. NO_COLOR is the
+ * convention; a pipe is the other half of it.
+ */
+const colour = process.stdout.isTTY && !process.env.NO_COLOR;
+const paint = (code) => (s) => (colour ? `\x1b[${code}m${s}\x1b[0m` : s);
+const ok = paint(32);
+const bad = paint(31);
+const dim = paint(2);
+const bold = paint(1);
 
 console.log(`\n${bold("Bringing this copy up to date")}\n`);
 
 /* 1. Is there anything here that would be lost? ---------------------------- */
 
-const dirty = run("git", ["status", "--porcelain"]).stdout.trim();
+const status = run("git", ["status", "--porcelain"]);
+if (status.status !== 0) {
+  // "git printed nothing" and "git could not run" look identical otherwise,
+  // and the second one would be read as a clean tree.
+  console.error(`${bad("✗")} git could not read this folder.\n`);
+  console.error(dim(`  ${(status.stderr || "").trim() || "Is this a git repository?"}\n`));
+  process.exit(1);
+}
+const dirty = status.stdout.trim();
 if (dirty) {
   console.error(`${bad("✗")} This copy has changes that are not committed:\n`);
   for (const line of dirty.split("\n").slice(0, 20)) console.error(`    ${line}`);
   if (dirty.split("\n").length > 20) console.error(dim(`    …and more`));
-  console.error(`\n  Nothing has been changed. Commit or stash them first:\n`);
-  console.error(`    ${bold("git stash -u")}   ${dim("put them aside")}`);
-  console.error(`    ${bold("npm run refresh")}`);
-  console.error(`    ${bold("git stash pop")}  ${dim("bring them back")}\n`);
+  /*
+    Committing is offered first, and stashing is not offered at all.
+
+    `git stash -u` takes untracked files off disk, and the `pop` that brings
+    them back would sit behind an install, a build and a test run here — any
+    of which can stop, leaving somebody's work in a stash they were not
+    expecting and did not ask for. A commit is the reversible one.
+  */
+  console.error(`\n  Nothing has been changed. Commit them first:\n`);
+  console.error(`    ${bold('git add -A && git commit -m "work in progress"')}`);
+  console.error(`    ${bold("npm run refresh")}\n`);
+  console.error(dim("  If they are not worth keeping, `git restore .` discards them — but look\n"));
+  console.error(dim("  at the list above first, because that cannot be undone.\n"));
   process.exit(1);
 }
 
 const branch = run("git", ["rev-parse", "--abbrev-ref", "HEAD"]).stdout.trim();
+if (branch === "HEAD") {
+  // Detached: `origin/HEAD` would fast-forward something, report success, and
+  // leave the person still detached with their work going nowhere.
+  console.error(`${bad("✗")} This copy is not on a branch (detached HEAD).\n`);
+  console.error(`  Get back onto one first:\n`);
+  console.error(`    ${bold("git checkout claude/react-node-webapp-setup-oliu8m")}\n`);
+  process.exit(1);
+}
 const before = run("git", ["rev-parse", "HEAD"]).stdout.trim();
 console.log(`${ok("✓")} Nothing uncommitted ${dim(`— on ${branch}`)}`);
 

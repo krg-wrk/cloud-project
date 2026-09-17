@@ -1,8 +1,13 @@
 node_modules/
 dist/
 build/
+# Settings, including credentials. Every variant, not just the exact name:
+# a `.env.backup` or `.env.old` made while trying something out is the same
+# token in the same folder, and the pattern is what stops one being committed.
+# `env.example` has no leading dot and carries no real values, so it stays.
 .env
-.env.local
+.env.*
+*.env
 *.log
 .DS_Store
 *.tsbuildinfo
