@@ -201,11 +201,17 @@ function proofPointSample(every = 3) {
 const proofPoints = proofPointSample();
 
 /*
- * The first line of the page, which is the one that must not lie.
+ * The first line of the page, on the one build that needs one.
  *
- * A sample build says it is a sample. A live snapshot says whose data it is,
- * when it was taken, and that it is frozen — because somebody handed this
- * file next week will otherwise read a fortnight-old schedule as today's.
+ * A live snapshot says whose data it is, when it was taken, and that it is
+ * frozen — because somebody handed this file next week will otherwise read a
+ * fortnight-old schedule as today's. That is a safety label, not a caption,
+ * and it stays.
+ *
+ * The sample build has no banner. It used to explain that the data was made
+ * up and that the address bar was real, which is a caption for a page nobody
+ * was going to be walked through. It is demonstrated out loud instead, and
+ * the forty pixels go back to the work.
  */
 const banner = LIVE
   ? `<strong>Internal snapshot</strong><span>Real data from ${escapeHtml(sourceName)}, ` +
@@ -215,14 +221,15 @@ const banner = LIVE
         ? "It carries email addresses."
         : "Email addresses have been removed."
     } Do not share it outside WGSN.</span>`
-  : `<strong>Proof of concept</strong><span>Sample schedule, not live data. Two things are ` +
-    `real: the address bar below changes as you move around, and what you write &mdash; notes, ` +
-    `reminders, peer reviews, workshop sign-ups &mdash; saves and is visible to anyone else on ` +
-    `this page. Switch account at the bottom left to see the view follow whoever is signed ` +
-    `in.</span>`;
+  : null;
 
 const html = readFileSync(join(here, "hub.template.html"), "utf8")
-  .replace("__BANNER__", () => banner)
+  // The whole element goes when there is nothing to say, rather than leaving
+  // an empty black strip across the top of the page.
+  .replace(
+    '<div class="demo-note">__BANNER__</div>',
+    () => (banner ? `<div class="demo-note">${banner}</div>` : ""),
+  )
   .replace(
   "__SEED__",
   JSON.stringify({
