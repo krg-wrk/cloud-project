@@ -10,6 +10,8 @@ Roughly twenty minutes, most of it waiting for downloads.
 
 ## Step 1 — Node
 
+This is for the Hub itself, not for Claude Code — the two are separate.
+
 Open **Terminal** (macOS: ⌘-Space, type "terminal") and run:
 
 ```bash
@@ -30,18 +32,37 @@ Check again with `node --version`. You want 22 or higher.
 
 ## Step 2 — Claude Code
 
+Use the native installer. It keeps itself up to date, which the npm package
+does not.
+
+**macOS:**
+
 ```bash
-npm install -g @anthropic-ai/claude-code
+curl -fsSL https://claude.ai/install.sh | bash
 ```
 
-If macOS refuses with a permissions error, use `sudo npm install -g @anthropic-ai/claude-code`
-and enter your Mac password.
+**Windows** — PowerShell:
 
-Check it worked:
+```powershell
+irm https://claude.ai/install.ps1 | iex
+```
+
+Close and reopen Terminal, then check:
 
 ```bash
 claude --version
 ```
+
+**If that says "command not found" on a Mac**, the installer put it in
+`~/.local/bin` and your shell does not look there yet. Fix it once:
+
+```bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+> Do not install it with `sudo npm install -g`. It causes permission problems
+> that are tedious to undo, and the native installer above avoids them.
 
 ---
 
@@ -106,9 +127,13 @@ In the same folder:
 claude
 ```
 
+**The first time**, it opens a browser to sign in. Use the same account you use
+for Claude on the web.
+
 That opens a conversation with the project loaded. It reads `CLAUDE.md`
 automatically, so it starts knowing the architecture, the conventions and the
-traps — you do not need to re-explain the project.
+traps — you do not need to re-explain the project. Type `/context` in a session
+to see that it loaded.
 
 A good first message:
 
@@ -153,11 +178,12 @@ when a sheet will not read, and where everything lives.
 
 ## If you get stuck
 
-Run these two and paste what they print:
+Run these and paste what they print:
 
 ```bash
 node --version
-npm run doctor
+claude doctor      # Claude Code's own health check
+npm run doctor     # the Hub's — what it is pointed at
 ```
 
 Neither prints a credential. `doctor` shows tokens as `••••1234` and a database
