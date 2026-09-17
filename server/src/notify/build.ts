@@ -307,8 +307,13 @@ function digestNotices(world: World): Notice[] {
  * Rules are not here: they need the rules an admin wrote, which is not part
  * of the world the Hub reads from the sheet. They are built alongside in
  * `ruleNotices` and added to the same run.
+ *
+ * Mentions are not here either, and for a different reason. These three are
+ * answers to "what is true today", worked out by sweeping the world on a
+ * timer. A mention is an event — somebody wrote a name a second ago — and it
+ * is raised where it happens, in `notify/mentions.ts`, as the note is saved.
  */
-const BUILDERS: Record<Exclude<NoticeKind, "rule">, (world: World) => Notice[]> = {
+const BUILDERS: Record<Exclude<NoticeKind, "rule" | "mention">, (world: World) => Notice[]> = {
   digest: digestNotices,
   deadline: deadlineNotices,
   review: reviewNotices,

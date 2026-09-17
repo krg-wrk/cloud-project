@@ -6,6 +6,7 @@ import { personName } from "../lib/domain";
 import { useViewer } from "../lib/viewer";
 import type { ContentNote, Person } from "../types";
 import { Avatar } from "./bits";
+import MentionBox, { NoteBody } from "./MentionBox";
 
 interface NotesResponse {
   notes: ContentNote[];
@@ -42,18 +43,25 @@ export default function Notes({
   const [problem, setProblem] = useState<string>();
   const [editing, setEditing] = useState<string>();
   const [editBody, setEditBody] = useState("");
+  /** Who the last save reached, so an @ does not disappear silently. */
+  const [told, setTold] = useState<string[]>();
 
   async function save() {
     const body = draft.trim();
     if (!body) return;
     setBusy("save");
     setProblem(undefined);
+    setTold(undefined);
     try {
-      await send(`/content/${contentId}/notes`, "POST", {
-        body,
-        source: isAiDraft ? "ai" : "human",
-        model: aiModel,
-      });
+      // The server answers with whoever it managed to tell, so the composer
+      // can say so rather than leaving somebody wondering whether an @ did
+      // anything.
+      const saved = await send<ContentNote & { told?: string[] }>(
+        `/content/${contentId}/notes`,
+        "POST",
+        { body, source: isAiDraft ? "ai" : "human", model: aiModel },
+      );
+      setTold(saved.told ?? []);
       setDraft("");
       setIsAiDraft(false);
       setAiModel(undefined);
@@ -127,15 +135,15 @@ export default function Notes({
 
       {data?.canWrite && (
         <div className="note-composer">
-          <textarea
-            className="note-input"
+          <MentionBox
             rows={isAiDraft ? 10 : 3}
             /* The placeholder is a prompt, not a name: it goes as you type. */
-            aria-label="A note on this forecast"
-            placeholder="What are you thinking about this forecast? Angles, evidence to chase, anything the deadline makes tight."
+            label="A note on this forecast"
+            placeholder="What are you thinking about this forecast? Type @ to name somebody."
             value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
+            people={people}
+            onChange={(next) => {
+              setDraft(next);
               if (isAiDraft) setIsAiDraft(false);
             }}
           />
@@ -183,6 +191,12 @@ export default function Notes({
               </button>
             )}
           </div>
+
+          {told && told.length > 0 && (
+            <p className="studio-note" role="status">
+              {told.length === 1 ? `${told[0]} has been told.` : `${told.join(", ")} have been told.`}
+            </p>
+          )}
 
           {problem && <div className="callout warn">{problem}</div>}
         </div>
@@ -239,15 +253,17 @@ export default function Notes({
                 )}
               </header>
               {editing === note.id ? (
-                <textarea
-                  className="note-input"
+                <MentionBox
                   rows={6}
-                  aria-label="Edit this note"
+                  label="Edit this note"
                   value={editBody}
-                  onChange={(e) => setEditBody(e.target.value)}
+                  people={people}
+                  onChange={setEditBody}
                 />
               ) : (
-                <div className="note-body">{note.body}</div>
+                <div className="note-body">
+                  <NoteBody body={note.body} people={people} />
+                </div>
               )}
             </article>
           ))}

@@ -895,7 +895,14 @@ export interface ReviewQueue {
 /* ---- Notifications ------------------------------------------------------- */
 
 export type NoticeChannel = "inApp" | "email" | "chat";
-export type NoticeKind = "digest" | "deadline" | "review";
+/**
+ * Kept in step with the server's own list by hand, like the rest of this file.
+ *
+ * The Alerts page builds its grid from what the server sends rather than from
+ * this union, so a kind missing here does not hide a row — it only stops the
+ * compiler checking the key. "rule" was missing for exactly that reason.
+ */
+export type NoticeKind = "digest" | "deadline" | "review" | "rule" | "mention";
 
 /** One notice in the bell's inbox. */
 export interface Inboxed {

@@ -39,15 +39,16 @@ export const CHANNEL_LABELS: Record<Channel, string> = {
  * the whole thing off, so this is the list that earns its place: the week
  * ahead, a deadline arriving, and a queue with your name on it.
  */
-export type NoticeKind = "digest" | "deadline" | "review" | "rule";
+export type NoticeKind = "digest" | "deadline" | "review" | "rule" | "mention";
 
-export const NOTICE_KINDS: NoticeKind[] = ["digest", "deadline", "review", "rule"];
+export const NOTICE_KINDS: NoticeKind[] = ["digest", "deadline", "review", "rule", "mention"];
 
 export const KIND_LABELS: Record<NoticeKind, string> = {
   digest: "The week ahead",
   deadline: "Deadlines coming up",
   review: "Proof points waiting on you",
   rule: "Anything a rule is watching for",
+  mention: "Somebody naming you in a note",
 };
 
 export const KIND_HINTS: Record<NoticeKind, string> = {
@@ -55,6 +56,7 @@ export const KIND_HINTS: Record<NoticeKind, string> = {
   deadline: "A forecast of yours due in three days, due today, or overdue",
   review: "When suggestions are waiting on a decision for a trend you own",
   rule: "Whatever an admin has set the Hub to watch for — a format slipping, a season nobody has started",
+  mention: "When somebody writes @ and your name on a forecast — this one arrives as the note is saved, not on a schedule",
 };
 
 /**
@@ -90,6 +92,7 @@ export const DEFAULT_ON: Record<NoticeKind, Channel[]> = {
   deadline: ["inApp"],
   review: ["inApp"],
   rule: ["inApp"],
+  mention: ["inApp"],
 };
 
 export function defaultPrefs(personId: string): NotifyPrefs {

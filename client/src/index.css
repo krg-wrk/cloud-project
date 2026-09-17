@@ -9248,3 +9248,68 @@ tr[data-tone] .cell-edit:focus-visible {
   background: var(--paper);
 }
 
+/* --- Naming somebody in a note ---------------------------------------------
+ *
+ * The menu is anchored under the box rather than at the caret. Putting it at
+ * the caret needs the textarea's text measured in a mirror element, which is
+ * a lot of machinery for a box three lines tall — and under the box it never
+ * covers the sentence being written, which is the thing that actually matters
+ * while typing.
+ *
+ * A mention in a saved note is tinted rather than underlined. It is not a
+ * link: it names a person, and there is nowhere it would sensibly go that the
+ * team page does not already do better.
+ */
+
+.mention-box {
+  position: relative;
+}
+
+.mention-list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 4px);
+  left: 0;
+  min-width: 246px;
+  max-width: 100%;
+  margin: 0;
+  padding: 5px 0;
+  list-style: none;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 10px 28px rgb(0 0 0 / 0.14);
+}
+
+.mention-hit {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  padding: 7px 13px;
+  border-left: 2px solid transparent;
+  cursor: pointer;
+}
+
+.mention-hit b {
+  font-weight: 550;
+}
+
+.mention-hit span {
+  margin-left: auto;
+  color: var(--ink-45);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+
+.mention-hit.on {
+  border-left-color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.mention {
+  padding: 0 2px;
+  border-radius: 3px;
+  background: var(--accent-wash);
+  color: var(--accent-ink);
+  font-weight: 500;
+}

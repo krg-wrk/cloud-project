@@ -1264,6 +1264,49 @@ world with nobody pressing anything, and a proof of concept that mailed two
 hundred people because somebody ran it on a laptop would be the last time the
 team trusted it.
 
+### Naming somebody in a note
+
+Typing `@` in a note offers the team, and the person named is told as the note
+is saved. It is the one thing in the Hub that sends without the schedule being
+on and without anybody pressing send — a deliberate exception, made once, on
+the grounds that a mention arriving on Monday with the digest is not a mention
+but a summary of one. It still goes down whichever channels that person chose,
+and `mention` is a kind of its own on the Alerts page, so somebody who wants
+these in email and nothing else can say so.
+
+**Nothing is stored about who was mentioned.** The names are in the note and
+the note is the truth. A mention table would be a second copy that has to be
+kept in step with an editable body, and the first edit that failed to update it
+would make the two disagree with nobody the wiser. Who was *told* is already
+recorded, in the notifications table.
+
+That leaves the matching to do honestly, and it is stricter than it looks:
+
+- Only whole names from the team list. `@Amara` does not match Amara Okafor,
+  because the day a second Amara joins it would start naming the wrong person
+  — and the picker writes the whole name, so the ordinary path is unaffected.
+- At any one `@`, the longest name wins. A team with an *Amara* and an *Amara
+  Okafor* would otherwise have "@Amara Okafor" notify both of them.
+- An email address is not a mention. `chase tom.bright@wgsn.com` names nobody,
+  which is why the character before the `@` is checked.
+- Naming yourself does nothing.
+
+The notice key is the note and the person and nothing about time, so saving a
+note again tells nobody a second time, while adding a name to it tells the
+person just added. The notice quotes the note, flattened to one paragraph and
+cut at 220 characters — a notice body is rendered as-is into email and Google
+Chat, and a two-thousand-word note has no business arriving in either.
+
+The picker offers the forecast **team**, not the wider content directory. Only
+the team have a Person record, and only a Person has an inbox, preferences and
+a channel — offering the other hundred and forty people and silently dropping
+the notice is the failure this avoids.
+
+In a saved note the names are tinted, not linked. Nothing is stored as markup
+and nothing is rendered as HTML: the body is text somebody typed, and putting
+it through `dangerouslySetInnerHTML` for the sake of a colour would be a new
+way into the page.
+
 ### A view in your inbox
 
 Every view built in the studio can be sent to you on a morning you choose —

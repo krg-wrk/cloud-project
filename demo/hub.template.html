@@ -4035,6 +4035,65 @@
     font-size: 11.5px;
   }
 
+  /*
+   * Naming somebody in a note. The menu sits under the box rather than at the
+   * caret, so it never covers the sentence being written; a saved mention is
+   * tinted rather than linked, because it names a person and there is nowhere
+   * it would sensibly go.
+   */
+  .mention-box {
+    position: relative;
+  }
+
+  .mention-list {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 4px);
+    left: 0;
+    min-width: 246px;
+    max-width: 100%;
+    margin: 0;
+    padding: 5px 0;
+    list-style: none;
+    border: 1px solid var(--rule-strong);
+    border-radius: var(--radius);
+    background: var(--paper);
+    box-shadow: 0 10px 28px rgb(0 0 0 / 0.14);
+  }
+
+  .mention-hit {
+    display: flex;
+    align-items: baseline;
+    gap: 9px;
+    padding: 7px 13px;
+    border-left: 2px solid transparent;
+    cursor: pointer;
+  }
+
+  .mention-hit b {
+    font-weight: 550;
+  }
+
+  .mention-hit span {
+    margin-left: auto;
+    color: var(--ink-45);
+    font-size: 11.5px;
+    white-space: nowrap;
+  }
+
+  .mention-hit.on {
+    border-left-color: var(--accent);
+    background: var(--accent-wash);
+  }
+
+  .mention {
+    padding: 0 2px;
+    border-radius: 3px;
+    background: var(--accent-wash);
+    color: var(--accent-ink);
+    font-weight: 500;
+  }
+
   .note-body {
     white-space: pre-wrap;
     font-size: 13.5px;
@@ -8658,6 +8717,69 @@
       });
   }
 
+  /*
+   * Naming somebody in a note.
+   *
+   * The same rules the Hub's server applies, because the demo is meant to read
+   * true: whole names from the team list only, the longest name winning at any
+   * one @, and an address left alone — "chase tom.bright@wgsn.com" names
+   * nobody. Nothing about who was named is stored; the names are in the note,
+   * and the note is the truth.
+   */
+  function mentionedIn(body) {
+    const hay = String(body ?? "").toLowerCase();
+    const named = people
+      .filter((p) => (p.name ?? "").trim())
+      .slice()
+      .sort((a, b) => b.name.trim().length - a.name.trim().length);
+    const claimed = new Set();
+    const found = new Set();
+    for (const person of named) {
+      for (const at of mentionSpots(hay, `@${person.name.trim().toLowerCase()}`)) {
+        if (claimed.has(at)) continue;
+        claimed.add(at);
+        found.add(person.id);
+      }
+    }
+    return people.filter((p) => found.has(p.id)).map((p) => p.id);
+  }
+
+  /** Every position where `needle` sits as a whole token. */
+  function mentionSpots(hay, needle) {
+    const out = [];
+    let at = hay.indexOf(needle);
+    while (at !== -1) {
+      const before = at === 0 ? "" : hay[at - 1];
+      const after = hay[at + needle.length] ?? "";
+      if ((before === "" || !/[\w@.]/.test(before)) && (after === "" || !/\w/.test(after))) {
+        out.push(at);
+      }
+      at = hay.indexOf(needle, at + 1);
+    }
+    return out;
+  }
+
+  /*
+   * A note's text with the names in it tinted.
+   *
+   * Escaped first and only then marked up, so the highlight cannot become a
+   * way to put markup in a note. A name the team list no longer has reads as
+   * the plain text it always was.
+   */
+  function noteBodyMarkup(body) {
+    const names = people
+      .filter((p) => (p.name ?? "").trim())
+      .map((p) => p.name.trim())
+      .sort((a, b) => b.length - a.length);
+    const safe = esc(String(body ?? ""));
+    if (!names.length) return safe;
+    const pattern = new RegExp(
+      `(^|[^\\w@.])@(${names.map((n) => esc(n).replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|")})(?![\\w])`,
+      "gi",
+    );
+    return safe.replace(pattern, (_m, lead, name) => `${lead}<span class="mention">@${name}</span>`);
+  }
+
   function addNote(contentId, note) {
     const next = [note, ...notesFor(contentId)];
     notes.set(contentId, next);
@@ -11202,9 +11324,15 @@
       ${
         canWrite
           ? `<div class="note-composer">
-              <textarea class="note-input" id="note-body" rows="${mine?.isAi ? 10 : 3}"
-                placeholder="What are you thinking about this piece? Angles, evidence to chase, anything the deadline makes tight."
-                >${esc(mine?.body ?? "")}</textarea>
+              <div class="mention-box">
+                <textarea class="note-input" id="note-body" rows="${mine?.isAi ? 10 : 3}"
+                  placeholder="What are you thinking about this piece? Type @ to name somebody."
+                  role="combobox" aria-expanded="false" aria-autocomplete="list"
+                  aria-controls="mention-list"
+                  >${esc(mine?.body ?? "")}</textarea>
+                <ul class="mention-list" id="mention-list" role="listbox"
+                  aria-label="People you can name" hidden></ul>
+              </div>
               ${
                 mine?.isAi
                   ? `<div class="ai-banner"><strong>AI draft — yours to edit.</strong> Nothing is
@@ -11248,7 +11376,7 @@
                         : ""
                     }
                   </header>
-                  <div class="note-body">${esc(n.body)}</div>
+                  <div class="note-body">${noteBodyMarkup(n.body)}</div>
                 </article>`,
               )
               .join("")}</div>`
@@ -17042,6 +17170,11 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
     ],
     ["deadline", "Deadlines coming up", "A forecast of yours due in three days, due today, or overdue"],
     ["review", "Proof points waiting on you", "When suggestions are waiting on a decision for a trend you own"],
+    [
+      "mention",
+      "Somebody naming you in a note",
+      "When somebody writes @ and your name on a forecast — this one arrives as the note is saved, not on a schedule",
+    ],
   ];
 
   const NOTICE_CHANNELS = [
@@ -17051,7 +17184,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
   ];
 
   /** The bell, and nothing that leaves the building. */
-  const DEFAULT_ON = { digest: ["inApp"], deadline: ["inApp"], review: ["inApp"] };
+  const DEFAULT_ON = { digest: ["inApp"], deadline: ["inApp"], review: ["inApp"], mention: ["inApp"] };
 
   /** Per person: what they asked for, and what they have read or dismissed. */
   const notifyPrefs = new Map();
@@ -17131,6 +17264,34 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
   function noticesFor(personId, today = TODAY) {
     const out = [];
     const mine = content.filter((c) => workingOn(c).includes(personId));
+
+    /*
+      Mentions, read back out of the notes themselves.
+
+      In the Hub these are raised as the note is saved — the one thing that
+      sends without the schedule being on. Here they are derived, because a
+      single file has no server to raise anything, and deriving them keeps the
+      demo honest in the way that matters: the notice exists exactly while the
+      note that names you does, and editing the name back out takes it away.
+    */
+    for (const [contentId, list] of notes) {
+      const item = content.find((c) => c.id === contentId);
+      if (!item) continue;
+      for (const n of list) {
+        if (n.authorId === personId) continue;
+        if (!mentionedIn(n.body).includes(personId)) continue;
+        const quote = String(n.body).trim().replace(/\s+/g, " ");
+        out.push({
+          key: `${personId}:mention:${n.id}`,
+          kind: "mention",
+          urgency: 0,
+          title: `${nameOf(n.authorId)} named you in a note on ${item.title}`,
+          body: quote.length > 220 ? `${quote.slice(0, 220).trimEnd()}…` : quote,
+          link: `#/content/${item.id}`,
+        });
+      }
+    }
+
     const week = weekOf(today);
     const end = new Date(Date.parse(`${week}T00:00:00Z`) + 6 * 864e5).toISOString().slice(0, 10);
 
@@ -19355,6 +19516,110 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       }),
     );
     // Notes -----------------------------------------------------------------
+
+    /*
+     * The @ menu.
+     *
+     * Anchored under the box rather than at the caret: measuring where the
+     * caret is inside a textarea needs a mirror element built from its own
+     * computed styles, which is a great deal of machinery for a box three
+     * lines tall — and under the box it never covers the sentence being
+     * written, which is what actually matters while typing.
+     *
+     * Focus stays in the textarea throughout, so the arrows walk the list by
+     * moving `aria-activedescendant` rather than by moving focus. That is the
+     * same arrangement the search palette uses.
+     */
+    function wireMentions(box, list) {
+      if (!box || !list) return;
+      let at = -1;
+      let picked = 0;
+      let hits = [];
+
+      const close = () => {
+        at = -1;
+        hits = [];
+        list.hidden = true;
+        list.innerHTML = "";
+        box.setAttribute("aria-expanded", "false");
+        box.removeAttribute("aria-activedescendant");
+      };
+
+      const draw = () => {
+        if (at === -1 || !hits.length) return close();
+        list.hidden = false;
+        box.setAttribute("aria-expanded", "true");
+        list.innerHTML = hits
+          .map(
+            (p, i) =>
+              `<li id="mention-${esc(p.id)}" role="option" aria-selected="${i === picked}"
+                 class="mention-hit${i === picked ? " on" : ""}" data-mention="${esc(p.id)}">
+                 <b>${esc(p.name)}</b><span>${
+                   p.role === "commissioning-manager" ? "Commissioning manager" : "Forecaster"
+                 }</span></li>`,
+          )
+          .join("");
+        box.setAttribute("aria-activedescendant", `mention-${hits[picked].id}`);
+        list.querySelectorAll("[data-mention]").forEach((el) =>
+          el.addEventListener("mousedown", (e) => {
+            e.preventDefault();
+            choose(people.find((p) => p.id === el.dataset.mention));
+          }),
+        );
+      };
+
+      const look = () => {
+        const upto = box.value.slice(0, box.selectionStart);
+        const m = /(?:^|[\s(>])@([^\n@]{0,40})$/.exec(upto);
+        if (!m) return close();
+        const typed = m[1];
+        if ((typed.match(/ /g) ?? []).length > 1) return close();
+        at = box.selectionStart - typed.length - 1;
+        const q = typed.trim().toLowerCase();
+        hits = people
+          .filter((p) => (p.name ?? "").trim())
+          .filter((p) => !q || p.name.toLowerCase().split(/\s+/).some((w) => w.startsWith(q)))
+          .slice(0, 6);
+        picked = 0;
+        draw();
+      };
+
+      const choose = (person) => {
+        if (!person || at === -1) return;
+        const name = `@${person.name} `;
+        const next = box.value.slice(0, at) + name + box.value.slice(box.selectionStart);
+        box.value = next;
+        const caret = at + name.length;
+        box.setSelectionRange(caret, caret);
+        composer = { ...composer, body: next, isAi: false };
+        close();
+        box.focus();
+      };
+
+      box.addEventListener("input", look);
+      box.addEventListener("click", look);
+      box.addEventListener("keydown", (e) => {
+        if (at === -1 || !hits.length) return;
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          picked = (picked + 1) % hits.length;
+          draw();
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          picked = (picked - 1 + hits.length) % hits.length;
+          draw();
+        } else if (e.key === "Enter" || e.key === "Tab") {
+          e.preventDefault();
+          choose(hits[picked]);
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          close();
+        }
+      });
+      // Late, so a click on a name lands before the menu goes.
+      box.addEventListener("blur", () => setTimeout(close, 120));
+    }
+
     const bodyBox = view.querySelector("#note-body");
     const steerBox = view.querySelector("#note-steer");
     const readComposer = (contentId) => {
@@ -19369,6 +19634,7 @@ ${composer.steer ? `\nThe forecaster asked you to focus on: ${composer.steer}` :
       bodyBox.addEventListener("input", () => {
         composer = { ...composer, contentId: composer.contentId, body: bodyBox.value, isAi: false };
       });
+      wireMentions(bodyBox, view.querySelector("#mention-list"));
     }
     if (steerBox) {
       steerBox.addEventListener("input", () => {
