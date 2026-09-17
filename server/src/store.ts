@@ -212,6 +212,42 @@ CREATE TABLE IF NOT EXISTS schedule_writes (
 CREATE INDEX IF NOT EXISTS schedule_writes_content ON schedule_writes (content_id, at DESC);
 
 /*
+ * The same record, for a cell changed through a studio view.
+ *
+ * A second table rather than more columns on the first, for two reasons. The
+ * schema only ever grows tables — nothing alters one — so a column added here
+ * would never appear on a database that already exists. And the two are
+ * genuinely different records: a schedule write is one of five known fields on
+ * a known forecast, while this is an arbitrary column of an arbitrary sheet
+ * somebody pointed a view at, with no content id to hang it on.
+ *
+ * Refusals are kept as well as successes, for the same reason as the other
+ * table: a write that was turned down and left no trace is worse than no
+ * write, because nobody can tell afterwards whether it was tried.
+ */
+CREATE TABLE IF NOT EXISTS view_writes (
+  id TEXT PRIMARY KEY,
+  view_id TEXT NOT NULL,
+  /** The view's address at the time, which is what a person would recognise. */
+  view_label TEXT NOT NULL,
+  dataset_id TEXT NOT NULL,
+  /** Which sheet, in the words the confirmation used. */
+  target TEXT NOT NULL,
+  /** The source's own row id. */
+  row_id TEXT NOT NULL,
+  /** [{ field, name, from, to }], as it was shown before applying. */
+  changes TEXT NOT NULL,
+  by_email TEXT NOT NULL,
+  by_person_id TEXT,
+  at TEXT NOT NULL,
+  ok INTEGER NOT NULL,
+  /** Why it was refused, when it was. */
+  problem TEXT
+);
+
+CREATE INDEX IF NOT EXISTS view_writes_by_view ON view_writes (view_id, at DESC);
+
+/*
  * What a trend's owner decided about a suggested proof point.
  *
  * The library itself is a read-only extract — a pipeline writes it weekly and
@@ -1227,6 +1263,70 @@ export class HubStore {
     return rows.map(toScheduleWrite);
   }
 
+  // --- Cells changed through a studio view --------------------------------
+
+  /**
+   * Log an attempt on a view's cell, successful or not.
+   *
+   * The view's label is copied in rather than joined to, because the log has
+   * to stay readable after the view is renamed or deleted — what matters
+   * afterwards is what the person thought they were editing.
+   */
+  async logViewWrite(input: {
+    viewId: string;
+    viewLabel: string;
+    datasetId: string;
+    target: string;
+    rowId: string;
+    changes: ViewCellChange[];
+    byEmail: string;
+    byPersonId?: string | null;
+    ok: boolean;
+    problem?: string;
+  }): Promise<ViewWrite> {
+    const entry: ViewWrite = {
+      id: randomUUID(),
+      viewId: input.viewId,
+      viewLabel: input.viewLabel,
+      datasetId: input.datasetId,
+      target: input.target,
+      rowId: input.rowId,
+      changes: input.changes,
+      byEmail: input.byEmail,
+      byPersonId: input.byPersonId ?? undefined,
+      at: now(),
+      ok: input.ok,
+      problem: input.problem,
+    };
+    await this.db.run(`INSERT INTO view_writes
+           (id, view_id, view_label, dataset_id, target, row_id, changes, by_email, by_person_id, at, ok, problem)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [entry.id,
+        entry.viewId,
+        entry.viewLabel,
+        entry.datasetId,
+        entry.target,
+        entry.rowId,
+        JSON.stringify(entry.changes),
+        entry.byEmail,
+        entry.byPersonId ?? null,
+        entry.at,
+        entry.ok ? 1 : 0,
+        entry.problem ?? null]);
+    return entry;
+  }
+
+  /** What has been changed through one view, most recent first. */
+  async viewWrites(viewId: string, limit = 50): Promise<ViewWrite[]> {
+    const rows = await this.db.all(`SELECT * FROM view_writes WHERE view_id = ? ORDER BY at DESC, id LIMIT ?`, [viewId, limit]) as Record<string, unknown>[];
+    return rows.map(toViewWrite);
+  }
+
+  /** The whole log, for an admin. */
+  async allViewWrites(limit = 200): Promise<ViewWrite[]> {
+    const rows = await this.db.all(`SELECT * FROM view_writes ORDER BY at DESC, id LIMIT ?`, [limit]) as Record<string, unknown>[];
+    return rows.map(toViewWrite);
+  }
+
   // --- Notifications -----------------------------------------------------
 
   /** What this person asked for, or nothing if they never said. */
@@ -1557,6 +1657,60 @@ function toScheduleWrite(row: Record<string, unknown>): ScheduleWrite {
     contentId: String(row.content_id),
     sourceRowId: String(row.source_row_id),
     target: String(row.target),
+    changes,
+    byEmail: String(row.by_email),
+    byPersonId: row.by_person_id ? String(row.by_person_id) : undefined,
+    at: String(row.at),
+    ok: row.ok === 1 || row.ok === true,
+    problem: row.problem ? String(row.problem) : undefined,
+  };
+}
+
+/**
+ * One cell of a studio view, as the confirmation showed it.
+ *
+ * `field` is the column's stable key and `name` its title at the time. Both
+ * are kept because the key is what was written and the title is what a person
+ * reading the log a month later will recognise — and by then the column may
+ * have been renamed.
+ */
+export interface ViewCellChange {
+  field: string;
+  name: string;
+  from: string;
+  to: string;
+}
+
+/** An attempt to change a cell through a studio view, successful or not. */
+export interface ViewWrite {
+  id: string;
+  viewId: string;
+  viewLabel: string;
+  datasetId: string;
+  target: string;
+  rowId: string;
+  changes: ViewCellChange[];
+  byEmail: string;
+  byPersonId?: string;
+  at: string;
+  ok: boolean;
+  problem?: string;
+}
+
+function toViewWrite(row: Record<string, unknown>): ViewWrite {
+  let changes: ViewCellChange[] = [];
+  try {
+    changes = JSON.parse(String(row.changes)) as ViewCellChange[];
+  } catch {
+    // A log entry with unreadable changes is still worth having.
+  }
+  return {
+    id: String(row.id),
+    viewId: String(row.view_id),
+    viewLabel: String(row.view_label),
+    datasetId: String(row.dataset_id),
+    target: String(row.target),
+    rowId: String(row.row_id),
     changes,
     byEmail: String(row.by_email),
     byPersonId: row.by_person_id ? String(row.by_person_id) : undefined,

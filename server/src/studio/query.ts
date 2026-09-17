@@ -44,6 +44,65 @@ export function canSeeView(
   return audience.verticals.some((v) => (viewer.verticals as string[]).includes(v));
 }
 
+/**
+ * Whether this viewer may change a cell in this view.
+ *
+ * Two gates, both of which have to open. Being able to read a view is not the
+ * same permission as being able to change the sheet behind it, so the edit
+ * rule's own audience is asked as well as the view's — and an admin is not
+ * waved through the way `canSeeView` waves them through, because "can see
+ * every draft" is a builder's convenience and "can write to any sheet the
+ * studio points at" is not the same promise.
+ *
+ * An admin does still pass the audience half by way of `canSeeView`, so the
+ * question they have to answer is only whether the edit rule names them. That
+ * keeps a half-built draft from being writable by its author by accident, and
+ * makes the rule the single place the answer is written down.
+ */
+export function canEditView(
+  spec: ViewSpec,
+  audience: Audience,
+  state: "draft" | "live",
+  viewer: Viewer,
+): boolean {
+  const edit = spec.edit;
+  if (!edit || edit.fields.length === 0) return false;
+  if (!canSeeView(audience, state, viewer)) return false;
+  return inAudience(edit.who, viewer);
+}
+
+/**
+ * The audience rules on their own, without the draft and admin short-circuits.
+ *
+ * `canSeeView` folds three decisions together — is this person active, is the
+ * view live, are they an admin — and only the last of the three is about the
+ * audience itself. An edit rule needs that last part by itself.
+ */
+function inAudience(audience: Audience, viewer: Viewer): boolean {
+  if (!viewer.active) return false;
+  if (audience.emails.some((e) => e.toLowerCase() === viewer.email.toLowerCase())) return true;
+
+  const roleOk = audience.roles === "all" || audience.roles.includes(viewer.role);
+  if (!roleOk) return false;
+
+  if (audience.verticals === "all") return true;
+  if (viewer.verticals === "all") return true;
+  return audience.verticals.some((v) => (viewer.verticals as string[]).includes(v));
+}
+
+/**
+ * The fields this view offers for editing, as fields rather than keys.
+ *
+ * A key in the rule that the dataset no longer has — a column deleted in
+ * Smartsheet since the rule was written — is dropped here rather than being
+ * offered and then failing at the sheet. The order follows the dataset so two
+ * views over the same sheet list their editable columns the same way round.
+ */
+export function editableFields(spec: ViewSpec, fields: Field[]): Field[] {
+  const keys = new Set(spec.edit?.fields ?? []);
+  return keys.size === 0 ? [] : fields.filter((f) => keys.has(f.key));
+}
+
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}/;
 
 /** A comparable number from a cell, for sorting and the numeric operators. */
@@ -187,6 +246,9 @@ export function usedFields(spec: ViewSpec, fields: Field[]): Field[] {
       ...(f.columns ?? []),
       ...(f.meta ?? []),
       ...spec.filters.map((x) => x.field),
+      // An editable column has to travel even when the layout does not draw
+      // it, or the cell it is meant to offer arrives blank and unaddressable.
+      ...(spec.edit?.fields ?? []),
       spec.sort?.field,
     ].filter((x): x is string => Boolean(x)),
   );

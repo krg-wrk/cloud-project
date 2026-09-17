@@ -20,6 +20,7 @@ import ShareLink from "../components/ShareLink";
 import SaveView from "../components/SaveView";
 import MailView from "../components/MailView";
 import ExportButton from "../components/ExportButton";
+import EditCell from "../components/EditCell";
 import type { CSSProperties } from "react";
 
 /**
@@ -33,13 +34,19 @@ import type { CSSProperties } from "react";
  */
 export default function CustomView() {
   const { slug = "" } = useParams();
-  const { data, error, loading } = useApi<ViewPage>(`/views/${encodeURIComponent(slug)}`);
+  const { data, error, loading, reload } = useApi<ViewPage>(`/views/${encodeURIComponent(slug)}`);
 
   if (error) return <ErrorNote message={error} />;
   if (loading || !data) return <Loading what="the view" />;
 
   const { view, fields, source, rows, total } = data;
   const spec = view.spec;
+  /*
+    The server decides what this person may change; the page only draws it.
+    An empty list is the ordinary case and means the table renders exactly as
+    it always has.
+  */
+  const editable = data.editable ?? [];
 
   return (
     <>
@@ -83,6 +90,14 @@ export default function CustomView() {
             showing the first {rows.length} of {total}
           </span>
         )}
+        {/* Said once here rather than as a hint on every cell: a view that
+            writes back to somebody's sheet should announce itself. */}
+        {editable.length > 0 && (
+          <span className="view-writable">
+            <Icon name="edit" size={12} />{" "}
+            {editable.length === 1 ? "1 column" : `${editable.length} columns`} you can change
+          </span>
+        )}
         <span className="view-source-right">
           {/* Every column the dataset has, not only the ones this layout
               shows: a card view naming three fields is a display decision,
@@ -113,7 +128,16 @@ export default function CustomView() {
           </p>
         </div>
       ) : (
-        <Body spec={spec} fields={fields} rows={rows} />
+        <Body
+          spec={spec}
+          fields={fields}
+          rows={rows}
+          editing={
+            editable.length > 0
+              ? { slug: view.slug, fields: editable, onSaved: reload }
+              : undefined
+          }
+        />
       )}
     </>
   );
@@ -127,14 +151,34 @@ const SOURCE_LABELS: Record<string, string> = {
   snowflake: "Snowflake",
 };
 
+/**
+ * Everything a view needs to let somebody change a cell.
+ *
+ * Optional, and absent is read-only — which matters because the studio's
+ * builder renders this same component to preview an unsaved spec, against real
+ * rows from a real sheet. A preview that offered working edit controls while
+ * an admin was still deciding what the view should be would be writing to the
+ * sheet from a design surface.
+ */
+export interface Editing {
+  /** The view's address, which the write route is keyed by. */
+  slug: string;
+  /** Column keys this viewer may change, as the server decided. */
+  fields: string[];
+  /** Re-read the view, so the cell shows what the sheet now says. */
+  onSaved: () => void;
+}
+
 export function Body({
   spec,
   fields,
   rows,
+  editing,
 }: {
   spec: ViewSpec;
   fields: Field[];
   rows: Record<string, string>[];
+  editing?: Editing;
 }) {
   switch (spec.layout) {
     case "cards":
@@ -146,7 +190,7 @@ export function Body({
     case "board":
       return <Board spec={spec} rows={rows} />;
     default:
-      return <Table spec={spec} fields={fields} rows={rows} />;
+      return <Table spec={spec} fields={fields} rows={rows} editing={editing} />;
   }
 }
 
@@ -202,10 +246,12 @@ function Table({
   spec,
   fields,
   rows,
+  editing,
 }: {
   spec: ViewSpec;
   fields: Field[];
   rows: Record<string, string>[];
+  editing?: Editing;
 }) {
   // No columns chosen yet: show what the view carries rather than nothing.
   const columns =
@@ -217,6 +263,20 @@ function Table({
   // of the last read, so a rename in Smartsheet reads through here.
   const typeOf = (key: string) => fields.find((f) => f.key === key)?.type;
   const titleOf = (key: string) => fields.find((f) => f.key === key)?.name ?? key;
+
+  /*
+    A cell is editable when the server said so, the column is on this table,
+    and the row carries the source's own id. That last test is not a formality:
+    `rowKey` falls back to the array position, and writing to "row 3" would
+    change whichever row happens to be third today.
+  */
+  const editableField = (key: string, row: Record<string, string>) =>
+    editing && row._row && editing.fields.includes(key)
+      ? fields.find((f) => f.key === key)
+      : undefined;
+  /** What a row is called, for the screen reader on each cell's button. */
+  const nameOf = (row: Record<string, string>) =>
+    cell(row, spec.fields.title) || cell(row, columns[0]) || "this row";
 
   return (
     <div className="table-wrap">
@@ -236,9 +296,19 @@ function Table({
               {columns.map((c, j) => {
                 const value = cell(row, c);
                 const type = typeOf(c);
+                const editable = editableField(c, row);
                 return (
                   <td key={c} className={type === "number" ? "num" : undefined}>
-                    {j === 0 && link ? (
+                    {editable && editing ? (
+                      <EditCell
+                        slug={editing.slug}
+                        field={editable}
+                        row={row._row}
+                        value={value}
+                        rowName={nameOf(row)}
+                        onSaved={editing.onSaved}
+                      />
+                    ) : j === 0 && link ? (
                       <LinkOut url={cell(row, link)}>{value}</LinkOut>
                     ) : type === "url" ? (
                       <LinkOut url={value}>{value.replace(/^https?:\/\//, "")}</LinkOut>

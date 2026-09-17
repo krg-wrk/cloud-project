@@ -136,7 +136,7 @@ app.use(
     people: await data.listPeople(),
   })),
   createApiRouter(data, store, signUps, drafter, proofPoints),
-  createStudioRouter(studio, data, viewRunner),
+  createStudioRouter(studio, data, viewRunner, store),
   createProofPointRouter(proofPoints, data, store),
   createNotifyRouter(data, store, signUps, proofPoints, studio, viewRunner),
   createSearchRouter(data, studio, proofPoints),

@@ -1626,6 +1626,64 @@ role rule, the vertical rule, or their address named on it. A forecaster
 opening a manager-only view gets a plain refusal, and it is not in their
 sidebar.
 
+### A view that accepts changes
+
+A view reads by default and keeps reading unless somebody says otherwise. The
+last step in the builder is where that is said, and it asks two separate
+questions: which columns can be changed, and who may change them.
+
+They are separate on purpose. Being able to open a view and being able to edit
+the sheet behind it are different permissions, and folding them together would
+make every view the team can see also writable by the team the first time one
+column was ticked. So a view can be open to everybody and editable by two
+people. Nobody is chosen by default — including admins, who are waved through
+the *audience* rule because they build the views, and are not waved through
+this one because writing to somebody's live sheet is not the same promise.
+
+Only a Smartsheet **sheet** can be edited, and the builder says so plainly for
+everything else rather than offering a control that could never work:
+
+- a **report** draws rows from several sheets and names its columns with ids
+  that are meaningless outside the report, so there is nothing to write to;
+- a **Google Sheet** is read-only to the Hub — the connection asks Google for
+  read access and nothing else — and a row there is addressed by its position
+  in the grid, so sorting the tab would move what a saved edit points at;
+- the **Hub's own tables** are a reading surface over the sheets behind them,
+  and a forecast is changed on its own page.
+
+Changing a cell is the same two steps as the commissioning sheet: the Hub
+re-reads the row from Smartsheet, shows what it says now beside what it would
+say, and writes nothing until that exact change is agreed to. The row is read
+again because the page may be a minute old and its values have been through
+the display formatter — a checkbox reads `Yes` in a table and `true` on the
+sheet, and comparing those two would make every save look like a conflict.
+
+Three things follow from that, and each is the reason for a rule:
+
+- **What is compared is what the sheet holds.** `expect` comes from the live
+  read and goes back untouched. Rebuilt from whatever the box holds, it would
+  compare a value against itself and always pass.
+- **Every column written is in the check.** The commissioning sheet's own
+  writer sends all five of its columns while checking only the ones that
+  differ, which quietly overwrites a column somebody else touched. This one
+  refuses rather than inheriting that.
+- **The words a person sees are the view's; the values sent are the sheet's.**
+  The confirmation says `Signed off: No → Yes`; what goes to Smartsheet is
+  `true`.
+
+A column's sampled values are offered as suggestions and never used to refuse
+one. Those values are "the few distinct things this column happens to hold",
+filled in by the studio for any column with fewer than forty of them — not a
+picklist. Refusing on them would mean a status column of six values could
+never gain a seventh. Smartsheet decides what a column takes, and says so in a
+message worth passing on.
+
+Every attempt is recorded in `view_writes`, successes and refusals alike, with
+the change as the confirmation showed it. It is a second table rather than more
+columns on `schedule_writes` because the schema only ever grows tables —
+nothing alters one — so a column added there would never appear on a database
+that already exists.
+
 ### What is not verified
 
 The Smartsheet reader has not run against the live API. `api.smartsheet.com`
@@ -1649,6 +1707,20 @@ seven things that would otherwise only fail in production:
 The tests run against `server/dist`, so they exercise what actually ships.
 Everything else — the store, the query layer, the whole studio UI, and the Hub
 connector reading all seven tables — was exercised end to end.
+
+The write-back a view does is in the same position and stood up the same way.
+`server/src/studio/editing.test.mjs` covers it against a stubbed API, written
+as the things that must never happen: a cell written on a view nobody was given
+the right to change, a cell written that the view never offered, a write to a
+report or a Google Sheet or a Hub table, a write over somebody's intervening
+edit, and a row id that is not a number reaching a URL.
+
+Beyond the unit tests, the whole path was driven end to end against a stand-in
+Smartsheet — preview, apply, the audit row, the cache being dropped, and a
+stale `expect` being refused — by pointing `SMARTSHEET_API` at a local server.
+That setting exists on the reader for regional accounts (`api.smartsheet.eu`),
+and the studio now honours it too: the two halves of the Hub that talk to
+Smartsheet had better be pointed at the same place.
 
 ## Changing the built-in pages
 

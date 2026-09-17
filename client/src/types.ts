@@ -459,11 +459,25 @@ export interface FormatRule {
   label?: string;
 }
 
+/**
+ * What a view lets people change, and who.
+ *
+ * Absent on every view built before this existed, which is read-only — and
+ * read-only is still what almost every view should be.
+ */
+export interface EditRule {
+  /** Field keys a person may change. Empty is read-only. */
+  fields: string[];
+  /** Who may change them, on top of being able to see the view at all. */
+  who: Audience;
+}
+
 export interface ViewSpec {
   layout: Layout;
   fields: FieldRoles;
   filters: Filter[];
   rules?: FormatRule[];
+  edit?: EditRule;
   sort?: { field: string; direction: "asc" | "desc" };
   pageSize: number;
 }
@@ -567,8 +581,37 @@ export interface ViewPage {
   source: { dataset: string; connection: string; kind: ConnectorKind };
   total: number;
   rows: Record<string, string>[];
+  /**
+   * The column keys this viewer may change, decided on the server.
+   *
+   * The page draws an editor for these and nothing else. Working it out here
+   * from the spec would mean offering a control that the save might refuse.
+   */
+  editable: string[];
   /** Set when the source would not answer, so the page can say why. */
   error?: string;
+}
+
+/** What one cell would become, as the server described it before anything moved. */
+export interface ViewCellEdit {
+  field: string;
+  name: string;
+  from: string;
+  to: string;
+}
+
+/** The confirmation: what changes, against what the sheet says right now. */
+export interface ViewEditPreview {
+  /** Which sheet, in words, so somebody knows what they are about to change. */
+  target: string;
+  cells: ViewCellEdit[];
+  /**
+   * What the sheet held when this was worked out, to be sent back untouched.
+   *
+   * Rebuilding it from whatever the form holds now would make the concurrency
+   * check compare a value against itself and always pass.
+   */
+  expect: Record<string, string>;
 }
 
 /* ---- A view, emailed ----------------------------------------------------- */

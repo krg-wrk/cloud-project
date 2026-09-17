@@ -9119,3 +9119,132 @@ tr[data-tone] > td {
   padding-left: 11px;
   border-left: 2px solid var(--rule);
 }
+
+/* --- Changing a cell a view drew -------------------------------------------
+ *
+ * The affordance is deliberately quiet. Most cells in most views are not
+ * editable, and a table where a few cells shout is a table nobody reads — so
+ * an editable cell looks like its neighbours until the pointer is on it, and
+ * carries a small pencil that only earns its contrast on hover and focus.
+ *
+ * The confirmation sits under the cell rather than in the middle of the
+ * screen. What somebody needs while deciding is the row it belongs to, and a
+ * modal takes exactly that away.
+ */
+
+.view-writable {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--accent-ink);
+  font-weight: 500;
+}
+
+.cell-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 3px 6px;
+  margin: -3px -6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cell-edit:hover,
+.cell-edit:focus-visible {
+  border-color: var(--rule-strong);
+  background: var(--ground);
+}
+
+.cell-edit .icon {
+  flex: none;
+  margin-left: auto;
+  opacity: 0;
+  color: var(--ink-45);
+}
+
+.cell-edit:hover .icon,
+.cell-edit:focus-visible .icon {
+  opacity: 1;
+}
+
+/* An empty cell still has to be a target big enough to press. */
+.cell-edit-blank {
+  color: var(--ink-45);
+}
+
+.cell-edit-value {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cell-editor {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 170px;
+}
+
+.cell-input {
+  width: 100%;
+  padding: 5px 7px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+}
+
+.cell-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cell-confirm {
+  padding: 9px 11px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  /* Its own ground, so it reads as a question rather than as more table. */
+  background: var(--ground);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.cell-confirm-line {
+  margin: 0 0 4px;
+}
+
+.cell-confirm-line q {
+  font-style: normal;
+  font-weight: 500;
+}
+
+.cell-confirm-where {
+  margin: 0 0 9px;
+  color: var(--ink-45);
+  font-size: 11.5px;
+}
+
+.cell-confirm .cell-actions {
+  margin-top: 2px;
+}
+
+/*
+ * A tone paints the whole row, and an editable cell sits on top of that wash
+ * rather than punching a hole in it.
+ */
+tr[data-tone] .cell-edit:hover,
+tr[data-tone] .cell-edit:focus-visible {
+  background: var(--paper);
+}
+

@@ -230,12 +230,40 @@ export interface FormatRule {
   label?: string;
 }
 
+/**
+ * What a view lets people change, and who.
+ *
+ * A view is a reading surface by default and stays one unless somebody says
+ * otherwise out loud — the same arrangement the Smartsheet write-back and the
+ * notification channels use. `fields` empty means read-only, which is what
+ * every view built before this existed has.
+ *
+ * `who` is a second, narrower gate rather than a reuse of the view's audience.
+ * Being able to open a view and being able to change the sheet behind it are
+ * different permissions, and collapsing them would make every view that is
+ * visible to the team also writable by the team the moment one column was
+ * marked editable.
+ *
+ * It lives inside the spec rather than beside the audience because the views
+ * table cannot gain a column: the schema is applied with CREATE TABLE IF NOT
+ * EXISTS and nothing ever alters one, so an existing deployment would never
+ * see it. The spec is a JSON blob read whole, so it can.
+ */
+export interface EditRule {
+  /** Field keys a person may change. Empty — or absent — is read-only. */
+  fields: string[];
+  /** Who may change them, on top of being able to see the view at all. */
+  who: Audience;
+}
+
 export interface ViewSpec {
   layout: Layout;
   fields: FieldRoles;
   filters: Filter[];
   /** Conditional formatting. Absent on views built before it existed. */
   rules?: FormatRule[];
+  /** Write-back. Absent on views built before it existed, which is read-only. */
+  edit?: EditRule;
   sort?: { field: string; direction: "asc" | "desc" };
   /** Rows per page; 0 for all of them. */
   pageSize: number;
@@ -255,6 +283,16 @@ export interface Audience {
 }
 
 export const EVERYONE: Audience = { roles: "all", verticals: "all", emails: [] };
+
+/**
+ * Nobody at all — an empty role list, which `canSeeView` never matches.
+ *
+ * The audience parser turns an empty role list into "all", because an audience
+ * nobody is in is never what somebody meant to save. An edit rule is the
+ * opposite: no roles is exactly what it means, and is what a view says when
+ * nobody has been given permission to change it yet.
+ */
+export const NOBODY: Audience = { roles: [], verticals: "all", emails: [] };
 
 export interface ViewDef {
   id: string;
@@ -302,6 +340,15 @@ export interface ViewPage {
   source: { dataset: string; connection: string; kind: ConnectorKind };
   total: number;
   rows: Record<string, string>[];
+  /**
+   * The column keys *this* viewer may change, already decided here.
+   *
+   * Empty for almost every view and almost every person, which is the point: a
+   * page that draws an editor because the spec has one, and finds out at save
+   * time that the person may not, has already made a promise it cannot keep.
+   * The client draws what is in this list and nothing else.
+   */
+  editable: string[];
   /** Set when the read failed, so the page can say what went wrong. */
   error?: string;
 }

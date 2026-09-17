@@ -3,7 +3,10 @@ import { requireAdmin, type Viewer, type ViewerRequest } from "../auth.js";
 import { connectorCatalogue } from "./connectors.js";
 import {
   applySpec,
+  canEditView,
   canSeeView,
+  display,
+  editableFields,
   identities,
   project,
   RESERVED_SLUGS,
@@ -12,6 +15,8 @@ import {
 } from "./query.js";
 import { ViewRunner } from "./run.js";
 import type { StudioStore } from "./store.js";
+import { cellValue, refuseValue, SheetWriter, writableSheet, type CellEdit } from "./write.js";
+import type { HubStore } from "../store.js";
 import {
   CONNECTOR_KINDS,
   EVERYONE,
@@ -19,7 +24,11 @@ import {
   LAYOUTS,
   TONES,
   type Audience,
+  type Connection,
   type ConnectorKind,
+  type Dataset,
+  type EditRule,
+  type Field,
   type Filter,
   type FormatRule,
   type Layout,
@@ -85,6 +94,23 @@ function readSpec(body: unknown): ViewSpec {
       label: typeof x.label === "string" ? x.label.trim().slice(0, 40) : undefined,
     }));
 
+  /*
+    Editing, which every view is without until somebody says otherwise.
+
+    An empty field list is stored as no rule at all rather than as a rule that
+    permits nothing — the two mean the same thing and one shape is easier to
+    reason about at the point of use. `who` goes through a stricter reader than
+    the view's own audience: an audience with no roles means "everybody",
+    because that is never what somebody meant to save, while an edit rule with
+    no roles means exactly what it says.
+  */
+  const editRaw = (raw.edit ?? null) as Record<string, unknown> | null;
+  const editFields = list(editRaw?.fields).slice(0, 40);
+  const edit: EditRule | undefined =
+    editFields.length > 0
+      ? { fields: editFields, who: readEditors(editRaw?.who) }
+      : undefined;
+
   const sortRaw = (raw.sort ?? null) as Record<string, unknown> | null;
   const sort =
     sortRaw && typeof sortRaw.field === "string" && sortRaw.field.trim() !== ""
@@ -113,9 +139,41 @@ function readSpec(body: unknown): ViewSpec {
     },
     filters,
     rules,
+    edit,
     sort,
     // 0 means every row; anything silly is clamped rather than refused.
     pageSize: Number.isFinite(size) ? Math.max(0, Math.min(2000, Math.trunc(size))) : 100,
+  };
+}
+
+/**
+ * Who may edit, read strictly.
+ *
+ * `readAudience` turns an empty role list into "all" because an audience that
+ * admits nobody is never what an admin meant when choosing who can *see*
+ * something. Permission to change a live sheet is the other way round: the
+ * safe reading of "no roles chosen" is no roles, and an admin who wants the
+ * whole team has to say so.
+ */
+function readEditors(body: unknown): Audience {
+  const raw = (body ?? {}) as Record<string, unknown>;
+  const roles = (Array.isArray(raw.roles) ? raw.roles : []).filter((r): r is Role =>
+    ROLES.includes(r as Role),
+  );
+  const verticals =
+    raw.verticals === "all" || raw.verticals == null
+      ? ("all" as const)
+      : (Array.isArray(raw.verticals) ? raw.verticals : []).filter(
+          (v): v is string => typeof v === "string" && v.trim() !== "",
+        );
+  const emails = (Array.isArray(raw.emails) ? raw.emails : [])
+    .filter((e): e is string => typeof e === "string")
+    .map((e) => e.trim().toLowerCase())
+    .filter((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e));
+  return {
+    roles,
+    verticals: verticals === "all" || verticals.length === 0 ? "all" : verticals,
+    emails,
   };
 }
 
@@ -157,6 +215,15 @@ export function createStudioRouter(
   studio: StudioStore,
   data: DataSource,
   runner = new ViewRunner(studio, data),
+  /**
+   * The Hub's own store, for the record of what a view changed.
+   *
+   * Optional so the studio can still be mounted without one — the reading half
+   * needs nothing from it. Editing does: a write that leaves no trace is worse
+   * than no write, so without a store the edit routes refuse rather than
+   * quietly writing to somebody's sheet unrecorded.
+   */
+  store?: HubStore,
 ): Router {
   const router = Router();
   const reader = runner.reader;
@@ -206,6 +273,297 @@ export function createStudioRouter(
       }
       res.json(await runner.for(view, viewer, req.viewer?.name));
     } catch (err) {
+      next(err);
+    }
+  });
+
+  /*
+    Changing a cell a view drew.
+
+    Two steps, the same two the commissioning sheet's write-back uses, and for
+    the same reason: the confirmation is the point. A person is shown the sheet
+    as it stands right now, beside what it would say, and nothing moves until
+    they agree to that specific change. A box that saved on blur would be
+    quicker and would also, once, quietly overwrite somebody's afternoon.
+
+    The preview is where the safety lives. It re-reads the row from the sheet
+    rather than trusting the rendered page — which may be up to a minute stale,
+    and whose values have been through the display formatter — and hands back
+    an `expect` that the apply sends straight back untouched.
+  */
+
+  /**
+   * Everything both steps need, or the status and sentence to answer with.
+   *
+   * The three ways this fails are deliberately kept apart. Not being allowed
+   * to see the view is a 404, because saying "that exists but is not yours"
+   * about an address somebody guessed is itself an answer. Not being allowed
+   * to change it is a 403. A dataset the Hub cannot write to is a 400, because
+   * nothing about the person is wrong — the view should not have offered it.
+   */
+  async function forEditing(
+    req: ViewerRequest,
+  ): Promise<
+    | { fail: { status: number; error: string } }
+    | {
+        viewer: Viewer;
+        view: ViewDef;
+        dataset: Dataset;
+        connection: Connection;
+        fields: Field[];
+        writer: SheetWriter;
+        target: string;
+      }
+  > {
+    const viewer = req.viewer;
+    const view = await studio.viewBySlug(req.params.slug);
+    if (!view || !viewer || !canSeeView(view.audience, view.state, viewer)) {
+      return { fail: { status: 404, error: "No view at that address, or it is not yours to see." } };
+    }
+    if (!store) {
+      return {
+        fail: { status: 503, error: "This Hub has nowhere to record a change, so it will not make one." },
+      };
+    }
+    if (!canEditView(view.spec, view.audience, view.state, viewer)) {
+      return {
+        fail: { status: 403, error: "This view is one to read. Nobody has been given the right to change it." },
+      };
+    }
+    const found = await resolve(view.datasetId);
+    if ("error" in found) return { fail: { status: 400, error: found.error } };
+    const { dataset, connection } = found;
+
+    const sheet = writableSheet(connection, dataset);
+    if (!sheet.ok) return { fail: { status: 400, error: sheet.why } };
+
+    const fields = editableFields(view.spec, dataset.fields);
+    if (fields.length === 0) {
+      return {
+        fail: {
+          status: 400,
+          error:
+            "The columns this view offered for editing are no longer on the sheet. " +
+            "An admin needs to read its columns again in the studio.",
+        },
+      };
+    }
+    return {
+      viewer,
+      view,
+      dataset,
+      connection,
+      fields,
+      writer: new SheetWriter(sheet.sheetId, await reader.contextFor(connection)),
+      target: `${dataset.label} (via ${connection.label})`,
+    };
+  }
+
+  /**
+   * What the client asked to change, narrowed to what it is allowed to.
+   *
+   * A key the view does not offer for editing cannot reach the sheet even if
+   * it got past everything else — the same belt-and-braces the commissioning
+   * sheet's writer uses, where the API and the writer each iterate the allowed
+   * list independently rather than trusting a body.
+   */
+  function readEdits(
+    body: unknown,
+    fields: Field[],
+  ): { edits: { field: Field; value: string }[]; refused: string[] } {
+    const raw = ((body ?? {}) as Record<string, unknown>).changes;
+    const asked = (raw ?? {}) as Record<string, unknown>;
+    const edits: { field: Field; value: string }[] = [];
+    const refused: string[] = [];
+    for (const field of fields) {
+      if (!(field.key in asked)) continue;
+      const value = asked[field.key];
+      if (typeof value !== "string") {
+        refused.push(`${field.name} needs to be text.`);
+        continue;
+      }
+      if (value.length > 4000) {
+        refused.push(`${field.name} is too long for a cell.`);
+        continue;
+      }
+      const no = refuseValue(value, field);
+      if (no) {
+        refused.push(no);
+        continue;
+      }
+      edits.push({ field, value });
+    }
+    return { edits, refused };
+  }
+
+  /** A row id, as far as this layer is concerned: present and not absurd. */
+  function readRowId(body: unknown): string {
+    const raw = ((body ?? {}) as Record<string, unknown>).row;
+    const id = typeof raw === "string" ? raw.trim() : "";
+    return id.length > 0 && id.length <= 40 ? id : "";
+  }
+
+  /**
+   * What would change, having just read the sheet.
+   *
+   * The `from` comes from this read and not from the rendered page, which may
+   * be a minute old and whose values have been through the display formatter —
+   * a checkbox shows as "Yes" in a view and is `true` on the sheet, and
+   * comparing those two would make every save look like a conflict.
+   */
+  router.post("/views/:slug/edit/preview", async (req: ViewerRequest, res, next) => {
+    try {
+      const ready = await forEditing(req);
+      if ("fail" in ready) {
+        res.status(ready.fail.status).json({ error: ready.fail.error });
+        return;
+      }
+      const row = readRowId(req.body);
+      if (!row) {
+        res.status(400).json({ error: "That row cannot be addressed on the sheet." });
+        return;
+      }
+      const { edits, refused } = readEdits(req.body, ready.fields);
+      if (refused.length > 0) {
+        res.status(400).json({ error: refused.join(" ") });
+        return;
+      }
+      if (edits.length === 0) {
+        res.status(400).json({ error: "Nothing was changed." });
+        return;
+      }
+
+      const live = await ready.writer.current(row);
+      const cells: CellEdit[] = [];
+      const expect: Record<string, string> = {};
+      for (const { field, value } of edits) {
+        const raw = live[field.key] ?? "";
+        /*
+          Two vocabularies, and keeping them apart is the whole of this.
+
+          What a person is shown is the view's words — a checkbox reads Yes or
+          No, because that is what the table they are looking at says. What is
+          compared against the sheet is the sheet's own words, which for that
+          same checkbox is "true". Showing the raw value would read as
+          "false → Yes"; comparing the shown one would make setting No on an
+          unticked box look like a change, and write false over false.
+        */
+        const shown = display(raw, field.type);
+        if (shown.trim() === value.trim()) continue;
+        cells.push({ field: field.key, name: field.name, from: shown, to: value });
+        expect[field.key] = raw;
+      }
+      if (cells.length === 0) {
+        res.status(400).json({ error: "Nothing to change — the sheet already says that." });
+        return;
+      }
+      res.json({ target: ready.target, cells, expect });
+    } catch (err) {
+      if (err instanceof Error) {
+        res.status(502).json({ error: err.message });
+        return;
+      }
+      next(err);
+    }
+  });
+
+  /**
+   * Write it, having checked nobody moved first.
+   *
+   * `expect` goes back to the writer exactly as the preview handed it out. It
+   * is not rebuilt here and it is not rebuilt in the browser: rebuilding it
+   * from whatever the form holds now would make the concurrency check compare
+   * a value against itself and always pass, which is the one failure the two
+   * steps exist to prevent.
+   *
+   * Every column written has to appear in it. The commissioning sheet's writer
+   * checks only the cells that differ while writing all five, which silently
+   * overwrites a column somebody else touched; there is no reason to inherit
+   * that here.
+   */
+  router.post("/views/:slug/edit", async (req: ViewerRequest, res, next) => {
+    try {
+      const ready = await forEditing(req);
+      if ("fail" in ready) {
+        res.status(ready.fail.status).json({ error: ready.fail.error });
+        return;
+      }
+      const row = readRowId(req.body);
+      if (!row) {
+        res.status(400).json({ error: "That row cannot be addressed on the sheet." });
+        return;
+      }
+      const { edits, refused } = readEdits(req.body, ready.fields);
+      if (refused.length > 0) {
+        res.status(400).json({ error: refused.join(" ") });
+        return;
+      }
+      if (edits.length === 0) {
+        res.status(400).json({ error: "Nothing was changed." });
+        return;
+      }
+
+      const sent = (req.body ?? {}) as Record<string, unknown>;
+      const expect: Record<string, string> = {};
+      for (const [k, v] of Object.entries((sent.expect ?? {}) as Record<string, unknown>)) {
+        if (typeof v === "string") expect[k] = v;
+      }
+      const uncovered = edits.filter((e) => !(e.field.key in expect));
+      if (uncovered.length > 0) {
+        res.status(400).json({
+          error:
+            "Something has moved on since this change was worked out. Review it again.",
+        });
+        return;
+      }
+
+      // Logged in the words the confirmation used, so the record answers
+      // "what did they think they were doing" and not only "what moved".
+      const changes = edits.map(({ field, value }) => ({
+        field: field.key,
+        name: field.name,
+        from: display(expect[field.key] ?? "", field.type),
+        to: value,
+      }));
+
+      const log = (ok: boolean, problem?: string) =>
+        store!.logViewWrite({
+          viewId: ready.view.id,
+          viewLabel: ready.view.label,
+          datasetId: ready.dataset.id,
+          target: ready.target,
+          rowId: row,
+          changes,
+          byEmail: ready.viewer.email,
+          byPersonId: ready.viewer.personId,
+          ok,
+          problem,
+        });
+
+      try {
+        await ready.writer.apply(
+          row,
+          edits.map(({ field, value }) => ({ field: field.key, value: cellValue(value, field.type) })),
+          expect,
+        );
+      } catch (err) {
+        const problem = err instanceof Error ? err.message : "The sheet refused the change.";
+        await log(false, problem);
+        res.status(409).json({ error: problem });
+        return;
+      }
+
+      await log(true);
+      // The rows this view drew are now wrong by exactly this much. Dropping
+      // only this dataset's cache rather than the whole connection's, or a
+      // dozen unrelated views pay for one edit.
+      reader.forget(ready.connection.id, ready.dataset.ref);
+      res.json({ changed: changes, target: ready.target });
+    } catch (err) {
+      if (err instanceof Error) {
+        res.status(502).json({ error: err.message });
+        return;
+      }
       next(err);
     }
   });

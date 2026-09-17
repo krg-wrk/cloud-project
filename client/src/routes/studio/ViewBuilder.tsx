@@ -4,6 +4,7 @@ import { Icon, ICON_PATHS } from "../../lib/icons";
 import type {
   Audience,
   Dataset,
+  EditRule,
   Field,
   FilterOp,
   FormatRule,
@@ -114,6 +115,9 @@ export default function ViewBuilder({
   );
   const [state, setViewState] = useState<"draft" | "live">(existing?.state ?? "draft");
   const [emailsText, setEmailsText] = useState((existing?.audience.emails ?? []).join(", "));
+  const [editEmailsText, setEditEmailsText] = useState(
+    (existing?.spec.edit?.who.emails ?? []).join(", "),
+  );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -121,6 +125,32 @@ export default function ViewBuilder({
   const fields = dataset?.fields ?? [];
 
   const preview = usePreview(datasetId, spec);
+
+  /*
+    Whether this dataset is one the Hub could write to at all, which is a
+    property of the source rather than of the view. Read off the preview
+    because that is the live answer and this component has no connection list;
+    undefined until the first preview lands, which reads as "not yet".
+
+    The server decides this again on every write. Saying it here is so that an
+    admin is not offered a control that could never work.
+  */
+  const kind = preview.data?.source.kind;
+  const isReport = (dataset?.ref ?? "").startsWith("report:");
+  const writable = kind === undefined ? undefined : kind === "smartsheet" && !isReport;
+  /** Editable columns the table is not drawing, which have no cell to offer. */
+  const drawn = spec.fields.columns ?? [];
+  const undrawn = (spec.edit?.fields ?? [])
+    .filter((key) => drawn.length > 0 && !drawn.includes(key))
+    .map((key) => fields.find((f) => f.key === key)?.name ?? key);
+
+  const whyNotWritable = isReport
+    ? "A report draws rows from several sheets and names its columns with ids that mean nothing outside it, so there is nothing to write back to. Point the dataset at the sheet itself."
+    : kind === "google-sheets"
+      ? "A Google Sheet is read-only to the Hub, and a row there is addressed by its position in the grid — sorting the tab would move what a saved edit points at."
+      : kind === "hub"
+        ? "The Hub's own tables are a reading surface over the sheets behind them. A forecast is changed on its own page, and the view follows."
+        : "Only a Smartsheet sheet can be edited from a view.";
 
   function setField(role: keyof ViewSpec["fields"], value: string) {
     setSpec({ ...spec, fields: { ...spec.fields, [role]: value || undefined } });
@@ -134,6 +164,18 @@ export default function ViewBuilder({
     setSpec({ ...spec, fields: { ...spec.fields, [role]: next } });
   }
 
+  /**
+   * Change the edit rule, starting one if there is not one yet.
+   *
+   * The blank it starts from names nobody, not everybody. An admin ticking a
+   * column to make it editable has said which column, not who — and the safe
+   * reading of an unanswered question about writing to a live sheet is "no".
+   */
+  function setEdit(next: Partial<EditRule>) {
+    const now: EditRule = spec.edit ?? { fields: [], who: { roles: [], verticals: "all", emails: [] } };
+    setSpec({ ...spec, edit: { ...now, ...next } });
+  }
+
   async function save() {
     setSaving(true);
     setError(null);
@@ -145,7 +187,9 @@ export default function ViewBuilder({
         section,
         description,
         datasetId,
-        spec,
+        spec: spec.edit
+          ? { ...spec, edit: { ...spec.edit, who: { ...spec.edit.who, emails: parseEmails(editEmailsText) } } }
+          : spec,
         audience: { ...audience, emails: parseEmails(emailsText) },
         state,
       };
@@ -438,6 +482,108 @@ export default function ViewBuilder({
             Admins always see every view, including drafts. The rule is applied on the server, so
             a link to a view is no way round it.
           </p>
+        </section>
+
+        {/* Last on purpose. Everything above decides what a view shows; this
+            is the only part that reaches back into somebody else's sheet. */}
+        <section className="builder-step">
+          <h2 className="section-title">
+            <Icon name="edit" /> What can be changed
+          </h2>
+          {!writable ? (
+            <p className="muted small">{writable === false ? whyNotWritable : "Choose a dataset first."}</p>
+          ) : (
+            <>
+              <div className="field">
+                <label>Columns people can edit</label>
+                <div className="chip-picker">
+                  {fields.map((f) => {
+                    const on = (spec.edit?.fields ?? []).includes(f.key);
+                    return (
+                      <button
+                        key={f.key}
+                        className={on ? "chip on" : "chip"}
+                        onClick={() => {
+                          const current = spec.edit?.fields ?? [];
+                          setEdit({
+                            fields: on ? current.filter((x) => x !== f.key) : [...current, f.key],
+                          });
+                        }}
+                      >
+                        {f.name}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="muted small">
+                  None chosen is a view to read, which is what almost every view should be.
+                </p>
+                {/* Two ways to choose a column that can never be edited in
+                    practice. Both are easy to do and invisible afterwards, so
+                    the builder says so here rather than leaving somebody to
+                    wonder why the cell is not a box. */}
+                {(spec.edit?.fields ?? []).length > 0 && spec.layout !== "table" && (
+                  <p className="studio-note bad">
+                    <Icon name="at-risk" size={14} /> Only a table draws a cell somebody can
+                    change. On a {spec.layout} layout these columns stay as they are.
+                  </p>
+                )}
+                {undrawn.length > 0 && spec.layout === "table" && (
+                  <p className="studio-note bad">
+                    <Icon name="at-risk" size={14} /> {undrawn.join(", ")}{" "}
+                    {undrawn.length === 1 ? "is not a column" : "are not columns"} this view
+                    shows, so there is no cell to change. Add{" "}
+                    {undrawn.length === 1 ? "it" : "them"} under “What it shows”.
+                  </p>
+                )}
+              </div>
+
+              {(spec.edit?.fields ?? []).length > 0 && (
+                <>
+                  <div className="field">
+                    <label>And who may change them</label>
+                    <div className="chip-picker">
+                      {ROLE_OPTIONS.map((r) => {
+                        const roles = spec.edit?.who.roles;
+                        const on = roles !== "all" && (roles ?? []).includes(r);
+                        return (
+                          <button
+                            key={r}
+                            className={on ? "chip on" : "chip"}
+                            onClick={() => {
+                              const current = roles === "all" || !roles ? [] : roles;
+                              setEdit({
+                                who: {
+                                  ...(spec.edit?.who ?? { verticals: "all", emails: [] }),
+                                  roles: on ? current.filter((x) => x !== r) : [...current, r],
+                                },
+                              });
+                            }}
+                          >
+                            {r === "commissioning-manager" ? "Commissioning managers" : `${r}s`}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div className="field">
+                    <label htmlFor="v-edit-emails">And these people, whatever their role</label>
+                    <input
+                      id="v-edit-emails"
+                      value={editEmailsText}
+                      placeholder="someone@wgsn.com"
+                      onChange={(e) => setEditEmailsText(e.target.value)}
+                    />
+                  </div>
+                  <p className="studio-note">
+                    <Icon name="lock" size={14} /> Nobody until a role or a name is chosen here
+                    &mdash; not even an admin. Every change is read back from the sheet first, shown
+                    before it is made, and recorded.
+                  </p>
+                </>
+              )}
+            </>
+          )}
         </section>
 
         <div className="builder-save">

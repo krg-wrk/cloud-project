@@ -1,9 +1,10 @@
 import type { Viewer } from "../auth.js";
 import type { DataSource } from "../types.js";
 import { createConnectors, DatasetReader } from "./connectors.js";
-import { applySpec, identities, project, usedFields } from "./query.js";
+import { applySpec, canEditView, editableFields, identities, project, usedFields } from "./query.js";
 import type { StudioStore } from "./store.js";
-import type { ViewDef, ViewPage } from "./types.js";
+import type { Connection, Dataset, Field, ViewDef, ViewPage } from "./types.js";
+import { writableSheet } from "./write.js";
 
 /**
  * Running a view, away from HTTP.
@@ -40,12 +41,14 @@ export class ViewRunner {
   }
 
   /** A dataset plus its connection, or a sentence written for a person. */
-  async resolve(datasetId: string) {
+  async resolve(
+    datasetId: string,
+  ): Promise<{ error: string } | { dataset: Dataset; connection: Connection }> {
     const dataset = await this.studio.dataset(datasetId);
-    if (!dataset) return { error: "No dataset with that id." } as const;
+    if (!dataset) return { error: "No dataset with that id." };
     const connection = await this.studio.connection(dataset.connectionId);
-    if (!connection) return { error: "That dataset's connection has been removed." } as const;
-    return { dataset, connection } as const;
+    if (!connection) return { error: "That dataset's connection has been removed." };
+    return { dataset, connection };
   }
 
   /**
@@ -82,6 +85,7 @@ export class ViewRunner {
         source: { dataset: "—", connection: "—", kind: "smartsheet" },
         total: 0,
         rows: [],
+        editable: [],
         error: found.error,
       };
     }
@@ -99,6 +103,7 @@ export class ViewRunner {
         // The rules run against the whole row rather than the projected one,
         // so a rule can key off a column the layout does not draw.
         rows: project(applied.rows, fields, view.spec, identities(viewer, viewerName), dataset.fields),
+        editable: this.editableFor(view, viewer, connection, dataset).map((f) => f.key),
       };
     } catch (err) {
       return {
@@ -107,8 +112,29 @@ export class ViewRunner {
         source,
         total: 0,
         rows: [],
+        editable: [],
         error: err instanceof Error ? err.message : "The source could not be read.",
       };
     }
+  }
+
+  /**
+   * The columns this person may change on this view, or none.
+   *
+   * Three things all have to be true, and they fail for different reasons, so
+   * they are asked separately: the view has to offer editing to this person,
+   * the dataset has to be one the Hub can physically write to, and the column
+   * has to still exist on it. Only the last is a detail — the other two are
+   * the permission and the capability, and neither is the client's to decide.
+   */
+  editableFor(
+    view: ViewDef,
+    viewer: Viewer,
+    connection: Connection,
+    dataset: Dataset,
+  ): Field[] {
+    if (!canEditView(view.spec, view.audience, view.state, viewer)) return [];
+    if (!writableSheet(connection, dataset).ok) return [];
+    return editableFields(view.spec, dataset.fields);
   }
 }

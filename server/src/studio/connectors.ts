@@ -180,7 +180,21 @@ function flat(row: unknown, index: number): Record<string, string> {
   return out;
 }
 
-const API = "https://api.smartsheet.com/2.0";
+/**
+ * Where the Smartsheet API lives.
+ *
+ * The same setting the commissioning sheet's reader uses, and for the same
+ * reasons: Smartsheet is regional, so a European account is served from
+ * api.smartsheet.eu and pointing a UK team's Hub at the US endpoint either
+ * fails or moves their data across a border neither of them chose. It is also
+ * how this path is exercised against a stub, the real API being unreachable
+ * from the environment it was built in.
+ *
+ * It was hard-coded here while the studio only read. Now that it writes, the
+ * two halves of the Hub that talk to Smartsheet had better be pointed at the
+ * same place.
+ */
+export const API = (process.env.SMARTSHEET_API ?? "https://api.smartsheet.com/2.0").replace(/\/$/, "");
 
 interface SmartsheetColumn {
   id: number;
