@@ -23,6 +23,30 @@ file, so there are no credentials to set up first and no database to install.
 Set `HUB_DB_URL` when it is time for Postgres — see
 [the database](#the-database-sqlite-to-try-it-postgres-to-run-it).
 
+### Settings, and where a credential lives
+
+Everything is configured by environment variable, and there are enough of them
+that typing them on one line stops being reasonable around the fourth. Copy the
+template and fill in what you need:
+
+```bash
+cp env.example .env
+npm run dev
+```
+
+`.env` is read by Node itself — `--env-file-if-exists`, no dependency — and is
+gitignored, which is the whole reason it is the right place for a token. Every
+line in it is optional: with none of them set you get the sample data, and
+anything that reaches the outside world stays off until a line turns it on.
+
+Two things follow from that, and both are deliberate. A real Smartsheet token
+belongs on a machine somebody chose to put it on, never in the repository — so
+nothing in `env.example` is a real value and `.env` must stay ignored. And
+`SMARTSHEET_WRITE` is its own line rather than something the token implies:
+reading the real sheets and changing them are different decisions, and the
+second one is worth making separately once the first has been watched for a
+while.
+
 ## What's in it
 
 | Page | URL | What it's for |
