@@ -312,14 +312,18 @@ function reportColumns(sheetColumns, groups) {
     say(" ", `      ${bad("✗")} “${title}”${near ? dim(` — the sheet has “${near}”`) : ""}`);
   }
   /*
-   * Capped, and the count says so. A trend sheet carries eighty headings the
-   * Hub never reads, and printing all of them buries the three lines above
-   * that somebody has to act on.
+   * All of them, wrapped, once something is missing.
+   *
+   * This was capped at eight so a wide sheet could not bury the lines above
+   * that somebody has to act on, which was the wrong instinct: the moment a
+   * title is missing, the sheet's own heading for it is somewhere in this
+   * list, and a list that stops at eight of seventy is a list that cannot
+   * answer the only question being asked of it. The cap saved nothing —
+   * nothing is printed at all when a sheet matches cleanly.
    */
   if (spare.length) {
-    const shown = spare.slice(0, 8).map((t) => `“${t}”`).join(", ");
-    const more = spare.length > 8 ? ` and ${spare.length - 8} more` : "";
-    say(" ", dim(`      not read by the Hub: ${shown}${more}`));
+    say(" ", dim(`      not read by the Hub (${spare.length}):`));
+    for (const line of wrap(spare.map((t) => `“${t}”`), 76)) say(" ", dim(`        ${line}`));
   }
 }
 
@@ -336,11 +340,38 @@ function closest(wanted, spare) {
   const flatten = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
   const target = flatten(wanted);
   if (!target) return null;
+  /*
+   * A heading with no letters in it cannot be a near miss.
+   *
+   * Real sheets use ">>" and "—" as spacer columns, and those flatten to
+   * nothing at all — which every target contains, so the first spacer in the
+   * sheet was confidently offered as the match for whatever was missing.
+   * "Vertical" was reported as probably being ">>". Two characters is enough
+   * to keep "ID" as a candidate for "Content ID", which is a real answer.
+   */
+  const usable = spare.filter((t) => flatten(t).length >= 2);
   return (
-    spare.find((t) => flatten(t) === target) ??
-    spare.find((t) => flatten(t).includes(target) || target.includes(flatten(t))) ??
+    usable.find((t) => flatten(t) === target) ??
+    usable.find((t) => flatten(t).includes(target) || target.includes(flatten(t))) ??
     null
   );
+}
+
+/** Long lists, folded to a width, so a seventy-column sheet stays readable. */
+function wrap(items, width) {
+  const lines = [];
+  let line = "";
+  for (const item of items) {
+    const next = line ? `${line}, ${item}` : item;
+    if (next.length > width && line) {
+      lines.push(`${line},`);
+      line = item;
+    } else {
+      line = next;
+    }
+  }
+  if (line) lines.push(line);
+  return lines;
 }
 
 /**
