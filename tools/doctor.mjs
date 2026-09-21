@@ -16,6 +16,18 @@
  * It only reads. Nothing here writes, and no credential is ever printed —
  * a token appears as its last four characters, the way the studio shows one.
  *
+ *   npm run doctor -- --columns
+ *
+ * The second failure, once every id is right, is a sheet that answers
+ * perfectly and whose column titles are not the ones the Hub looks for. That
+ * one is silent: `fetchRows` keys a row by the exact title string, so a
+ * heading reading "Submission date" or carrying a trailing space is simply
+ * absent, the field comes back empty on every row, and the page is confidently
+ * blank with nothing logged anywhere. `--columns` asks each sheet what it
+ * actually has and says which of the Hub's titles are missing — and, because
+ * the near misses are the ones nobody spots by eye, what the sheet has that
+ * looks like the missing one.
+ *
  * Written in Node rather than as a shell script so it behaves the same on a
  * Mac, on Windows and in CI, and needs nothing installed to run.
  */
@@ -53,6 +65,27 @@ const idle = (label, note) => say(dim("·"), label, note);
 /** A credential, shown the way the studio shows one: enough to recognise. */
 const tail = (secret) => (secret.length <= 4 ? "••••" : `••••${secret.slice(-4)}`);
 
+/*
+ * The column titles the Hub looks for, read from the code that looks for them.
+ *
+ * Imported from the build rather than copied into this file, because a second
+ * list of the same titles is a second thing to forget: somebody corrects
+ * `COLUMNS` to match a real sheet, the doctor goes on checking the old names,
+ * and it reports a problem that was fixed an hour ago. Loaded only when it is
+ * asked for, so the ordinary run needs no build at all.
+ */
+const wantsColumns = process.argv.includes("--columns");
+let COLUMNS = null;
+if (wantsColumns) {
+  try {
+    ({ COLUMNS } = await import(new URL("server/dist/data/smartsheetSource.js", new URL("..", import.meta.url))));
+  } catch {
+    console.log(
+      warn("\n--columns needs the server built first — run `npm run build -w server`, then try again."),
+    );
+  }
+}
+
 console.log("\nThe Forecasters Hub, as this machine has it\n");
 
 /* ---- The machine --------------------------------------------------------- */
@@ -89,6 +122,15 @@ const source = process.env.DATA_SOURCE ?? "seed";
 console.log("\nThe schedule");
 if (source !== "smartsheet") {
   idle(`DATA_SOURCE=${source}`, "the built-in sample schedule; no credentials needed");
+  /*
+   * Asked for a comparison there is nothing to compare. Said out loud
+   * because the alternative is what happened the first time somebody tried
+   * it: --columns printed nothing at all, which reads as the flag being
+   * broken rather than as the machine not being pointed at a sheet yet.
+   */
+  if (wantsColumns) {
+    idle("--columns", "nothing to compare until DATA_SOURCE=smartsheet and the sheet ids are set");
+  }
 } else {
   const token = process.env.SMARTSHEET_TOKEN ?? "";
   const api = (process.env.SMARTSHEET_API ?? "https://api.smartsheet.com/2.0").replace(/\/$/, "");
@@ -102,50 +144,71 @@ if (source !== "smartsheet") {
 
     // Every sheet the Hub reads, whether or not it is set. An unset one is
     // not an error — the Hub does without it — but it is worth seeing.
+    /*
+     * The last element names the groups of `COLUMNS` this sheet is read
+     * through, for --columns. The directory has none on purpose: its reader
+     * takes the sheet's own headings as they come, so there is no fixed list
+     * to hold it to.
+     */
     const SHEETS = [
-      ["SMARTSHEET_CONTENT_SHEET_ID", "the commissioning schedule", true],
-      ["SMARTSHEET_PEOPLE_SHEET_ID", "the team"],
-      ["SMARTSHEET_ACCESS_SHEET_ID", "who may sign in"],
-      ["SMARTSHEET_EVENTS_SHEET_ID", "leave and holidays"],
-      ["SMARTSHEET_SESSIONS_SHEET_ID", "the workshop programme"],
-      ["SMARTSHEET_SIGNUPS_SHEET_ID", "workshop sign-ups"],
-      ["SMARTSHEET_DIRECTORY_SHEET_ID", "the content directory"],
-      ["SMARTSHEET_TRENDS_SHEET_ID", "TFDB trend profiles"],
-      ["SMARTSHEET_METRICS_SHEET_ID", "the KPIs tracked"],
-      ["SMARTSHEET_KPI_SHEET_ID", "KPI readings"],
+      ["SMARTSHEET_CONTENT_SHEET_ID", "the commissioning schedule", true, ["content"]],
+      ["SMARTSHEET_PEOPLE_SHEET_ID", "the team", false, ["people"]],
+      ["SMARTSHEET_ACCESS_SHEET_ID", "who may sign in", false, ["access"]],
+      ["SMARTSHEET_EVENTS_SHEET_ID", "leave and holidays", false, ["events"]],
+      ["SMARTSHEET_SESSIONS_SHEET_ID", "the workshop programme", false, ["sessions"]],
+      ["SMARTSHEET_SIGNUPS_SHEET_ID", "workshop sign-ups", false, ["signUps"]],
+      ["SMARTSHEET_DIRECTORY_SHEET_ID", "the content directory", false, null],
+      ["SMARTSHEET_TRENDS_SHEET_ID", "TFDB trend profiles", false, ["trends", "trendLabels"]],
+      ["SMARTSHEET_METRICS_SHEET_ID", "the KPIs tracked", false, ["metrics"]],
+      ["SMARTSHEET_KPI_SHEET_ID", "KPI readings", false, ["observations"]],
     ];
 
     console.log("");
-    for (const [name, what, required] of SHEETS) {
-      const id = process.env[name];
-      const label = `${name.replace(/^SMARTSHEET_|_SHEET_ID$/g, "").toLowerCase().padEnd(9)} ${dim(what)}`;
-      if (!id) {
+    for (const [name, what, required, groups] of SHEETS) {
+      const raw = process.env[name];
+      const short = name.replace(/^SMARTSHEET_|_SHEET_ID$/g, "").toLowerCase();
+      if (!raw || !raw.trim()) {
+        const label = `${short.padEnd(9)} ${dim(what)}`;
         if (required) fail(label, "not set, and the Hub cannot start without it");
         else idle(label, "not set");
         continue;
       }
-      if (!/^\d{6,25}$/.test(id.trim())) {
-        /*
-          Never echoed back.
+      /*
+       * A list, because the events variable takes several — holidays, leave
+       * and shows in the sheets a team already keeps. Every id is asked
+       * about separately: reporting "the events sheet answers" when one of
+       * three is a digit out would hide exactly the failure this exists to
+       * catch, and the sheet's own name beside each one is what tells
+       * somebody which of the three it was.
+       */
+      const ids = [...new Set(raw.split(",").map((v) => v.trim()).filter(Boolean))];
+      const label = `${short.padEnd(9)} ${dim(what)}`;
 
-          A sheet id is digits, and a Smartsheet token is not — so the one
-          thing that reliably lands here is somebody pasting their token into
-          a sheet-id line by mistake. Printing "that is not a sheet id" with
-          the value attached would put a live credential in the output whose
-          whole purpose is to be pasted into a ticket. Its shape is enough to
-          recognise the mistake.
-        */
-        fail(label, `not a sheet id — ${shapeOf(id)}. It should be a long number, 6 to 25 digits`);
-        continue;
-      }
-      if (!token) continue;
-      // pageSize=1 so a 3,000-row sheet is not pulled to answer "is it there".
-      const sheet = await ask(`${api}/sheets/${id.trim()}?pageSize=1`, token);
-      if (sheet.ok) {
-        const rows = sheet.body.totalRowCount ?? 0;
-        good(label, `“${sheet.body.name}” — ${rows} row${rows === 1 ? "" : "s"}`);
-      } else {
-        fail(label, sheet.why);
+      for (const id of ids) {
+        if (!/^\d{6,25}$/.test(id)) {
+          /*
+            Never echoed back.
+
+            A sheet id is digits, and a Smartsheet token is not — so the one
+            thing that reliably lands here is somebody pasting their token
+            into a sheet-id line by mistake. Printing "that is not a sheet
+            id" with the value attached would put a live credential in the
+            output whose whole purpose is to be pasted into a ticket. Its
+            shape is enough to recognise the mistake.
+          */
+          fail(label, `not a sheet id — ${shapeOf(id)}. It should be a long number, 6 to 25 digits`);
+          continue;
+        }
+        if (!token) continue;
+        // pageSize=1 so a 3,000-row sheet is not pulled to answer "is it there".
+        const sheet = await ask(`${api}/sheets/${id}?pageSize=1`, token);
+        if (sheet.ok) {
+          const rows = sheet.body.totalRowCount ?? 0;
+          good(label, `“${sheet.body.name}” — ${rows} row${rows === 1 ? "" : "s"}`);
+          if (COLUMNS && groups) reportColumns(sheet.body.columns ?? [], groups);
+        } else {
+          fail(label, sheet.why);
+        }
       }
     }
   }
@@ -217,6 +280,67 @@ if (problems === 0) {
 } else {
   console.log(bad(`${problems} thing${problems === 1 ? "" : "s"} to fix — see the ✗ above.\n`));
   process.exitCode = 1;
+}
+
+/**
+ * What the Hub wants from this sheet against what the sheet has.
+ *
+ * Only the mismatches are printed. A sheet whose fourteen titles all match
+ * says so in one line and moves on — the output is meant to be read when it
+ * is wrong, and a wall of ticks is how somebody stops reading it.
+ *
+ * The spare headings are worth printing beside the missing ones because the
+ * answer is almost always among them: the sheet says "Actual Submission Date"
+ * and the Hub asks for "Actual Submission". Naming the likely one is the whole
+ * value of this over reading two lists side by side.
+ */
+function reportColumns(sheetColumns, groups) {
+  const has = sheetColumns.map((c) => c.title).filter(Boolean);
+  const wanted = [...new Set(groups.flatMap((g) => Object.values(COLUMNS[g] ?? {})))];
+
+  const missing = wanted.filter((title) => !has.includes(title));
+  if (missing.length === 0) {
+    say(" ", dim(`    all ${wanted.length} columns the Hub reads are there`));
+    return;
+  }
+
+  const spare = has.filter((title) => !wanted.includes(title));
+  problems += missing.length;
+  say(" ", `    ${bad(`${missing.length} of ${wanted.length} missing`)}`);
+  for (const title of missing) {
+    const near = closest(title, spare);
+    say(" ", `      ${bad("✗")} “${title}”${near ? dim(` — the sheet has “${near}”`) : ""}`);
+  }
+  /*
+   * Capped, and the count says so. A trend sheet carries eighty headings the
+   * Hub never reads, and printing all of them buries the three lines above
+   * that somebody has to act on.
+   */
+  if (spare.length) {
+    const shown = spare.slice(0, 8).map((t) => `“${t}”`).join(", ");
+    const more = spare.length > 8 ? ` and ${spare.length - 8} more` : "";
+    say(" ", dim(`      not read by the Hub: ${shown}${more}`));
+  }
+}
+
+/**
+ * The spare heading most likely to be the missing one.
+ *
+ * Case, spaces and punctuation are stripped before comparing because those are
+ * exactly the differences a person cannot see and `fetchRows` cannot forgive —
+ * a trailing space in a Smartsheet heading looks like nothing at all. Anything
+ * beyond a containment match is left alone: a wrong guess printed confidently
+ * is worse than no guess, and the spare list is right underneath.
+ */
+function closest(wanted, spare) {
+  const flatten = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const target = flatten(wanted);
+  if (!target) return null;
+  return (
+    spare.find((t) => flatten(t) === target) ??
+    spare.find((t) => flatten(t).includes(target) || target.includes(flatten(t))) ??
+    null
+  );
 }
 
 /**

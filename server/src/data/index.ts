@@ -11,6 +11,9 @@ import { SmartsheetSource } from "./smartsheetSource.js";
  *   SMARTSHEET_TOKEN, SMARTSHEET_CONTENT_SHEET_ID,
  *   SMARTSHEET_EVENTS_SHEET_ID, SMARTSHEET_PEOPLE_SHEET_ID
  *
+ *   SMARTSHEET_EVENTS_SHEET_ID takes a comma-separated list, so holidays,
+ *   leave and shows can stay in the separate sheets a team already keeps.
+ *
  * SMARTSHEET_API          the API base, for a non-US Smartsheet region
  *   (api.smartsheet.eu for a European account). Defaults to the US one.
  *
@@ -22,6 +25,24 @@ import { SmartsheetSource } from "./smartsheetSource.js";
  *   for developing them without a Smartsheet token. Nothing leaves the
  *   process and nothing survives a restart. Ignored unless DATA_SOURCE=seed.
  */
+/**
+ * One environment variable, however many sheets are behind it.
+ *
+ * `SMARTSHEET_EVENTS_SHEET_ID=111,222,333` because a team's calendar is
+ * usually several sheets — holidays in one, leave in another, shows in a
+ * third — and the Hub reads Smartsheet as it is kept rather than asking for
+ * it to be rearranged. A second variable per sheet was the alternative and
+ * would have meant a new deploy every time somebody starts a fourth.
+ *
+ * Whitespace and empty entries are dropped so a trailing comma, or a list
+ * broken across lines in an editor, is not a sheet id of "" that reports as a
+ * 404 nobody can place. Duplicates go too: the same id twice would put every
+ * holiday on the calendar twice.
+ */
+export function sheetIds(raw: string | undefined): string[] {
+  return [...new Set((raw ?? "").split(",").map((id) => id.trim()).filter(Boolean))];
+}
+
 export function createDataSource(): DataSource {
   const kind = process.env.DATA_SOURCE ?? "seed";
 
@@ -43,7 +64,7 @@ export function createDataSource(): DataSource {
        * request.
        */
       allowWrites: process.env.SMARTSHEET_WRITE === "1",
-      eventsSheetId: process.env.SMARTSHEET_EVENTS_SHEET_ID,
+      eventsSheetIds: sheetIds(process.env.SMARTSHEET_EVENTS_SHEET_ID),
       peopleSheetId: process.env.SMARTSHEET_PEOPLE_SHEET_ID,
       directorySheetId: process.env.SMARTSHEET_DIRECTORY_SHEET_ID,
       sessionsSheetId: process.env.SMARTSHEET_SESSIONS_SHEET_ID,

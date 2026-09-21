@@ -223,7 +223,18 @@ export interface SmartsheetConfig {
    * API refuses before it gets anywhere near a request.
    */
   allowWrites?: boolean;
-  eventsSheetId?: string;
+  /**
+   * Several, because a team keeps its calendar the way it already keeps it.
+   *
+   * Holidays in one sheet, leave in another, shows in a third is the ordinary
+   * arrangement, and the Hub is a reading surface over Smartsheet rather than
+   * a reason to reorganise it. Asking somebody to merge three sheets into one
+   * so the Hub can read them puts the tool's convenience ahead of the system
+   * of record, which is the wrong way round. A Smartsheet report across the
+   * three would have been the other answer and does not work: a report is
+   * served from /reports and this reads /sheets.
+   */
+  eventsSheetIds?: string[];
   peopleSheetId?: string;
   sessionsSheetId?: string;
   /** One row per person per session: Session ID, Person, State. */
@@ -437,12 +448,22 @@ export class SmartsheetSource implements DataSource {
   private async fetchRows(sheetId: string): Promise<FlatRow[]> {
     const sheet = await this.fetchSheet(sheetId);
     const titleById = new Map(sheet.columns.map((c) => [c.id, c.title]));
+    /*
+     * Which columns hold days, so those cells can be read the other way
+     * round. The sheet already says — every column arrives with its type —
+     * so this costs nothing beyond noticing.
+     */
+    const dateColumns = new Set(
+      sheet.columns.filter((c) => isDateColumn(c.type)).map((c) => c.id),
+    );
     return sheet.rows.map((row) => {
       const flat: FlatRow = { _rowId: String(row.id) };
       for (const cell of row.cells) {
         const title = titleById.get(cell.columnId);
         if (!title) continue;
-        flat[title] = cell.displayValue ?? (cell.value != null ? String(cell.value) : "");
+        flat[title] = dateColumns.has(cell.columnId)
+          ? String(cell.value ?? cell.displayValue ?? "")
+          : (cell.displayValue ?? (cell.value != null ? String(cell.value) : ""));
       }
       return flat;
     });
@@ -509,14 +530,32 @@ export class SmartsheetSource implements DataSource {
       }));
   }
 
+  /**
+   * Every events sheet, read as one calendar.
+   *
+   * The sheets are asked for together rather than one after another: three
+   * sequential round trips to Smartsheet is three times the wait on a page
+   * somebody opens every morning, and they do not depend on each other.
+   *
+   * A row's id carries its sheet, because a Smartsheet row id is unique
+   * within its sheet and not across sheets — two rows in two sheets can
+   * collide, and an event quietly standing in for another on the calendar is
+   * the sort of thing nobody reports as a bug because it just looks wrong.
+   */
   async listEvents(): Promise<CalendarEvent[]> {
-    if (!this.config.eventsSheetId) return [];
+    const sheetIds = this.config.eventsSheetIds ?? [];
+    if (sheetIds.length === 0) return [];
     const c = COLUMNS.events;
-    const rows = await this.fetchRows(this.config.eventsSheetId);
-    return rows
-      .filter((row) => row[c.title] && row[c.startDate])
-      .map((row, i) => ({
-        id: row._rowId || `ev-${i}`,
+    const perSheet = await Promise.all(
+      sheetIds.map(async (sheetId) =>
+        (await this.fetchRows(sheetId)).map((row) => ({ row, sheetId })),
+      ),
+    );
+    return perSheet
+      .flat()
+      .filter(({ row }) => row[c.title] && row[c.startDate])
+      .map(({ row, sheetId }, i) => ({
+        id: row._rowId ? `${sheetId}-${row._rowId}` : `ev-${i}`,
         type: normaliseEventType(row[c.type]),
         title: row[c.title],
         personId: row[c.person] ? personId(row[c.person]) : undefined,
@@ -785,12 +824,55 @@ function personId(nameOrEmail: string | undefined): string {
   return local.replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-/** Smartsheet returns dates as YYYY-MM-DD already, but display values vary by sheet locale. */
-function isoDate(value: string | undefined): string {
-  if (!value) return "";
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
+/**
+ * A cell that holds a calendar day rather than words.
+ *
+ * Worth knowing about because a date column is the one place where the
+ * display value is the wrong one to read: Smartsheet renders it to the
+ * account's regional format, so a UK sheet says "06/01/26" for the sixth of
+ * January and the underlying value says "2026-01-06". Everywhere else the
+ * display value is the one a person would recognise — a contact column shows
+ * a name over an address, a formula shows its result — so the preference is
+ * inverted here and nowhere else.
+ */
+export function isDateColumn(type: string | undefined): boolean {
+  return type === "DATE" || type === "DATETIME" || type === "ABSTRACT_DATETIME";
+}
+
+/**
+ * A calendar day, as the domain model holds them.
+ *
+ * Three rules, and each one exists because the obvious version was wrong.
+ *
+ * An ISO date is taken as characters, never parsed and reformatted. Reading
+ * "2026-09-21" into a Date and calling toISOString on it returns the
+ * twentieth anywhere east of Greenwich, because the string is read as
+ * midnight UTC but a datetime is rendered back in local time. A date that
+ * arrives correct must leave untouched.
+ *
+ * A date written only in digits and slashes is refused rather than guessed.
+ * "06/01/26" is the sixth of January to the team who typed it and the first
+ * of June to `new Date`, and there is nothing in the string that says which —
+ * so the honest answer is no answer. An empty cell on a page is somebody
+ * asking why; a deadline five months out is nobody asking anything.
+ *
+ * Anything else — "21 Sep 2026" and the like — is parsed, but the day is read
+ * back off the local clock rather than through UTC, for the same reason as
+ * the first rule.
+ */
+export function isoDate(value: string | undefined): string {
+  const text = (value ?? "").trim();
+  if (!text) return "";
+
+  const iso = /^(\d{4}-\d{2}-\d{2})(?:[T ]|$)/.exec(text);
+  if (iso) return iso[1];
+
+  if (/^\d{1,4}[/.]\d{1,2}[/.]\d{1,4}$/.test(text)) return "";
+
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}`;
 }
 
 /**
