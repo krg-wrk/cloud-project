@@ -30,7 +30,11 @@ jobs:
       # source it came from.
       - run: npm test -w server
 
-      - run: npx tsc -p client/tsconfig.json --noEmit
+      # `tsc -b`, not `tsc -p tsconfig.json`. The root client config is a
+      # solution file — `"files": []` and two references — and `-p` does not
+      # follow references, so it compiled zero files and passed whatever it was
+      # given. A deliberate type error went straight through it.
+      - run: npm run typecheck
       - run: npm run lint
       - run: npm run build -w client
       - run: node demo/build.mjs

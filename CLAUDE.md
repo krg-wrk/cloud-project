@@ -18,13 +18,19 @@ npm run dev       # client :5173, server :3001
 npm run doctor    # what this machine is pointed at, and whether it answers
 npm run refresh   # pull, rebuild, re-test
 npm test          # server (283) then client (11)
+npm run typecheck # tsc -b client — see below, this one matters
 npm run lint      # client only — nothing lints the server
-npx tsc -p client/tsconfig.json --noEmit    # client typecheck
 npm run build -w server && node demo/build.mjs   # rebuild the demo
 ```
 
 `npm run build -w server` *is* the server typecheck; `npm test -w server` runs
 it first, so a type error fails the tests.
+
+**Never use `tsc -p client/tsconfig.json --noEmit`.** That config is a solution
+file — `"files": []` and two references — and `-p` does not follow references,
+so it compiles **zero files** and passes anything. A deliberate
+`const x: number = "nope"` went straight through it. It was CI's typecheck step
+for months. `npm run typecheck` (`tsc -b client`) is the real one.
 
 Node 22 is a floor, not a preference — `node:sqlite` needs it, and the client
 tests rely on Node reading TypeScript directly.
@@ -173,6 +179,24 @@ These are silent. Each has bitten somebody.
   is always truthy.** Real bugs of this family: a permission flag that let
   everybody into an admin page; `CHANNELS.filter(async …)` passing every
   channel, twice, in different files. None of them threw. Exercise the surface.
+- **Express 4 does not forward async rejections, and about a third of the
+  routes have no `try`/`catch`.** In those, an `await` that throws hangs the
+  request until the client gives up — there is no 500 and no error page. The
+  gaps are concentrated in `server/src/studio/api.ts` and
+  `server/src/notify/api.ts`. Adding a throwing call to one of those handlers
+  produces a hang, not an error. Wrap the body before you add the call.
+- **Running `node --test server/dist/…/x.test.mjs` directly tests a stale
+  copy** — whatever the last `npm run build -w server` put there. Always go
+  through `npm test -w server`, which rebuilds first.
+- **Two constants named `STATUS_LABELS`, same type, different values.**
+  `server/src/data/smartsheetSource.ts` holds the *sheet's* words ("In
+  Progress"); `client/src/lib/domain.ts` holds the *Hub's* ("Writing").
+  Auto-import gives you whichever it likes, and "harmonising" them destroys the
+  concurrency check while every test still passes.
+- **A string replacement reads `$&` in the data.** `demo/build.mjs` inlines the
+  seed with `.replace("__SEED__", …)`; a replacer *function* is used precisely
+  so a `$&` in a proof point cannot splice the whole seed into itself. Keep it a
+  function.
 - **`server/src/api.ts` contains literal control characters** (the saved-view
   path sanitiser). Plain `grep` calls it a binary file and prints nothing — use
   `grep -a`. A careless rewrite silently destroys that regex.
@@ -236,9 +260,15 @@ proved against a stubbed `globalThis.fetch` serving the shapes the API
 documents. Google Sheets *is* reachable, and those tests skip themselves when
 the network is absent.
 
-CI runs server tests, the client typecheck, lint, the client build, the demo
-build and `npm audit`. **It does not run the client tests** — run `npm test` at
-the root yourself.
+CI runs server tests, the typecheck, lint, the client build, the demo build and
+`npm audit`. Two gaps worth knowing: **it does not run the client tests**, and
+**ESLint never sees them either** — `client/eslint.config.js` matches
+`**/*.{ts,tsx}`, and the one client test is `.mts`. Run `npm test` at the root
+yourself.
+
+Nothing tests the database. There is no test over the store, the `?` → `$1`
+translation, or the schema on either engine — the SQLite/Postgres parity run
+described in the README was a one-off and is not in the repository.
 
 For a UI change, `node tools/audit-a11y.mjs --demo` and `--demo --dark` check
 accessible names, labels and contrast. Needs Playwright, which is deliberately

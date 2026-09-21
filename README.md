@@ -2161,11 +2161,15 @@ where it matters.
 - `npm run build` — builds both
 - `npm start` — runs the built server; with `NODE_ENV=production` it also
   serves the built client, with a catch-all so deep links survive a refresh
-- `npm test -w server` — 138 tests: the Smartsheet reader against a stubbed
-  API, the proof point library and its sanitiser, what the notifier says and
-  when, how search ranks, what a resource link and a colour are allowed to be,
-  the `?` → `$1` translation both databases rely on, and that a leave reason
-  never reaches the directory
+- `npm test -w server` — 283 tests: the Smartsheet reader and both write-backs
+  against a stubbed API, the proof point library and its sanitiser, what the
+  notifier says and when, who an @ mention names, how search ranks, what a
+  resource link and a colour are allowed to be, and that a leave reason never
+  reaches the directory
+- `npm test` — the above plus the 11 client tests, which CI does not run
+- `npm run typecheck` — `tsc -b client`. Not `tsc -p client/tsconfig.json`:
+  that config is a solution file with `"files": []`, `-p` does not follow
+  project references, and it therefore compiles nothing and passes anything
 - `node demo/build.mjs` — rebuilds the shareable single-file demo
 - `python3 tools/extract-proof-points.py <workbook.xlsx>` — regenerates the
   proof point seed from the Proof Points Reviewer workbook

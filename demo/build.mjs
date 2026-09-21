@@ -230,23 +230,32 @@ const html = readFileSync(join(here, "hub.template.html"), "utf8")
     '<div class="demo-note">__BANNER__</div>',
     () => (banner ? `<div class="demo-note">${banner}</div>` : ""),
   )
-  .replace(
-  "__SEED__",
-  JSON.stringify({
-    people,
-    content,
-    events,
-    sessions,
-    signUps,
-    access,
-    metrics,
-    trends,
-    observations: metricObservations,
-    directory,
-    taxonomy: { contentTypes: CONTENT_TYPES, tiers: TIER_MEANINGS, roles: ROLE_BENCHMARKS },
-    proofPoints,
-  }),
-);
+  /*
+   * A function, not a string.
+   *
+   * `String.replace` with a string replacement reads `$&`, `` $` ``, `$'` and
+   * `$$` as instructions: a proof point containing `$&` would have the whole
+   * seed spliced into it in place of those two characters, and the page would
+   * either break or quietly hold the wrong text. A replacer function is handed
+   * the value verbatim. Nothing in today's data triggers it, which is exactly
+   * why it would have been found the hard way.
+   */
+  .replace("__SEED__", () =>
+    JSON.stringify({
+      people,
+      content,
+      events,
+      sessions,
+      signUps,
+      access,
+      metrics,
+      trends,
+      observations: metricObservations,
+      directory,
+      taxonomy: { contentTypes: CONTENT_TYPES, tiers: TIER_MEANINGS, roles: ROLE_BENCHMARKS },
+      proofPoints,
+    }),
+  );
 
 /*
  * Does the page's own script actually parse?
