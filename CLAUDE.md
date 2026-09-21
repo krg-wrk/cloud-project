@@ -14,8 +14,10 @@ before changing anything.
 
 ```bash
 npm run setup     # first run: node check, install, .env, build, test
+npm run configure # fill in .env by being asked, rather than by editing it
 npm run dev       # client :5173, server :3001
 npm run doctor    # what this machine is pointed at, and whether it answers
+npm run doctor -- --columns   # ...and whether the column titles match
 npm run refresh   # pull, rebuild, re-test
 npm test          # server (283) then client (11)
 npm run typecheck # tsc -b client — see below, this one matters

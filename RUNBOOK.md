@@ -49,9 +49,21 @@ Stop it with `Ctrl-C`.
 
 ## Once, to point it at real data
 
-Open `.env` in an editor. Every line is commented out; uncomment and fill in the
-ones you need. Add them **a few at a time** and run `npm run doctor` after each
-round — that is the whole point of the doctor.
+```bash
+npm run configure
+```
+
+It asks for each setting in turn and writes it in, which avoids the one thing
+that catches everybody: every line of the file ships commented out, and a key
+typed onto a line that still starts with `#` is a key in a comment. The Hub
+reads nothing and it looks exactly like a wrong credential.
+
+Return leaves a setting alone, so running it again to change one line is safe.
+A token is typed without appearing on screen and is never printed back.
+
+Or open `.env` in an editor and do it by hand. Every line is commented out;
+uncomment and fill in the ones you need. Add them **a few at a time** and run
+`npm run doctor` after each round — that is the whole point of the doctor.
 
 ### Smartsheet
 
