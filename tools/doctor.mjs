@@ -76,9 +76,13 @@ const tail = (secret) => (secret.length <= 4 ? "••••" : `••••${s
  */
 const wantsColumns = process.argv.includes("--columns");
 let COLUMNS = null;
+let titleOf = (r) => (typeof r === "string" ? r : r.title);
+let renamedColumns = () => [];
 if (wantsColumns) {
   try {
-    ({ COLUMNS } = await import(new URL("server/dist/data/smartsheetSource.js", new URL("..", import.meta.url))));
+    ({ COLUMNS, titleOf, renamedColumns } = await import(
+      new URL("server/dist/data/smartsheetSource.js", new URL("..", import.meta.url))
+    ));
   } catch {
     console.log(
       warn("\n--columns needs the server built first — run `npm run build -w server`, then try again."),
@@ -296,9 +300,23 @@ if (problems === 0) {
  */
 function reportColumns(sheetColumns, groups) {
   const has = sheetColumns.map((c) => c.title).filter(Boolean);
-  const wanted = [...new Set(groups.flatMap((g) => Object.values(COLUMNS[g] ?? {})))];
+  const wanted = [...new Set(groups.flatMap((g) => Object.values(COLUMNS[g] ?? {}).map(titleOf)))];
 
-  const missing = wanted.filter((title) => !has.includes(title));
+  /*
+   * A rename the column id is quietly covering for.
+   *
+   * Worth saying out loud precisely because nothing is broken: the field
+   * still reads, so there is no symptom to notice, and the mapping drifts
+   * further from the sheet every time somebody does it. Said here it is a
+   * one-line correction; left alone it is a puzzle for whoever removes the
+   * id later.
+   */
+  const rescued = groups.flatMap((g) => renamedColumns(COLUMNS[g] ?? {}, sheetColumns));
+  for (const r of rescued) {
+    say(" ", `    ${warn("!")} ${dim(`“${r.mapped}” is now called “${r.actual}” — found by its column id, so it still reads`)}`);
+  }
+
+  const missing = wanted.filter((title) => !has.includes(title) && !rescued.some((r) => r.mapped === title));
   if (missing.length === 0) {
     say(" ", dim(`    all ${wanted.length} columns the Hub reads are there`));
     return;

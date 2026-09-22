@@ -41,6 +41,65 @@ import { WRITABLE_FIELDS } from "../types.js";
 const API = (process.env.SMARTSHEET_API ?? "https://api.smartsheet.com/2.0").replace(/\/$/, "");
 
 /**
+ * How a column is named in a source sheet.
+ *
+ * A bare string is the title, which is what nearly every entry is and what
+ * every non-Smartsheet source has to use: a Google Sheet's header row is its
+ * only identity, and a database column has a name and no id.
+ *
+ * The object form adds the Smartsheet column id as a second way to find the
+ * same column. The title is still tried first, deliberately: it is the form
+ * that works on every sheet, so a schedule kept one sheet per year resolves
+ * in 2027 by the name it shares with 2026 rather than by an id that only ever
+ * existed in one of them. The id is the safety net underneath — when somebody
+ * renames the column, the title stops matching and the id still finds it, so
+ * the field goes on reading instead of quietly emptying every row.
+ *
+ * Trying the id first was the other order and is worse: an id recorded from
+ * one sheet has no meaning in another, and the first thing it would do is
+ * make the 2027 sheet resolve against 2026's columns.
+ */
+export type ColumnRef = string | { title: string; id?: string };
+
+/** The title half of a reference, for the places that need a plain heading. */
+export function titleOf(ref: ColumnRef): string {
+  return typeof ref === "string" ? ref : ref.title;
+}
+
+/** Every field of a group as the plain title the flattened row is keyed by. */
+export function titles<T extends Record<string, ColumnRef>>(group: T): { [K in keyof T]: string } {
+  const out = {} as { [K in keyof T]: string };
+  for (const key of Object.keys(group) as (keyof T)[]) out[key] = titleOf(group[key]);
+  return out;
+}
+
+/**
+ * Which heading in *this* sheet answers each field, where that differs from
+ * the mapping.
+ *
+ * Only the renames come back: a field whose title is present needs no help,
+ * and a field found by neither is left out so the caller reads an empty cell
+ * and the doctor reports it. Exported because a rename is worth saying out
+ * loud rather than silently working — `--columns` tells somebody the mapping
+ * has drifted while it is still cheap to correct.
+ */
+export function renamedColumns<T extends Record<string, ColumnRef>>(
+  group: T,
+  columns: { id: number; title: string }[],
+): { field: string; mapped: string; actual: string }[] {
+  const present = new Set(columns.map((c) => c.title));
+  const byId = new Map(columns.map((c) => [String(c.id), c.title]));
+  const out: { field: string; mapped: string; actual: string }[] = [];
+  for (const [field, ref] of Object.entries(group)) {
+    if (typeof ref === "string" || !ref.id) continue;
+    if (present.has(ref.title)) continue;
+    const actual = byId.get(ref.id);
+    if (actual) out.push({ field, mapped: ref.title, actual });
+  }
+  return out;
+}
+
+/**
  * Column titles as they appear in the source sheets. Change these to match the
  * real sheets rather than touching the mapping code below.
  */
@@ -478,7 +537,11 @@ export class SmartsheetSource implements DataSource {
   }
 
   private async fetchRows(sheetId: string): Promise<FlatRow[]> {
-    const sheet = await this.fetchSheet(sheetId);
+    return this.flatten(await this.fetchSheet(sheetId));
+  }
+
+  /** A fetched sheet as rows keyed by column title. */
+  private flatten(sheet: SmartsheetSheet): FlatRow[] {
     const titleById = new Map(sheet.columns.map((c) => [c.id, c.title]));
     /*
      * Which columns hold days, so those cells can be read the other way
@@ -501,10 +564,36 @@ export class SmartsheetSource implements DataSource {
     });
   }
 
+  /**
+   * Rows, with a renamed column answering to the name the mapping knows it by.
+   *
+   * The alternative was to resolve the mapping into this sheet's own titles
+   * and hand that down, which would have meant every reader taking a second
+   * argument for a case that almost never happens. Aliasing instead keeps
+   * `row[c.submissionDate]` reading exactly as it did, whether the sheet
+   * still calls that column what it was called when somebody mapped it or
+   * not.
+   */
+  private async readRows<T extends Record<string, ColumnRef>>(
+    sheetId: string,
+    group: T,
+  ): Promise<FlatRow[]> {
+    const sheet = await this.fetchSheet(sheetId);
+    const rows = this.flatten(sheet);
+    const renamed = renamedColumns(group, sheet.columns);
+    if (renamed.length === 0) return rows;
+    for (const row of rows) {
+      for (const { mapped, actual } of renamed) {
+        if (row[actual] !== undefined) row[mapped] = row[actual];
+      }
+    }
+    return rows;
+  }
+
   async listPeople(): Promise<Person[]> {
     if (!this.config.peopleSheetId) return [];
-    const c = COLUMNS.people;
-    const rows = await this.fetchRows(this.config.peopleSheetId);
+    const c = titles(COLUMNS.people);
+    const rows = await this.readRows(this.config.peopleSheetId, COLUMNS.people);
     return rows
       .filter((row) => row[c.email])
       .map((row) => ({
@@ -548,12 +637,12 @@ export class SmartsheetSource implements DataSource {
    * exactly as it always has.
    */
   async listContent(): Promise<ContentItem[]> {
-    const c = COLUMNS.content;
+    const c = titles(COLUMNS.content);
     const sheetIds = this.config.contentSheetIds;
     const several = sheetIds.length > 1;
     const perSheet = await Promise.all(
       sheetIds.map(async (sheetId) =>
-        (await this.fetchRows(sheetId)).map((row) => ({ row, sheetId })),
+        (await this.readRows(sheetId, COLUMNS.content)).map((row) => ({ row, sheetId })),
       ),
     );
     return perSheet
@@ -597,10 +686,10 @@ export class SmartsheetSource implements DataSource {
   async listEvents(): Promise<CalendarEvent[]> {
     const sheetIds = this.config.eventsSheetIds ?? [];
     if (sheetIds.length === 0) return [];
-    const c = COLUMNS.events;
+    const c = titles(COLUMNS.events);
     const perSheet = await Promise.all(
       sheetIds.map(async (sheetId) =>
-        (await this.fetchRows(sheetId)).map((row) => ({ row, sheetId })),
+        (await this.readRows(sheetId, COLUMNS.events)).map((row) => ({ row, sheetId })),
       ),
     );
     return perSheet
@@ -621,8 +710,8 @@ export class SmartsheetSource implements DataSource {
 
   async listSessions(): Promise<KnowledgeSession[]> {
     if (!this.config.sessionsSheetId) return [];
-    const c = COLUMNS.sessions;
-    const rows = await this.fetchRows(this.config.sessionsSheetId);
+    const c = titles(COLUMNS.sessions);
+    const rows = await this.readRows(this.config.sessionsSheetId, COLUMNS.sessions);
     return rows
       .filter((row) => row[c.title] && row[c.date])
       .map((row) => {
@@ -653,8 +742,8 @@ export class SmartsheetSource implements DataSource {
 
   async listSignUps(): Promise<Record<string, SessionSignUps>> {
     if (!this.config.signUpsSheetId) return {};
-    const c = COLUMNS.signUps;
-    const rows = await this.fetchRows(this.config.signUpsSheetId);
+    const c = titles(COLUMNS.signUps);
+    const rows = await this.readRows(this.config.signUpsSheetId, COLUMNS.signUps);
     const out: Record<string, SessionSignUps> = {};
     for (const row of rows) {
       const session = row[c.session];
@@ -669,8 +758,8 @@ export class SmartsheetSource implements DataSource {
 
   async listAccess(): Promise<AccessRow[]> {
     if (!this.config.accessSheetId) return [];
-    const c = COLUMNS.access;
-    const rows = await this.fetchRows(this.config.accessSheetId);
+    const c = titles(COLUMNS.access);
+    const rows = await this.readRows(this.config.accessSheetId, COLUMNS.access);
     return rows
       .filter((row) => row[c.email]?.includes("@"))
       .map((row) => ({
@@ -689,8 +778,8 @@ export class SmartsheetSource implements DataSource {
    */
   async listMetrics(): Promise<MetricDefinition[]> {
     if (!this.config.metricsSheetId) return seedMetrics;
-    const c = COLUMNS.metrics;
-    const rows = await this.fetchRows(this.config.metricsSheetId);
+    const c = titles(COLUMNS.metrics);
+    const rows = await this.readRows(this.config.metricsSheetId, COLUMNS.metrics);
     const supplied = rows
       .filter((row) => row[c.id] && row[c.label])
       .map((row) => {
@@ -723,8 +812,8 @@ export class SmartsheetSource implements DataSource {
    */
   async listTrends(): Promise<TrendProfile[]> {
     if (!this.config.trendsSheetId) return [];
-    const c = COLUMNS.trends;
-    const rows = await this.fetchRows(this.config.trendsSheetId);
+    const c = titles(COLUMNS.trends);
+    const rows = await this.readRows(this.config.trendsSheetId, COLUMNS.trends);
     return rows
       .filter((row) => row[c.id] && row[c.title])
       .map((row) => {
@@ -775,8 +864,8 @@ export class SmartsheetSource implements DataSource {
 
   async listMetricObservations(): Promise<MetricObservation[]> {
     if (!this.config.observationsSheetId) return [];
-    const c = COLUMNS.observations;
-    const rows = await this.fetchRows(this.config.observationsSheetId);
+    const c = titles(COLUMNS.observations);
+    const rows = await this.readRows(this.config.observationsSheetId, COLUMNS.observations);
     return rows
       .map((row) => ({
         metricId: (row[c.metric] ?? "").trim(),

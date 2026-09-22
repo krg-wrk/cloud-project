@@ -202,6 +202,20 @@ rather than a setting. Either edit those strings yourself and push, or send the
 column headings and have them changed for you — which keeps one source of truth
 and is usually quicker.
 
+A mapping may carry the Smartsheet column id as well as the title:
+
+```ts
+submissionDate: { title: "Sub Date", id: "4400551722174340" },
+```
+
+The title is still tried first, because it is the form that works on every
+sheet &mdash; a schedule kept one sheet per year resolves in 2027 by the name it
+shares with 2026. The id is the safety net underneath: rename the column and
+the title stops matching, the id still finds it, and the field goes on reading
+instead of quietly emptying every row. `npm run doctor -- --columns` says when
+that is happening, so the mapping can be corrected while it is a one-line
+change. A Google Sheet has no column ids, so there the title is all there is.
+
 Statuses and event types are matched loosely, so "In Progress", "Writing" and
 "Draft" all land on the same status without anything being edited.
 
