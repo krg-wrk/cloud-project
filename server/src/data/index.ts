@@ -11,8 +11,11 @@ import { SmartsheetSource } from "./smartsheetSource.js";
  *   SMARTSHEET_TOKEN, SMARTSHEET_CONTENT_SHEET_ID,
  *   SMARTSHEET_EVENTS_SHEET_ID, SMARTSHEET_PEOPLE_SHEET_ID
  *
- *   SMARTSHEET_EVENTS_SHEET_ID takes a comma-separated list, so holidays,
- *   leave and shows can stay in the separate sheets a team already keeps.
+ *   SMARTSHEET_EVENTS_SHEET_ID and SMARTSHEET_CONTENT_SHEET_ID each take a
+ *   comma-separated list, so holidays, leave and shows can stay in the
+ *   separate sheets a team already keeps, and a schedule kept one sheet per
+ *   year reads as one schedule. Writing is refused while the content
+ *   schedule spans several sheets — see enableWrites for why.
  *
  * SMARTSHEET_API          the API base, for a non-US Smartsheet region
  *   (api.smartsheet.eu for a European account). Defaults to the US one.
@@ -48,15 +51,15 @@ export function createDataSource(): DataSource {
 
   if (kind === "smartsheet") {
     const token = process.env.SMARTSHEET_TOKEN;
-    const contentSheetId = process.env.SMARTSHEET_CONTENT_SHEET_ID;
-    if (!token || !contentSheetId) {
+    const contentSheetIds = sheetIds(process.env.SMARTSHEET_CONTENT_SHEET_ID);
+    if (!token || contentSheetIds.length === 0) {
       throw new Error(
         "DATA_SOURCE=smartsheet needs SMARTSHEET_TOKEN and SMARTSHEET_CONTENT_SHEET_ID",
       );
     }
     return new SmartsheetSource({
       token,
-      contentSheetId,
+      contentSheetIds,
       /*
        * Writing to the managers' live sheet needs saying out loud. Nothing
        * about a read-only deployment changes; a Hub without this reports no

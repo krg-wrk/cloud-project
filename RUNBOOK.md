@@ -125,6 +125,12 @@ Leave this off at first.
 SMARTSHEET_WRITE=1
 ```
 
+It is refused outright while `SMARTSHEET_CONTENT_SHEET_ID` names more than one
+sheet. A write addresses a row by its Smartsheet row id, and a row id is unique
+within its sheet rather than across sheets — so with 2026 and 2027 both
+configured there is nothing in the address saying which is meant. The startup
+banner says so in words rather than failing later on somebody&rsquo;s edit.
+
 Everything else is a read. This is the one line that lets the Hub write back,
 and it is worth turning on only once you have watched it read your real sheets
 correctly for a few days. Until then you can exercise the same screens against

@@ -214,7 +214,17 @@ type FlatRow = Record<string, string>;
 
 export interface SmartsheetConfig {
   token: string;
-  contentSheetId: string;
+  /**
+   * Usually one, but a team that starts a fresh sheet each year has several.
+   *
+   * Read as one schedule, the way the calendar reads holidays and leave from
+   * wherever they are kept. Writing is the reason this is not simply the same
+   * change twice: the commissioning sheet is the one the Hub writes back to,
+   * and a row id is unique within its sheet rather than across sheets — so
+   * with several configured, `enableWrites` refuses rather than let an edit to
+   * a 2027 row land on whatever 2026 row happens to share its id.
+   */
+  contentSheetIds: string[];
   /**
    * Whether the Hub may write to the commissioning sheet.
    *
@@ -405,9 +415,15 @@ export class SmartsheetSource implements DataSource {
     return this.config.token;
   }
 
-  /** The commissioning sheet as the API returns it, for the writer. */
+  /**
+   * The commissioning sheet as the API returns it, for the writer.
+   *
+   * Singular, and only ever reached with one sheet configured: everything
+   * that calls it is behind the writer, and `enableWrites` refuses to build
+   * a writer at all when the schedule spans several sheets.
+   */
   contentSheet(): Promise<SmartsheetSheet> {
-    return this.fetchSheet(this.config.contentSheetId);
+    return this.fetchSheet(this.config.contentSheetIds[0]);
   }
 
   /**
@@ -420,10 +436,26 @@ export class SmartsheetSource implements DataSource {
    */
   async enableWrites(): Promise<string> {
     if (!this.config.allowWrites) return "off";
+    /*
+     * Refused outright while the schedule spans several sheets.
+     *
+     * A write addresses a row by `sourceRowId`, and a Smartsheet row id is
+     * unique within its sheet and not across sheets — so with 2026 and 2027
+     * both configured there is nothing in the address saying which sheet is
+     * meant. The writer holds one sheet id, so every edit would be sent to
+     * the first one: at best rejected, at worst applied to whichever row
+     * there happens to carry the same id. Carrying the sheet on the address
+     * would be the fix; until somebody does that, refusing is the only
+     * honest answer, and a refusal somebody can read beats a write nobody
+     * can trace.
+     */
+    if (this.config.contentSheetIds.length > 1) {
+      return `off — refused: the schedule is read from ${this.config.contentSheetIds.length} sheets, and a write cannot say which one it means`;
+    }
     const sheet = await this.contentSheet();
     const writer = new SmartsheetContentWriter(
       this,
-      this.config.contentSheetId,
+      this.config.contentSheetIds[0],
       sheet.name ?? "the commissioning sheet",
     );
     (this as { writes?: ContentWriter }).writes = writer;
@@ -502,13 +534,33 @@ export class SmartsheetSource implements DataSource {
     return readDirectory(await this.fetchRows(this.config.directorySheetId));
   }
 
+  /**
+   * The schedule, from every sheet it is kept in.
+   *
+   * Asked for together rather than one after another, for the same reason
+   * the calendar is: the wait is the slowest sheet rather than the sum of
+   * them.
+   *
+   * The made-up id for a row with no Content ID carries its sheet only when
+   * there is more than one, because `/content/ss-4021` is an address people
+   * paste to each other and a link that changes shape because a second sheet
+   * was configured is a link that stops working. With one sheet this reads
+   * exactly as it always has.
+   */
   async listContent(): Promise<ContentItem[]> {
     const c = COLUMNS.content;
-    const rows = await this.fetchRows(this.config.contentSheetId);
-    return rows
-      .filter((row) => row[c.title])
-      .map((row) => ({
-        id: row[c.id] || `ss-${row._rowId}`,
+    const sheetIds = this.config.contentSheetIds;
+    const several = sheetIds.length > 1;
+    const perSheet = await Promise.all(
+      sheetIds.map(async (sheetId) =>
+        (await this.fetchRows(sheetId)).map((row) => ({ row, sheetId })),
+      ),
+    );
+    return perSheet
+      .flat()
+      .filter(({ row }) => row[c.title])
+      .map(({ row, sheetId }) => ({
+        id: row[c.id] || (several ? `ss-${sheetId}-${row._rowId}` : `ss-${row._rowId}`),
         // The row, not the Content ID: the only address a write may use.
         sourceRowId: row._rowId,
         title: row[c.title],
