@@ -66,7 +66,7 @@ test("nothing in the season column is untagged, never a year", () => {
 
 test("a year read off a title says so, so an inferred year is never shown as a stated one", () => {
   const stated = horizonFor({ forecastHorizon: "2029", title: "Big Ideas 2030" });
-  assert.equal(stated.source, "season");
+  assert.equal(stated.source, "horizon");
   assert.equal(stated.horizon.year, 2029);
 
   const inferred = horizonFor({ title: "BIG IDEAS 2029" });

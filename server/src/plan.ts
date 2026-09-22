@@ -22,10 +22,10 @@
  * saved plan replaces it. A methodology that needs a developer to move a date
  * by a fortnight is one that will be kept in a spreadsheet instead.
  *
- * Nothing here guesses. A forecast whose season column is empty is reported as
- * untagged rather than assigned a year from its title and quietly counted as
- * compliant — the whole value of the exercise is knowing which rows nobody has
- * decided about yet.
+ * Nothing here guesses. A forecast whose Forecast Horizon column is empty is
+ * reported as untagged rather than assigned a year from its title and quietly
+ * counted as compliant — the whole value of the exercise is knowing which rows
+ * nobody has decided about yet.
  */
 
 import { CONTENT_TYPES } from "./taxonomy.js";
@@ -70,7 +70,7 @@ export interface Horizon {
 }
 
 /** Where a horizon was read from, weakest last. */
-export type HorizonSource = "season" | "details" | "title";
+export type HorizonSource = "horizon" | "details" | "title";
 
 export interface HorizonReading {
   horizon: Horizon;
@@ -107,9 +107,9 @@ const YEAR_PATTERN = /^(\d{4})$/;
 /**
  * Read a horizon out of whatever the sheet says, or return null.
  *
- * Null is a real answer and the caller is expected to show it: a season column
- * nobody has filled in is the thing this feature exists to surface, so it must
- * not be silently absorbed into a default year.
+ * Null is a real answer and the caller is expected to show it: a Forecast
+ * Horizon column nobody has filled in is the thing this feature exists to
+ * surface, so it must not be silently absorbed into a default year.
  */
 export function readHorizon(value: string | undefined): Horizon | null {
   if (!value) return null;
@@ -204,8 +204,8 @@ function yearInTitle(title: string): Horizon | null {
 /**
  * What a forecast is forecasting, and how confidently the Hub knows.
  *
- * The season column is asked first because it is the column the team is
- * mapping deliberately for exactly this purpose. The years typed on the
+ * The Forecast Horizon column is asked first because it is the column the team
+ * maps deliberately for exactly this purpose. The years typed on the
  * forecast in the Hub come next — somebody meant those, so they beat a guess
  * but not the sheet. The title is last and is reported as such, so a view can
  * draw an inferred year differently from a stated one rather than presenting
@@ -215,8 +215,8 @@ export function horizonFor(
   item: { forecastHorizon?: string; title?: string },
   details?: { yearFrom?: number; yearTo?: number },
 ): HorizonReading | null {
-  const fromSeason = readHorizon(item.forecastHorizon);
-  if (fromSeason) return { horizon: fromSeason, source: "season" };
+  const fromHorizon = readHorizon(item.forecastHorizon);
+  if (fromHorizon) return { horizon: fromHorizon, source: "horizon" };
 
   if (details?.yearFrom) {
     const first = details.yearFrom;
