@@ -165,7 +165,7 @@ export const content: ContentItem[] = contentRows.map(
     title,
     type,
     vertical,
-    season,
+    forecastHorizon: season,
     forecasterId,
     managerId: managerFor[forecasterId] ?? "gk",
     submissionDate,

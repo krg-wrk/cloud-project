@@ -89,7 +89,7 @@ export function TeamMember() {
                 <div>
                   <div className="deadline-title">{item.title}</div>
                   <div className="deadline-meta">
-                    {item.type} · {item.season} · publishes {formatShort(item.publicationDate)}
+                    {item.type} · {item.forecastHorizon} · publishes {formatShort(item.publicationDate)}
                   </div>
                 </div>
                 <div className="deadline-right">

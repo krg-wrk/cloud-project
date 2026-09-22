@@ -44,7 +44,8 @@ export interface ContentItem {
   title: string;
   type: string;
   vertical: string;
-  season: string;
+  /** The horizon a forecast points at: the team plans by horizon, not by season. */
+  forecastHorizon: string;
   forecasterId: string;
   managerId: string;
   submissionDate: string;

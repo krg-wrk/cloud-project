@@ -890,7 +890,7 @@ function chipDetail(chip: Chip, people: Schedule["people"]): ReactNode {
             {row("Forecaster", personName(people, item.forecasterId))}
             {row("Type", item.type)}
             {row("Vertical", item.vertical)}
-            {row("Season", item.season)}
+            {row("Forecast horizon", item.forecastHorizon)}
             {row(
               chip.kind === "submission" ? "Copy due" : "Publishes",
               due ? `${formatLong(due)} · ${relativeDays(due)}` : "",

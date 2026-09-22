@@ -198,7 +198,7 @@ export default function Deadlines() {
               { header: "Title", value: (r) => r.title },
               { header: "Type", value: (r) => r.type },
               { header: "Vertical", value: (r) => r.vertical },
-              { header: "Season", value: (r) => r.season },
+              { header: "Forecast horizon", value: (r) => r.forecastHorizon },
               { header: "Forecaster", value: (r) => personName(people.data ?? [], r.forecasterId) },
               { header: "Status", value: (r) => STATUS_LABELS[r.status] },
               { header: "Submission date", value: (r) => r.submissionDate },
@@ -282,7 +282,7 @@ export default function Deadlines() {
                   ),
                   "deadlines.column.type": item.type,
                   "deadlines.column.vertical": item.vertical,
-                  "deadlines.column.season": item.season,
+                  "deadlines.column.season": item.forecastHorizon,
                   "deadlines.column.forecaster": (
                     <Link to={`/team/${item.forecasterId}`}>
                       <Who

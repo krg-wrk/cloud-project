@@ -180,7 +180,7 @@ export default function Brief() {
       `Working title: ${title.trim() || item.title}`,
       `Format: ${item.details?.contentType ?? item.type}`,
       `Vertical: ${item.vertical}`,
-      `Season: ${item.season}`,
+      `Forecast horizon: ${item.forecastHorizon}`,
       `Publishes: ${formatLong(item.publicationDate)}`,
       "",
       "WHAT I NEED",
@@ -224,7 +224,7 @@ export default function Brief() {
 
     lines.push("AREAS OF FOCUS");
     if (audience.trim()) lines.push(`Who it is for: ${audience.trim()}`);
-    lines.push(`Season: ${item.season}`);
+    lines.push(`Forecast horizon: ${item.forecastHorizon}`);
     if (consumer.trim()) lines.push(`End consumer: ${consumer.trim()}`);
     if (categories.trim()) lines.push(`Categories: ${categories.trim()}`);
     lines.push("");
@@ -333,7 +333,7 @@ export default function Brief() {
                 {content.loading && <option disabled>Loading…</option>}
                 {forecasts.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.title} — {c.season}
+                    {c.title} — {c.forecastHorizon}
                     {person && c.forecasterId !== person.id
                       ? ` (${byId.get(c.forecasterId)?.name ?? "somebody else"})`
                       : ""}

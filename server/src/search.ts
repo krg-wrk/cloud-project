@@ -159,7 +159,7 @@ export function search(q: string, corpus: Corpus): SearchResult {
     const body = [
       item.type,
       item.vertical,
-      item.season,
+      item.forecastHorizon,
       item.status,
       name.get(item.forecasterId) ?? "",
       item.notes ?? "",

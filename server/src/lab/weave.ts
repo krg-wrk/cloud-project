@@ -342,7 +342,7 @@ export function weave(
   const scoredForecasts = corpus.content
     .map((c) => ({
       item: c,
-      matched: hits([c.title, c.type, c.vertical, c.season].join(" "), terms),
+      matched: hits([c.title, c.type, c.vertical, c.forecastHorizon].join(" "), terms),
       titleHits: hits(c.title, terms),
     }))
     .filter((s) => s.matched >= need)

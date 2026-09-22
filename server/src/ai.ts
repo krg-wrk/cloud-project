@@ -51,7 +51,7 @@ function buildPrompt(input: DraftInput): string {
     `Piece: ${item.title}`,
     `Type: ${item.type}`,
     `Vertical: ${item.vertical}`,
-    `Season: ${item.season}`,
+    `Forecast horizon: ${item.forecastHorizon}`,
     `Copy due: ${item.submissionDate}`,
     `Publishes: ${item.publicationDate}`,
     `Status: ${item.status}`,
@@ -66,7 +66,7 @@ function buildPrompt(input: DraftInput): string {
     lines.push(
       "",
       "Other pieces commissioned in this vertical (avoid overlapping with these):",
-      ...siblings.map((s) => `- ${s.title} (${s.type}, ${s.season}, publishes ${s.publicationDate})`),
+      ...siblings.map((s) => `- ${s.title} (${s.type}, ${s.forecastHorizon}, publishes ${s.publicationDate})`),
     );
   }
   if (steer) {

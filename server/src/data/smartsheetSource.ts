@@ -104,34 +104,48 @@ export function renamedColumns<T extends Record<string, ColumnRef>>(
  * real sheets rather than touching the mapping code below.
  */
 export const COLUMNS = {
+  /*
+   * An empty title is a field the team has said it does not keep, rather
+   * than one nobody has got to yet. It reads as absent, and `--columns`
+   * passes over it instead of reporting a column that was never wanted.
+   */
   content: {
-    id: "Content ID",
+    id: "Forecast ID",
     title: "Title",
-    type: "Content Type",
+    type: "Report Type",
     vertical: "Vertical",
-    season: "Season",
-    forecaster: "Forecaster",
-    manager: "Commissioning Manager",
-    submissionDate: "Submission Date",
-    publicationDate: "Publication Date",
+    /** The horizon a forecast points at — the team plans by it, not by season. */
+    forecastHorizon: "Forecast Horizon",
+    forecaster: "Owner",
+    /** Recorded outside the schedule. */
+    manager: "",
+    submissionDate: "Sub Date",
+    publicationDate: "Live Date",
     /** When the copy actually landed — what the timeliness KPIs measure. */
-    submittedOn: "Actual Submission",
+    submittedOn: "Content Submitted",
     status: "Status",
-    notes: "Notes",
-    /** Sole / Co-owned / Byline / Freelance. */
-    ownership: "Ownership",
-    /** Everyone credited, so co-owned work counts for both people. */
-    contributors: "Contributors",
+    /** The Hub keeps its own notes, threaded and attributed. */
+    notes: "",
+    /** Sole / Co-owned / Byline / Freelance. Recorded outside the schedule. */
+    ownership: "",
+    /** Everyone credited. Recorded outside the schedule. */
+    contributors: "",
   },
   events: {
-    type: "Event Type",
+    type: "Type",
     title: "Title",
-    person: "Person",
+    person: "Owner",
+    /**
+     * The country, which the region is worked out from — see `regionFor`.
+     * `region` is the fallback for a sheet that records one directly and no
+     * country, which is how the trade shows sheet is kept.
+     */
+    country: "Country",
     region: "Region",
-    startDate: "Start Date",
-    endDate: "End Date",
-    location: "Location",
-    notes: "Notes",
+    startDate: "Start",
+    endDate: "End",
+    location: "Country",
+    notes: "",
   },
   people: {
     name: "Name",
@@ -140,26 +154,28 @@ export const COLUMNS = {
     role: "Role",
     team: "Team",
     department: "Department",
-    vertical: "Vertical",
-    region: "Region",
+    vertical: "",
+    /** A country here too, turned into a region the same way. */
+    region: "Country",
     managerEmail: "Manager Email",
   },
   sessions: {
-    id: "Session ID",
+    id: "Event ID",
     title: "Title",
-    kind: "Kind",
+    kind: "Type",
+    /** The workshop lead. */
     host: "Host",
-    guest: "Guest Speaker",
-    date: "Date",
-    startTime: "Start Time",
-    endTime: "End Time",
-    location: "Location",
+    guest: "",
+    date: "Start",
+    startTime: "",
+    endTime: "",
+    location: "Country",
     capacity: "Capacity",
-    signUpsOpen: "Sign-ups Open",
-    required: "Required",
-    summary: "Summary",
-    topics: "Topics",
-    recapUrl: "Recap",
+    signUpsOpen: "Sign-Ups",
+    required: "",
+    summary: "",
+    topics: "",
+    recapUrl: "",
   },
   signUps: {
     session: "Session ID",
@@ -606,7 +622,7 @@ export class SmartsheetSource implements DataSource {
         forecasterRole: row[c.role] || undefined,
         vertical: (row[c.vertical] || row[c.team] || undefined) as Vertical | undefined,
         department: row[c.department] || undefined,
-        region: row[c.region] || "UK",
+        region: regionFor(row[c.region]) ?? row[c.region] ?? "UK",
       }));
   }
 
@@ -655,7 +671,7 @@ export class SmartsheetSource implements DataSource {
         title: row[c.title],
         type: (row[c.type] || "Market Report") as ContentType,
         vertical: (row[c.vertical] || "Womenswear") as Vertical,
-        season: row[c.season] || "",
+        forecastHorizon: row[c.forecastHorizon] || "",
         forecasterId: personId(row[c.forecaster]),
         managerId: personId(row[c.manager]),
         submissionDate: isoDate(row[c.submissionDate]),
@@ -700,7 +716,7 @@ export class SmartsheetSource implements DataSource {
         type: normaliseEventType(row[c.type]),
         title: row[c.title],
         personId: row[c.person] ? personId(row[c.person]) : undefined,
-        region: row[c.region] || undefined,
+        region: regionFor(row[c.country]) ?? regionFor(row[c.region]) ?? row[c.region] ?? undefined,
         startDate: isoDate(row[c.startDate]),
         endDate: isoDate(row[c.endDate] || row[c.startDate]),
         location: row[c.location] || undefined,
@@ -963,6 +979,76 @@ function personId(nameOrEmail: string | undefined): string {
   const value = nameOrEmail.trim().toLowerCase();
   const local = value.includes("@") ? value.split("@")[0] : value;
   return local.replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+/**
+ * The region a country belongs to.
+ *
+ * The sheets record a country and the Hub compares regions, so something has
+ * to bridge the two. Holding the bridge here rather than asking the team to
+ * add a Region column to ten calendar sheets is the point: `Country` is
+ * already filled in on the sheets that have it, and a column nobody
+ * remembers to populate is worse than a table one person maintains.
+ *
+ * A value that is already a region passes straight through, so a sheet may
+ * say "EMEA" in the country column and still work. A country nobody has
+ * listed comes back undefined rather than guessed — an event with no region
+ * reaches everybody, which is the safer failure for a public holiday, and
+ * the doctor is where an unrecognised country should be noticed.
+ */
+const REGIONS: Record<string, string[]> = {
+  EMEA: [
+    "UK", "United Kingdom", "England", "Scotland", "Wales", "Northern Ireland", "Ireland",
+    "France", "Germany", "Italy", "Spain", "Portugal", "Netherlands", "Holland", "Belgium",
+    "Luxembourg", "Denmark", "Sweden", "Norway", "Finland", "Iceland", "Switzerland",
+    "Austria", "Poland", "Czech Republic", "Czechia", "Hungary", "Romania", "Bulgaria",
+    "Greece", "Croatia", "Serbia", "Ukraine", "Russia", "Turkey", "Israel",
+    "UAE", "United Arab Emirates", "Dubai", "Saudi Arabia", "Qatar", "Kuwait",
+    "Egypt", "Morocco", "Tunisia", "South Africa", "Nigeria", "Kenya", "Ghana", "Ethiopia",
+  ],
+  APAC: [
+    "China", "Hong Kong", "Macau", "Taiwan", "Japan", "Korea", "South Korea",
+    "India", "Pakistan", "Bangladesh", "Sri Lanka", "Singapore", "Malaysia", "Thailand",
+    "Vietnam", "Indonesia", "Philippines", "Cambodia", "Myanmar",
+    "Australia", "New Zealand",
+  ],
+  NAM: ["USA", "US", "United States", "United States of America", "Canada"],
+  LATAM: [
+    "Brazil", "Mexico", "Argentina", "Chile", "Colombia", "Peru", "Uruguay",
+    "Ecuador", "Bolivia", "Paraguay", "Venezuela", "Costa Rica", "Panama",
+  ],
+};
+
+const REGION_BY_COUNTRY = new Map<string, string>();
+for (const [region, countries] of Object.entries(REGIONS)) {
+  REGION_BY_COUNTRY.set(region.toLowerCase(), region);
+  for (const country of countries) REGION_BY_COUNTRY.set(country.toLowerCase(), region);
+}
+
+export function regionFor(country: string | undefined): string | undefined {
+  const key = (country ?? "").trim().toLowerCase();
+  if (!key) return undefined;
+  return REGION_BY_COUNTRY.get(key);
+}
+
+/**
+ * Whether an event in a region reaches a particular person.
+ *
+ * One function because the rule was written out twice — in the notice
+ * builder and in the calendar feed — and two copies of a rule are two
+ * chances to change one of them. Somebody reading their calendar and
+ * somebody reading the email about it must be told the same thing.
+ *
+ * An event with no region reaches everybody, and so does one marked "all":
+ * matched without regard to case, because a team that agrees to tag things
+ * ALL will type ALL, and a rule that quietly excludes everybody from an
+ * event meant for everybody is the worst way to find that out.
+ */
+export function inRegion(eventRegion: string | undefined, personRegion: string | undefined): boolean {
+  const theirs = (eventRegion ?? "").trim();
+  if (!theirs) return true;
+  if (theirs.toLowerCase() === "all") return true;
+  return theirs.toLowerCase() === (personRegion ?? "").trim().toLowerCase();
 }
 
 /**

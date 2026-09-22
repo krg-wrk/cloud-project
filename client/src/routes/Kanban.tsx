@@ -56,7 +56,7 @@ export const CARD_FIELDS: { id: CardField; label: string }[] = [
   { id: "manager", label: "Commissioning manager" },
   { id: "type", label: "Content type" },
   { id: "vertical", label: "Vertical" },
-  { id: "season", label: "Season" },
+  { id: "season", label: "Forecast horizon" },
   { id: "submission", label: "Submission date" },
   { id: "publication", label: "Publication date" },
   { id: "notes", label: "Notes" },
@@ -244,10 +244,10 @@ export default function Kanban({
                           {item.vertical}
                         </span>
                       )}
-                      {shown.has("season") && item.season && (
-                        <span title="Season">
+                      {shown.has("season") && item.forecastHorizon && (
+                        <span title="Forecast horizon">
                           <Icon name="calendar" size={12} />
-                          {item.season}
+                          {item.forecastHorizon}
                         </span>
                       )}
                       {shown.has("submission") && item.submissionDate && (

@@ -220,7 +220,7 @@ test("a sheet without the column says so rather than writing elsewhere", async (
   const s = await source();
   await assert.rejects(
     () => s.writes.apply("900", { submittedOn: "2026-09-17" }, {}),
-    /has no "Actual Submission" column/,
+    /has no "Content Submitted" column/,
   );
   assert.equal(writes.length, 0);
 });

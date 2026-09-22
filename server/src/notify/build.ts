@@ -1,3 +1,4 @@
+import { inRegion } from "../data/smartsheetSource.js";
 import type { CalendarEvent, ContentItem, KnowledgeSession, Person } from "../types.js";
 import type { PeerReview } from "../store.js";
 import type { Notice, NoticeKind } from "./types.js";
@@ -101,7 +102,7 @@ export function awayOn(events: CalendarEvent[], person: Person, date: string): b
     // Leave belongs to one person; a holiday to a region, or to everybody.
     if (e.type === "leave") return e.personId === person.id;
     if (e.type !== "public-holiday") return false;
-    return !e.region || e.region === "All" || e.region === person.region;
+    return inRegion(e.region, person.region);
   });
 }
 

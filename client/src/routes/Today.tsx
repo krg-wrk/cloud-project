@@ -39,7 +39,7 @@ function DeadlineRow({
       <div>
         <div className="deadline-title">{item.title}</div>
         <div className="deadline-meta">
-          {item.type} · {item.vertical} · {item.season}
+          {item.type} · {item.vertical} · {item.forecastHorizon}
           {showOwner && ` · ${personName(people, item.forecasterId)}`}
         </div>
       </div>

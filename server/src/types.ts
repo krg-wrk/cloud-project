@@ -57,7 +57,8 @@ export interface ContentItem {
   title: string;
   type: ContentType;
   vertical: Vertical;
-  season: string;
+  /** The horizon a forecast points at: the team plans by horizon, not by season. */
+  forecastHorizon: string;
   /** Person id of the forecaster who writes it. */
   forecasterId: string;
   /** Person id of the commissioning manager who owns the slot. */
