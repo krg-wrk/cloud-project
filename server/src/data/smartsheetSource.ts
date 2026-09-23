@@ -950,9 +950,16 @@ export class SmartsheetSource implements DataSource {
         id: row._rowId ? `${sheetId}-${row._rowId}` : `ev-${i}`,
         type: normaliseEventType(row[c.type]),
         title: row[c.title],
-        // The first name in the cell: leave belongs to one person, and a
-        // shared entry is the calendar saying it is not really leave.
+        /*
+         * Everybody in the cell, and the first of them kept separately.
+         *
+         * Leave really does belong to one person and the whole Hub reads it
+         * that way, but a trade show is owned by two or three — and taking
+         * the first name was quietly deciding which of them it was for.
+         */
         personId: whoIn(row, c.person)[0] ? personId(whoIn(row, c.person)[0]) : undefined,
+        personIds: whoIn(row, c.person).map(personId),
+        countries: listCell(row[c.country]),
         region: regionFor(row[c.country]) ?? regionFor(row[c.region]) ?? row[c.region] ?? undefined,
         startDate: isoDate(row[c.startDate]),
         endDate: isoDate(row[c.endDate] || row[c.startDate]),
@@ -974,10 +981,17 @@ export class SmartsheetSource implements DataSource {
           id: row[c.id] || `ws-${row._rowId}`,
           title: row[c.title],
           kind: normaliseSessionKind(row[c.kind]),
-          hostId: whoIn(row, c.host)[0] ? personId(whoIn(row, c.host)[0]) : undefined,
-          hostExternal: row[c.guest] || undefined,
+          /*
+           * "Unassigned" is the sheet saying there is no host yet, not the
+           * name of one. Treated as absent so the panel leaves the line out
+           * rather than printing a placeholder as though it were a person.
+           */
+          hostId: namedHost(whoIn(row, c.host)[0]) ? personId(whoIn(row, c.host)[0]) : undefined,
+          hostExternal: namedHost(row[c.guest]) ? row[c.guest] : undefined,
           attendeeIds: whoIn(row, c.attendees).map(personId),
           department: row[c.department] || undefined,
+          departments: listCell(row[c.department]),
+          countries: listCell(row[c.location]),
           // A session with no end runs for the day it starts, which is what a
           // blank End cell means on a workshop sheet rather than a gap.
           startDate: isoDate(row[c.startDate]),
@@ -1306,6 +1320,36 @@ export function peopleIn(cell: SmartsheetCell): string[] {
   const one = cell.objectValue;
   if (one && (one.email || one.name)) return [(one.email || one.name || "").trim()].filter(Boolean);
   return [];
+}
+
+/**
+ * A multi-picklist cell as the several values it holds.
+ *
+ * Smartsheet hands a multi-picklist back as its values joined with commas,
+ * so "UK, USA" is two countries and reading it whole would match neither.
+ * Splitting on the comma is right here and would not be for a contact cell —
+ * a person's name can contain one, which is why `peopleIn` asks the API for
+ * the structure instead. A picklist option is chosen from a fixed list
+ * somebody wrote, and none of these has a comma in it.
+ */
+/**
+ * Whether a host cell names somebody, or says nobody has been found yet.
+ *
+ * "Unassigned" and "TBC" are words a person typed into a column that holds
+ * people, meaning the opposite of a person. Printing them under "Host" tells
+ * a reader the workshop is run by somebody called Unassigned.
+ */
+export function namedHost(value: string | undefined): boolean {
+  const text = (value ?? "").trim();
+  if (!text) return false;
+  return !/^(unassigned|tbc|tbd|n\/a|none|unknown)$/i.test(text);
+}
+
+export function listCell(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
 }
 
 export function regionFor(country: string | undefined): string | undefined {

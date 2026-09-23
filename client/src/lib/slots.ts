@@ -265,7 +265,7 @@ export const SLOT_PAGES: SlotPage[] = [
         label: "The stages",
         orderable: true,
         slots: [
-          { id: "content.step.submission", label: "Copy due with the commissioning manager", kind: "step" },
+          { id: "content.step.submission", label: "Due with the subbing team", kind: "step" },
           { id: "content.step.review", label: "Edit and review", kind: "step" },
           { id: "content.step.published", label: "Live on the platform", kind: "step" },
         ],

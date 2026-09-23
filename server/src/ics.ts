@@ -122,7 +122,7 @@ export function buildFeed(input: FeedInput): string {
   for (const item of mine) {
     entries.push({
       uid: `submission-${item.id}@forecasters-hub`,
-      summary: `Copy due: ${item.title}`,
+      summary: `Due with subbing: ${item.title}`,
       date: item.submissionDate,
       description: `${item.type} · ${item.vertical} · ${item.forecastHorizon}\nStatus: ${item.status}`,
       url: `${baseUrl}/content/${item.id}`,
@@ -150,7 +150,7 @@ export function buildFeed(input: FeedInput): string {
           ? `Reviewing ${counterpart?.name ?? "a colleague"}'s piece.`
           : `${counterpart?.name ?? "A colleague"} is reviewing this.`,
         review.note ?? "",
-        `Copy due ${item.submissionDate}, publishes ${item.publicationDate}.`,
+        `Due with the subbing team ${item.submissionDate}, publishes ${item.publicationDate}.`,
       ]
         .filter(Boolean)
         .join("\n"),

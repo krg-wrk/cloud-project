@@ -29,6 +29,8 @@ export interface Person {
   vertical?: string;
   department?: string;
   region: string;
+  /** The country the directory writes, which is what a holiday is matched on. */
+  country?: string;
   /**
    * When this person last changed their photo, if they have one.
    *
@@ -81,7 +83,13 @@ export interface CalendarEvent {
   id: string;
   type: EventType;
   title: string;
+  /** The first name in the Owner cell — leave belongs to one person. */
   personId?: string;
+  /** Everybody named there, because a trade show is owned by several. */
+  personIds?: string[];
+  /** What the sheet's Country column says, which is what a holiday is scoped by. */
+  countries?: string[];
+  /** Only the trade shows sheet records one, and only as a fallback. */
   region?: string;
   startDate: string;
   endDate: string;
@@ -113,6 +121,12 @@ export interface KnowledgeSession {
   startTime?: string;
   endTime?: string;
   location: string;
+  /** Every country the Country cell names, which is a multi-picklist. */
+  countries?: string[];
+  /** Every department it names. "All" reaches the whole team. */
+  departments?: string[];
+  /** Everybody tagged into it, from the sheet's own Owner column. */
+  attendeeIds?: string[];
   online: boolean;
   capacity: number | null;
   signUpsOpen: boolean;

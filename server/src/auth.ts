@@ -136,25 +136,85 @@ export function canRead(viewer: Viewer): boolean {
 export function sessionReaches(
   session: {
     attendeeIds?: string[];
-    department?: string;
-    location?: string;
+    departments?: string[];
+    countries?: string[];
     hostId?: string;
   },
   person: { id: string; country?: string } | null | undefined,
 ): boolean {
   const named = session.attendeeIds ?? [];
-  const department = (session.department ?? "").trim();
-  const where = (session.location ?? "").trim();
-  if (!named.length && !department && !where) return true;
+  const departments = session.departments ?? [];
+  const countries = session.countries ?? [];
+  if (!named.length && !departments.length && !countries.length) return true;
 
   if (!person) return false;
+  // Being named is the most explicit thing the sheet can say, so it comes
+  // first: somebody tagged into a workshop in another country was tagged on
+  // purpose, and hiding it from them would be the Hub overruling the tag.
   if (named.includes(person.id)) return true;
   if (session.hostId === person.id) return true;
-  if (/^all$/i.test(department)) return true;
-  if (where && person.country && where.toLowerCase() === person.country.trim().toLowerCase()) {
-    return true;
-  }
+  if (saysAll(departments)) return true;
+  if (countries.length) return saysAll(countries) || inCountries(countries, person.country);
   return false;
+}
+
+/** A multi-valued cell holds "All" when any one of its values says so. */
+function saysAll(values: string[]): boolean {
+  return values.some((value) => /^all$/i.test(value.trim()));
+}
+
+/** Whether somebody's own country is one of the ones a cell names. */
+function inCountries(countries: string[], country: string | undefined): boolean {
+  const theirs = (country ?? "").trim().toLowerCase();
+  if (!theirs) return false;
+  return countries.some((c) => c.trim().toLowerCase() === theirs);
+}
+
+/**
+ * Whether a calendar entry is one of somebody's.
+ *
+ * The same question `sessionReaches` asks, of the sheets the calendar is
+ * read from, and it was being answered by region — which is both too wide
+ * and not what any of those sheets records. A South African public holiday
+ * was reaching every one of the sixty people the Hub files under EMEA,
+ * because the country had been turned into a region on the way in and the
+ * country thrown away.
+ *
+ * In the order the sheets themselves are filled in:
+ *
+ * - **Named owners win, and limit.** A trade show names the two or three
+ *   people going to it, and nobody else needs it on their calendar. Leave and
+ *   an activity day name one person, which is the same rule.
+ * - **Then the country**, which is what a holiday records — matched against
+ *   the person's own country, with "All" in the column meaning everybody.
+ *   That is how the sheet says a thing is not regional at all.
+ * - **Then the region**, which only the trade shows sheet keeps, and only
+ *   reached when nobody was named on the row.
+ *
+ * A row that says none of those reaches everybody. Most of a calendar is
+ * filled in over time, and the alternative is an empty page that reads as
+ * breakage rather than as a sheet still being tagged.
+ */
+export function eventReaches(
+  event: { personId?: string; personIds?: string[]; countries?: string[]; region?: string },
+  person: { id: string; country?: string; region?: string } | null | undefined,
+): boolean {
+  // Nobody to filter for: the caller wants the whole calendar.
+  if (!person) return true;
+
+  const owners = event.personIds?.length
+    ? event.personIds
+    : event.personId
+      ? [event.personId]
+      : [];
+  if (owners.length) return owners.includes(person.id);
+
+  const countries = event.countries ?? [];
+  if (countries.length) return saysAll(countries) || inCountries(countries, person.country);
+
+  const region = (event.region ?? "").trim();
+  if (region) return /^all$/i.test(region) || region === person.region;
+  return true;
 }
 
 /**

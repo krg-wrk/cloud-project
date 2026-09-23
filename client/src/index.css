@@ -52,16 +52,16 @@
   --rule: #e6e6ee;
   --rule-strong: #c8c9d6;
 
-  --accent: #4c5578;
+  --accent: #4868b3;
   /* A lighter step of the accent for de-emphasised bars: >=3:1 on white and
      15+ deltaE from the accent, so both are legible and tellable apart. */
-  --accent-soft: #7a83a6;
-  --accent-wash: #eceef4;
+  --accent-soft: #788fc7;
+  --accent-wash: #e9edf6;
   --accent-ink: #ffffff;
 
-  --status-not-started: #8b8b91;
-  --status-in-progress: #2f5f9e;
-  --status-submitted: #6b4fc0;
+  --status-not-started: #ef6c02;
+  --status-in-progress: #f09400;
+  --status-submitted: #e4c442;
   /*
    * Amber and orange, darkened until they clear 4.5:1 on the tinted grounds
    * they are actually drawn on — not just on white. #9c6b16 was 4.64 on
@@ -69,25 +69,25 @@
    * sits; #c2571a was 3.84 on its own tag wash. Both are small text, so
    * both need the full 4.5.
    */
-  --status-in-review: #875d13;
-  --status-published: #256b48;
-  --status-at-risk: #b8341f;
+  --status-in-review: #bae8da;
+  --status-published: #049be5;
+  --status-at-risk: #d50101;
 
-  --event-leave: #6b4fc0;
-  --event-public-holiday: #17706c;
-  --event-workshop: #9c6b16;
-  --event-training: #2f5f9e;
-  --event-conference: #a33a60;
+  --event-leave: #7cb342;
+  --event-public-holiday: #009688;
+  --event-workshop: #9f6aaf;
+  --event-training: #b49ddb;
+  --event-conference: #9c6b16;
 
-  --kind-workshop: #4c5578;
-  --kind-masterclass: #a33a60;
-  --kind-lunch-and-learn: #17706c;
-  --kind-critique: #9c6b16;
-  --kind-training: #2f5f9e;
+  --kind-workshop: #9f6aaf;
+  --kind-masterclass: #7a86cb;
+  --kind-lunch-and-learn: #7a86cb;
+  --kind-critique: #7a86cb;
+  --kind-training: #7a86cb;
 
   /* Things only the signed-in person sees — kept clear of every shared hue. */
-  --mine: #8e3b74;
-  --review: #a94c16;
+  --mine: #8b8b91;
+  --review: #b8341f;
 
   /* The strategic call on a trend is ordered by how much commitment it asks
      for, so it takes one hue in four steps rather than four unrelated
@@ -2020,7 +2020,17 @@ table.schedule .overdue {
 .event-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 8px;
+}
+
+/* The first heading follows the filters, which already provide the break. */
+.month-heading:first-child {
+  margin-top: 20px;
+}
+
+/* Two lines in one cell — the title and who it is for — want telling apart. */
+.event-row .deadline-meta {
+  margin-top: 3px;
 }
 
 .event-row {
@@ -2041,11 +2051,17 @@ table.schedule .overdue {
   color: var(--ink-70);
 }
 
+/*
+ * A month heading is a break in the list, so it is given room to be one.
+ * At twenty-four pixels above and eleven below it sat nearer the month it
+ * was ending than the one it was announcing, which reads as a label on the
+ * last row rather than a heading over the next.
+ */
 .month-heading {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 24px 0 11px;
+  margin: 38px 0 14px;
   font-family: var(--display);
   font-size: 12px;
   font-weight: 500;
@@ -7704,6 +7720,87 @@ a.inbox-title:hover {
 @media (max-width: 900px) {
   .icon-row {
     grid-template-columns: 36px minmax(0, 1fr) auto;
+  }
+}
+
+
+/* --- An entry opened over the calendar ------------------------------------
+ *
+ * Offered as an alternative to the entry's own page, chosen once in the
+ * studio. It shows the same facts the hover preview does, on purpose: a
+ * person who has been reading previews all week should not meet a different
+ * summary the moment they click. The way to the full page is always on it,
+ * so choosing the panel never costs anybody the page.
+ */
+.entry-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--ink) 28%, transparent);
+}
+
+.entry-panel {
+  width: min(460px, 100%);
+  max-height: 80vh;
+  overflow-y: auto;
+  padding: 18px 20px 16px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius);
+  background: var(--paper);
+  box-shadow: 0 18px 44px -12px color-mix(in srgb, var(--ink) 34%, transparent);
+}
+
+.entry-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.entry-panel-title {
+  display: block;
+  margin: 8px 0 12px;
+  font-family: var(--display);
+  font-size: 19px;
+  line-height: 1.25;
+}
+
+/* A plain glyph: the close is not an action worth a button's weight. */
+.entry-panel-close {
+  flex: none;
+  padding: 0 4px;
+  border: 0;
+  background: none;
+  color: var(--ink-45);
+  font-size: 21px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.entry-panel-close:hover {
+  color: var(--ink);
+}
+
+.entry-panel-foot {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--rule);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .entry-panel {
+    animation: entry-panel-in 120ms ease-out;
+  }
+
+  @keyframes entry-panel-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
   }
 }
 

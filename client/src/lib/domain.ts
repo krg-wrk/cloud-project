@@ -86,7 +86,7 @@ export const EVENT_LABELS_SHORT: Record<EventType, string> = {
   conference: "Show",
 };
 
-/** Work is done once it is with the commissioning manager. */
+/** Work is done once it is with the subbing team. */
 export function isOutstanding(item: ContentItem): boolean {
   return item.status === "not-started" || item.status === "in-progress" || item.status === "at-risk";
 }
@@ -103,6 +103,29 @@ export function daysUntilSubmission(item: ContentItem, today = TODAY): number {
 export function personName(people: Person[], id: string | undefined): string {
   if (!id) return "Unassigned";
   return people.find((p) => p.id === id)?.name ?? id;
+}
+
+/**
+ * Who a calendar entry is for, in the words the sheet uses.
+ *
+ * Named people first and all of them, then the countries it applies to, then
+ * the region as a last resort. The order is the one the entry itself is most
+ * specific about: a trade show names the people going, a public holiday names
+ * a country, and only the shows sheet records a region at all.
+ *
+ * It printed the region before, which is worked out from the country on the
+ * way in — so a South African public holiday read "EMEA team" and told sixty
+ * people it was theirs.
+ */
+export function eventWho(event: CalendarEvent, people: Person[]): string {
+  const named = event.personIds?.length
+    ? event.personIds
+    : event.personId
+      ? [event.personId]
+      : [];
+  if (named.length) return named.map((id) => personName(people, id)).join(", ");
+  if (event.countries?.length) return event.countries.join(", ");
+  return event.region ?? "Everyone";
 }
 
 export function initials(name: string): string {
@@ -128,22 +151,38 @@ export function eventCovers(event: CalendarEvent, date: string): boolean {
 }
 
 /**
- * Leave and holidays that collide with a submission deadline. Holidays are
- * regional, so a Singapore holiday is not a clash for a forecaster in London.
+ * Leave and holidays that collide with a deadline.
+ *
+ * A holiday belongs to a country, so a Singapore holiday is not a clash for a
+ * forecaster in London. It was being matched on region, which made it one for
+ * everybody the Hub files under APAC — the same fault as the calendar's, and
+ * worth fixing in both places rather than only where it was noticed.
+ *
+ * The region stays underneath as a fallback, because the trade shows sheet
+ * records one and no country at all.
  */
 export function clashesFor(
   item: ContentItem,
   events: CalendarEvent[],
   people: Person[] = [],
 ): CalendarEvent[] {
-  const region = people.find((p) => p.id === item.forecasterId)?.region;
+  const them = people.find((p) => p.id === item.forecasterId);
+  const theirCountry = (them?.country ?? "").trim().toLowerCase();
   return events.filter((event) => {
     if (event.type !== "leave" && event.type !== "public-holiday") return false;
     if (!eventCovers(event, item.submissionDate)) return false;
-    if (event.personId) return event.personId === item.forecasterId;
-    // An unassigned event applies by region; "All" covers everyone.
+    const named = event.personIds?.length ? event.personIds : event.personId ? [event.personId] : [];
+    if (named.length) return named.includes(item.forecasterId);
+    const countries = event.countries ?? [];
+    if (countries.length) {
+      if (countries.some((c) => /^all$/i.test(c.trim()))) return true;
+      // Nobody has filled the country in for this person, so it cannot be
+      // ruled out — which is the safe way round for a warning.
+      if (!theirCountry) return true;
+      return countries.some((c) => c.trim().toLowerCase() === theirCountry);
+    }
     if (!event.region || event.region === "All") return true;
-    return region === undefined || event.region === region;
+    return them?.region === undefined || event.region === them.region;
   });
 }
 

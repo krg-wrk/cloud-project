@@ -27,10 +27,12 @@ import {
   EVENT_LABELS_SHORT,
   KIND_LABELS,
   eventCovers,
+  eventWho,
   personName,
 } from "../lib/domain";
 import { Icon } from "../lib/icons";
 import { coversDay, isMultiDay, packWeek, type Bar } from "../lib/spans";
+import { useAppearance } from "../lib/appearance";
 import { useViewer } from "../lib/viewer";
 import type {
   CalendarEvent,
@@ -240,7 +242,7 @@ function chipHref(chip: Chip): string {
 function chipMeaning(chip: Chip): string {
   switch (chip.kind) {
     case "submission":
-      return "Copy due with the commissioning manager";
+      return "Forecast due with the subbing team";
     case "publication":
       return "Publishes on the platform";
     case "review":
@@ -363,6 +365,17 @@ export default function CalendarView() {
   // Workshops belong to the whole team, so they are not narrowed by forecaster.
   const sessions = useApi<SessionWithSignUps[]>("/sessions");
 
+  /*
+   * Whether an entry opens over the calendar, and which one is open.
+   *
+   * Read from the appearance record the studio writes, so the choice is the
+   * deployment's rather than this page's — and held here rather than in the
+   * address, because a panel is a way of looking at the month you are already
+   * on rather than a place. Anything worth pasting to somebody is the full
+   * page, which the panel offers.
+   */
+  const opensInPanel = useAppearance().opens === "panel";
+  const [opened, setOpened] = useState<Chip | null>(null);
   const [adding, setAdding] = useState(false);
   const [extraEntries, setExtraEntries] = useState<PersonalEntry[]>([]);
   const [dropped, setDropped] = useState<string[]>([]);
@@ -696,6 +709,7 @@ export default function CalendarView() {
                               chip={chip}
                               people={data.people}
                               onRemoveEntry={removeEntry}
+                              onOpen={opensInPanel ? setOpened : undefined}
                             />
                           ))}
                           {hidden > 0 && (
@@ -750,6 +764,10 @@ export default function CalendarView() {
           </div>
         </>
       )}
+
+      {opened && data && (
+        <EntryPanel chip={opened} people={data.people} onClose={() => setOpened(null)} />
+      )}
     </>
   );
 }
@@ -769,10 +787,22 @@ function SpanBar({
   onRemoveEntry: (id: string) => void;
 }) {
   const span = spanOf(bar.item);
+  const colour =
+    bar.item.kind === "event" ? `var(--event-${bar.item.event.type})` : "var(--mine)";
+  /*
+   * The bars get the panel too.
+   *
+   * They did not, and the effect was that the preview looked like a thing
+   * that only worked on entries in the future — because a bar is what leave
+   * and a trade show are drawn as, and most of those in view have been and
+   * gone. Nothing was ever checking the date; the bars were simply a second
+   * way of drawing a chip that had never been given the handlers.
+   */
+  const preview = useHoverPreview();
   const style = {
     gridColumn: `${bar.startCol + 1} / ${bar.endCol + 2}`,
     gridRow: bar.lane + 1,
-    "--chip-color": bar.item.kind === "event" ? `var(--event-${bar.item.event.type})` : "var(--mine)",
+    "--chip-color": colour,
   } as CSSProperties;
 
   const who =
@@ -792,28 +822,51 @@ function SpanBar({
     </>
   );
 
+  const asChip: Chip =
+    bar.item.kind === "event"
+      ? { kind: "event", event: bar.item.event }
+      : { kind: "entry", entry: bar.item.entry };
+  const panel = (
+    <HoverPreview at={preview.at}>
+      <b className="preview-title">{title}</b>
+      <span className="preview-what" style={{ "--chip-color": colour } as CSSProperties}>
+        <Icon name={icon} size={12} />
+        {chipMeaning(asChip)}
+      </span>
+      {chipDetail(asChip, people)}
+    </HoverPreview>
+  );
+
   if (bar.item.kind === "entry") {
     const id = bar.item.entry.id;
     return (
-      <button
-        className="cal-span cal-span-button"
-        style={style}
-        title={`${title}, ${dates} (yours — click to remove)`}
-        onClick={() => onRemoveEntry(id)}
-      >
-        {body}
-      </button>
+      <>
+        <button
+          className="cal-span cal-span-button"
+          style={style}
+          title={`${title}, ${dates} (yours — click to remove)`}
+          onClick={() => onRemoveEntry(id)}
+          {...preview.handlers()}
+        >
+          {body}
+        </button>
+        {panel}
+      </>
     );
   }
   return (
-    <Link
-      className="cal-span"
-      style={style}
-      to={`/whats-on?type=${bar.item.event.type}&from=calendar`}
-      title={`${title}${who ? ` — ${who}` : ""}, ${dates}`}
-    >
-      {body}
-    </Link>
+    <>
+      <Link
+        className="cal-span"
+        style={style}
+        to={`/whats-on?type=${bar.item.event.type}&from=calendar`}
+        title={`${title}${who ? ` — ${who}` : ""}, ${dates}`}
+        {...preview.handlers()}
+      >
+        {body}
+      </Link>
+      {panel}
+    </>
   );
 }
 
@@ -922,11 +975,11 @@ function chipDetail(chip: Chip, people: Schedule["people"]): ReactNode {
             {row("Vertical", item.vertical)}
             {row("Forecast horizon", item.forecastHorizon)}
             {row(
-              chip.kind === "submission" ? "Copy due" : "Publishes",
+              chip.kind === "submission" ? "Due with subbing" : "Publishes",
               due ? `${formatLong(due)} · ${relativeDays(due)}` : "",
             )}
             {row(
-              chip.kind === "submission" ? "Publishes" : "Copy due",
+              chip.kind === "submission" ? "Publishes" : "Due with subbing",
               chip.kind === "submission"
                 ? item.publicationDate && formatMedium(item.publicationDate)
                 : item.submissionDate && formatMedium(item.submissionDate),
@@ -966,6 +1019,11 @@ function chipDetail(chip: Chip, people: Schedule["people"]): ReactNode {
               .join(" · "),
           )}
           {row("Where", chip.session.online ? `${chip.session.location} · online` : chip.session.location)}
+          {/*
+            Left out entirely when nobody is hosting yet. `row` already drops
+            an empty value, and the sheet's own "Unassigned" is read as absent
+            on the way in rather than printed as though it were a name.
+          */}
           {row("Host", chip.session.hostId ? personName(people, chip.session.hostId) : chip.session.hostExternal)}
           {row("Going", chip.session.going.length ? `${chip.session.going.length} signed up` : "")}
           {row("About", chip.session.summary)}
@@ -975,7 +1033,14 @@ function chipDetail(chip: Chip, people: Schedule["people"]): ReactNode {
       return (
         <dl className="preview-facts">
           {row("Kind", EVENT_LABELS[chip.event.type])}
-          {row("Who", chip.event.personId ? personName(people, chip.event.personId) : chip.event.region)}
+          {/*
+            Everybody named, then where it applies. A trade show is owned by
+            two or three people and printing only the first said the show was
+            one person's; a public holiday belongs to a country, and printing
+            the region it was filed under told sixty people in EMEA that a
+            South African holiday was theirs.
+          */}
+          {row("Who", eventWho(chip.event, people))}
           {row(
             "When",
             chip.event.startDate === chip.event.endDate
@@ -1007,10 +1072,13 @@ function ChipView({
   chip,
   people,
   onRemoveEntry,
+  onOpen,
 }: {
   chip: Chip;
   people: Schedule["people"];
   onRemoveEntry: (id: string) => void;
+  /** Set when the studio says an entry opens over the calendar rather than away from it. */
+  onOpen?: (chip: Chip) => void;
 }) {
   const { kicker, title, icon, colour } = chipLabel(chip, people);
   const preview = useHoverPreview();
@@ -1057,6 +1125,29 @@ function ChipView({
       </>
     );
   }
+  /*
+   * A button when the detail opens over the calendar, a link when it opens
+   * away from it. Deliberately not a link with the navigation cancelled: the
+   * one that opens a panel is not a destination, and rendering it as a link
+   * would put a URL in the status bar and on the right-click menu that
+   * clicking it does not go to.
+   */
+  if (onOpen) {
+    return (
+      <>
+        <button
+          className="cal-chip cal-chip-button"
+          style={style}
+          title={`${title} — ${chipMeaning(chip)}`}
+          onClick={() => onOpen(chip)}
+          {...preview.handlers()}
+        >
+          {body}
+        </button>
+        {panel}
+      </>
+    );
+  }
   return (
     <>
       <Link
@@ -1070,6 +1161,65 @@ function ChipView({
       </Link>
       {panel}
     </>
+  );
+}
+
+/**
+ * An entry opened over the calendar rather than instead of it.
+ *
+ * The same facts the hover panel shows, which is on purpose — a person who
+ * has been reading previews all week should not meet a different summary the
+ * moment they click. What it adds is the way onward: the full page is one
+ * more click, so choosing the panel never costs somebody the page.
+ *
+ * Escape closes it and the backdrop closes it, because both are what every
+ * other thing of this shape in the Hub does.
+ */
+function EntryPanel({
+  chip,
+  people,
+  onClose,
+}: {
+  chip: Chip;
+  people: Schedule["people"];
+  onClose: () => void;
+}) {
+  const { title, icon, colour } = chipLabel(chip, people);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="entry-backdrop" onClick={onClose}>
+      <div
+        className="entry-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="entry-panel-head" style={{ "--chip-color": colour } as CSSProperties}>
+          <span className="preview-what" style={{ "--chip-color": colour } as CSSProperties}>
+            <Icon name={icon} size={12} />
+            {chipMeaning(chip)}
+          </span>
+          <button className="entry-panel-close" onClick={onClose} aria-label="Close this entry">
+            &times;
+          </button>
+        </div>
+        <b className="entry-panel-title">{title}</b>
+        {chipDetail(chip, people)}
+        <div className="entry-panel-foot">
+          <Link className="btn" to={chipHref(chip)}>
+            Open the full page
+          </Link>
+        </div>
+      </div>
+    </div>
   );
 }
 

@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   canWriteNote,
   canWriteSchedule,
+  eventReaches,
   hubAccessFor,
   reportsTo,
   resolveViewer,
@@ -104,51 +105,117 @@ test("somebody the directory marks inactive does not get in", () => {
 });
 
 /**
- * Which workshops are somebody's.
+ * Which workshops and calendar entries are somebody's.
  *
- * Relevance, not permission. The failure to avoid is the one on screen now:
- * a forecaster in London reading a Seoul research week and four Beauty
- * scoring days. The other failure is worse and quieter — an over-strict rule
- * emptying the page for all two hundred people while the sheet is still being
- * tagged.
+ * Relevance, not permission. The failure to avoid is the one that was on
+ * screen: a forecaster in London reading a Seoul research week, four Beauty
+ * scoring days and every South African public holiday. The other failure is
+ * worse and quieter — an over-strict rule emptying the page for all two
+ * hundred people while the sheets are still being tagged.
  */
 
-const person = { id: "me", country: "UK" };
+const person = { id: "me", country: "UK", region: "EMEA" };
 
 test("a session naming somebody is theirs", () => {
-  assert.equal(sessionReaches({ attendeeIds: ["me"], department: "Beauty", location: "Korea" }, person), true);
+  assert.equal(
+    sessionReaches({ attendeeIds: ["me"], departments: ["Beauty"], countries: ["Korea"] }, person),
+    true,
+  );
+});
+
+test("being named beats the country, because somebody was tagged on purpose", () => {
+  assert.equal(sessionReaches({ attendeeIds: ["me"], countries: ["Singapore"] }, person), true);
 });
 
 test("a session the whole team is for reaches everybody", () => {
-  assert.equal(sessionReaches({ department: "All", location: "Korea" }, person), true);
-  assert.equal(sessionReaches({ department: "all", location: "Korea" }, person), true);
+  assert.equal(sessionReaches({ departments: ["All"], countries: ["Korea"] }, person), true);
+  assert.equal(sessionReaches({ departments: ["all"], countries: ["Korea"] }, person), true);
+  assert.equal(sessionReaches({ departments: ["Beauty", "All"] }, person), true, "any value saying all");
 });
 
 test("a session where somebody is reaches them", () => {
-  assert.equal(sessionReaches({ department: "Beauty", location: "UK" }, person), true);
-  assert.equal(sessionReaches({ department: "Beauty", location: " uk " }, person), true);
+  assert.equal(sessionReaches({ departments: ["Beauty"], countries: ["UK"] }, person), true);
+  assert.equal(sessionReaches({ countries: [" uk "] }, person), true);
+  assert.equal(sessionReaches({ countries: ["USA", "UK"] }, person), true, "one of several");
 });
 
 test("a session for another department in another country is not theirs", () => {
-  assert.equal(sessionReaches({ attendeeIds: ["someone"], department: "Beauty", location: "Korea" }, person), false);
+  assert.equal(
+    sessionReaches({ attendeeIds: ["someone"], departments: ["Beauty"], countries: ["Korea"] }, person),
+    false,
+  );
 });
 
 test("the host's own session is theirs, whoever else is tagged", () => {
-  assert.equal(sessionReaches({ hostId: "me", department: "Beauty", location: "Korea" }, person), true);
+  assert.equal(sessionReaches({ hostId: "me", countries: ["Korea"] }, person), true);
 });
 
 test("a session with nothing filled in reaches everybody, because most of the sheet is untagged", () => {
   assert.equal(sessionReaches({}, person), true);
-  assert.equal(sessionReaches({ attendeeIds: [] }, person), true);
+  assert.equal(sessionReaches({ attendeeIds: [], departments: [], countries: [] }, person), true);
 });
 
 test("somebody with no person record sees only the untagged ones", () => {
   assert.equal(sessionReaches({}, null), true);
-  assert.equal(sessionReaches({ department: "Beauty" }, null), false);
+  assert.equal(sessionReaches({ departments: ["Beauty"] }, null), false);
 });
 
 test("a country nobody has filled in for the person does not match every session", () => {
-  assert.equal(sessionReaches({ location: "UK" }, { id: "me" }), false);
+  assert.equal(sessionReaches({ countries: ["UK"] }, { id: "me" }), false);
+});
+
+/**
+ * The calendar sheets, which were being read by region and should not be.
+ *
+ * A region is worked out from a country on the way in; none of these sheets
+ * records one except trade shows. Reading the region meant a South African
+ * public holiday reached every one of the sixty people filed under EMEA, and
+ * a trade show reached a region rather than the two people going to it.
+ */
+
+test("a holiday reaches the country it is in, and nobody else", () => {
+  const saHoliday = { countries: ["South Africa"] };
+  assert.equal(eventReaches(saHoliday, { id: "x", country: "South Africa", region: "EMEA" }), true);
+  assert.equal(eventReaches(saHoliday, person), false, "the whole of EMEA is not South Africa");
+});
+
+test("a holiday marked All reaches everybody, which is how the sheet says not regional", () => {
+  assert.equal(eventReaches({ countries: ["All"] }, person), true);
+  assert.equal(eventReaches({ countries: ["all"] }, person), true);
+});
+
+test("a holiday in two places reaches both", () => {
+  const both = { countries: ["Singapore", "UK"] };
+  assert.equal(eventReaches(both, person), true);
+  assert.equal(eventReaches(both, { id: "y", country: "Singapore" }), true);
+  assert.equal(eventReaches(both, { id: "z", country: "Brazil" }), false);
+});
+
+test("a trade show is for the people going to it, not for their whole region", () => {
+  const show = { personIds: ["a", "b"], region: "EMEA" };
+  assert.equal(eventReaches(show, { id: "a", region: "EMEA" }), true);
+  assert.equal(eventReaches(show, { id: "b", region: "APAC" }), true, "tagged, wherever they are");
+  assert.equal(eventReaches(show, { id: "c", region: "EMEA" }), false, "same region, not going");
+});
+
+test("leave belongs to the one person named on it", () => {
+  assert.equal(eventReaches({ personId: "a" }, { id: "a" }), true);
+  assert.equal(eventReaches({ personId: "a" }, { id: "b" }), false);
+});
+
+test("a show with nobody named falls back to its region, which only that sheet keeps", () => {
+  assert.equal(eventReaches({ region: "EMEA" }, person), true);
+  assert.equal(eventReaches({ region: "APAC" }, person), false);
+  assert.equal(eventReaches({ region: "All" }, person), true);
+});
+
+test("a row saying nothing at all reaches everybody, while the sheets are being tagged", () => {
+  assert.equal(eventReaches({}, person), true);
+  assert.equal(eventReaches({ personIds: [], countries: [] }, person), true);
+});
+
+test("asking for the whole calendar is not filtered at all", () => {
+  assert.equal(eventReaches({ countries: ["South Africa"] }, undefined), true);
 });
 
 /**

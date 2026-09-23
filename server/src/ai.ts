@@ -52,7 +52,7 @@ function buildPrompt(input: DraftInput): string {
     `Type: ${item.type}`,
     `Vertical: ${item.vertical}`,
     `Forecast horizon: ${item.forecastHorizon}`,
-    `Copy due: ${item.submissionDate}`,
+    `Due with the subbing team: ${item.submissionDate}`,
     `Publishes: ${item.publicationDate}`,
     `Status: ${item.status}`,
     forecaster ? `Forecaster: ${forecaster.name} (${forecaster.vertical}, ${forecaster.region})` : "",

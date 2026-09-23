@@ -102,7 +102,7 @@ export interface ContentItem {
   forecasterId: string;
   /** Person id of the commissioning manager who owns the slot. */
   managerId: string;
-  /** ISO date (YYYY-MM-DD) the copy is due with the commissioning manager. */
+  /** ISO date (YYYY-MM-DD) the forecast is due with the subbing team. */
   submissionDate: string;
   /** ISO date (YYYY-MM-DD) it goes live on the platform. */
   publicationDate: string;
@@ -142,7 +142,28 @@ export interface CalendarEvent {
   title: string;
   /** Person id, when the event belongs to one person (e.g. annual leave). */
   personId?: string;
-  /** Region the event applies to, for public holidays. */
+  /**
+   * Everybody named in the Owner cell, not only the first.
+   *
+   * A trade show is owned by several people often enough that taking the
+   * first name silently decided which of them the show belonged to. `personId`
+   * stays as the first of these because a leave row really does belong to one
+   * person and half the Hub reads it that way.
+   */
+  personIds?: string[];
+  /**
+   * The countries the event applies to, as the sheet's Country column says.
+   *
+   * A list because the column is a multi-picklist and a holiday can be marked
+   * for two places at once. "All" in it reaches everybody, which is how the
+   * holidays sheet says a thing is not regional at all.
+   */
+  countries?: string[];
+  /**
+   * Region, which only the trade shows sheet records and only as a fallback.
+   * A country is what a person's directory row holds, so a country is what
+   * gets compared where there is one — see `eventReaches`.
+   */
   region?: string;
   startDate: string;
   endDate: string;
@@ -347,11 +368,22 @@ export interface KnowledgeSession {
   /** Everybody tagged into it, from the sheet's own contact column. */
   attendeeIds?: string[];
   /**
-   * The department it is for. "All" reaches everybody; anything else is read
-   * alongside the country, so a session is relevant to somebody if it names
-   * them, names their department as All, or happens where they are.
+   * The department it is for, as one string for the places that show it.
+   * "All" reaches everybody.
    */
   department?: string;
+  /**
+   * Every value in the Department cell, which is a multi-picklist — so a
+   * session marked for two departments is two values rather than one string
+   * that matches neither.
+   */
+  departments?: string[];
+  /**
+   * Every country the session is for, same column as `location` and split
+   * the same way. Read alongside the department: a session reaches somebody
+   * if it names them, says All, or happens where they are.
+   */
+  countries?: string[];
   /** The whole team is expected, so there is nothing to opt into. */
   required?: boolean;
   summary: string;
