@@ -13,6 +13,7 @@ import {
   type Token,
 } from "../../lib/appearance";
 import { usePreferences } from "../../lib/preferences";
+import { PALETTE, paletteName } from "../../lib/palette";
 import { ErrorNote, Loading } from "../../components/bits";
 
 /**
@@ -267,6 +268,41 @@ export default function Look() {
                       <b>{token.label}</b>
                       <span className="muted small">{token.css}</span>
                     </div>
+                    {/*
+                      The palette, beside the two ways of saying a colour that
+                      were already here. A named list is the one most people
+                      want — it is the design team's own sheet and the colours
+                      the Hub already uses, so picking from it keeps a team
+                      inside a palette somebody approved. The hex field stays
+                      for anybody who has a code in their hand, and picks up
+                      whatever the dropdown chooses, so neither is the
+                      authority and both read the same value.
+                    */}
+                    <select
+                      className="swatch-pick"
+                      value={paletteName(value) ?? ""}
+                      onChange={(e) => {
+                        const picked = PALETTE.find((c) => c.name === e.target.value);
+                        if (picked) set(token.id, picked.hex);
+                      }}
+                      aria-label={`Palette colour for ${token.label}`}
+                    >
+                      {/*
+                        Only shown while the value is one nobody named, and it
+                        cannot be chosen: "Custom" is a description of where
+                        the hex field has got to, not a thing to select.
+                      */}
+                      {!paletteName(value) && (
+                        <option value="" disabled>
+                          Custom — {value}
+                        </option>
+                      )}
+                      {PALETTE.map((colour) => (
+                        <option key={colour.hex} value={colour.name}>
+                          {colour.name} — {colour.hex}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       className="swatch-hex"
                       value={value}

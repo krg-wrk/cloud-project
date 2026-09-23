@@ -7523,9 +7523,21 @@ a.inbox-title:hover {
 .swatch-row,
 .icon-row {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) 120px 150px auto;
+  grid-template-columns: 36px minmax(0, 1fr) 190px 120px 150px auto;
   align-items: center;
   gap: 12px;
+}
+
+/* The named palette, sitting between the label and the hex it fills in. */
+.swatch-pick {
+  min-width: 0;
+  padding: 6px 9px;
+  border: 1px solid var(--rule-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
 }
 
 .icon-row {
@@ -7586,15 +7598,27 @@ a.inbox-title:hover {
   font-size: 13px;
 }
 
-@media (max-width: 900px) {
-  .swatch-row,
-  .icon-row {
+/*
+ * Wider than it was, because the palette adds a fifth fixed column and the
+ * label is the one thing that gives: at a thousand pixels "Not started" was
+ * setting three words to a line beside four fields that had all the room
+ * they wanted.
+ */
+@media (max-width: 1140px) {
+  .swatch-row {
     grid-template-columns: 36px minmax(0, 1fr) auto;
   }
 
+  .swatch-row .swatch-pick,
   .swatch-row .swatch-hex,
   .swatch-row span:nth-of-type(1) {
     grid-column: 2 / -1;
+  }
+}
+
+@media (max-width: 900px) {
+  .icon-row {
+    grid-template-columns: 36px minmax(0, 1fr) auto;
   }
 }
 
