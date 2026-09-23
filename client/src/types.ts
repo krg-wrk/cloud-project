@@ -39,6 +39,19 @@ export interface Person {
   photoAt?: string;
 }
 
+/**
+ * One line of the dev sign-in switcher.
+ *
+ * Deliberately not a `Person`: the switcher needs a name to read and an
+ * address to send, and it is served to somebody who has not signed in yet.
+ * Narrowing the type here is what stops the rest of a team record following
+ * it out.
+ */
+export interface DevAccount {
+  name: string;
+  email: string;
+}
+
 export interface ContentItem {
   id: string;
   title: string;
