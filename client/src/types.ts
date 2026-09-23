@@ -147,6 +147,11 @@ export interface Me {
   active: boolean;
   person?: Person;
   seesWholeTeam: boolean;
+  /**
+   * The people who report to this one, by person id. Empty for somebody who
+   * already sees the whole team, and for nearly everybody else.
+   */
+  reports: string[];
   aiNotes: boolean;
   /**
    * Whether changing the sheet is worth offering at all. Says nothing about

@@ -59,6 +59,14 @@ export interface Viewer {
   /** Verticals a manager or admin oversees; "all" for everything. */
   verticals: Vertical[] | "all";
   active: boolean;
+  /**
+   * The people who report to this one, by person id.
+   *
+   * Empty for nearly everybody, and empty for a commissioning manager too:
+   * they already see the whole team, so listing their reports separately
+   * would be a narrower answer to a question they are not asking.
+   */
+  reports: string[];
 }
 
 /** An access-sheet row, as maintained by the commissioning managers. */
@@ -397,7 +405,15 @@ export function resolveViewer(
   const named = admins.includes(email.toLowerCase());
 
   if (!row && !person && !named) {
-    return { email, name: email, personId: null, role: "forecaster", verticals: [], active: false };
+    return {
+      email,
+      name: email,
+      personId: null,
+      role: "forecaster",
+      verticals: [],
+      active: false,
+      reports: [],
+    };
   }
 
   const verticals = named ? "all" : parseVerticals(row?.verticals);
@@ -423,7 +439,32 @@ export function resolveViewer(
     verticals,
     // A named admin is never locked out, which is the whole point of naming one.
     active: named ? true : row ? row.active : (person?.active ?? true),
+    reports: reportsTo(email, people),
   };
+}
+
+/**
+ * Who names this address as their line manager.
+ *
+ * The directory already answers this and nothing was reading it, so a Head Of
+ * looking at the schedule saw the same two choices as everybody else: their
+ * own name, or nothing. This is the middle one — the handful of people whose
+ * work is actually theirs to worry about.
+ *
+ * Deliberately by address rather than by name. Two people share a name often
+ * enough to matter in a directory of two hundred, and the column holds an
+ * address precisely because it is the thing that is unique. Somebody absent
+ * from the directory manages nobody, which is also what an empty column
+ * means — so the answer to "who reports to a stranger" is nobody rather than
+ * everybody with a blank cell.
+ */
+export function reportsTo(email: string | null, people: Person[]): string[] {
+  const manager = (email ?? "").trim().toLowerCase();
+  if (!manager) return [];
+  return people
+    .filter((p) => (p.managerEmail ?? "").trim().toLowerCase() === manager)
+    .filter((p) => p.email.toLowerCase() !== manager)
+    .map((p) => p.id);
 }
 
 function parseVerticals(raw: string | undefined): Vertical[] | "all" {

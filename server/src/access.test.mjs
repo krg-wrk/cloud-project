@@ -4,6 +4,7 @@ import {
   canWriteNote,
   canWriteSchedule,
   hubAccessFor,
+  reportsTo,
   resolveViewer,
   seesWholeTeam,
   sessionReaches,
@@ -148,4 +149,48 @@ test("somebody with no person record sees only the untagged ones", () => {
 
 test("a country nobody has filled in for the person does not match every session", () => {
   assert.equal(sessionReaches({ location: "UK" }, { id: "me" }), false);
+});
+
+/**
+ * Who reports to whom, read from the directory's Manager Email column.
+ *
+ * The thing that must never happen is the blank cell reading as a match:
+ * most of the column is empty, so a rule that treated "no manager named" as
+ * "reports to whoever is asking" would hand the whole directory to the first
+ * person to look.
+ */
+
+const team = [
+  { id: "a", name: "A", email: "a@wgsn.com", role: "forecaster", region: "EMEA", managerEmail: "boss@wgsn.com" },
+  { id: "b", name: "B", email: "b@wgsn.com", role: "forecaster", region: "APAC", managerEmail: "BOSS@wgsn.com " },
+  { id: "c", name: "C", email: "c@wgsn.com", role: "forecaster", region: "EMEA", managerEmail: "other@wgsn.com" },
+  { id: "d", name: "D", email: "d@wgsn.com", role: "forecaster", region: "EMEA" },
+  { id: "boss", name: "Boss", email: "boss@wgsn.com", role: "forecaster", region: "EMEA" },
+];
+
+test("the people naming an address are theirs, whatever case the column was typed in", () => {
+  assert.deepEqual(reportsTo("boss@wgsn.com", team), ["a", "b"]);
+});
+
+test("a blank column names nobody, so an unfilled directory hands over nothing", () => {
+  assert.deepEqual(reportsTo("", team), []);
+  assert.deepEqual(reportsTo(null, team), []);
+  assert.deepEqual(reportsTo("   ", team), []);
+});
+
+test("somebody the directory has never heard of manages nobody", () => {
+  assert.deepEqual(reportsTo("stranger@wgsn.com", team), []);
+});
+
+test("nobody reports to themselves, however the column is filled in", () => {
+  const odd = [{ id: "x", name: "X", email: "x@wgsn.com", role: "forecaster", region: "EMEA", managerEmail: "x@wgsn.com" }];
+  assert.deepEqual(reportsTo("x@wgsn.com", odd), []);
+});
+
+test("a line manager carries their reports, and a commissioning manager does not need to", () => {
+  const managed = resolveViewer("boss@wgsn.com", [], team, []);
+  assert.deepEqual(managed.reports, ["a", "b"]);
+
+  const cm = resolveViewer("c@wgsn.com", [{ email: "c@wgsn.com", role: "commissioning-manager", active: true }], team, []);
+  assert.equal(seesWholeTeam(cm), true, "and so the reports are the wider list already");
 });

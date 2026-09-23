@@ -59,6 +59,15 @@ export interface Person {
    * one of those two questions unanswerable.
    */
   country?: string;
+  /**
+   * Their line manager's address, as the directory writes it.
+   *
+   * The line manager, deliberately, and not the commissioning manager the
+   * `cm` column names. A commissioning manager already sees everybody, so
+   * reading that column would say nothing new; a Head Of with five people
+   * reporting to them currently sees only their own name in a filter.
+   */
+  managerEmail?: string;
 }
 
 /**

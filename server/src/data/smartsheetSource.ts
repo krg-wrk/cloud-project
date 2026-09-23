@@ -815,6 +815,7 @@ export class SmartsheetSource implements DataSource {
         department: row[c.department] || undefined,
         region: regionFor(row[c.region]) ?? row[c.region] ?? "UK",
         country: row[c.region] || undefined,
+        managerEmail: row[c.managerEmail] || undefined,
       }));
   }
 
