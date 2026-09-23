@@ -30,7 +30,7 @@ import {
   personName,
 } from "../lib/domain";
 import { Icon } from "../lib/icons";
-import { isMultiDay, packWeek, type Bar } from "../lib/spans";
+import { coversDay, isMultiDay, packWeek, type Bar } from "../lib/spans";
 import { useViewer } from "../lib/viewer";
 import type {
   CalendarEvent,
@@ -168,8 +168,12 @@ function chipsForDay(date: string, feed: Feed, show: Show, includeSpans = false)
     }
     for (const session of feed.sessions) {
       // Every day it runs, not only the day it starts: an R&D week belongs on
-      // the calendar all week, the way leave and a trade show already do.
-      if (wanted({ from: session.startDate, to: session.endDate })) {
+      // the calendar all week, the way leave and a trade show already do. And
+      // only the days it runs — spanning the week is a reason to ask which
+      // days those are, not a reason to stop asking.
+      const span = { from: session.startDate, to: session.endDate };
+      if (!coversDay(span, date)) continue;
+      if (wanted(span)) {
         chips.push({ kind: "session", session });
       }
     }

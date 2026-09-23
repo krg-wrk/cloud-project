@@ -34,6 +34,22 @@ export function isMultiDay(span: Spanning): boolean {
 }
 
 /**
+ * True when a thing runs on a day.
+ *
+ * Tolerant of a half-filled span, because the sheets these come from are
+ * maintained by hand and the end date is the thing most often left out: a
+ * span with no end runs on the day it starts rather than every day since,
+ * and a span with no start runs on no day at all. Absent is not the same as
+ * always, which is exactly the way this went wrong — a workshop drawn across
+ * the days it runs, with nothing left asking which days those were, put
+ * every workshop on every day.
+ */
+export function coversDay(span: Spanning, date: string): boolean {
+  if (!span.from) return false;
+  return span.from <= date && (span.to || span.from) >= date;
+}
+
+/**
  * Packs the bars for one week into as few lanes as will hold them, so a lane
  * is reused by anything that does not overlap it.
  *
