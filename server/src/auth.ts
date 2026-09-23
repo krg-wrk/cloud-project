@@ -119,19 +119,24 @@ export function canRead(viewer: Viewer): boolean {
  * Whether a workshop is one of somebody's.
  *
  * Relevance rather than permission — nothing here is secret, and a manager
- * can still ask for the whole programme. It exists because the sheet holds
- * every session every team runs, and a forecaster in London opening the
- * calendar was reading a Seoul research week and four Beauty scoring days
- * that had nothing to do with them.
+ * can still ask for the whole programme with `everyone=1`. It exists because
+ * the sheet holds every session every team runs, and a forecaster in London
+ * opening the calendar was reading a Seoul research week and four Beauty
+ * scoring days that had nothing to do with them.
  *
  * Three ways in, in the order the team described them: named in the session,
  * or a session for the whole team, or one happening where they are. A session
  * that answers none of them belongs to somebody else.
  *
- * A session with nothing filled in reaches everybody, deliberately. Most of
- * the programme is untagged today, and the alternative is a workshops page
- * that is empty for all two hundred people — silence that reads as breakage
- * rather than as a sheet waiting to be filled in.
+ * Being named comes first and beats the country, because somebody tagged into
+ * a workshop in another country was tagged on purpose and hiding it from them
+ * would be the Hub overruling the tag.
+ *
+ * A session with nothing filled in reaches **nobody**. It used to reach
+ * everybody, on the argument that a half-tagged sheet should not empty the
+ * page — the same argument the calendar made and the same one the sheets
+ * settled. An untagged row is a row waiting to be tagged, and putting it in
+ * front of two hundred people is not how it gets noticed.
  */
 export function sessionReaches(
   session: {
@@ -145,12 +150,8 @@ export function sessionReaches(
   const named = session.attendeeIds ?? [];
   const departments = session.departments ?? [];
   const countries = session.countries ?? [];
-  if (!named.length && !departments.length && !countries.length) return true;
 
   if (!person) return false;
-  // Being named is the most explicit thing the sheet can say, so it comes
-  // first: somebody tagged into a workshop in another country was tagged on
-  // purpose, and hiding it from them would be the Hub overruling the tag.
   if (named.includes(person.id)) return true;
   if (session.hostId === person.id) return true;
   if (saysAll(departments)) return true;
@@ -235,6 +236,17 @@ export function eventReaches(
  */
 export function isTheirs(viewer: Viewer, item: ContentItem): boolean {
   if (!viewer.personId) return false;
+  /*
+   * A forecast with nobody in the Owner column is nobody's.
+   *
+   * Said out loud rather than left to fall out of the comparisons below,
+   * which is what it did: two blank ids comparing equal is the sort of thing
+   * that starts being true after a refactor and hands a forecaster somebody
+   * else's work. Every one of the two thousand three hundred rows is owned
+   * today, so this guards a case that does not exist yet rather than one
+   * that does — which is the point of writing it down.
+   */
+  if (!item.forecasterId && !(item.contributorIds ?? []).length) return false;
   if (viewer.personId === item.forecasterId) return true;
   return (item.contributorIds ?? []).includes(viewer.personId);
 }

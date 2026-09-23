@@ -176,13 +176,18 @@ export function clashesFor(
     const countries = event.countries ?? [];
     if (countries.length) {
       if (countries.some((c) => /^all$/i.test(c.trim()))) return true;
-      // Nobody has filled the country in for this person, so it cannot be
-      // ruled out — which is the safe way round for a warning.
-      if (!theirCountry) return true;
+      /*
+       * Nobody has filled the country in for this person, so only the
+       * holidays marked All can be theirs. Warning about every country's
+       * holidays was the other way round and disagreed with the calendar,
+       * which shows them the All ones and nothing else — one of the two had
+       * to be wrong, and a clash nobody can act on is the wrong one.
+       */
+      if (!theirCountry) return false;
       return countries.some((c) => c.trim().toLowerCase() === theirCountry);
     }
-    if (!event.region || event.region === "All") return true;
-    return them?.region === undefined || event.region === them.region;
+    // A region decides nothing here either — see `eventReaches`.
+    return false;
   });
 }
 

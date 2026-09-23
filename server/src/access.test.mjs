@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   canWriteNote,
+  isTheirs,
   canWriteSchedule,
   eventReaches,
   hubAccessFor,
@@ -77,6 +78,13 @@ test("view only writes nothing, not even on a forecast that names them", () => {
   assert.equal(canWriteSchedule(v, theirs), false);
 });
 
+test("a forecast with nobody in the Owner column is nobody's", () => {
+  const orphan = { id: "c9", title: "Untitled", vertical: "Womenswear", forecasterId: "", contributorIds: [] };
+  assert.equal(isTheirs(viewer("forecaster", { personId: "" }), orphan), false, "not even for a blank id");
+  assert.equal(isTheirs(viewer("forecaster", { personId: "somebody" }), orphan), false);
+  assert.equal(canWriteNote(viewer("forecaster", { personId: "somebody" }), orphan), false);
+});
+
 test("a forecaster still sees themselves first", () => {
   assert.equal(seesWholeTeam(viewer("forecaster")), false);
 });
@@ -150,14 +158,15 @@ test("the host's own session is theirs, whoever else is tagged", () => {
   assert.equal(sessionReaches({ hostId: "me", countries: ["Korea"] }, person), true);
 });
 
-test("a session with nothing filled in reaches everybody, because most of the sheet is untagged", () => {
-  assert.equal(sessionReaches({}, person), true);
-  assert.equal(sessionReaches({ attendeeIds: [], departments: [], countries: [] }, person), true);
+test("a session with nothing filled in reaches nobody, because it is a row waiting to be tagged", () => {
+  assert.equal(sessionReaches({}, person), false);
+  assert.equal(sessionReaches({ attendeeIds: [], departments: [], countries: [] }, person), false);
 });
 
-test("somebody with no person record sees only the untagged ones", () => {
-  assert.equal(sessionReaches({}, null), true);
+test("somebody with no person record sees none of the programme", () => {
+  assert.equal(sessionReaches({}, null), false);
   assert.equal(sessionReaches({ departments: ["Beauty"] }, null), false);
+  assert.equal(sessionReaches({ departments: ["All"] }, null), false);
 });
 
 test("a country nobody has filled in for the person does not match every session", () => {
