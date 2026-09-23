@@ -42,7 +42,7 @@ import { WRITABLE_FIELDS } from "../types.js";
 const API = (process.env.SMARTSHEET_API ?? "https://api.smartsheet.com/2.0").replace(/\/$/, "");
 
 /**
- * How long one listing of the sheets' modified times stands for.
+ * How long a sheet's version number stands for before it is asked again.
  *
  * Shorter than the response cache above it on purpose: this is the thing
  * that notices an edit at all, so it should notice sooner than the caller
@@ -320,6 +320,13 @@ interface SmartsheetSheet {
   /** `options` is a picklist column's allowed values, which a write must use. */
   columns: { id: number; title: string; type?: string; options?: string[] }[];
   rows: SmartsheetRow[];
+  /**
+   * Incremented by Smartsheet on every change to the sheet, and the same
+   * number `/sheets/{id}/version` reports on its own. Read from the body
+   * rather than asked for again, so a copy is filed under the version it
+   * actually is.
+   */
+  version?: number;
 }
 
 /** A sheet row flattened to { "Column Title": "value" }. */
@@ -363,10 +370,10 @@ export interface SmartsheetConfig {
    */
   allowWrites?: boolean;
   /**
-   * How long one listing of the sheets' modified times stands for.
+   * How long a sheet's version number stands for before it is asked again.
    *
    * Here rather than only as a constant so a test can set it to nothing and
-   * watch the stamps decide, which is otherwise a thing that can only be
+   * watch the version decide, which is otherwise a thing that can only be
    * proved by waiting half a minute.
    */
   stampTtlMs?: number;
@@ -544,20 +551,24 @@ export const STATUS_LABELS: Record<Status, string> = {
 /**
  * Whether a sheet already in hand can be served again without reading it.
  *
- * One listing call reports every sheet's `modifiedAt`, and a sheet whose
- * stamp has not moved cannot have changed — so the copy held is the copy
- * Smartsheet would send back. Everything else answers no: a sheet never
- * read, a sheet the listing does not mention, a listing that failed. The
- * asymmetry is on purpose. Reading again costs a second; serving a schedule
- * somebody has already corrected costs them the afternoon they spend
- * working from it.
+ * Smartsheet increments a sheet's version on every change to it, so a
+ * version that has not moved means the copy held is the copy the API would
+ * send back. Everything else answers no: a sheet never read, a sheet whose
+ * version could not be had, a check that failed. The asymmetry is on
+ * purpose. Reading again costs a second; serving a schedule somebody has
+ * already corrected costs them the afternoon they spend working from it.
+ *
+ * A version rather than a modified time, though the sheet reports both. The
+ * timestamp is only accurate to the second, so an edit landing in the same
+ * second as a read would leave a stamp that matches and a sheet that does
+ * not. A counter cannot do that.
  */
 export function sheetIsCurrent(
-  held: string | undefined,
-  listed: string | undefined,
+  held: number | undefined,
+  current: number | undefined,
 ): boolean {
-  if (!held || !listed) return false;
-  return held === listed;
+  if (held === undefined || current === undefined) return false;
+  return held === current;
 }
 
 export class SmartsheetSource implements DataSource {
@@ -565,57 +576,60 @@ export class SmartsheetSource implements DataSource {
   readonly writes?: ContentWriter;
 
   /*
-   * What has been read, and the stamp it was read at.
+   * What has been read, and the version it was read at.
    *
-   * Drawing the fixed pages reads sixteen sheets and takes about six
+   * Drawing the fixed pages reads thirteen sheets and takes about seven
    * seconds, and most of them — the directory above all — change perhaps
-   * weekly. One listing call answers "which of these has moved" for all of
-   * them at once, so the usual refresh reads nothing at all. The alternative
-   * was simply to cache for longer, which buys the same speed by showing
-   * people staler data; a schedule exists to be current, so that is the
-   * wrong end to save at.
+   * weekly. Asking each one for its version costs a few bytes and answers
+   * "has this moved", so the usual refresh reads nothing at all. The
+   * alternative was simply to cache for longer, which buys the same speed by
+   * showing people staler data; a schedule exists to be current, so that is
+   * the wrong end to save at.
    */
-  private readonly held = new Map<string, { modifiedAt: string; sheet: SmartsheetSheet }>();
-  private stamps: { at: number; byId: Map<string, string> } | null = null;
+  private readonly held = new Map<string, { version: number; sheet: SmartsheetSheet }>();
+  private readonly versions = new Map<string, { at: number; version?: number }>();
 
   constructor(private readonly config: SmartsheetConfig) {}
 
-  /** A write of the Hub's own makes both the copy and its stamp wrong. */
+  /** A write of the Hub's own makes both the copy and its version wrong. */
   forget(): void {
     this.held.clear();
-    this.stamps = null;
+    this.versions.clear();
   }
 
   /**
-   * When each sheet the token can see was last modified.
+   * What version Smartsheet holds of one sheet.
    *
-   * Deliberately one page of five hundred: the account holds around a
-   * hundred and thirty sheets, and paging through them would spend the
-   * saving this exists to make. A listing that fails answers with nothing,
-   * which reads every sheet the long way — the slow path rather than the
-   * wrong one — and the empty answer is kept for the usual interval so a
-   * broken listing costs one failed call rather than one per sheet.
+   * Asked per sheet, of the sheets this deployment is pointed at, rather
+   * than by listing the account. Listing works and was how this started, but
+   * it returns all hundred and twenty-six sheets the token can see to answer
+   * a question about thirteen — twice as slow, and it means a token narrowed
+   * to the Hub's own folder would stop being able to answer it. What the Hub
+   * is configured to read is exactly what it should need to ask about.
+   *
+   * A version that cannot be had is remembered as absent for the usual
+   * interval: the sheet is then read the long way, which is the slow path
+   * rather than the wrong one, and one failed call rather than one per read.
    */
-  private async modifiedTimes(): Promise<Map<string, string>> {
+  private async versionOf(sheetId: string): Promise<number | undefined> {
     const now = Date.now();
     const ttl = this.config.stampTtlMs ?? STAMP_TTL_MS;
-    if (this.stamps && now - this.stamps.at < ttl) return this.stamps.byId;
-    const byId = new Map<string, string>();
+    const known = this.versions.get(sheetId);
+    if (known && now - known.at < ttl) return known.version;
+    let version: number | undefined;
     try {
-      const res = await fetch(`${API}/sheets?pageSize=500`, {
+      const res = await fetch(`${API}/sheets/${sheetId}/version`, {
         headers: { Authorization: `Bearer ${this.config.token}` },
       });
       if (res.ok) {
-        const body = (await res.json()) as { data?: { id: number; modifiedAt?: string }[] };
-        for (const listed of body.data ?? []) {
-          if (listed.modifiedAt) byId.set(String(listed.id), listed.modifiedAt);
-        }
+        const body = (await res.json()) as { version?: number };
+        if (typeof body.version === "number") version = body.version;
       }
     } catch {
-      // Unreachable is not the same as unchanged, and an empty map says so.
+      // Unreachable is not the same as unchanged, and no version says so.
     }
-    this.stamps = { at: now, byId };
-    return byId;
+    this.versions.set(sheetId, { at: now, version });
+    return version;
   }
 
   /** The token, for the writer only. Nothing else needs it from outside. */
@@ -685,9 +699,9 @@ export class SmartsheetSource implements DataSource {
      * itself and agree every time — which is the concurrency check gone,
      * with every test still passing.
      */
-    const listed = fresh ? undefined : (await this.modifiedTimes()).get(sheetId);
+    const current = fresh ? undefined : await this.versionOf(sheetId);
     const held = this.held.get(sheetId);
-    if (held && sheetIsCurrent(held.modifiedAt, listed)) return held.sheet;
+    if (held && sheetIsCurrent(held.version, current)) return held.sheet;
 
     /*
      * Level 2, with the object values.
@@ -712,8 +726,16 @@ export class SmartsheetSource implements DataSource {
       );
     }
     const sheet = (await res.json()) as SmartsheetSheet;
-    // Only worth holding when there is a stamp to notice it going stale by.
-    if (listed) this.held.set(sheetId, { modifiedAt: listed, sheet });
+    /*
+     * Filed under the version the sheet itself reports, not the one asked
+     * for a moment earlier. An edit landing between the two would otherwise
+     * be labelled with the version before it, and the copy would look
+     * current until somebody edited the sheet again.
+     */
+    if (typeof sheet.version === "number") {
+      this.held.set(sheetId, { version: sheet.version, sheet });
+      this.versions.set(sheetId, { at: Date.now(), version: sheet.version });
+    }
     return sheet;
   }
 
