@@ -835,7 +835,17 @@ export class SmartsheetSource implements DataSource {
         forecasterRole: row[c.role] || undefined,
         vertical: (row[c.vertical] || row[c.team] || undefined) as Vertical | undefined,
         department: row[c.department] || undefined,
-        region: regionFor(row[c.region]) ?? row[c.region] ?? "UK",
+        /*
+         * No country means no region, rather than London.
+         *
+         * "UK" was the default for an unfilled row and it is a guess dressed
+         * as a fact: nineteen of a hundred and thirty-nine rows have no
+         * country, and every one of them was being filed under a region
+         * somebody would then read off the page as though the directory said
+         * it. Blank is the honest answer, and it is the one that gets the
+         * column filled in.
+         */
+        region: regionFor(row[c.region]) ?? row[c.region] ?? "",
         country: row[c.region] || undefined,
         managerEmail: row[c.managerEmail] || undefined,
       }));

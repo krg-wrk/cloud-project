@@ -3,7 +3,13 @@ import { Link, useParams } from "react-router-dom";
 import { useApi } from "../lib/api";
 import { Slot, useCustom } from "../lib/custom";
 import { TODAY, formatLong, formatShort, monthKey, relativeDays } from "../lib/date";
-import { STATUS_LABELS, clashesFor, isOverdue, personName } from "../lib/domain";
+import {
+  STATUS_LABELS,
+  clashesFor,
+  isOverdue,
+  personName,
+  personPlace,
+} from "../lib/domain";
 import type { CalendarEvent, ContentItem, PeerReview, Person, Taxonomy } from "../types";
 import { Avatar, ErrorNote, EventPill, Loading, StatusPill } from "../components/bits";
 import BackLink from "../components/BackLink";
@@ -226,7 +232,7 @@ export default function ContentDetail() {
                 <div>
                   <div className="person-name">{forecaster.name}</div>
                   <div className="person-meta">
-                    {forecaster.vertical} · {forecaster.region}
+                    {personPlace(forecaster)}
                   </div>
                 </div>
               </Link>

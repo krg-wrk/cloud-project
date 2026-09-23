@@ -76,11 +76,12 @@ const tail = (secret) => (secret.length <= 4 ? "••••" : `••••${s
  */
 const wantsColumns = process.argv.includes("--columns");
 let COLUMNS = null;
+let regionFor = null;
 let titleOf = (r) => (typeof r === "string" ? r : r.title);
 let renamedColumns = () => [];
 if (wantsColumns) {
   try {
-    ({ COLUMNS, titleOf, renamedColumns } = await import(
+    ({ COLUMNS, titleOf, renamedColumns, regionFor } = await import(
       new URL("server/dist/data/smartsheetSource.js", new URL("..", import.meta.url))
     ));
   } catch {
@@ -210,6 +211,7 @@ if (source !== "smartsheet") {
           const rows = sheet.body.totalRowCount ?? 0;
           good(label, `“${sheet.body.name}” — ${rows} row${rows === 1 ? "" : "s"}`);
           if (COLUMNS && groups) reportColumns(sheet.body.columns ?? [], groups);
+          reportCountries(sheet.body.columns ?? []);
         } else {
           fail(label, sheet.why);
         }
@@ -332,6 +334,37 @@ if (problems === 0) {
  * and the Hub asks for "Actual Submission". Naming the likely one is the whole
  * value of this over reading two lists side by side.
  */
+/**
+ * Countries in a dropdown the Hub cannot work a region out from.
+ *
+ * Region is background, not a calendar concept: it is how the team reads
+ * somebody's expertise in the directory, and how the spread of workshops and
+ * trade shows gets counted. Nothing on a calendar consults it. So an unmapped
+ * country breaks nothing at all, which is exactly why it is worth printing —
+ * the gap shows up months later as a person missing from a count, and named
+ * here it is a one-line addition to `regionFor`.
+ *
+ * The Country column only. A Region column already holds regions, so running
+ * those through a country-to-region map would report NAM and EMEA as
+ * unmappable countries, which is the check misunderstanding its own question.
+ *
+ * Read from the column's own options rather than from the rows, which is
+ * free: a picklist hands its allowed values back with the column definition,
+ * so this costs nothing beyond the one row already being fetched.
+ */
+function reportCountries(sheetColumns) {
+  if (!regionFor) return;
+  const col = sheetColumns.find((c) => c.title === "Country");
+  const options = col?.options ?? [];
+  if (options.length === 0) return;
+  const unknown = options.filter(
+    (value) => !/^(all|n\/a|tbc|)$/i.test(String(value).trim()) && !regionFor(value),
+  );
+  if (unknown.length === 0) return;
+  problems += unknown.length;
+  say(" ", `    ${warn("!")} ${dim(`no region known for ${unknown.length}: ${unknown.join(", ")} — directory and counts only, nothing on a calendar`)}`);
+}
+
 function reportColumns(sheetColumns, groups) {
   const has = sheetColumns.map((c) => c.title).filter(Boolean);
   const wanted = [...new Set(groups.flatMap((g) => Object.values(COLUMNS[g] ?? {}).map(titleOf)))];

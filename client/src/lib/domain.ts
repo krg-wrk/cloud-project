@@ -108,14 +108,17 @@ export function personName(people: Person[], id: string | undefined): string {
 /**
  * Who a calendar entry is for, in the words the sheet uses.
  *
- * Named people first and all of them, then the countries it applies to, then
- * the region as a last resort. The order is the one the entry itself is most
- * specific about: a trade show names the people going, a public holiday names
- * a country, and only the shows sheet records a region at all.
+ * Named people first and all of them, then the countries it applies to, and
+ * then nothing — which is an answer. A trade show names the people going and
+ * a public holiday names a country; a row that names neither is a row nobody
+ * has tagged, and saying so is what gets it tagged.
  *
- * It printed the region before, which is worked out from the country on the
- * way in — so a South African public holiday read "EMEA team" and told sixty
- * people it was theirs.
+ * No region, deliberately. Region is background — how the team reads
+ * somebody's expertise in the directory, and how the spread of shows gets
+ * counted — and it is not how anything reaches a calendar. Printing it here
+ * read "EMEA team" under a South African public holiday and told sixty
+ * people it was theirs, which is the same mistake in words that the scoping
+ * was making in rows.
  */
 export function eventWho(event: CalendarEvent, people: Person[]): string {
   const named = event.personIds?.length
@@ -125,7 +128,19 @@ export function eventWho(event: CalendarEvent, people: Person[]): string {
       : [];
   if (named.length) return named.map((id) => personName(people, id)).join(", ");
   if (event.countries?.length) return event.countries.join(", ");
-  return event.region ?? "Everyone";
+  return "Nobody tagged";
+}
+
+/**
+ * A person's line under their name — what they cover, and where.
+ *
+ * Joined here rather than in the three places that draw it, because a blank
+ * part has to take its separator with it. The directory has nineteen rows
+ * with no country, and now that a missing one is left blank rather than
+ * guessed at as UK, "Womenswear · " would have appeared on all of them.
+ */
+export function personPlace(person: { vertical?: string; region?: string }): string {
+  return [person.vertical, person.region].filter(Boolean).join(" · ");
 }
 
 export function initials(name: string): string {

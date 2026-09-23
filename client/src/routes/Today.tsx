@@ -13,6 +13,7 @@ import {
   isOutstanding,
   isOverdue,
   personName,
+  personPlace,
 } from "../lib/domain";
 import { useViewer } from "../lib/viewer";
 import type { ContentItem, Schedule, SessionWithSignUps } from "../types";
@@ -313,7 +314,7 @@ export default function Today() {
                         <Who id={p.id} name={p.name} />
                       </div>
                       <div className="deadline-meta">
-                        {p.vertical} · {p.region}
+                        {personPlace(p)}
                       </div>
                     </div>
                     <div className="deadline-right">
