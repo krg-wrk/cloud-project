@@ -203,15 +203,32 @@ test("leave belongs to the one person named on it", () => {
   assert.equal(eventReaches({ personId: "a" }, { id: "b" }), false);
 });
 
-test("a show with nobody named falls back to its region, which only that sheet keeps", () => {
-  assert.equal(eventReaches({ region: "EMEA" }, person), true);
-  assert.equal(eventReaches({ region: "APAC" }, person), false);
-  assert.equal(eventReaches({ region: "All" }, person), true);
+test("a region grants nothing, so an untagged show is not everybody in EMEA's", () => {
+  /*
+   * Seven trade shows carry a region and no owner — IAA among them — and
+   * reading the region put a Frankfurt motor show on the calendar of every
+   * forecaster in EMEA who had nothing to do with it. A region is a filing
+   * category, not a statement about who a thing is for.
+   */
+  assert.equal(eventReaches({ region: "EMEA" }, person), false);
+  assert.equal(eventReaches({ region: "All" }, person), false, "not even when it says All");
+  assert.equal(
+    eventReaches({ personIds: ["me"], region: "APAC" }, person),
+    true,
+    "and it does not take away what the owner column gave",
+  );
 });
 
-test("a row saying nothing at all reaches everybody, while the sheets are being tagged", () => {
-  assert.equal(eventReaches({}, person), true);
-  assert.equal(eventReaches({ personIds: [], countries: [] }, person), true);
+test("a row naming nobody and nowhere reaches nobody, rather than everybody", () => {
+  assert.equal(eventReaches({}, person), false);
+  assert.equal(eventReaches({ personIds: [], countries: [] }, person), false);
+});
+
+test("somebody with no country of their own still gets the ones marked All", () => {
+  const nowhere = { id: "them" };
+  assert.equal(eventReaches({ countries: ["All"] }, nowhere), true);
+  assert.equal(eventReaches({ countries: ["UK"] }, nowhere), false);
+  assert.equal(eventReaches({ personIds: ["them"] }, nowhere), true, "and anything naming them");
 });
 
 test("asking for the whole calendar is not filtered at all", () => {

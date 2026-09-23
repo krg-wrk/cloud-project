@@ -2113,11 +2113,16 @@ table.schedule .overdue {
   overflow: visible;
 }
 
+/*
+ * Light on purpose. It sits where a page is about to be, so it should read
+ * as the paper waiting rather than as a graphic somebody is meant to look
+ * at — the rings barely there, the electrons just enough to follow.
+ */
 .loader-atom ellipse {
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.1;
-  opacity: 0.38;
+  stroke-width: 0.85;
+  opacity: 0.22;
 }
 
 .loader-electron,
@@ -2125,8 +2130,12 @@ table.schedule .overdue {
   fill: currentColor;
 }
 
+.loader-electron {
+  opacity: 0.55;
+}
+
 .loader-core {
-  opacity: 0.9;
+  opacity: 0.45;
 }
 
 @supports (offset-path: path("M 0 0")) {

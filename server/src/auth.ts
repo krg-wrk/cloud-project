@@ -173,31 +173,40 @@ function inCountries(countries: string[], country: string | undefined): boolean 
 /**
  * Whether a calendar entry is one of somebody's.
  *
- * The same question `sessionReaches` asks, of the sheets the calendar is
- * read from, and it was being answered by region — which is both too wide
- * and not what any of those sheets records. A South African public holiday
- * was reaching every one of the sixty people the Hub files under EMEA,
- * because the country had been turned into a region on the way in and the
- * country thrown away.
+ * The same question `sessionReaches` asks, of the sheets the calendar is read
+ * from. It was answered by region, which is both too coarse and not what any
+ * of those sheets records — a South African public holiday reached every one
+ * of the sixty people the Hub files under EMEA.
  *
- * In the order the sheets themselves are filled in:
+ * Two ways in, and only two:
  *
- * - **Named owners win, and limit.** A trade show names the two or three
- *   people going to it, and nobody else needs it on their calendar. Leave and
- *   an activity day name one person, which is the same rule.
+ * - **Named owners win, and limit.** A trade show names the people going to
+ *   it; leave and an activity day name one person. Two thousand of the two
+ *   and a half thousand rows are tagged this way.
  * - **Then the country**, which is what a holiday records — matched against
- *   the person's own country, with "All" in the column meaning everybody.
- *   That is how the sheet says a thing is not regional at all.
- * - **Then the region**, which only the trade shows sheet keeps, and only
- *   reached when nobody was named on the row.
+ *   the person's own, with "All" in the column meaning everybody. That is how
+ *   the holidays sheet says a thing is not regional at all.
  *
- * A row that says none of those reaches everybody. Most of a calendar is
- * filled in over time, and the alternative is an empty page that reads as
- * breakage rather than as a sheet still being tagged.
+ * **A region grants nothing**, deliberately, and this is the second time that
+ * has had to be said. Seven trade shows carry a region and no owner — IAA
+ * among them — and reading it put a Frankfurt motor show on the calendar of
+ * every forecaster in EMEA who had nothing to do with it. A region is a
+ * filing category rather than a statement about who a thing is for, so it is
+ * not consulted; it stays on the record because the panel still shows it.
+ *
+ * And a row that names nobody and nowhere reaches **nobody**, rather than
+ * everybody. That was the other way round on the argument that a half-tagged
+ * sheet should not empty somebody's page — which the real sheets settle:
+ * four rows out of two and a half thousand say nothing at all, so the cost of
+ * being strict is four rows and the cost of being loose is a calendar full of
+ * other people's work.
+ *
+ * None of this narrows what somebody may look at. Asking for the whole
+ * calendar is not filtering, and is answered in full.
  */
 export function eventReaches(
-  event: { personId?: string; personIds?: string[]; countries?: string[]; region?: string },
-  person: { id: string; country?: string; region?: string } | null | undefined,
+  event: { personId?: string; personIds?: string[]; countries?: string[] },
+  person: { id: string; country?: string } | null | undefined,
 ): boolean {
   // Nobody to filter for: the caller wants the whole calendar.
   if (!person) return true;
@@ -211,10 +220,7 @@ export function eventReaches(
 
   const countries = event.countries ?? [];
   if (countries.length) return saysAll(countries) || inCountries(countries, person.country);
-
-  const region = (event.region ?? "").trim();
-  if (region) return /^all$/i.test(region) || region === person.region;
-  return true;
+  return false;
 }
 
 /**
