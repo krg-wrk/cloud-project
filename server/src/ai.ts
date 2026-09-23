@@ -91,7 +91,7 @@ interface GeminiResponse {
 export class GeminiDrafter implements NoteDrafter {
   constructor(
     private readonly apiKey: string,
-    readonly model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+    readonly model = process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite",
   ) {}
 
   async draft(input: DraftInput): Promise<string> {

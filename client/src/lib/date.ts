@@ -176,9 +176,29 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((b - a) / 86_400_000);
 }
 
-/** "in 4 days", "today", "3 days ago" */
+/**
+ * "in 4 days", "today", "3 days ago" — and nothing at all for a day that is
+ * not there.
+ *
+ * A real sheet has blank date cells in it: a hundred rows of the
+ * commissioning schedule have no submission date yet. `Date.parse` answers
+ * NaN for those, which arithmetic carries all the way to the screen, and the
+ * page told somebody a forecast was "NaN days ago". An empty string is the
+ * honest reading — the row already shows an em dash where the date would be,
+ * and a date nobody has set needs no elaboration.
+ *
+ * The shape is checked rather than the arithmetic, because `Date.parse` is
+ * lenient enough to be dangerous: a Country column with "19 Sept" typed into
+ * it parses to a real instant, and a finiteness test waves through
+ * "9135 days ago". A calendar day in this domain is YYYY-MM-DD and nothing
+ * else is worth a reading.
+ */
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
 export function relativeDays(date: string, today = TODAY): string {
+  if (!ISO_DAY.test((date ?? "").trim())) return "";
   const diff = daysBetween(today, date);
+  if (!Number.isFinite(diff)) return "";
   if (diff === 0) return "today";
   if (diff === 1) return "tomorrow";
   if (diff === -1) return "yesterday";

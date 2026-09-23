@@ -233,7 +233,7 @@ const gemini = process.env.GEMINI_API_KEY ?? "";
 if (!gemini) {
   idle("AI note drafting", "no GEMINI_API_KEY — the button says so rather than hiding");
 } else {
-  const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+  const model = process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite";
   /*
     The key goes in a header, not the query string.
 
@@ -241,12 +241,34 @@ if (!gemini) {
     access log — a managed laptop inspecting TLS records the method and URL as
     a matter of course, and does not record headers. server/src/ai.ts already
     sends it as x-goog-api-key; this had been the one place that did not.
+
+    The question asked is about the model the Hub will actually call, not
+    about the key. Listing the models proves only that the credential works,
+    and this reported a cheerful green while gemini-2.5-flash answered every
+    real request with "no longer available to new users" — a retirement is
+    how a working Gemini setup stops working, and the doctor exists to say
+    so before somebody presses Draft and is told nothing useful.
   */
-  const res = await ask("https://generativelanguage.googleapis.com/v1beta/models", undefined, {
-    "x-goog-api-key": gemini,
-  });
-  if (res.ok) good(`Gemini ${tail(gemini)}`, `answering — model ${model}`);
-  else fail(`Gemini ${tail(gemini)}`, res.why);
+  const res = await ask(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+    undefined,
+    { "x-goog-api-key": gemini },
+    { contents: [{ parts: [{ text: "ok" }] }], generationConfig: { maxOutputTokens: 1 } },
+  );
+  if (res.ok) {
+    good(`Gemini ${tail(gemini)}`, `${model} — answering`);
+  } else {
+    /*
+     * A 404 here is a retired model, not a mistyped sheet id, and `reason`
+     * speaks Smartsheet because that is what it mostly answers for. Saying
+     * "no sheet with that id" about a language model would send somebody to
+     * check a number that does not exist.
+     */
+    const why = /\(404\)/.test(res.why)
+      ? "this model is not available to this key — it may have been retired. `GEMINI_MODEL` picks another"
+      : res.why;
+    fail(`Gemini ${tail(gemini)}`, `${model} — ${why}`);
+  }
 }
 
 const relay = process.env.NOTIFY_EMAIL_URL ?? "";
@@ -398,10 +420,16 @@ function wrap(items, width) {
  * Never throws: a doctor that dies on the first unreachable host cannot
  * report on the nine things after it.
  */
-async function ask(url, token, extra = {}) {
+async function ask(url, token, extra = {}, body) {
   try {
     const res = await fetch(url, {
-      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...extra },
+      method: body ? "POST" : "GET",
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(body ? { "content-type": "application/json" } : {}),
+        ...extra,
+      },
+      body: body ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(12_000),
     });
     if (res.ok) return { ok: true, body: await res.json().catch(() => ({})) };
