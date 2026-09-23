@@ -27,6 +27,7 @@ import type {
   Vertical,
   WritableFields,
 } from "../types.js";
+import { hubAccessFor } from "../auth.js";
 import { WRITABLE_FIELDS } from "../types.js";
 
 /**
@@ -159,6 +160,16 @@ export const COLUMNS = {
     /** A country here too, turned into a region the same way. */
     region: "Country",
     managerEmail: "Manager Email",
+    /** What somebody may do in the Hub. Blank reads as an ordinary forecaster. */
+    hubAccess: "Hub Access",
+    /**
+     * Employment status, read only for whether somebody is still here. The
+     * reason never leaves the server: "Maternity Leave" and "Medical Leave"
+     * sit in this column beside "Full-Time", and a Hub that published either
+     * would have taken something told to HR and shown it to two hundred
+     * people. Only "Inactive" changes anything, and it changes it to no.
+     */
+    status: "Status",
   },
   sessions: {
     id: "Event ID",
@@ -660,9 +671,32 @@ export class SmartsheetSource implements DataSource {
         id: personId(row[c.email]),
         name: row[c.name] ?? row[c.email],
         email: row[c.email],
-        role: row[c.role]?.toLowerCase().includes("commission")
-          ? ("commissioning-manager" as const)
-          : ("forecaster" as const),
+        /*
+         * Which side of the team somebody is on, read from the access column
+         * first and the grade only as a fallback.
+         *
+         * The grade was doing both jobs and doing one of them badly: it
+         * matched on the word "commission", and this directory writes "CM",
+         * so six commissioning managers were reading as forecasters and could
+         * not see the team they commission for. The grade is what the KPI
+         * benchmarks key on; what somebody may do is a separate question and
+         * now has a column of its own.
+         */
+        role:
+          hubAccessFor(row[c.hubAccess]).role === "commissioning-manager" ||
+          hubAccessFor(row[c.hubAccess]).role === "admin" ||
+          /commission|^cm$/i.test((row[c.role] ?? "").trim())
+            ? ("commissioning-manager" as const)
+            : ("forecaster" as const),
+        hubAccess: hubAccessFor(row[c.hubAccess]).role,
+        /*
+         * Still here, or not. Both halves can say no and either is enough:
+         * the access column for somebody who was never to have an account,
+         * the status column for somebody who has left.
+         */
+        active:
+          hubAccessFor(row[c.hubAccess]).active !== false &&
+          !/^inactive$/i.test((row[c.status] ?? "").trim()),
         forecasterRole: row[c.role] || undefined,
         vertical: (row[c.vertical] || row[c.team] || undefined) as Vertical | undefined,
         department: row[c.department] || undefined,

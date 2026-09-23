@@ -1,6 +1,6 @@
 /** Domain model for the Forecasters Hub. Mirrors the columns held in Smartsheet. */
 
-import type { AccessRow } from "./auth.js";
+import type { AccessRow, Role } from "./auth.js";
 
 export type { AccessRow };
 
@@ -44,6 +44,14 @@ export interface Person {
   /** The department the KPI sheet groups them under. */
   department?: string;
   region: string;
+  /**
+   * What the directory's Hub Access column says they may do, where it says
+   * anything. Separate from `role` above, which is the grade the KPI
+   * benchmarks key on — somebody can be a Strategist and an admin.
+   */
+  hubAccess?: Role;
+  /** False when the directory marks them inactive, or as having no access. */
+  active?: boolean;
 }
 
 /**

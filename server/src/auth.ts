@@ -1,7 +1,50 @@
 import type { NextFunction, Request, Response } from "express";
 import type { ContentItem, Person, Vertical } from "./types.js";
 
-export type Role = "forecaster" | "commissioning-manager" | "admin";
+/**
+ * What somebody may do in the Hub, as the directory's Hub Access column says.
+ *
+ * Five levels rather than three, because two distinctions the team makes were
+ * not expressible. `leadership` sees the whole team and changes nothing —
+ * previously the only way to see everyone was to be a manager, which also
+ * granted the right to edit the commissioning sheet. `view-only` can open the
+ * Hub and write nowhere, which is what a leaver's notice period or an
+ * observer from another team actually needs.
+ *
+ * Deliberately not a list of jobs. Data and Subbing are teams and the
+ * directory already records them in `Team`; an access level that moves when
+ * somebody changes desk is an access level nobody can reason about.
+ */
+export type Role =
+  | "forecaster"
+  | "commissioning-manager"
+  | "leadership"
+  | "view-only"
+  | "admin";
+
+/**
+ * The Hub Access column's words, as the dropdown writes them.
+ *
+ * Matched loosely and case-insensitively for the same reason statuses are:
+ * the column is maintained by people, and "Commissioning Manager" arriving as
+ * "commissioning manager" should not silently demote somebody.
+ */
+export function hubAccessFor(
+  value: string | undefined,
+): { role?: Role; active?: boolean } {
+  const v = (value ?? "").trim().toLowerCase();
+  if (!v) return {};
+  // "No Access" is not a quiet level, it is the absence of one: somebody who
+  // may not sign in at all, which is a different answer from somebody who may
+  // look and not touch.
+  if (v.includes("no access")) return { active: false };
+  if (v.includes("admin")) return { role: "admin" };
+  if (v.includes("view")) return { role: "view-only" };
+  if (v.includes("leader")) return { role: "leadership" };
+  if (v.includes("commission") || v === "cm") return { role: "commissioning-manager" };
+  if (v.includes("forecaster")) return { role: "forecaster" };
+  return {};
+}
 
 /**
  * Who is making this request, and what they are allowed to see and change.
@@ -31,9 +74,27 @@ export interface AccessRow {
 const isAdmin = (v: Viewer) => v.role === "admin";
 const isManager = (v: Viewer) => v.role === "commissioning-manager" || v.role === "admin";
 
-/** Managers and admins see the whole team; forecasters see themselves first. */
+/**
+ * Somebody who may look and not touch.
+ *
+ * Checked first in every write, before the question of whose work it is.
+ * Owning a forecast is what usually grants the right to annotate it, so
+ * without this a view-only account would get that right the moment their
+ * name appeared in an owner cell — which is precisely the account it must
+ * not happen to.
+ */
+const isViewOnly = (v: Viewer) => v.role === "view-only";
+
+/**
+ * Who sees the whole team rather than themselves first.
+ *
+ * Leadership is here and not in `isManager`: the two were the same question
+ * while the only way to see everyone was to be able to edit the sheet, and
+ * they are not the same question. A director wants the shape of the team's
+ * work; they are not commissioning it.
+ */
 export function seesWholeTeam(viewer: Viewer): boolean {
-  return isManager(viewer);
+  return isManager(viewer) || viewer.role === "leadership";
 }
 
 function inScope(viewer: Viewer, vertical: string): boolean {
@@ -65,6 +126,7 @@ export function isTheirs(viewer: Viewer, item: ContentItem): boolean {
 /** Notes belong to the person writing them, but managers can annotate their own verticals. */
 export function canWriteNote(viewer: Viewer, item: ContentItem): boolean {
   if (!viewer.active) return false;
+  if (isViewOnly(viewer)) return false;
   if (isAdmin(viewer)) return true;
   if (isTheirs(viewer, item)) return true;
   return isManager(viewer) && inScope(viewer, item.vertical);
@@ -77,6 +139,7 @@ export function canEditNote(
   authorId: string,
 ): boolean {
   if (!viewer.active) return false;
+  if (isViewOnly(viewer)) return false;
   if (isAdmin(viewer)) return true;
   if (viewer.personId === authorId) return true;
   return isManager(viewer) && inScope(viewer, item.vertical);
@@ -92,6 +155,7 @@ export function canWritePeerReview(
   currentReviewerId?: string,
 ): boolean {
   if (!viewer.active) return false;
+  if (isViewOnly(viewer)) return false;
   if (isAdmin(viewer)) return true;
   if (isTheirs(viewer, item)) return true;
   if (currentReviewerId && viewer.personId === currentReviewerId) return true;
@@ -118,6 +182,7 @@ export function canWriteDetails(viewer: Viewer, item: ContentItem): boolean {
  */
 export function canWriteSchedule(viewer: Viewer, item: ContentItem): boolean {
   if (!viewer.active) return false;
+  if (isViewOnly(viewer)) return false;
   if (isAdmin(viewer)) return true;
   return isManager(viewer) && inScope(viewer, item.vertical);
 }
@@ -131,7 +196,7 @@ export function canWriteSchedule(viewer: Viewer, item: ContentItem): boolean {
  * `canWriteSchedule` on the server, so a yes here buys nothing.
  */
 export function mayWriteSomeSchedule(viewer: Viewer): boolean {
-  return viewer.active && isManager(viewer);
+  return viewer.active && !isViewOnly(viewer) && isManager(viewer);
 }
 
 /**
@@ -147,6 +212,7 @@ export function canWriteTrend(
   viewerName?: string,
 ): boolean {
   if (!viewer.active) return false;
+  if (isViewOnly(viewer)) return false;
   if (isAdmin(viewer)) return true;
   const mine = new Set([viewer.personId, nameId(viewerName)].filter(Boolean));
   if (mine.has(trend.ownerId)) return true;
@@ -187,12 +253,13 @@ export function canViewKpis(viewer: Viewer, subject: Person): boolean {
 
 /** Personal entries are private: only their owner touches them. */
 export function canWriteEntry(viewer: Viewer, ownerId: string): boolean {
-  return viewer.active && viewer.personId === ownerId;
+  return viewer.active && !isViewOnly(viewer) && viewer.personId === ownerId;
 }
 
 /** Signing up is for yourself; admins can add someone who asked by email. */
 export function canSignUpAs(viewer: Viewer, personId: string): boolean {
   if (!viewer.active) return false;
+  if (isViewOnly(viewer)) return false;
   return isAdmin(viewer) || viewer.personId === personId;
 }
 
@@ -292,17 +359,28 @@ export function resolveViewer(
   }
 
   const verticals = named ? "all" : parseVerticals(row?.verticals);
+  /*
+   * Three sources, and the order is the argument.
+   *
+   * HUB_ADMINS is the deployment's own statement and the way back into a
+   * locked room, so nothing overrides it. The access sheet is next, because
+   * it is the exception list the commissioning managers keep by hand and a
+   * hand-written exception should beat a column filled in for everybody. The
+   * directory's Hub Access column answers for the other two hundred people,
+   * which is the case that actually comes up.
+   */
   return {
     email,
     name: row?.name ?? person?.name ?? email,
     personId: person?.id ?? null,
-    // Absent from the access sheet: a known team member with no extra rights.
     role: named
       ? "admin"
-      : (row?.role ?? (person?.role === "commissioning-manager" ? "commissioning-manager" : "forecaster")),
+      : (row?.role ??
+        person?.hubAccess ??
+        (person?.role === "commissioning-manager" ? "commissioning-manager" : "forecaster")),
     verticals,
     // A named admin is never locked out, which is the whole point of naming one.
-    active: named ? true : row ? row.active : true,
+    active: named ? true : row ? row.active : (person?.active ?? true),
   };
 }
 

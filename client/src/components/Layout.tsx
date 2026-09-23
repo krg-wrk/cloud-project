@@ -28,6 +28,8 @@ import Wash, { useWashClass } from "./Wash";
 const ROLE_LABELS: Record<Me["role"], string> = {
   forecaster: "Forecaster",
   "commissioning-manager": "Commissioning manager",
+  leadership: "Leadership",
+  "view-only": "View only",
   admin: "Admin",
 };
 

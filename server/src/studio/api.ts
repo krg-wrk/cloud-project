@@ -51,7 +51,13 @@ import type { DataSource } from "../types.js";
  * in the client, so a slug someone forwarded is no way past it.
  */
 
-const ROLES: Role[] = ["forecaster", "commissioning-manager", "admin"];
+const ROLES: Role[] = [
+  "forecaster",
+  "commissioning-manager",
+  "leadership",
+  "view-only",
+  "admin",
+];
 
 /** Anything a client sends is rebuilt field by field rather than trusted. */
 function readSpec(body: unknown): ViewSpec {

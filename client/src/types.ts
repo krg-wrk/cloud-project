@@ -130,7 +130,12 @@ export interface SessionWithSignUps extends KnowledgeSession {
   full: boolean;
 }
 
-export type Role = "forecaster" | "commissioning-manager" | "admin";
+export type Role =
+  | "forecaster"
+  | "commissioning-manager"
+  | "leadership"
+  | "view-only"
+  | "admin";
 
 /** The signed-in account, as /api/me returns it. */
 export interface Me {
