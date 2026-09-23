@@ -264,10 +264,22 @@ export const COLUMNS = {
   },
 } as const;
 
+/** One contact in a cell: Smartsheet gives the name and the address apart. */
+interface SmartsheetContact {
+  name?: string;
+  email?: string;
+}
+
 interface SmartsheetCell {
   columnId: number;
   value?: string | number | boolean;
   displayValue?: string;
+  /**
+   * Only present when the sheet is asked for at level 2. A multi-contact or
+   * multi-picklist cell has no `value` at all, and its `displayValue` is the
+   * values joined with commas — so this is the only faithful reading of one.
+   */
+  objectValue?: SmartsheetContact & { objectType?: string; values?: SmartsheetContact[] };
 }
 
 interface SmartsheetRow {
@@ -285,7 +297,23 @@ interface SmartsheetSheet {
 }
 
 /** A sheet row flattened to { "Column Title": "value" }. */
-type FlatRow = Record<string, string>;
+/**
+ * A row flattened to its column titles, with the people kept as people.
+ *
+ * Every cell reads as a string because that is what the mapping code wants,
+ * and a contact column flattens to the names Smartsheet shows — "Allyson
+ * Rees, Hannah Allan" for a piece two people own. Read as one value that is
+ * nobody: `personId` turned it into "allyson-rees-hannah-allan", a person
+ * who does not exist, so the work belonged to neither of them and the access
+ * check refused them both.
+ *
+ * So the addresses are kept beside the string, under `_people`. Addresses
+ * rather than names because an address is the identity the directory is
+ * keyed on and the one thing that cannot be spelled two ways — the same
+ * person is "Ellie Bull" in one sheet and "Ellie  Bull" in another, and an
+ * id built from either has to be the same id.
+ */
+type FlatRow = Record<string, string> & { _people?: Record<string, string[]> };
 
 export interface SmartsheetConfig {
   token: string;
@@ -538,7 +566,18 @@ export class SmartsheetSource implements DataSource {
   }
 
   private async fetchSheet(sheetId: string): Promise<SmartsheetSheet> {
-    const res = await fetch(`${API}/sheets/${sheetId}`, {
+    /*
+     * Level 2, with the object values.
+     *
+     * Asked for plainly, Smartsheet answers in a shape that predates
+     * multi-select: a multi-contact or multi-picklist column reports its type
+     * as TEXT_NUMBER and its cells arrive as the values joined with commas,
+     * with no structure at all. Every person in a co-owned cell is then one
+     * unsplittable string, and a name containing a comma makes it
+     * unsplittable in principle rather than only in practice. This is the
+     * request that returns the people as people.
+     */
+    const res = await fetch(`${API}/sheets/${sheetId}?level=2&include=objectValue`, {
       headers: {
         Authorization: `Bearer ${this.config.token}`,
         "Content-Type": "application/json",
@@ -575,6 +614,9 @@ export class SmartsheetSource implements DataSource {
         flat[title] = dateColumns.has(cell.columnId)
           ? String(cell.value ?? cell.displayValue ?? "")
           : (cell.displayValue ?? (cell.value != null ? String(cell.value) : ""));
+
+        const who = peopleIn(cell);
+        if (who.length) (flat._people ??= {})[title] = who;
       }
       return flat;
     });
@@ -672,18 +714,37 @@ export class SmartsheetSource implements DataSource {
         type: (row[c.type] || "Market Report") as ContentType,
         vertical: (row[c.vertical] || "Womenswear") as Vertical,
         forecastHorizon: row[c.forecastHorizon] || "",
-        forecasterId: personId(row[c.forecaster]),
-        managerId: personId(row[c.manager]),
+        /*
+         * The first person named owns it, and everybody named is credited.
+         *
+         * Smartsheet's contact column has no notion of a lead — the people in
+         * it are equal — so the Hub picks the first for the one field that
+         * takes a single person and keeps the whole list beside it. That is
+         * the reading that matches the team's practice without inventing a
+         * hierarchy their sheet does not record, and it is why a co-owned
+         * piece now shows up for both of them rather than for neither.
+         */
+        forecasterId: personId(whoIn(row, c.forecaster)[0] ?? row[c.forecaster]),
+        managerId: personId(whoIn(row, c.manager)[0] ?? row[c.manager]),
         submissionDate: isoDate(row[c.submissionDate]),
         publicationDate: isoDate(row[c.publicationDate]),
         status: normaliseStatus(row[c.status]),
         notes: row[c.notes] || undefined,
         submittedOn: isoDate(row[c.submittedOn]) || undefined,
         ownership: normaliseOwnership(row[c.ownership]),
-        contributorIds: (row[c.contributors] || "")
-          .split(/\s*,\s*/)
-          .filter(Boolean)
-          .map(personId),
+        /*
+         * Everybody on the piece, the owners included.
+         *
+         * A team with no separate Contributors column still co-owns work, and
+         * it says so by putting two people in the owner cell. Splitting the
+         * display string on commas was the old reading and is wrong twice
+         * over: it cannot tell "Rees, Allyson" from two people, and a team
+         * that maps no Contributors column at all got an empty list while
+         * the owner cell plainly named two.
+         */
+        contributorIds: [
+          ...new Set([...whoIn(row, c.forecaster), ...whoIn(row, c.contributors)]),
+        ].map(personId),
       }));
   }
 
@@ -715,7 +776,9 @@ export class SmartsheetSource implements DataSource {
         id: row._rowId ? `${sheetId}-${row._rowId}` : `ev-${i}`,
         type: normaliseEventType(row[c.type]),
         title: row[c.title],
-        personId: row[c.person] ? personId(row[c.person]) : undefined,
+        // The first name in the cell: leave belongs to one person, and a
+        // shared entry is the calendar saying it is not really leave.
+        personId: whoIn(row, c.person)[0] ? personId(whoIn(row, c.person)[0]) : undefined,
         region: regionFor(row[c.country]) ?? regionFor(row[c.region]) ?? row[c.region] ?? undefined,
         startDate: isoDate(row[c.startDate]),
         endDate: isoDate(row[c.endDate] || row[c.startDate]),
@@ -737,7 +800,7 @@ export class SmartsheetSource implements DataSource {
           id: row[c.id] || `ws-${row._rowId}`,
           title: row[c.title],
           kind: normaliseSessionKind(row[c.kind]),
-          hostId: row[c.host] ? personId(row[c.host]) : undefined,
+          hostId: whoIn(row, c.host)[0] ? personId(whoIn(row, c.host)[0]) : undefined,
           hostExternal: row[c.guest] || undefined,
           date: isoDate(row[c.date]),
           startTime: row[c.startTime] || "09:00",
@@ -1023,6 +1086,47 @@ const REGION_BY_COUNTRY = new Map<string, string>();
 for (const [region, countries] of Object.entries(REGIONS)) {
   REGION_BY_COUNTRY.set(region.toLowerCase(), region);
   for (const country of countries) REGION_BY_COUNTRY.set(country.toLowerCase(), region);
+}
+
+/**
+ * Everybody named in a cell, as addresses.
+ *
+ * A contact cell carries its people in `objectValue.values`, each with a name
+ * and an address, and that is the only place the two are still separate — the
+ * display value has already joined them with commas, which cannot be undone
+ * safely because a name may contain one. Reading the structure rather than
+ * unpicking the string is the whole fix.
+ *
+ * The address is preferred and the name is the fallback, for an entry
+ * somebody typed by hand that Smartsheet never resolved to an account: a
+ * cell holding a person the Hub cannot address is still a cell holding a
+ * person, and dropping them would quietly un-assign the work.
+ */
+/**
+ * The people in one column of a row, as addresses.
+ *
+ * Falls back to splitting the display string on commas, because not every
+ * source is Smartsheet: a Google Sheet's contact column is a line of text
+ * somebody typed, and the old reading is the only one available for it. The
+ * structured list is preferred wherever it exists, which is why a name with
+ * a comma in it survives on a real sheet and not in a spreadsheet — that is
+ * the difference between the two sources, not a bug in the reader.
+ */
+function whoIn(row: FlatRow, column: string): string[] {
+  if (!column) return [];
+  const structured = row._people?.[column];
+  if (structured?.length) return structured;
+  return (row[column] || "").split(/\s*,\s*/).filter(Boolean);
+}
+
+export function peopleIn(cell: SmartsheetCell): string[] {
+  const values = cell.objectValue?.values;
+  if (Array.isArray(values)) {
+    return values.map((v) => (v.email || v.name || "").trim()).filter(Boolean);
+  }
+  const one = cell.objectValue;
+  if (one && (one.email || one.name)) return [(one.email || one.name || "").trim()].filter(Boolean);
+  return [];
 }
 
 export function regionFor(country: string | undefined): string | undefined {

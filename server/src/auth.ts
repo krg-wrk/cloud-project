@@ -46,11 +46,27 @@ export function canRead(viewer: Viewer): boolean {
   return viewer.active;
 }
 
+/**
+ * Whether this forecast is theirs, however they are credited on it.
+ *
+ * `forecasterId` is whoever was named first in a contact cell that has no
+ * notion of a lead, so treating it as the only owner refuses the second
+ * person named access to work that is equally theirs. The KPI page already
+ * counts a forecast for everybody credited and the notices already go to all
+ * of them; the permission checks were the last place still asking who came
+ * first alphabetically in a Smartsheet cell.
+ */
+export function isTheirs(viewer: Viewer, item: ContentItem): boolean {
+  if (!viewer.personId) return false;
+  if (viewer.personId === item.forecasterId) return true;
+  return (item.contributorIds ?? []).includes(viewer.personId);
+}
+
 /** Notes belong to the person writing them, but managers can annotate their own verticals. */
 export function canWriteNote(viewer: Viewer, item: ContentItem): boolean {
   if (!viewer.active) return false;
   if (isAdmin(viewer)) return true;
-  if (viewer.personId === item.forecasterId) return true;
+  if (isTheirs(viewer, item)) return true;
   return isManager(viewer) && inScope(viewer, item.vertical);
 }
 
@@ -77,7 +93,7 @@ export function canWritePeerReview(
 ): boolean {
   if (!viewer.active) return false;
   if (isAdmin(viewer)) return true;
-  if (viewer.personId === item.forecasterId) return true;
+  if (isTheirs(viewer, item)) return true;
   if (currentReviewerId && viewer.personId === currentReviewerId) return true;
   return isManager(viewer) && inScope(viewer, item.vertical);
 }
