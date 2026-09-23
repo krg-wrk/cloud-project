@@ -252,28 +252,57 @@ export function emailFromRequest(req: Request, config: AuthConfig): string | nul
  * list. Someone signed in but absent from both is inactive: they can reach
  * the Hub but see nothing, which is the safe default for a leaver.
  */
+/**
+ * The addresses this deployment names as admins, whatever the sheets say.
+ *
+ * `HUB_ADMINS=someone@wgsn.com,someone.else@wgsn.com`. Rights normally come
+ * from the access sheet, which is right: they are operational, the
+ * commissioning managers maintain them, and changing who may do what should
+ * not need a deploy.
+ *
+ * This is the one exception, and it is the way back in. Before an access
+ * sheet exists there is no way to be an admin at all, so the person setting
+ * the Hub up cannot reach the studio that configures it. And once one does
+ * exist, a row marking the wrong person inactive locks them out with no
+ * remedy inside the Hub — a door that can only be opened from a room you are
+ * locked out of. Naming an address in the environment is a statement by
+ * whoever runs the deployment, so it wins over the sheet rather than being
+ * overridden by it.
+ */
+export function adminList(raw = process.env.HUB_ADMINS): string[] {
+  return (raw ?? "")
+    .split(",")
+    .map((address) => address.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 export function resolveViewer(
   email: string | null,
   access: AccessRow[],
   people: Person[],
+  admins: string[] = adminList(),
 ): Viewer | null {
   if (!email) return null;
   const row = access.find((a) => a.email.toLowerCase() === email);
   const person = people.find((p) => p.email.toLowerCase() === email);
+  const named = admins.includes(email.toLowerCase());
 
-  if (!row && !person) {
+  if (!row && !person && !named) {
     return { email, name: email, personId: null, role: "forecaster", verticals: [], active: false };
   }
 
-  const verticals = parseVerticals(row?.verticals);
+  const verticals = named ? "all" : parseVerticals(row?.verticals);
   return {
     email,
     name: row?.name ?? person?.name ?? email,
     personId: person?.id ?? null,
     // Absent from the access sheet: a known team member with no extra rights.
-    role: row?.role ?? (person?.role === "commissioning-manager" ? "commissioning-manager" : "forecaster"),
+    role: named
+      ? "admin"
+      : (row?.role ?? (person?.role === "commissioning-manager" ? "commissioning-manager" : "forecaster")),
     verticals,
-    active: row ? row.active : true,
+    // A named admin is never locked out, which is the whole point of naming one.
+    active: named ? true : row ? row.active : true,
   };
 }
 

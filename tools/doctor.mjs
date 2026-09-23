@@ -291,6 +291,18 @@ const dbUrl = process.env.HUB_DB_URL;
 if (dbUrl) good("Database", `Postgres at ${hostOf(dbUrl)}`);
 else good("Database", `SQLite at ${process.env.HUB_DB ?? "./data/hub.db"}`);
 
+/*
+ * Counted, not listed. The output of this is meant to be pasted into a
+ * ticket, and a list of colleagues' addresses is the one thing here that
+ * should not travel with it — the same reason directory.json is gitignored.
+ */
+const admins = (process.env.HUB_ADMINS ?? "").split(",").map((a) => a.trim()).filter(Boolean);
+if (admins.length) {
+  good("Admins", `${admins.length} named in HUB_ADMINS, whatever the access sheet says`);
+} else {
+  idle("Admins", "none named — rights come from the access sheet, and without one nobody is an admin");
+}
+
 const auth = process.env.AUTH_MODE ?? "dev";
 if (auth === "dev") {
   idle("Sign-in", "dev — the account switcher is on, which is right on a laptop and nowhere else");
