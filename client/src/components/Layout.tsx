@@ -10,6 +10,7 @@ import { useDialog } from "../lib/dialog";
 import { ACCOUNT_CHANGED, ViewerProvider, useViewer } from "../lib/viewer";
 import type {
   ContentItem,
+  DevAccount,
   Inbox,
   Me,
   Person,
@@ -838,6 +839,75 @@ function MobileNav({ content, onSearch }: { content: ContentItem[]; onSearch: ()
   );
 }
 
+/**
+ * The dev switcher, on its own read.
+ *
+ * The accounts come from `/accounts` rather than `/people` because nobody is
+ * signed in yet and every read behind the identity middleware answers 401 —
+ * fed from `/people` the menu is empty on any browser that has not already
+ * chosen, which is every new laptop. It is a component of its own so that
+ * read happens when somebody is actually signing in, rather than on every
+ * page load for the whole life of the app.
+ */
+function SignIn() {
+  const accounts = useApi<DevAccount[]>("/accounts");
+
+  return (
+    <div className="main">
+      <div className="page-head">
+        <div>
+          <div className="eyebrow">Forecasters Hub</div>
+          <h1 className="page-title">Sign in</h1>
+          <p className="page-sub">
+            With SSO in front of the Hub you would already be here. For now, pick an
+            account to look around as.
+          </p>
+        </div>
+      </div>
+      <div className="card" style={{ maxWidth: 380 }}>
+        <label className="eyebrow" htmlFor="pick">
+          Account
+        </label>
+        {accounts.loading && <Loading />}
+        {/*
+         * The switcher is a dev-mode thing, so the route is not there in
+         * proxy mode. Saying so names the actual situation — the Hub is
+         * waiting on SSO — rather than showing an empty menu and letting
+         * somebody conclude the team sheet is broken.
+         */}
+        {accounts.error && (
+          <ErrorNote message="Nobody is signed in, and this Hub expects SSO in front of it to say who you are." />
+        )}
+        {accounts.data?.length === 0 && (
+          <p className="page-sub">
+            There is nobody on the team sheet to sign in as. Check the schedule the Hub is
+            pointed at with <code>npm run doctor</code>.
+          </p>
+        )}
+        {accounts.data && accounts.data.length > 0 && (
+          <select
+            id="pick"
+            defaultValue=""
+            style={{ width: "100%", marginTop: 8, padding: 8 }}
+            onChange={(e) => {
+              if (!e.target.value) return;
+              setDevViewer(e.target.value);
+              window.location.reload();
+            }}
+          >
+            <option value="">Choose an account&hellip;</option>
+            {accounts.data.map((a) => (
+              <option key={a.email} value={a.email}>
+                {a.name} &mdash; {a.email}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /** Loads the account and the team once, then hands the app a settled viewer. */
 export default function Layout() {
   const [searching, setSearching] = useState(false);
@@ -876,44 +946,7 @@ export default function Layout() {
   }, [reloadMe, reloadPeople]);
 
   // Nobody chosen yet in dev mode: the API has no identity to work from.
-  if (me.error && !devViewer()) {
-    return (
-      <div className="main">
-        <div className="page-head">
-          <div>
-            <div className="eyebrow">Forecasters Hub</div>
-            <h1 className="page-title">Sign in</h1>
-            <p className="page-sub">
-              With SSO in front of the Hub you would already be here. For now, pick an
-              account to look around as.
-            </p>
-          </div>
-        </div>
-        <div className="card" style={{ maxWidth: 380 }}>
-          <label className="eyebrow" htmlFor="pick">
-            Account
-          </label>
-          <select
-            id="pick"
-            defaultValue=""
-            style={{ width: "100%", marginTop: 8, padding: 8 }}
-            onChange={(e) => {
-              if (!e.target.value) return;
-              setDevViewer(e.target.value);
-              window.location.reload();
-            }}
-          >
-            <option value="">Choose an account…</option>
-            {(people.data ?? []).map((p) => (
-              <option key={p.id} value={p.email}>
-                {p.name} — {p.email}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-    );
-  }
+  if (me.error && !devViewer()) return <SignIn />;
 
   if (me.error || people.error || content.error) {
     return (

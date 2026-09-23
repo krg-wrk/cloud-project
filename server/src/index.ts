@@ -2,6 +2,7 @@ import path from "node:path";
 import compression from "compression";
 import cors from "cors";
 import express from "express";
+import { createAccountsRouter } from "./accounts.js";
 import { createNoteDrafter } from "./ai.js";
 import { createApiRouter, createFeedRouter } from "./api.js";
 import { readAuthConfig, viewerMiddleware } from "./auth.js";
@@ -128,6 +129,11 @@ app.use((req, res, next) =>
 // The feed is fetched by Google, not by a signed-in browser, so it is mounted
 // before the identity middleware and authenticates on its URL token instead.
 app.use("/api", createFeedRouter(data, store, signUps));
+
+// The dev switcher has to name the accounts before anybody has picked one, so
+// it is mounted before the identity middleware too. It answers 404 unless
+// AUTH_MODE=dev — see accounts.ts for why that is the whole of the guard.
+app.use("/api", createAccountsRouter(auth, data));
 
 app.use(
   "/api",
