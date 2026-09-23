@@ -108,6 +108,48 @@ export function canRead(viewer: Viewer): boolean {
 }
 
 /**
+ * Whether a workshop is one of somebody's.
+ *
+ * Relevance rather than permission — nothing here is secret, and a manager
+ * can still ask for the whole programme. It exists because the sheet holds
+ * every session every team runs, and a forecaster in London opening the
+ * calendar was reading a Seoul research week and four Beauty scoring days
+ * that had nothing to do with them.
+ *
+ * Three ways in, in the order the team described them: named in the session,
+ * or a session for the whole team, or one happening where they are. A session
+ * that answers none of them belongs to somebody else.
+ *
+ * A session with nothing filled in reaches everybody, deliberately. Most of
+ * the programme is untagged today, and the alternative is a workshops page
+ * that is empty for all two hundred people — silence that reads as breakage
+ * rather than as a sheet waiting to be filled in.
+ */
+export function sessionReaches(
+  session: {
+    attendeeIds?: string[];
+    department?: string;
+    location?: string;
+    hostId?: string;
+  },
+  person: { id: string; country?: string } | null | undefined,
+): boolean {
+  const named = session.attendeeIds ?? [];
+  const department = (session.department ?? "").trim();
+  const where = (session.location ?? "").trim();
+  if (!named.length && !department && !where) return true;
+
+  if (!person) return false;
+  if (named.includes(person.id)) return true;
+  if (session.hostId === person.id) return true;
+  if (/^all$/i.test(department)) return true;
+  if (where && person.country && where.toLowerCase() === person.country.trim().toLowerCase()) {
+    return true;
+  }
+  return false;
+}
+
+/**
  * Whether this forecast is theirs, however they are credited on it.
  *
  * `forecasterId` is whoever was named first in a contact cell that has no

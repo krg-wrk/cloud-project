@@ -177,6 +177,10 @@ export const COLUMNS = {
     kind: "Type",
     /** The workshop lead. */
     host: "Host",
+    /** Everybody tagged into it — the Owner column is a multi-contact list. */
+    attendees: "Owner",
+    /** "All" here means the whole team, whatever anybody's country says. */
+    department: "Department",
     guest: "",
     startDate: "Start",
     endDate: "End",
@@ -701,6 +705,7 @@ export class SmartsheetSource implements DataSource {
         vertical: (row[c.vertical] || row[c.team] || undefined) as Vertical | undefined,
         department: row[c.department] || undefined,
         region: regionFor(row[c.region]) ?? row[c.region] ?? "UK",
+        country: row[c.region] || undefined,
       }));
   }
 
@@ -839,6 +844,8 @@ export class SmartsheetSource implements DataSource {
           kind: normaliseSessionKind(row[c.kind]),
           hostId: whoIn(row, c.host)[0] ? personId(whoIn(row, c.host)[0]) : undefined,
           hostExternal: row[c.guest] || undefined,
+          attendeeIds: whoIn(row, c.attendees).map(personId),
+          department: row[c.department] || undefined,
           // A session with no end runs for the day it starts, which is what a
           // blank End cell means on a workshop sheet rather than a gap.
           startDate: isoDate(row[c.startDate]),

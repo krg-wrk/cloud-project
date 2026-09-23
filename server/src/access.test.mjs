@@ -6,6 +6,7 @@ import {
   hubAccessFor,
   resolveViewer,
   seesWholeTeam,
+  sessionReaches,
 } from "./auth.js";
 
 /**
@@ -99,4 +100,52 @@ test("somebody the directory marks inactive does not get in", () => {
     { id: "p", name: "P", email: "p@wgsn.com", role: "forecaster", region: "EMEA", active: false },
   ];
   assert.equal(resolveViewer("p@wgsn.com", [], people, []).active, false);
+});
+
+/**
+ * Which workshops are somebody's.
+ *
+ * Relevance, not permission. The failure to avoid is the one on screen now:
+ * a forecaster in London reading a Seoul research week and four Beauty
+ * scoring days. The other failure is worse and quieter — an over-strict rule
+ * emptying the page for all two hundred people while the sheet is still being
+ * tagged.
+ */
+
+const person = { id: "me", country: "UK" };
+
+test("a session naming somebody is theirs", () => {
+  assert.equal(sessionReaches({ attendeeIds: ["me"], department: "Beauty", location: "Korea" }, person), true);
+});
+
+test("a session the whole team is for reaches everybody", () => {
+  assert.equal(sessionReaches({ department: "All", location: "Korea" }, person), true);
+  assert.equal(sessionReaches({ department: "all", location: "Korea" }, person), true);
+});
+
+test("a session where somebody is reaches them", () => {
+  assert.equal(sessionReaches({ department: "Beauty", location: "UK" }, person), true);
+  assert.equal(sessionReaches({ department: "Beauty", location: " uk " }, person), true);
+});
+
+test("a session for another department in another country is not theirs", () => {
+  assert.equal(sessionReaches({ attendeeIds: ["someone"], department: "Beauty", location: "Korea" }, person), false);
+});
+
+test("the host's own session is theirs, whoever else is tagged", () => {
+  assert.equal(sessionReaches({ hostId: "me", department: "Beauty", location: "Korea" }, person), true);
+});
+
+test("a session with nothing filled in reaches everybody, because most of the sheet is untagged", () => {
+  assert.equal(sessionReaches({}, person), true);
+  assert.equal(sessionReaches({ attendeeIds: [] }, person), true);
+});
+
+test("somebody with no person record sees only the untagged ones", () => {
+  assert.equal(sessionReaches({}, null), true);
+  assert.equal(sessionReaches({ department: "Beauty" }, null), false);
+});
+
+test("a country nobody has filled in for the person does not match every session", () => {
+  assert.equal(sessionReaches({ location: "UK" }, { id: "me" }), false);
 });

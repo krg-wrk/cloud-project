@@ -52,6 +52,13 @@ export interface Person {
   hubAccess?: Role;
   /** False when the directory marks them inactive, or as having no access. */
   active?: boolean;
+  /**
+   * The country as the directory writes it, kept beside the region it was
+   * worked out from. A workshop is tagged by country and a holiday reaches a
+   * region, so throwing the country away to keep only the region would make
+   * one of those two questions unanswerable.
+   */
+  country?: string;
 }
 
 /**
@@ -328,6 +335,14 @@ export interface KnowledgeSession {
   capacity: number | null;
   /** False for sessions nobody signs up for — the required ones. */
   signUpsOpen: boolean;
+  /** Everybody tagged into it, from the sheet's own contact column. */
+  attendeeIds?: string[];
+  /**
+   * The department it is for. "All" reaches everybody; anything else is read
+   * alongside the country, so a session is relevant to somebody if it names
+   * them, names their department as All, or happens where they are.
+   */
+  department?: string;
   /** The whole team is expected, so there is nothing to opt into. */
   required?: boolean;
   summary: string;

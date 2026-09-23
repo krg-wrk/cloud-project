@@ -9,6 +9,7 @@ import {
   formatLong,
   formatMedium,
   formatWeekday,
+  dayRange,
   isSameMonth,
   isWeekend,
   lastOfMonth,
@@ -241,7 +242,15 @@ function chipMeaning(chip: Chip): string {
     case "review":
       return chip.review.iAmReviewer ? "Peer review — you are reviewing" : "Peer review of your piece";
     case "session":
-      return `${KIND_LABELS[chip.session.kind]}, ${chip.session.startTime}–${chip.session.endTime}`;
+      // The days always; the times only where a team records them. Printing
+      // them regardless is how every workshop read "undefined–undefined".
+      return [
+        KIND_LABELS[chip.session.kind],
+        dayRange(chip.session.startDate, chip.session.endDate),
+        chip.session.startTime ? `${chip.session.startTime}–${chip.session.endTime ?? ""}` : "",
+      ]
+        .filter(Boolean)
+        .join(", ");
     case "event":
       return EVENT_LABELS[chip.event.type];
     case "entry":
@@ -943,7 +952,15 @@ function chipDetail(chip: Chip, people: Schedule["people"]): ReactNode {
       return (
         <dl className="preview-facts">
           {row("Kind", KIND_LABELS[chip.session.kind])}
-          {row("When", `${chip.session.startTime}–${chip.session.endTime}`)}
+          {row(
+            "When",
+            [
+              dayRange(chip.session.startDate, chip.session.endDate),
+              chip.session.startTime ? `${chip.session.startTime}–${chip.session.endTime ?? ""}` : "",
+            ]
+              .filter(Boolean)
+              .join(" · "),
+          )}
           {row("Where", chip.session.online ? `${chip.session.location} · online` : chip.session.location)}
           {row("Host", chip.session.hostId ? personName(people, chip.session.hostId) : chip.session.hostExternal)}
           {row("Going", chip.session.going.length ? `${chip.session.going.length} signed up` : "")}

@@ -206,7 +206,14 @@ interface Section {
   slot?: string;
 }
 
-type GroupKey = "work" | "lab" | "data" | "team" | "resources" | "settings";
+type GroupKey =
+  | "work"
+  | "lab"
+  | "data"
+  | "team"
+  | "resources"
+  | "planning"
+  | "settings";
 
 /**
  * The groups, in the order they are read.
@@ -223,6 +230,9 @@ const GROUPS: { key: GroupKey; slot: string }[] = [
   { key: "data", slot: "nav.group.data" },
   { key: "team", slot: "nav.group.team" },
   { key: "resources", slot: "nav.group.resources" },
+  // Just above the studio: both are a commissioning manager's tools rather
+  // than a forecaster's, and neither belongs in the run of daily work.
+  { key: "planning", slot: "nav.group.planning" },
   { key: "settings", slot: "nav.group.settings" },
 ];
 
@@ -236,14 +246,14 @@ function sections({
   outstanding,
   mySessions,
   forecasters,
-  wholeTeam = false,
+  commissioning = false,
 }: {
   overdue: number;
   outstanding: number;
   mySessions: number;
   forecasters: number;
-  /** Whether to offer the commissioning-only sections. */
-  wholeTeam?: boolean;
+  /** Whether to offer the commissioning manager's own tools. */
+  commissioning?: boolean;
 }): Section[] {
   return [
     {
@@ -279,13 +289,22 @@ function sections({
      * they may not read, which is worse than not mentioning it. The server
      * refuses it as well — this only decides whether it is offered.
      */
-    ...(wholeTeam
+    /*
+     * Commissioning managers, and not yet leadership.
+     *
+     * The grid reads as a verdict on the schedule, and the people who can act
+     * on that verdict are the ones commissioning it. Showing it to leadership
+     * before the horizon column is filled in would be showing them a page
+     * that is four-fifths "untagged" — a fair reading of the data and an
+     * unfair first impression of the team.
+     */
+    ...(commissioning
       ? [
           {
             to: "/plan",
             label: "The plan",
             icon: "performance",
-            group: "work" as const,
+            group: "planning" as const,
             slot: "nav.item.plan",
           },
         ]
@@ -621,7 +640,7 @@ function useSections(content: ContentItem[]): Section[] {
     outstanding: scope.filter(isOutstanding).length,
     mySessions: person ? (sessions.data?.length ?? 0) : 0,
     forecasters: new Set(content.map((c) => c.forecasterId)).size,
-    wholeTeam: isManager,
+    commissioning: isManager,
   });
 
   const built = [...(views.data ?? [])]
