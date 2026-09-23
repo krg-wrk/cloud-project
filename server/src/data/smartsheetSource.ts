@@ -42,6 +42,15 @@ import { WRITABLE_FIELDS } from "../types.js";
 const API = (process.env.SMARTSHEET_API ?? "https://api.smartsheet.com/2.0").replace(/\/$/, "");
 
 /**
+ * How long one listing of the sheets' modified times stands for.
+ *
+ * Shorter than the response cache above it on purpose: this is the thing
+ * that notices an edit at all, so it should notice sooner than the caller
+ * thinks to ask.
+ */
+const STAMP_TTL_MS = 30_000;
+
+/**
  * How a column is named in a source sheet.
  *
  * A bare string is the title, which is what nearly every entry is and what
@@ -354,6 +363,14 @@ export interface SmartsheetConfig {
    */
   allowWrites?: boolean;
   /**
+   * How long one listing of the sheets' modified times stands for.
+   *
+   * Here rather than only as a constant so a test can set it to nothing and
+   * watch the stamps decide, which is otherwise a thing that can only be
+   * proved by waiting half a minute.
+   */
+  stampTtlMs?: number;
+  /**
    * Several, because a team keeps its calendar the way it already keeps it.
    *
    * Holidays in one sheet, leave in another, shows in a third is the ordinary
@@ -524,11 +541,82 @@ export const STATUS_LABELS: Record<Status, string> = {
   "at-risk": "At Risk",
 };
 
+/**
+ * Whether a sheet already in hand can be served again without reading it.
+ *
+ * One listing call reports every sheet's `modifiedAt`, and a sheet whose
+ * stamp has not moved cannot have changed — so the copy held is the copy
+ * Smartsheet would send back. Everything else answers no: a sheet never
+ * read, a sheet the listing does not mention, a listing that failed. The
+ * asymmetry is on purpose. Reading again costs a second; serving a schedule
+ * somebody has already corrected costs them the afternoon they spend
+ * working from it.
+ */
+export function sheetIsCurrent(
+  held: string | undefined,
+  listed: string | undefined,
+): boolean {
+  if (!held || !listed) return false;
+  return held === listed;
+}
+
 export class SmartsheetSource implements DataSource {
   readonly name = "smartsheet";
   readonly writes?: ContentWriter;
 
+  /*
+   * What has been read, and the stamp it was read at.
+   *
+   * Drawing the fixed pages reads sixteen sheets and takes about six
+   * seconds, and most of them — the directory above all — change perhaps
+   * weekly. One listing call answers "which of these has moved" for all of
+   * them at once, so the usual refresh reads nothing at all. The alternative
+   * was simply to cache for longer, which buys the same speed by showing
+   * people staler data; a schedule exists to be current, so that is the
+   * wrong end to save at.
+   */
+  private readonly held = new Map<string, { modifiedAt: string; sheet: SmartsheetSheet }>();
+  private stamps: { at: number; byId: Map<string, string> } | null = null;
+
   constructor(private readonly config: SmartsheetConfig) {}
+
+  /** A write of the Hub's own makes both the copy and its stamp wrong. */
+  forget(): void {
+    this.held.clear();
+    this.stamps = null;
+  }
+
+  /**
+   * When each sheet the token can see was last modified.
+   *
+   * Deliberately one page of five hundred: the account holds around a
+   * hundred and thirty sheets, and paging through them would spend the
+   * saving this exists to make. A listing that fails answers with nothing,
+   * which reads every sheet the long way — the slow path rather than the
+   * wrong one — and the empty answer is kept for the usual interval so a
+   * broken listing costs one failed call rather than one per sheet.
+   */
+  private async modifiedTimes(): Promise<Map<string, string>> {
+    const now = Date.now();
+    const ttl = this.config.stampTtlMs ?? STAMP_TTL_MS;
+    if (this.stamps && now - this.stamps.at < ttl) return this.stamps.byId;
+    const byId = new Map<string, string>();
+    try {
+      const res = await fetch(`${API}/sheets?pageSize=500`, {
+        headers: { Authorization: `Bearer ${this.config.token}` },
+      });
+      if (res.ok) {
+        const body = (await res.json()) as { data?: { id: number; modifiedAt?: string }[] };
+        for (const listed of body.data ?? []) {
+          if (listed.modifiedAt) byId.set(String(listed.id), listed.modifiedAt);
+        }
+      }
+    } catch {
+      // Unreachable is not the same as unchanged, and an empty map says so.
+    }
+    this.stamps = { at: now, byId };
+    return byId;
+  }
 
   /** The token, for the writer only. Nothing else needs it from outside. */
   get tokenForWrite(): string {
@@ -541,9 +629,13 @@ export class SmartsheetSource implements DataSource {
    * Singular, and only ever reached with one sheet configured: everything
    * that calls it is behind the writer, and `enableWrites` refuses to build
    * a writer at all when the schedule spans several sheets.
+   *
+   * Always read afresh. This is the read the preview and the apply compare
+   * against, and a cached answer would turn "has somebody else changed this
+   * row" into a question asked of the Hub's own memory.
    */
   contentSheet(): Promise<SmartsheetSheet> {
-    return this.fetchSheet(this.config.contentSheetIds[0]);
+    return this.fetchSheet(this.config.contentSheetIds[0], { fresh: true });
   }
 
   /**
@@ -582,7 +674,21 @@ export class SmartsheetSource implements DataSource {
     return writer.target;
   }
 
-  private async fetchSheet(sheetId: string): Promise<SmartsheetSheet> {
+  private async fetchSheet(
+    sheetId: string,
+    { fresh = false }: { fresh?: boolean } = {},
+  ): Promise<SmartsheetSheet> {
+    /*
+     * A read that may be answered from the copy in hand, and one that may
+     * not. The writer's re-read asks for fresh, because comparing a row
+     * against a copy the Hub is already holding would compare it against
+     * itself and agree every time — which is the concurrency check gone,
+     * with every test still passing.
+     */
+    const listed = fresh ? undefined : (await this.modifiedTimes()).get(sheetId);
+    const held = this.held.get(sheetId);
+    if (held && sheetIsCurrent(held.modifiedAt, listed)) return held.sheet;
+
     /*
      * Level 2, with the object values.
      *
@@ -605,7 +711,10 @@ export class SmartsheetSource implements DataSource {
         `Smartsheet request for sheet ${sheetId} failed: ${res.status} ${res.statusText}`,
       );
     }
-    return (await res.json()) as SmartsheetSheet;
+    const sheet = (await res.json()) as SmartsheetSheet;
+    // Only worth holding when there is a stamp to notice it going stale by.
+    if (listed) this.held.set(sheetId, { modifiedAt: listed, sheet });
+    return sheet;
   }
 
   private async fetchRows(sheetId: string): Promise<FlatRow[]> {
