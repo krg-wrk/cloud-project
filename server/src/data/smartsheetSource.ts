@@ -166,7 +166,8 @@ export const COLUMNS = {
     /** The workshop lead. */
     host: "Host",
     guest: "",
-    date: "Start",
+    startDate: "Start",
+    endDate: "End",
     startTime: "",
     endTime: "",
     location: "Country",
@@ -792,7 +793,7 @@ export class SmartsheetSource implements DataSource {
     const c = titles(COLUMNS.sessions);
     const rows = await this.readRows(this.config.sessionsSheetId, COLUMNS.sessions);
     return rows
-      .filter((row) => row[c.title] && row[c.date])
+      .filter((row) => row[c.title] && row[c.startDate])
       .map((row) => {
         const capacity = Number.parseInt(row[c.capacity] ?? "", 10);
         const location = row[c.location] ?? "";
@@ -802,9 +803,12 @@ export class SmartsheetSource implements DataSource {
           kind: normaliseSessionKind(row[c.kind]),
           hostId: whoIn(row, c.host)[0] ? personId(whoIn(row, c.host)[0]) : undefined,
           hostExternal: row[c.guest] || undefined,
-          date: isoDate(row[c.date]),
-          startTime: row[c.startTime] || "09:00",
-          endTime: row[c.endTime] || "10:00",
+          // A session with no end runs for the day it starts, which is what a
+          // blank End cell means on a workshop sheet rather than a gap.
+          startDate: isoDate(row[c.startDate]),
+          endDate: isoDate(row[c.endDate]) || isoDate(row[c.startDate]),
+          startTime: row[c.startTime] || undefined,
+          endTime: row[c.endTime] || undefined,
           location,
           online: /remote|zoom|teams|online/i.test(location),
           capacity: Number.isFinite(capacity) ? capacity : null,

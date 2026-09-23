@@ -166,7 +166,7 @@ const DERIVED: Record<string, (input: KpiInput, from: string, to: string) => num
     ).length,
 
   "sessions-attended": (input, from, to) =>
-    input.sessions.filter((s) => input.attended.has(s.id) && inRange(s.date, from, to)).length,
+    input.sessions.filter((s) => input.attended.has(s.id) && inRange(s.startDate, from, to)).length,
 };
 
 /** Supplied metrics are a sum of their readings in the window. */

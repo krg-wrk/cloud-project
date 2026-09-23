@@ -66,7 +66,9 @@ export function signUpState(
   personId: string | undefined,
   today = TODAY,
 ): SignUpState {
-  if (session.date < today) return "past";
+  // Past once it has finished, so a session runs all the way through its
+  // last day rather than reading as over on the morning of its second.
+  if (session.endDate < today) return "past";
   if (personId && session.going.includes(personId)) return "going";
   if (personId && session.waiting.includes(personId)) return "waiting";
   if (session.required) return "required";

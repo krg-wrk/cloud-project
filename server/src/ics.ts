@@ -163,7 +163,7 @@ export function buildFeed(input: FeedInput): string {
     entries.push({
       uid: `session-${session.id}@forecasters-hub`,
       summary: session.title,
-      date: session.date,
+      date: session.startDate,
       startTime: session.startTime,
       endTime: session.endTime,
       description: session.summary,

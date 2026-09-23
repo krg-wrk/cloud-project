@@ -100,9 +100,16 @@ export interface KnowledgeSession {
   kind: SessionKind;
   hostId?: string;
   hostExternal?: string;
-  date: string;
-  startTime: string;
-  endTime: string;
+  /**
+   * The days it runs. An R&D day is one day, so `endDate` equals
+   * `startDate` — a workshop programme keeps ranges and the Hub used to hold
+   * a single day, which quietly hid the second half of everything longer.
+   */
+  startDate: string;
+  endDate: string;
+  /** Clock times, where a team records them. Many keep only the days. */
+  startTime?: string;
+  endTime?: string;
   location: string;
   online: boolean;
   capacity: number | null;

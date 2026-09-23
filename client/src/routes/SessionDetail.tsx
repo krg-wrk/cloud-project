@@ -1,7 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import { Link, useParams } from "react-router-dom";
 import { query, send, useApi } from "../lib/api";
-import { formatLong, monthKey, relativeDays } from "../lib/date";
+import { dayRange, monthKey, relativeDays } from "../lib/date";
 import { KIND_LABELS, personName, signUpState } from "../lib/domain";
 import { useViewer } from "../lib/viewer";
 import type { Person, SessionWithSignUps } from "../types";
@@ -81,13 +81,13 @@ export default function SessionDetail() {
       <div className="page-head">
         <div>
           <div className="eyebrow">
-            {KIND_LABELS[session.kind]} · {formatLong(session.date)} ·{" "}
-            {session.startTime}–{session.endTime}
+            {KIND_LABELS[session.kind]} · {dayRange(session.startDate, session.endDate)}
+            {session.startTime ? ` · ${session.startTime}–${session.endTime ?? ""}` : ""}
           </div>
           <h1 className="page-title">{session.title}</h1>
           <p className="page-sub">
             Hosted by {host} · {session.location}
-            {state !== "past" && ` · ${relativeDays(session.date)}`}
+            {state !== "past" && ` · ${relativeDays(session.startDate)}`}
           </p>
         </div>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -188,15 +188,18 @@ export default function SessionDetail() {
           <div className="card">
             <dl className="facts">
               <div className="fact">
-                <dt>Date</dt>
-                <dd>{formatLong(session.date)}</dd>
+                <dt>{session.endDate && session.endDate !== session.startDate ? "Dates" : "Date"}</dt>
+                <dd>{dayRange(session.startDate, session.endDate)}</dd>
               </div>
-              <div className="fact">
-                <dt>Time</dt>
-                <dd>
-                  {session.startTime}–{session.endTime}
-                </dd>
-              </div>
+              {session.startTime && (
+                <div className="fact">
+                  <dt>Time</dt>
+                  <dd>
+                    {session.startTime}
+                    {session.endTime ? `–${session.endTime}` : ""}
+                  </dd>
+                </div>
+              )}
               <div className="fact">
                 <dt>Where</dt>
                 <dd>{session.location}</dd>
@@ -244,7 +247,7 @@ export default function SessionDetail() {
             )}
 
             <Link
-              to={`/calendar/${monthKey(session.date)}`}
+              to={`/calendar/${monthKey(session.startDate)}`}
               className="btn"
               style={{ display: "block", marginTop: 14, textAlign: "center" }}
             >

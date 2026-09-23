@@ -166,7 +166,11 @@ function chipsForDay(date: string, feed: Feed, show: Show, includeSpans = false)
       if (wanted({ from: event.startDate, to: event.endDate })) chips.push({ kind: "event", event });
     }
     for (const session of feed.sessions) {
-      if (session.date === date) chips.push({ kind: "session", session });
+      // Every day it runs, not only the day it starts: an R&D week belongs on
+      // the calendar all week, the way leave and a trade show already do.
+      if (wanted({ from: session.startDate, to: session.endDate })) {
+        chips.push({ kind: "session", session });
+      }
     }
   }
   if (show.submissions) {
@@ -267,7 +271,7 @@ function chipLabel(chip: Chip, people: Schedule["people"]): { kicker: string; ti
       };
     case "session":
       return {
-        kicker: chip.session.startTime,
+        kicker: chip.session.startTime ?? "",
         title: chip.session.title,
         icon: chip.session.kind === "training" ? "training" : "workshop",
         colour: `var(--kind-${chip.session.kind})`,
@@ -1059,7 +1063,7 @@ function DayView({
     .filter((c) => c.kind === "session")
     .sort((a, b) =>
       a.kind === "session" && b.kind === "session"
-        ? a.session.startTime.localeCompare(b.session.startTime)
+        ? (a.session.startTime ?? "").localeCompare(b.session.startTime ?? "")
         : 0,
     );
   const untimed = chips.filter((c) => c.kind !== "session");

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { daysBetween, relativeDays } from "./date.ts";
+import { dayRange, daysBetween, relativeDays } from "./date.ts";
 
 /**
  * Dates as a real sheet supplies them, which includes not supplying them.
@@ -30,4 +30,21 @@ test("the gap between two days is counted in whole days, across a month end", ()
   assert.equal(daysBetween("2026-09-30", "2026-10-01"), 1);
   assert.equal(daysBetween("2026-09-23", "2026-09-23"), 0);
   assert.equal(daysBetween("2026-10-01", "2026-09-30"), -1);
+});
+
+test("a session that runs one day reads as one day", () => {
+  assert.equal(dayRange("2026-09-17"), "Thu 17 Sept");
+  assert.equal(dayRange("2026-09-17", "2026-09-17"), "Thu 17 Sept");
+});
+
+test("a range inside a month names the month once, because 17 Sept – 19 Sept says it twice", () => {
+  assert.equal(dayRange("2026-09-17", "2026-09-19"), "17–19 Sept");
+});
+
+test("a range across a month writes both, since 29–2 Oct would be a riddle", () => {
+  assert.equal(dayRange("2026-09-29", "2026-10-02"), "29 Sept – 2 Oct");
+});
+
+test("no start is no range, rather than a half-written one", () => {
+  assert.equal(dayRange("", "2026-09-19"), "");
 });

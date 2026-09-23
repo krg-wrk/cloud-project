@@ -302,10 +302,16 @@ export interface KnowledgeSession {
   hostId?: string;
   /** Named guest speaker, when the host is not on the team. */
   hostExternal?: string;
-  date: string;
-  /** 24h "HH:MM", in UK time. */
-  startTime: string;
-  endTime: string;
+  /**
+   * The days it runs. An R&D day is one day, so `endDate` equals `startDate`.
+   * The Hub held a single day and a workshop programme keeps ranges, which
+   * quietly hid every day of a session after its first.
+   */
+  startDate: string;
+  endDate: string;
+  /** 24h "HH:MM", in UK time, where a team records them at all. */
+  startTime?: string;
+  endTime?: string;
   location: string;
   online: boolean;
   /** null when there is no limit on numbers. */

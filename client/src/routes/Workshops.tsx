@@ -3,6 +3,7 @@ import { Link, useSearchParams } from "react-router-dom";
 import { query, send, useApi } from "../lib/api";
 import {
   TODAY,
+  dayRange,
   formatMedium,
   formatMonthShort,
   formatWeekday,
@@ -85,6 +86,7 @@ function SessionCard({
   const state = signUpState(session, person?.id);
   const action = ACTION_LABEL[state];
   const past = state === "past";
+  const runsOneDay = !session.endDate || session.endDate === session.startDate;
   const mine = state === "going" || state === "waiting";
 
   async function act() {
@@ -122,13 +124,17 @@ function SessionCard({
       className={`session${mine ? " mine" : ""}${past ? " session-past" : ""}`}
       style={{ "--kind-color": `var(--kind-${session.kind})` } as CSSProperties}
     >
+      {/* The big day is the day it starts; the line beneath carries the rest,
+          so a two-week R&D block does not read as a single Tuesday. */}
       <div className="session-when">
-        <span className="session-day">{session.date.slice(8)}</span>
-        <span className="session-month">{formatMonthShort(session.date)}</span>
+        <span className="session-day">{session.startDate.slice(8)}</span>
+        <span className="session-month">{formatMonthShort(session.startDate)}</span>
         <div>
-          {formatWeekday(session.date)} {session.startTime}–{session.endTime}
+          {runsOneDay
+            ? `${formatWeekday(session.startDate)}${session.startTime ? ` ${session.startTime}–${session.endTime ?? ""}` : ""}`
+            : `to ${dayRange(session.endDate)}`}
         </div>
-        {!past && <div style={{ marginTop: 4 }}>{relativeDays(session.date)}</div>}
+        {!past && <div style={{ marginTop: 4 }}>{relativeDays(session.startDate)}</div>}
       </div>
 
       <div>
@@ -241,7 +247,7 @@ export default function Workshops() {
 
   const byMonth = new Map<string, SessionWithSignUps[]>();
   for (const session of sessions) {
-    const key = monthKey(session.date);
+    const key = monthKey(session.startDate);
     byMonth.set(key, [...(byMonth.get(key) ?? []), session]);
   }
   const months = [...byMonth.entries()];

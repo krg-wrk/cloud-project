@@ -249,8 +249,8 @@ export default function Today() {
             {mySessions.slice(0, 5).map((session) => (
               <Link key={session.id} to={`/workshops/${session.id}`} className="deadline">
                 <div className="deadline-date">
-                  {formatShort(session.date)}
-                  <span className="rel">{session.startTime}</span>
+                  {formatShort(session.startDate)}
+                  <span className="rel">{session.startTime ?? ""}</span>
                 </div>
                 <div>
                   <div className="deadline-title">{session.title}</div>

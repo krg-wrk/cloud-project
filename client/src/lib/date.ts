@@ -193,6 +193,29 @@ export function daysBetween(from: string, to: string): number {
  * "9135 days ago". A calendar day in this domain is YYYY-MM-DD and nothing
  * else is worth a reading.
  */
+/**
+ * The days something runs, as one phrase.
+ *
+ * "17 Sept" for a day, "17–19 Sept" when it stays inside a month, and both
+ * months written out when it crosses one. A workshop programme keeps ranges
+ * and printing only the first day was how the Hub hid the rest of an R&D
+ * week; printing "17 Sept – 17 Sept" for the ordinary case would be the
+ * other way of getting it wrong.
+ */
+export function dayRange(startDate: string, endDate?: string): string {
+  if (!startDate) return "";
+  if (!endDate || endDate === startDate) return formatMedium(startDate);
+  /*
+   * No weekday once it is a range. "Thu 17 – Sat 19 Sept" is three ideas
+   * where one will do, and a weekday earns its place only when there is a
+   * single day somebody is deciding whether they can make.
+   */
+  if (startDate.slice(0, 7) === endDate.slice(0, 7)) {
+    return `${dayOfMonth(startDate)}–${formatShort(endDate)}`;
+  }
+  return `${formatShort(startDate)} – ${formatShort(endDate)}`;
+}
+
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 export function relativeDays(date: string, today = TODAY): string {
