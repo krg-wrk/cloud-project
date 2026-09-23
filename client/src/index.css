@@ -2066,9 +2066,94 @@ table.schedule .overdue {
 }
 
 .loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
   padding: 60px 0;
   text-align: center;
   color: var(--ink-45);
+}
+
+/* --- The loading atom -----------------------------------------------------
+ *
+ * Three rings held still at sixty degrees to each other, with an electron
+ * travelling each one at its own speed and one of them the other way, so the
+ * figure never settles into a pattern that reads as stuck.
+ *
+ * The electrons follow the ring as a path rather than being carried round by
+ * a rotating group. Rotating the groups was the first attempt: it keeps each
+ * dot exactly on its own ring, and it also turns the rings, so within a
+ * second or two all three lie at the same angle and the atom becomes a
+ * scribble. A browser without offset-path draws the rings and leaves the
+ * electrons sitting on them, which is an atom at rest rather than a fault.
+ *
+ * Drawn in the accent at the weight of a hairline rule, so it reads as part
+ * of the furniture rather than a graphic somebody dropped in. `.loader-` and
+ * not `.atom`, which the Forecast Builder's draggable cards already own.
+ */
+.loader-atom {
+  color: var(--accent);
+  overflow: visible;
+}
+
+.loader-atom ellipse {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.1;
+  opacity: 0.38;
+}
+
+.loader-electron,
+.loader-core {
+  fill: currentColor;
+}
+
+.loader-core {
+  opacity: 0.9;
+}
+
+@supports (offset-path: path("M 0 0")) {
+  .loader-electron {
+    /* The ring itself, as a path: two half-ellipses of the same rx and ry. */
+    offset-path: path("M 3.5,20 a 16.5,6.4 0 1,1 33,0 a 16.5,6.4 0 1,1 -33,0");
+    offset-rotate: 0deg;
+    /*
+     * The path positions the dot, and the dot's own coordinates would be
+     * added to it — which is what threw the three electrons off their rings
+     * and out into the white. Zeroed here rather than in the markup so the
+     * fallback keeps them on the rings.
+     */
+    cx: 0;
+    cy: 0;
+    animation: loader-travel 2.6s linear infinite;
+  }
+
+  .loader-electron-2 {
+    animation-duration: 3.4s;
+    animation-direction: reverse;
+  }
+
+  .loader-electron-3 {
+    animation-duration: 4.4s;
+  }
+
+  @keyframes loader-travel {
+    to {
+      offset-distance: 100%;
+    }
+  }
+}
+
+/*
+ * Somebody who has asked for less movement gets the atom standing still. It
+ * is a picture of what is happening rather than the evidence that anything
+ * is — the sentence under it is that — so it loses nothing by holding a pose.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .loader-electron {
+    animation: none;
+  }
 }
 
 /* --- Workshops ---------------------------------------------------------- */
