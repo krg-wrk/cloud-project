@@ -459,7 +459,20 @@ export default function CalendarView() {
             value={forecaster}
             onChange={(e) => setParam("forecaster", e.target.value)}
           >
-            <option value="">Everyone</option>
+            {/*
+              A forecaster is not offered everybody's calendar.
+
+              On the real schedule that is two and a half thousand events —
+              every colleague's leave, every activity day, every submission —
+              and the month view answers "+21 more" in every cell. It is not
+              a permission: a forecaster may look up any one colleague, which
+              is the question people actually have. It is that the whole team
+              at once is not a view of anything, and offering it as the
+              default reading of the calendar buries the fortnight somebody
+              came to look at. Managers keep it, because comparing the team is
+              their job.
+            */}
+            {isManager && <option value="">Everyone</option>}
             {people
               .filter((p) => p.role === "forecaster")
               .map((p) => (

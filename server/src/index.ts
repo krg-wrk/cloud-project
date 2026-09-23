@@ -16,6 +16,7 @@ import { createAppearanceRouter } from "./appearance.js";
 import { createDirectoryRouter } from "./directory.js";
 import { createLabRouter } from "./lab/api.js";
 import { createResourcesRouter } from "./resources.js";
+import { createPlanRouter } from "./planApi.js";
 import { createSearchRouter } from "./searchApi.js";
 import { ProofPointLibrary } from "./proofPoints/library.js";
 import { SignUps } from "./signUps.js";
@@ -146,6 +147,7 @@ app.use(
   createProofPointRouter(proofPoints, data, store),
   createNotifyRouter(data, store, signUps, proofPoints, studio, viewRunner),
   createSearchRouter(data, studio, proofPoints),
+  createPlanRouter(data, store),
   createResourcesRouter(store),
   createAppearanceRouter(store),
   createDirectoryRouter(data),

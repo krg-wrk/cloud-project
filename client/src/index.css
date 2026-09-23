@@ -9313,3 +9313,41 @@ tr[data-tone] .cell-edit:focus-visible {
   color: var(--accent-ink);
   font-weight: 500;
 }
+
+/*
+ * The commissioning plan.
+ *
+ * A grid of groups against months, coloured by the worst verdict in each
+ * cell rather than an average: a month where one forecast is late and nine
+ * are fine is a month with a late forecast in it, and averaging that away is
+ * how a plan stops being read. The colours are the semantic set, not the
+ * accent — this is a status, and it has to survive somebody changing the
+ * Hub's hue in the studio.
+ */
+.plan-tally { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 16px; }
+.plan-chip {
+  border: 1px solid var(--rule); background: var(--ground); color: var(--ink);
+  border-radius: 999px; padding: 5px 12px; font-size: 12px; cursor: pointer;
+}
+.plan-chip b { font-variant-numeric: tabular-nums; margin-right: 4px; }
+.plan-chip.on { border-color: currentColor; }
+.plan-chip.plan-late { color: var(--status-at-risk); }
+.plan-chip.plan-early { color: var(--status-in-review); }
+.plan-chip.plan-untagged { color: var(--ink-45); }
+.plan-chip.plan-no-lead { color: var(--ink-45); }
+.plan-chip.plan-on-plan { color: var(--status-published); }
+
+.plan-scroll { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; background: var(--ground); }
+.plan-grid { border-collapse: collapse; width: 100%; font-size: 12.5px; }
+.plan-grid th, .plan-grid td { border-bottom: 1px solid var(--rule); padding: 8px 10px; text-align: left; }
+.plan-grid thead th { font-weight: 600; color: var(--ink-45); text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+.plan-grid th[scope="row"] { white-space: nowrap; font-weight: 500; }
+.plan-cell { text-align: center; font-variant-numeric: tabular-nums; }
+.plan-cell b { display: block; font-weight: 600; }
+.plan-years { font-size: 10.5px; color: var(--ink-45); }
+.plan-cell.plan-late { background: color-mix(in srgb, var(--status-at-risk) 16%, transparent); }
+.plan-cell.plan-early { background: color-mix(in srgb, var(--status-in-review) 16%, transparent); }
+.plan-cell.plan-untagged { background: color-mix(in srgb, var(--ink-45) 12%, transparent); }
+.plan-cell.plan-on-plan { background: color-mix(in srgb, var(--status-published) 14%, transparent); }
+.plan-layer th[scope="row"], .plan-layer td { color: var(--ink-45); font-size: 11.5px; }
+.plan-aside { display: block; }

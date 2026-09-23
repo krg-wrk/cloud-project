@@ -59,6 +59,8 @@ export interface ContentItem {
   vertical: string;
   /** The horizon a forecast points at: the team plans by horizon, not by season. */
   forecastHorizon: string;
+  /** How the team files it — the planning view groups and filters on it. */
+  forecastCategory?: string;
   forecasterId: string;
   managerId: string;
   submissionDate: string;

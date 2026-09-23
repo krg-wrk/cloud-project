@@ -116,6 +116,7 @@ export const COLUMNS = {
     vertical: "Vertical",
     /** The horizon a forecast points at — the team plans by it, not by season. */
     forecastHorizon: "Forecast Horizon",
+    forecastCategory: "Forecast Category",
     forecaster: "Owner",
     /** Recorded outside the schedule. */
     manager: "",
@@ -715,6 +716,7 @@ export class SmartsheetSource implements DataSource {
         type: (row[c.type] || "Market Report") as ContentType,
         vertical: (row[c.vertical] || "Womenswear") as Vertical,
         forecastHorizon: row[c.forecastHorizon] || "",
+        forecastCategory: row[c.forecastCategory] || undefined,
         /*
          * The first person named owns it, and everybody named is credited.
          *

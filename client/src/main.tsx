@@ -9,6 +9,7 @@ import Data from "./routes/data/Data";
 import ProofPoints from "./routes/data/ProofPoints";
 import Review from "./routes/data/Review";
 import Deadlines from "./routes/Deadlines";
+import Plan from "./routes/Plan";
 import Directory from "./routes/Directory";
 import Kpis from "./routes/Kpis";
 import Atoms from "./routes/lab/Atoms";
@@ -47,6 +48,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Today /> },
       { path: "deadlines", element: <Deadlines /> },
+      { path: "plan", element: <Plan /> },
       { path: "calendar", element: <Navigate to={`/calendar/${monthKey(TODAY)}`} replace /> },
       { path: "calendar/:month", element: <CalendarView /> },
       { path: "content/:id", element: <ContentDetail /> },

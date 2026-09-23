@@ -234,11 +234,14 @@ function sections({
   outstanding,
   mySessions,
   forecasters,
+  wholeTeam = false,
 }: {
   overdue: number;
   outstanding: number;
   mySessions: number;
   forecasters: number;
+  /** Whether to offer the commissioning-only sections. */
+  wholeTeam?: boolean;
 }): Section[] {
   return [
     {
@@ -268,6 +271,23 @@ function sections({
       primary: true,
       slot: "nav.item.calendar",
     },
+    /*
+     * Commissioning managers only, and hidden rather than refused: a menu
+     * item that answers 403 tells a forecaster there is a page about them
+     * they may not read, which is worse than not mentioning it. The server
+     * refuses it as well — this only decides whether it is offered.
+     */
+    ...(wholeTeam
+      ? [
+          {
+            to: "/plan",
+            label: "The plan",
+            icon: "performance",
+            group: "work" as const,
+            slot: "nav.item.plan",
+          },
+        ]
+      : []),
     { to: "/trends", label: "Trends", icon: "trends", group: "work", primary: true, slot: "nav.item.trends" },
     {
       to: "/performance",
@@ -599,6 +619,7 @@ function useSections(content: ContentItem[]): Section[] {
     outstanding: scope.filter(isOutstanding).length,
     mySessions: person ? (sessions.data?.length ?? 0) : 0,
     forecasters: new Set(content.map((c) => c.forecasterId)).size,
+    wholeTeam: isManager,
   });
 
   const built = [...(views.data ?? [])]
