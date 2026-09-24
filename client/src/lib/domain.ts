@@ -30,26 +30,76 @@ export const STATUS_ORDER: Status[] = [
 export const EVENT_LABELS: Record<EventType, string> = {
   leave: "Leave",
   "public-holiday": "Public holiday",
-  workshop: "Workshop",
-  training: "Training",
   conference: "Show / conference",
+  travel: "Travel",
+  marketing: "Marketing",
+  "client-call": "Client call",
+  reminder: "Reminder",
+  other: "Other",
 };
 
 export const KIND_LABELS: Record<SessionKind, string> = {
   workshop: "Workshop",
-  masterclass: "Masterclass",
-  "lunch-and-learn": "Lunch & Learn",
-  critique: "Critique",
-  training: "Training",
+  "scoring-session": "Scoring session",
+  "trend-governance": "Trend governance",
+  "forecast-forums": "Forecast forums",
+  research: "Research",
+  other: "Other",
 };
 
 export const KIND_ORDER: SessionKind[] = [
   "workshop",
-  "masterclass",
-  "lunch-and-learn",
-  "critique",
-  "training",
+  "scoring-session",
+  "trend-governance",
+  "forecast-forums",
+  "research",
+  "other",
 ];
+
+/**
+ * A sentence for each kind, for the page that shows one session.
+ *
+ * Held beside the labels rather than as a chain of ternaries in the page,
+ * because a new kind is then one line in one place instead of another arm
+ * on a five-deep conditional — and the team has said it will add kinds.
+ */
+export const KIND_BLURBS: Record<SessionKind, string> = {
+  workshop: "Working session with an output the whole team uses.",
+  "scoring-session": "Trends are scored together, so the calls hold across verticals.",
+  "trend-governance": "What we are standing behind, and whether the evidence carries it.",
+  "forecast-forums": "The forecast talked through in the open, before it is committed to.",
+  research: "Time set aside for the reading and looking the forecasts are built on.",
+  other: "A session on the programme that has not been filed under a kind yet.",
+};
+
+/**
+ * The glyph each kind carries, so a chip is readable without its colour.
+ *
+ * Drawn from the icon set the Hub already has rather than five new paths.
+ * `client/src/lib/icons.tsx` is kept in step with the demo by hand, so every
+ * glyph added there is a second place to remember — and the existing set
+ * says these five perfectly well.
+ */
+export const KIND_ICONS: Record<SessionKind, string> = {
+  workshop: "workshop",
+  "scoring-session": "score",
+  "trend-governance": "proof",
+  "forecast-forums": "people",
+  research: "search",
+  other: "more",
+};
+
+/** The same, for a calendar entry. */
+export const EVENT_ICONS: Record<EventType, string> = {
+  leave: "leave",
+  "public-holiday": "public-holiday",
+  conference: "conference",
+  travel: "external",
+  marketing: "media",
+  "client-call": "chat",
+  reminder: "bell",
+  other: "more",
+};
 
 /** What the sign-up control should offer this person for this session. */
 export type SignUpState =
@@ -81,9 +131,12 @@ export function signUpState(
 export const EVENT_LABELS_SHORT: Record<EventType, string> = {
   leave: "Leave",
   "public-holiday": "Holiday",
-  workshop: "Workshop",
-  training: "Training",
   conference: "Show",
+  travel: "Travel",
+  marketing: "Marketing",
+  "client-call": "Client",
+  reminder: "Reminder",
+  other: "Other",
 };
 
 /** Work is done once it is with the subbing team. */

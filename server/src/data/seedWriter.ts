@@ -8,7 +8,7 @@ import { COLUMNS, STATUS_LABELS } from "./smartsheetSource.js";
  * somebody else's system, so it is the part most worth getting right and the
  * part hardest to sit in front of: seeing it at all needs a Smartsheet token
  * and a real sheet to point it at, which is a lot to ask of somebody fixing
- * the wording on a confirmation dialog. Without this, the write-back screens
+ * the wording on a confirmation dialogue. Without this, the write-back screens
  * are the only ones in the Hub nobody can look at locally.
  *
  * So this stands in for the sheet, in memory, and behaves the way the real

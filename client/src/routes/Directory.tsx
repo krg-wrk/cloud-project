@@ -32,7 +32,7 @@ import ExportButton from "../components/ExportButton";
  * - **A person is joined to their work.** The directory says who they are; the
  *   Hub knows what they are carrying and when it is due, so the card says both
  *   and the name goes to their page.
- * - **Denser.** The canvas gives a whole card to a name and a region. A team
+ * - **Denser.** The canvas gives a whole card to a name and a lens. A team
  *   of a hundred and fifty is a scrolling problem, so this is a row.
  */
 
@@ -42,7 +42,7 @@ const BADGE = {
 };
 
 /** The facet filters the page carries, as the query string spells them. */
-const FILTER_KEYS = ["team", "tag", "knowledge", "region", "role"] as const;
+const FILTER_KEYS = ["team", "department", "tag", "knowledge", "lens", "country", "role"] as const;
 
 /**
  * Which groups a person has folded away, kept per facet.
@@ -177,7 +177,7 @@ export default function Directory() {
           <input
             value={q}
             onChange={(e) => set("q", e.target.value)}
-            placeholder="A name, a category, a knowledge network, a region"
+            placeholder="A name, a category, a knowledge network, a regional lens"
             style={{ minWidth: 300 }}
           />
         </label>
@@ -232,8 +232,9 @@ export default function Directory() {
               { header: "Team", value: (p) => p.team },
               { header: "What they cover", value: (p) => p.tags.join("; ") },
               { header: "Knowledge networks", value: (p) => p.knowledge.join("; ") },
-              { header: "Region", value: (p) => p.region },
-              { header: "Country", value: (p) => p.country },
+              { header: "Department", value: (p) => p.department },
+              { header: "Regional lens", value: (p) => p.regionalLens },
+              { header: "Based in", value: (p) => p.country },
               { header: "Feed lead", value: (p) => (p.feedLead ? "Yes" : "No") },
               { header: "DEI board", value: (p) => (p.deiBoard ? "Yes" : "No") },
               // Away, never why: the reason is nobody else's business, and an
@@ -269,7 +270,7 @@ export default function Directory() {
             ? `Nobody matches “${q}”`
             : "Nobody is in every one of those at once"}
           . The directory covers names, teams, the categories people cover, knowledge
-          networks and regions.
+          networks, lenses and departments.
         </p>
       )}
 
@@ -369,7 +370,10 @@ function Row({
    * Whatever the grouping is already saying is left off the row: under
    * "Fashion Design" every row would otherwise repeat "Fashion Design".
    */
-  const place = [by === "region" ? null : person.region, person.country]
+  const place = [
+    by === "lens" ? null : person.regionalLens,
+    by === "country" ? null : person.country,
+  ]
     .filter(Boolean)
     .join(" · ");
 

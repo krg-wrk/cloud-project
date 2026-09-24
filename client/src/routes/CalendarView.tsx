@@ -25,6 +25,8 @@ import {
 import {
   EVENT_LABELS,
   EVENT_LABELS_SHORT,
+  EVENT_ICONS,
+  KIND_ICONS,
   KIND_LABELS,
   eventCovers,
   eventWho,
@@ -288,7 +290,7 @@ function chipLabel(chip: Chip, people: Schedule["people"]): { kicker: string; ti
       return {
         kicker: chip.session.startTime ?? "",
         title: chip.session.title,
-        icon: chip.session.kind === "training" ? "training" : "workshop",
+        icon: KIND_ICONS[chip.session.kind] ?? "workshop",
         colour: `var(--kind-${chip.session.kind})`,
       };
     case "event":
@@ -297,7 +299,7 @@ function chipLabel(chip: Chip, people: Schedule["people"]): { kicker: string; ti
           ? personName(people, chip.event.personId).split(" ")[0]
           : EVENT_LABELS_SHORT[chip.event.type],
         title: chip.event.title,
-        icon: chip.event.type,
+        icon: EVENT_ICONS[chip.event.type] ?? "more",
         colour: `var(--event-${chip.event.type})`,
       };
     case "entry":
@@ -756,7 +758,13 @@ export default function CalendarView() {
             <span style={{ "--legend-color": "var(--mine)" } as CSSProperties}>
               <i /> Yours only
             </span>
-            {(["leave", "public-holiday", "conference"] as (keyof typeof EVENT_LABELS)[]).map((type) => (
+            {/*
+              Every kind rather than three. The three were the whole diary
+              once; now that the activity sheets are bucketed properly there
+              are eight, and a legend that named a third of them would be
+              worse than no legend.
+            */}
+            {(Object.keys(EVENT_LABELS) as (keyof typeof EVENT_LABELS)[]).map((type) => (
               <span key={type} style={{ "--legend-color": `var(--event-${type})` } as CSSProperties}>
                 <i /> {EVENT_LABELS[type]}
               </span>
@@ -810,7 +818,7 @@ function SpanBar({
       ? personName(people, bar.item.event.personId).split(" ")[0]
       : null;
   const title = bar.item.kind === "event" ? bar.item.event.title : bar.item.entry.title;
-  const icon = bar.item.kind === "event" ? bar.item.event.type : "note";
+  const icon = bar.item.kind === "event" ? (EVENT_ICONS[bar.item.event.type] ?? "more") : "note";
   const dates = `${formatMedium(span.from)} to ${formatMedium(span.to)}`;
 
   const body = (

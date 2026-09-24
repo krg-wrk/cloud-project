@@ -346,7 +346,11 @@ interface SmartsheetSheet {
  * person is "Ellie Bull" in one sheet and "Ellie  Bull" in another, and an
  * id built from either has to be the same id.
  */
-type FlatRow = Record<string, string> & { _people?: Record<string, string[]> };
+type FlatRow = Record<string, string> & {
+  _people?: Record<string, string[]>;
+  /** Multi-picklist cells as their own values, rather than a joined string. */
+  _list?: Record<string, string[]>;
+};
 
 export interface SmartsheetConfig {
   token: string;
@@ -765,6 +769,12 @@ export class SmartsheetSource implements DataSource {
 
         const who = peopleIn(cell);
         if (who.length) (flat._people ??= {})[title] = who;
+        // A multi-picklist as its own values, so nothing downstream has to
+        // split a string that may legitimately contain a comma.
+        if (cell.objectValue?.objectType === "MULTI_PICKLIST") {
+          const picked = valuesIn(cell);
+          if (picked.length) (flat._list ??= {})[title] = picked;
+        }
       }
       return flat;
     });
@@ -969,7 +979,7 @@ export class SmartsheetSource implements DataSource {
          */
         personId: whoIn(row, c.person)[0] ? personId(whoIn(row, c.person)[0]) : undefined,
         personIds: whoIn(row, c.person).map(personId),
-        countries: listCell(row[c.country]),
+        countries: row._list?.[c.country] ?? listCell(row[c.country]),
         region: regionFor(row[c.country]) ?? regionFor(row[c.region]) ?? row[c.region] ?? undefined,
         startDate: isoDate(row[c.startDate]),
         endDate: isoDate(row[c.endDate] || row[c.startDate]),
@@ -1000,8 +1010,8 @@ export class SmartsheetSource implements DataSource {
           hostExternal: namedHost(row[c.guest]) ? row[c.guest] : undefined,
           attendeeIds: whoIn(row, c.attendees).map(personId),
           department: row[c.department] || undefined,
-          departments: listCell(row[c.department]),
-          countries: listCell(row[c.location]),
+          departments: row._list?.[c.department] ?? listCell(row[c.department]),
+          countries: row._list?.[c.location] ?? listCell(row[c.location]),
           // A session with no end runs for the day it starts, which is what a
           // blank End cell means on a workshop sheet rather than a gap.
           startDate: isoDate(row[c.startDate]),
@@ -1227,13 +1237,31 @@ function isYes(value: string | undefined): boolean {
   return /^(true|yes|y|1)$/i.test((value ?? "").trim());
 }
 
-function normaliseSessionKind(value: string | undefined): SessionKind {
-  const v = (value ?? "").toLowerCase();
-  if (v.includes("masterclass")) return "masterclass";
-  if (v.includes("lunch")) return "lunch-and-learn";
-  if (v.includes("critique") || v.includes("review")) return "critique";
-  if (v.includes("training") || v.includes("course")) return "training";
-  return "workshop";
+/**
+ * What the workshop sheet's Type dropdown says, as the Hub's own kinds.
+ *
+ * A table for the same reason the calendar's is, and one the team has already
+ * said it will add to. The five before these were Masterclass, Lunch and
+ * learn, Critique, Training and Workshop, and the sheet has never held any of
+ * them — so every one of the fifty-seven rows read as "Workshop" and four of
+ * the five colours an admin could set coloured nothing at all.
+ *
+ * A value not listed becomes `other` rather than `workshop`. That is the
+ * whole difference: a new dropdown value shows up on the calendar as
+ * something nobody has bucketed yet, which is a thing somebody notices and
+ * fixes in one line, rather than quietly joining the largest group.
+ */
+export const SESSION_KINDS: Record<string, SessionKind> = {
+  workshop: "workshop",
+  "scoring session": "scoring-session",
+  "trend governance": "trend-governance",
+  "forecast forums": "forecast-forums",
+  "forecast forum": "forecast-forums",
+  research: "research",
+};
+
+export function normaliseSessionKind(value: string | undefined): SessionKind {
+  return SESSION_KINDS[(value ?? "").trim().toLowerCase()] ?? "other";
 }
 
 /**
@@ -1320,6 +1348,28 @@ function whoIn(row: FlatRow, column: string): string[] {
   const structured = row._people?.[column];
   if (structured?.length) return structured;
   return (row[column] || "").split(/\s*,\s*/).filter(Boolean);
+}
+
+/**
+ * A multi-picklist cell as the several values it actually holds.
+ *
+ * The same argument `peopleIn` makes, for the same reason. Asked plainly, a
+ * multi-picklist arrives as its values joined with commas, and splitting that
+ * back apart is a guess that the directory already disproves: one of its
+ * coverage tags is "Decor / DIY & Hardware, to include lighting", which
+ * splitting turns into two things nobody covers. At level 2 the API says
+ * which values are in the cell, so nothing has to be guessed.
+ *
+ * Empty when the cell is not a picklist, which leaves the caller to read the
+ * text — a Google Sheet has no structure to offer and never will.
+ */
+export function valuesIn(cell: SmartsheetCell): string[] {
+  const values = cell.objectValue?.values;
+  if (!Array.isArray(values)) return [];
+  return values
+    .map((v) => (typeof v === "string" ? v : ((v as { value?: string }).value ?? "")))
+    .map((v) => String(v).trim())
+    .filter(Boolean);
 }
 
 export function peopleIn(cell: SmartsheetCell): string[] {
@@ -1458,11 +1508,62 @@ function normaliseStatus(value: string | undefined): Status {
   return "not-started";
 }
 
-function normaliseEventType(value: string | undefined): EventType {
-  const v = (value ?? "").toLowerCase();
-  if (v.includes("holiday") || v.includes("bank")) return "public-holiday";
-  if (v.includes("workshop")) return "workshop";
-  if (v.includes("training") || v.includes("course")) return "training";
-  if (v.includes("conference") || v.includes("show") || v.includes("week")) return "conference";
-  return "leave";
+/**
+ * Which bucket each of the calendar sheets' dropdown values falls in.
+ *
+ * Held as a table rather than a chain of `includes` tests, because this is
+ * the team's own vocabulary and it changes: a new value in a Smartsheet
+ * dropdown should be a line here, read by somebody who has never seen the
+ * function, rather than a guess about which substring test it will fall
+ * through. The chain it replaces sent eleven distinct activity types —
+ * Marketing, Data Brief, Client Call, Retail Shoot and the rest — to "leave",
+ * so the calendar told people their colleagues were off when they were
+ * working.
+ *
+ * Matched whole and case-insensitively, not by substring. "Sick Leave" and
+ * "Annual Leave" are both leave because both are listed, not because they
+ * both contain the word.
+ *
+ * Anything not listed is `other`, which is the honest answer and a visible
+ * one: it gets its own colour, so a value nobody has bucketed shows up on
+ * the calendar as unbucketed rather than disguised as something else.
+ */
+export const EVENT_TYPES: Record<string, EventType> = {
+  // The two sheets that are wholly one thing.
+  "public holiday": "public-holiday",
+  "bank holiday": "public-holiday",
+  "trade show": "conference",
+
+  "annual leave": "leave",
+  "sick leave": "leave",
+  "sick day": "leave",
+  "lieu day": "leave",
+
+  travel: "travel",
+
+  video: "marketing",
+  podcast: "marketing",
+  "video/podcast": "marketing",
+  marketing: "marketing",
+  webinar: "marketing",
+  presentation: "marketing",
+
+  /*
+   * Mindset is listed under both Client Call and Reminder in the team's own
+   * table. It sits here with Analyst, which is the reading that groups two
+   * client-facing things rather than putting it among the briefs. One line
+   * to move if that is the wrong way round.
+   */
+  mindset: "client-call",
+  analyst: "client-call",
+  "client call": "client-call",
+
+  "freelance brief": "reminder",
+  "data brief": "reminder",
+  "retail shoot": "reminder",
+  reminder: "reminder",
+};
+
+export function normaliseEventType(value: string | undefined): EventType {
+  return EVENT_TYPES[(value ?? "").trim().toLowerCase()] ?? "other";
 }

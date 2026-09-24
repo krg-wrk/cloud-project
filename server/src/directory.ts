@@ -49,6 +49,12 @@ export function multi(value: unknown): string[] {
     .filter(Boolean);
 }
 
+/** A multi-value cell: its own values if the source gave them, else the text. */
+function listed(row: DirectoryRow, column: string): string[] {
+  const structured = (row as { _list?: Record<string, string[]> })._list?.[column];
+  return structured?.length ? structured : multi(row[column]);
+}
+
 const one = (value: unknown): string | undefined => {
   const text = String(value ?? "").trim();
   return text || undefined;
@@ -100,10 +106,16 @@ export const COLUMNS = {
   email: "Email",
   role: "Role",
   team: "Team",
+  department: "Department",
   tags: "Secondary Team Tags",
   knowledge: "Knowledge Network",
   feedLead: "Feed Lead",
-  region: "Regional Lens",
+  /**
+   * Regional Lens, not Region. It is the part of the world somebody knows
+   * rather than the one they live in — a forecaster in London can hold the
+   * APAC lens — so it is labelled as expertise and Country answers "where".
+   */
+  regionalLens: "Regional Lens",
   country: "Country",
   dei: "DEI Board",
   status: "Status",
@@ -159,9 +171,22 @@ export function readDirectory(rows: DirectoryRow[]): DirectoryPerson[] {
       email: one(row[COLUMNS.email])?.toLowerCase(),
       role: one(row[COLUMNS.role]),
       team: one(row[COLUMNS.team]),
-      tags: multi(row[COLUMNS.tags]),
-      knowledge: multi(row[COLUMNS.knowledge]),
-      region: one(row[COLUMNS.region]),
+      /*
+       * The cell's own values where the source can say them, and the text
+       * split otherwise.
+       *
+       * These are multi-picklists, and read as text they arrive joined with
+       * commas — "AI, UX/UI" as one tag rather than two, so a facet counted
+       * a coverage nobody has. Splitting the string back apart is the guess
+       * this directory itself disproves: one of its tags is "Decor / DIY &
+       * Hardware, to include lighting". So the structure is used where there
+       * is one, and a Google Sheet or a CSV, which has none to offer, still
+       * reads the way it always did.
+       */
+      tags: listed(row, COLUMNS.tags),
+      knowledge: listed(row, COLUMNS.knowledge),
+      department: one(row[COLUMNS.department]),
+      regionalLens: one(row[COLUMNS.regionalLens]),
       country: one(row[COLUMNS.country]),
       feedLead: ticked(row[COLUMNS.feedLead]),
       deiBoard: ticked(row[COLUMNS.dei]),
@@ -169,7 +194,7 @@ export function readDirectory(rows: DirectoryRow[]): DirectoryPerson[] {
       cm: one(row[COLUMNS.cm]),
       managerEmail: one(row[COLUMNS.managerEmail])?.toLowerCase(),
       availability: availabilityOf(one(row[COLUMNS.status])),
-      aliases: multi(row[COLUMNS.aliases]),
+      aliases: listed(row, COLUMNS.aliases),
     });
   }
 
@@ -181,7 +206,21 @@ export const FACETS = {
   team: { label: "Team", of: (p: DirectoryPerson) => (p.team ? [p.team] : []) },
   tag: { label: "What they cover", of: (p: DirectoryPerson) => p.tags },
   knowledge: { label: "Knowledge network", of: (p: DirectoryPerson) => p.knowledge },
-  region: { label: "Region", of: (p: DirectoryPerson) => (p.region ? [p.region] : []) },
+  /*
+   * Two separate questions, and they were one. "Region" was showing the
+   * Regional Lens column under a heading that reads as where somebody sits,
+   * so a forecaster in London holding the APAC lens looked like a forecaster
+   * in Singapore. Asked apart, both answer something.
+   */
+  lens: {
+    label: "Regional lens",
+    of: (p: DirectoryPerson) => (p.regionalLens ? [p.regionalLens] : []),
+  },
+  country: { label: "Where they are", of: (p: DirectoryPerson) => (p.country ? [p.country] : []) },
+  department: {
+    label: "Department",
+    of: (p: DirectoryPerson) => (p.department ? [p.department] : []),
+  },
   role: { label: "Role", of: (p: DirectoryPerson) => (p.role ? [p.role] : []) },
 } as const;
 
@@ -243,7 +282,8 @@ export function matches(person: DirectoryPerson, query: string): boolean {
     person.email,
     person.role,
     person.team,
-    person.region,
+    person.department,
+    person.regionalLens,
     person.country,
     person.cm,
     ...person.tags,

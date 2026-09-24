@@ -35,7 +35,7 @@ const OWNERSHIP: { id: string; label: string; colour: string; what: string }[] =
   {
     id: "byline-contributions",
     label: "Byline",
-    colour: "var(--event-workshop)",
+    colour: "var(--kind-workshop)",
     what: "You are credited on the byline but do not own it. Not a KPI on its own.",
   },
   {
@@ -132,8 +132,8 @@ export function TierRing({ results }: { results: MetricResult[] }) {
     () =>
       [
         { id: "tier-1", label: "Tier 1 — Decide", colour: "var(--accent)" },
-        { id: "tier-2", label: "Tier 2 — Understand", colour: "var(--kind-lunch-and-learn)" },
-        { id: "tier-3", label: "Tier 3 — Track", colour: "var(--event-workshop)" },
+        { id: "tier-2", label: "Tier 2 — Understand", colour: "var(--kind-forecast-forums)" },
+        { id: "tier-3", label: "Tier 3 — Track", colour: "var(--kind-workshop)" },
       ].map((t) => ({ ...t, value: valueOf(results, t.id) })),
     [results],
   );

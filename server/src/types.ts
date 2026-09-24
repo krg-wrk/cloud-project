@@ -129,12 +129,27 @@ export interface ContentItem {
 
 export type Ownership = "sole" | "co-owned" | "byline" | "freelance";
 
+/**
+ * What a calendar entry is, in the team's own words.
+ *
+ * The buckets the team keeps its dropdowns in — see `EVENT_TYPES` for which
+ * sheet value lands in which. `workshop` and `training` used to be here and
+ * are gone: the workshop programme is its own sheet with its own vocabulary,
+ * and no calendar row ever produced either.
+ *
+ * `other` is deliberate and visible. A dropdown value nobody has bucketed
+ * gets its own colour rather than being folded into leave, which is what was
+ * happening to eleven of them.
+ */
 export type EventType =
   | "leave"
   | "public-holiday"
-  | "workshop"
-  | "training"
-  | "conference";
+  | "conference"
+  | "travel"
+  | "marketing"
+  | "client-call"
+  | "reminder"
+  | "other";
 
 export interface CalendarEvent {
   id: string;
@@ -329,12 +344,21 @@ export interface MetricObservation {
   value: number;
 }
 
+/**
+ * What kind of session the workshop programme is running.
+ *
+ * The team's own dropdown, and one it has said it will add to — so a value
+ * the Hub has not met becomes `other` rather than the largest group, and
+ * shows up as unbucketed on somebody's calendar instead of disguised.
+ * See `SESSION_KINDS` for the mapping.
+ */
 export type SessionKind =
   | "workshop"
-  | "masterclass"
-  | "lunch-and-learn"
-  | "critique"
-  | "training";
+  | "scoring-session"
+  | "trend-governance"
+  | "forecast-forums"
+  | "research"
+  | "other";
 
 /**
  * A workshop or knowledge-sharing session. Separate from CalendarEvent
@@ -486,11 +510,19 @@ export interface DirectoryPerson {
   role?: string;
   /** The industry team: Fashion Design, Interiors, Beauty, Insight… */
   team?: string;
+  /** The department the directory files them under. */
+  department?: string;
   /** The categories they cover — the sheet's Secondary Team Tags. */
   tags: string[];
   /** The knowledge networks they sit on — Signals, Macro, Sustainability… */
   knowledge: string[];
-  region?: string;
+  /**
+   * The part of the world somebody knows, which is not where they live.
+   * A forecaster in London can hold the APAC lens, so this and `country`
+   * are asked separately and labelled apart.
+   */
+  regionalLens?: string;
+  /** Where they are based. */
   country?: string;
   /** Whether they run their team's feed. */
   feedLead: boolean;

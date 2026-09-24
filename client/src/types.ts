@@ -12,12 +12,22 @@ export type Status =
   | "published"
   | "at-risk";
 
+/**
+ * What a calendar entry is, in the team's own words.
+ *
+ * The buckets the team keeps its dropdowns in. `workshop` and `training` used
+ * to be here and are gone: the workshop programme is its own sheet with its
+ * own vocabulary, and no calendar row ever produced either.
+ */
 export type EventType =
   | "leave"
   | "public-holiday"
-  | "workshop"
-  | "training"
-  | "conference";
+  | "conference"
+  | "travel"
+  | "marketing"
+  | "client-call"
+  | "reminder"
+  | "other";
 
 export interface Person {
   id: string;
@@ -97,12 +107,21 @@ export interface CalendarEvent {
   notes?: string;
 }
 
+/**
+ * What kind of session the workshop programme is running.
+ *
+ * The team's own dropdown, and one it has said it will add to — so a value
+ * the Hub has not met becomes `other` rather than the largest group, and
+ * shows up as unbucketed on somebody's calendar instead of disguised.
+ * See `SESSION_KINDS` for the mapping.
+ */
 export type SessionKind =
   | "workshop"
-  | "masterclass"
-  | "lunch-and-learn"
-  | "critique"
-  | "training";
+  | "scoring-session"
+  | "trend-governance"
+  | "forecast-forums"
+  | "research"
+  | "other";
 
 export interface KnowledgeSession {
   id: string;
@@ -564,9 +583,18 @@ export interface DirectoryPerson {
   email?: string;
   role?: string;
   team?: string;
+  /** The department the directory files them under. */
+  department?: string;
   tags: string[];
   knowledge: string[];
-  region?: string;
+  /**
+   * The part of the world somebody knows, which is not where they live — a
+   * forecaster in London can hold the APAC lens. Asked separately from
+   * `country` and labelled apart, because one heading answering both read as
+   * where somebody sits.
+   */
+  regionalLens?: string;
+  /** Where they are based. */
   country?: string;
   feedLead: boolean;
   deiBoard: boolean;

@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import type { EventType, Status } from "../types";
-import { EVENT_LABELS, STATUS_LABELS, initials, personHue } from "../lib/domain";
+import { EVENT_ICONS, EVENT_LABELS, STATUS_LABELS, initials, personHue } from "../lib/domain";
 import { Icon } from "../lib/icons";
 import { usePhoto } from "../lib/viewer";
 
@@ -21,7 +21,7 @@ export function StatusPill({ status }: { status: Status }) {
 export function EventPill({ type }: { type: EventType }) {
   return (
     <span className="pill" style={{ "--pill-color": `var(--event-${type})` } as CSSProperties}>
-      <Icon name={type} size={13} />
+      <Icon name={EVENT_ICONS[type] ?? "more"} size={13} />
       {EVENT_LABELS[type]}
     </span>
   );

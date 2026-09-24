@@ -586,7 +586,7 @@ export const sessions: KnowledgeSession[] = [
   {
     id: "ws-202",
     title: "House Style Refresher",
-    kind: "training",
+    kind: "research",
     hostId: "gk",
     startDate: "2026-09-24",
     endDate: "2026-09-24",
@@ -603,7 +603,7 @@ export const sessions: KnowledgeSession[] = [
   {
     id: "ws-203",
     title: "Lunch & Learn: Reading Retail Data Without Getting Fooled",
-    kind: "lunch-and-learn",
+    kind: "forecast-forums",
     hostId: "da",
     startDate: "2026-09-30",
     endDate: "2026-09-30",
@@ -638,7 +638,7 @@ export const sessions: KnowledgeSession[] = [
   {
     id: "ws-205",
     title: "Catwalk Critique: Paris Debrief",
-    kind: "critique",
+    kind: "scoring-session",
     hostId: "ao",
     startDate: "2026-10-12",
     endDate: "2026-10-12",
@@ -655,7 +655,7 @@ export const sessions: KnowledgeSession[] = [
   {
     id: "ws-206",
     title: "Masterclass: Coloro and How Colour Systems Actually Work",
-    kind: "masterclass",
+    kind: "trend-governance",
     hostExternal: "Guest speaker, Coloro",
     startDate: "2026-10-15",
     endDate: "2026-10-15",
@@ -672,7 +672,7 @@ export const sessions: KnowledgeSession[] = [
   {
     id: "ws-207",
     title: "Data Storytelling for Forecasters",
-    kind: "training",
+    kind: "research",
     hostId: "da",
     startDate: "2026-10-29",
     endDate: "2026-10-29",
@@ -706,7 +706,7 @@ export const sessions: KnowledgeSession[] = [
   {
     id: "ws-209",
     title: "Lunch & Learn: Inside a Consumer Attitudes Survey",
-    kind: "lunch-and-learn",
+    kind: "forecast-forums",
     hostId: "mc",
     startDate: "2026-11-19",
     endDate: "2026-11-19",
@@ -723,7 +723,7 @@ export const sessions: KnowledgeSession[] = [
   {
     id: "ws-210",
     title: "Masterclass: Trend Curve Methodology",
-    kind: "masterclass",
+    kind: "trend-governance",
     hostId: "jw",
     startDate: "2026-11-26",
     endDate: "2026-11-26",
@@ -758,7 +758,7 @@ export const sessions: KnowledgeSession[] = [
   {
     id: "ws-101",
     title: "Writing Punchier Headlines",
-    kind: "training",
+    kind: "research",
     hostId: "gk",
     startDate: "2026-08-20",
     endDate: "2026-08-20",
@@ -776,7 +776,7 @@ export const sessions: KnowledgeSession[] = [
   {
     id: "ws-102",
     title: "Masterclass: Forecasting for Beauty",
-    kind: "masterclass",
+    kind: "trend-governance",
     hostId: "rc",
     startDate: "2026-08-27",
     endDate: "2026-08-27",
@@ -794,7 +794,7 @@ export const sessions: KnowledgeSession[] = [
   {
     id: "ws-103",
     title: "Lunch & Learn: Inside the Photography Desk",
-    kind: "lunch-and-learn",
+    kind: "forecast-forums",
     hostId: "er",
     startDate: "2026-09-03",
     endDate: "2026-09-03",

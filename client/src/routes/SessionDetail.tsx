@@ -2,7 +2,7 @@ import { useEffect, useState, type CSSProperties } from "react";
 import { Link, useParams } from "react-router-dom";
 import { query, send, useApi } from "../lib/api";
 import { dayRange, monthKey, relativeDays } from "../lib/date";
-import { KIND_LABELS, personName, signUpState } from "../lib/domain";
+import { KIND_BLURBS, KIND_LABELS, personName, signUpState } from "../lib/domain";
 import { useViewer } from "../lib/viewer";
 import type { Person, SessionWithSignUps } from "../types";
 import { Avatar, ErrorNote, Loading, Who } from "../components/bits";
@@ -284,15 +284,7 @@ export default function SessionDetail() {
               {KIND_LABELS[session.kind]}
             </div>
             <div style={{ fontSize: 12.5, color: "var(--ink-70)" }}>
-              {session.kind === "lunch-and-learn"
-                ? "Short, informal, over lunch. No preparation expected."
-                : session.kind === "masterclass"
-                  ? "A deep session on one subject, usually with a specialist host."
-                  : session.kind === "critique"
-                    ? "We read each other's work and say what isn't landing."
-                    : session.kind === "training"
-                      ? "Practical skills session — bring your own work to it."
-                      : "Working session with an output the whole team uses."}
+              {KIND_BLURBS[session.kind] ?? KIND_BLURBS.other}
             </div>
           </div>
         </aside>

@@ -75,15 +75,21 @@
 
   --event-leave: #7cb342;
   --event-public-holiday: #009688;
-  --event-workshop: #9f6aaf;
-  --event-training: #b49ddb;
   --event-conference: #9c6b16;
+  --event-travel: #049be5;
+  --event-marketing: #d91a60;
+  --event-client-call: #8e24aa;
+  --event-reminder: #a68550;
+  /* Nothing has bucketed this one yet, so it is grey rather than a colour
+     that would imply somebody had decided. */
+  --event-other: #6e7e8b;
 
   --kind-workshop: #9f6aaf;
-  --kind-masterclass: #7a86cb;
-  --kind-lunch-and-learn: #7a86cb;
-  --kind-critique: #7a86cb;
-  --kind-training: #7a86cb;
+  --kind-scoring-session: #7a86cb;
+  --kind-trend-governance: #3f52b5;
+  --kind-forecast-forums: #308d9a;
+  --kind-research: #508a4d;
+  --kind-other: #6e7e8b;
 
   /* Things only the signed-in person sees — kept clear of every shared hue. */
   --mine: #8b8b91;
@@ -145,9 +151,9 @@
   --wash-dusk: 134 152 223;      /* --accent            #4c5578 */
   --wash-magenta: 223 134 195;   /* --mine, the Pulse hue  #8e3b74 */
   --wash-green: 134 223 179;     /* --status-published  #256b48 */
-  --wash-rose: 223 134 166;      /* --kind-masterclass  #a33a60 */
-  --wash-amber: 223 190 134;     /* --event-workshop    #9c6b16 */
-  --wash-teal: 134 223 219;      /* --kind-lunch-and-learn #17706c */
+  --wash-rose: 223 134 166;      /* --kind-trend-governance */
+  --wash-amber: 223 190 134;     /* --event-conference  #9c6b16 */
+  --wash-teal: 134 223 219;      /* --kind-forecast-forums */
   /*
    * How strong the field is. One number, because every alpha below is a
    * multiple of it — so the whole effect turns up or down from here without
@@ -422,15 +428,15 @@ button {
 }
 
 .nav-group.hue-teal {
-  --group-ink: var(--kind-lunch-and-learn);
+  --group-ink: var(--kind-forecast-forums);
 }
 
 .nav-group.hue-rose {
-  --group-ink: var(--kind-masterclass);
+  --group-ink: var(--kind-trend-governance);
 }
 
 .nav-group.hue-amber {
-  --group-ink: var(--event-workshop);
+  --group-ink: var(--kind-workshop);
 }
 
 /* A fade rather than a switch: the colour arriving is the point, and an

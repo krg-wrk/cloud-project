@@ -110,8 +110,23 @@ test("a gap in the sheet is visible rather than swallowed", () => {
 });
 
 test("the biggest group is first, because that is usually the question", () => {
-  const groups = groupBy(people, "region");
+  const groups = groupBy(people, "lens");
   assert.equal(groups[0].name, "EMEA");
+});
+
+/**
+ * Where somebody is, and what they know about, are two questions.
+ *
+ * They were one facet called "Region" showing the Regional Lens column, so a
+ * forecaster in London holding the APAC lens read as a forecaster in
+ * Singapore. Asked apart, both answer something.
+ */
+test("the regional lens and where somebody is based are separate facets", () => {
+  const byLens = groupBy(people, "lens").map((g) => g.name);
+  const byCountry = groupBy(people, "country").map((g) => g.name);
+  assert.ok(byLens.length > 0, "a lens groups people");
+  assert.ok(byCountry.length > 0, "and so does where they are");
+  assert.notDeepEqual(byLens, byCountry, "and they are not the same question");
 });
 
 test("search reaches every column a person is described by", () => {
@@ -145,7 +160,7 @@ test("the counts count what the page says they count", () => {
  */
 
 test("a dropdown offers the values that feature, commonest first", () => {
-  const values = facetValues(people, "region");
+  const values = facetValues(people, "lens");
   assert.deepEqual(
     values.map((v) => v.value),
     ["EMEA", "APAC", "NAM"],
