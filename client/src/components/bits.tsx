@@ -21,7 +21,7 @@ export function StatusPill({ status }: { status: Status }) {
 export function EventPill({ type }: { type: EventType }) {
   return (
     <span className="pill" style={{ "--pill-color": `var(--event-${type})` } as CSSProperties}>
-      <Icon name={EVENT_ICONS[type] ?? "more"} size={13} />
+      <Icon name={EVENT_ICONS[type] ?? "note"} size={13} />
       {EVENT_LABELS[type]}
     </span>
   );

@@ -1,0 +1,68 @@
+# Postgres, on this machine, for the tables the Hub owns itself.
+#
+# This adds no capability to the Hub. `server/src/db.ts` has opened either
+# SQLite or Postgres behind one `Db` interface since the store was written,
+# every query is ordinary SQL with `?` placeholders, and `HUB_DB_URL` is the
+# switch. What was missing was somewhere for that variable to point on a
+# laptop, and this is that — not a migration, and not a decision about where
+# the schedule comes from.
+#
+#     docker compose up -d
+#     npm run doctor            # says whether it answers, not just that it is set
+#
+# Postgres only, and the Hub deliberately not a service here, even though the
+# `Dockerfile` beside this would build one. The thing worth proving first is
+# that the store behaves the same on Postgres, and that is proved by running
+# `npm run dev` exactly as before against a database that is no longer a file.
+# Putting the Hub in a container too moves the rebuild loop inside Docker and
+# makes finding that out slower.
+#
+# Nothing here is a credential worth protecting. The port is bound to
+# localhost and the password is written down four lines below, on purpose:
+# a strong-looking invented one is the kind that gets reused somewhere it
+# matters because it looked like it had been chosen carefully.
+
+services:
+  db:
+    # Pinned, and worth keeping in step with wherever this eventually runs —
+    # a managed Postgres decides its own major version, and finding out that
+    # it is two behind the laptop is a thing to find out now rather than
+    # during a restore.
+    image: postgres:17
+    container_name: forecasters-hub-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: hub
+      POSTGRES_PASSWORD: hub-local-only
+      POSTGRES_DB: hub
+      # C collation, which is byte order — the same thing SQLite's default
+      # BINARY collation does. A database initialised with en_GB.UTF-8 sorts
+      # text by dictionary rules instead, so the same `ORDER BY` returns a
+      # different order on the two engines and the parity this whole exercise
+      # is meant to establish quietly stops holding.
+      POSTGRES_INITDB_ARGS: "--locale=C --encoding=UTF8"
+    ports:
+      # 5433 on this machine, not 5432. A Postgres installed with Homebrew
+      # already holds 5432, and the failure when both are running is not a
+      # refused connection anyone would notice — it is a successful one, to
+      # the wrong database, reporting that none of the Hub's tables exist.
+      - "127.0.0.1:5433:5432"
+    volumes:
+      # A named volume rather than a bind mount into the repository. The data
+      # directory is Postgres's own business, it is thousands of files, and
+      # under the repository it is somewhere a careless `git clean -fdx` can
+      # reach.
+      - hub-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # `pg_isready` rather than a port check, because Postgres accepts TCP
+      # connections for several seconds before it will answer a query, and
+      # starting the Hub inside that window fails in a way that reads as a
+      # bad password.
+      test: ["CMD-SHELL", "pg_isready -U hub -d hub"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  hub-pgdata:

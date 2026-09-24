@@ -568,4 +568,28 @@ export interface DataSource {
    * source has nothing to do.
    */
   forget?(key: "content" | "events" | "people" | "trends"): void;
+  /**
+   * Turn writing on at boot, and say what it will write to.
+   *
+   * Here as a capability rather than left to a type test at the call site,
+   * which is what this replaced. `index.ts` asked `source instanceof
+   * SmartsheetSource`, and that is true of exactly one class — so the moment
+   * a source is wrapped in another, as the mirror wraps it, writing was
+   * switched off at boot with nothing said and the Change button simply
+   * stopped being there.
+   *
+   * Called once, at startup rather than lazily, so a write flag set against a
+   * sheet the token cannot see fails with a message instead of failing the
+   * first time a manager presses Apply.
+   */
+  enableWrites?(): Promise<string>;
+  /**
+   * Read everything again, now, and say what came back.
+   *
+   * Only a source that keeps a copy has anything to do here — a source that
+   * reads live is always as fresh as its last request. Present as a
+   * capability so the freshness page can offer the button exactly when there
+   * is something behind it, rather than testing for a class.
+   */
+  refresh?(): Promise<{ kind: string; rows: number; ok: boolean; why?: string }[]>;
 }

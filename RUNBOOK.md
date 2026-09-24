@@ -138,6 +138,124 @@ the sample data with `SEED_WRITES=1`.
 
 ---
 
+## Once, to move the Hub&rsquo;s own tables to Postgres
+
+This is about the Hub&rsquo;s own tables &mdash; notes, sign-ups, saved views, studio
+connections, the log of every write attempted. It is **not** about where the
+schedule comes from: that is `DATA_SOURCE`, it stays `smartsheet`, and nothing
+in this section changes what the commissioning managers or the subbing teams
+see. Smartsheet remains the system of record throughout.
+
+Nothing needs building. `server/src/db.ts` has opened either engine behind one
+interface since the store was written, every query is plain SQL with `?`
+placeholders, and `HUB_DB_URL` is the switch. What follows is pointing it.
+
+**1. Start the database.**
+
+```bash
+docker compose up -d
+```
+
+Postgres 17, on port **5433** of this machine rather than 5432 &mdash; a Homebrew
+Postgres already holds 5432, and the failure when both run is not a refused
+connection. It is a successful one, to the wrong database, reporting that none
+of the Hub&rsquo;s tables exist.
+
+**2. Point the Hub at it.** One line in `.env`:
+
+```
+HUB_DB_URL=postgres://hub:hub-local-only@localhost:5433/hub
+```
+
+The password is in `docker-compose.yml` and is not a secret. The port is bound
+to localhost, so nothing outside this machine can reach it.
+
+**3. Check it answers.**
+
+```bash
+npm run doctor
+```
+
+The Database line now connects rather than repeating the address back at you.
+Before the first boot it says the database is empty, which is correct &mdash; the
+schema is created by `CREATE TABLE IF NOT EXISTS` on startup and there is no
+migration step. After a boot it says how many tables it found.
+
+**4. Run it.**
+
+```bash
+npm run dev
+```
+
+The startup banner names Postgres. Make a note on a row, sign up for a
+workshop, save a view &mdash; then stop the server and look:
+
+```bash
+docker compose exec db psql -U hub -d hub -c '\dt'
+```
+
+**What you have not brought with you.** A fresh Postgres is empty. The notes,
+sign-ups and studio views in `data/hub.db` stay in `data/hub.db`; switching
+`HUB_DB_URL` does not copy them and switching it back finds them all still
+there. That is the safe way round, and it is also the thing to be deliberate
+about before this becomes the real database rather than a trial of one.
+
+**To go back**, comment the line out. The SQLite file was never touched.
+
+**To start over**, `docker compose down -v` &mdash; the `-v` removes the volume and
+therefore everything in it.
+
+---
+
+## Once more, to read the schedule from a local copy
+
+Separate from the section above and worth doing after it, not instead of it.
+That one moved the Hub&rsquo;s own tables; this one changes where the Hub *reads the
+schedule from* &mdash; and it changes nothing at all about where the Hub writes.
+
+```
+DATA_SOURCE=mirror
+MIRROR_SYNC_MINUTES=10
+```
+
+Everything else stays as it was: the same token, the same sheet ids, the same
+`SMARTSHEET_WRITE`. The mirror is a Smartsheet source with a copy in front of
+it, so it takes all the same settings.
+
+**What changes.** The Hub pulls all ten sheets into `mirror_rows` at boot and
+every ten minutes after, and serves pages from that. Reads stop costing a round
+trip to Smartsheet, so a page that needs the schedule, the team and the
+calendar stops making three rate-limited requests to another company&rsquo;s API. If
+Smartsheet is down, the Hub keeps working on the copy it has.
+
+**What does not change.** Smartsheet is still the system of record. Every write
+still goes to the sheet through exactly the path it went through before &mdash; the
+subbing teams and everyone else in the sheets see a change the moment a manager
+applies it, the same as today. The mirror has no write path at all, by
+construction rather than by policy.
+
+**The one read that is never mirrored** is the check that guards a write. The
+preview asks Smartsheet directly, every time. Answering it from a copy would
+compare the sheet against a ten-minute-old picture of itself, which is a
+concurrency check that passes while somebody else&rsquo;s edit sits unread &mdash; and a
+concurrency check that always passes is not a concurrency check.
+
+**The cost, stated.** A page can be up to `MIRROR_SYNC_MINUTES` behind. Set it
+lower if that matters; the sheets are read once per pull whatever the number
+is. The freshness page (admin, or turned on for everybody) now shows two ages
+per read &mdash; the sixty-second request cache, and the age of the copy beneath it.
+Two numbers rather than one, because reporting only the first would answer
+&ldquo;how fresh is this&rdquo; with the smaller and more flattering of the two.
+
+**To try the shape of it without a token**, `MIRROR_UPSTREAM=seed` mirrors the
+sample schedule instead. Useful for seeing the boot banner, the freshness page
+and the write path behave before pointing it at anything real.
+
+**To go back**, put `DATA_SOURCE` to `smartsheet`. The mirror tables are left
+where they are and are ignored; nothing needs dropping.
+
+---
+
 ## Every time there are changes to pick up
 
 ```bash

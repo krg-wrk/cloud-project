@@ -1,4 +1,6 @@
+import type { Db } from "../db.js";
 import type { DataSource } from "../types.js";
+import { MirrorSource } from "./mirrorSource.js";
 import { SeedSource } from "./seedSource.js";
 import { SmartsheetSource } from "./smartsheetSource.js";
 
@@ -7,6 +9,10 @@ import { SmartsheetSource } from "./smartsheetSource.js";
  * data locally and against the live sheets in a deployed environment.
  *
  * DATA_SOURCE=seed        (default) built-in sample schedule, no credentials
+ * DATA_SOURCE=mirror      reads a local copy of the sheets, pulled on a timer.
+ *   Smartsheet stays the system of record and every write still goes there;
+ *   this only moves where reads are served from. Takes all the Smartsheet
+ *   settings below, plus MIRROR_SYNC_MINUTES. See mirrorSource.ts.
  * DATA_SOURCE=smartsheet  reads the commissioning sheets, requires:
  *   SMARTSHEET_TOKEN, SMARTSHEET_CONTENT_SHEET_ID,
  *   SMARTSHEET_EVENTS_SHEET_ID, SMARTSHEET_PEOPLE_SHEET_ID
@@ -46,9 +52,37 @@ export function sheetIds(raw: string | undefined): string[] {
   return [...new Set((raw ?? "").split(",").map((id) => id.trim()).filter(Boolean))];
 }
 
-export function createDataSource(): DataSource {
+/**
+ * `db` is needed only by `DATA_SOURCE=mirror`, which keeps its copy of the
+ * schedule in the same database as everything else the Hub owns. Optional so
+ * that the demo builder — which reads the seed or the sheets and has no
+ * database at all — can go on calling this with no arguments.
+ */
+export function createDataSource(db?: Db): DataSource {
   const kind = process.env.DATA_SOURCE ?? "seed";
 
+  /*
+   * The mirror is Smartsheet underneath, and says so.
+   *
+   * Written as a wrapper over whatever `DATA_SOURCE` would otherwise have
+   * built rather than as a tenth source of its own, because the thing being
+   * changed is where reads are served from — not where the data comes from.
+   * The upstream keeps its sheet ids, its token, its regional endpoint and,
+   * crucially, its writer.
+   */
+  if (kind === "mirror") {
+    if (!db) {
+      throw new Error("DATA_SOURCE=mirror needs a database — it keeps its copy of the schedule there");
+    }
+    const upstream = createUpstream(process.env.MIRROR_UPSTREAM ?? "smartsheet");
+    return new MirrorSource(upstream, db);
+  }
+
+  return createUpstream(kind);
+}
+
+/** Everything that is not the mirror, which is everything that reads a source. */
+function createUpstream(kind: string): DataSource {
   if (kind === "smartsheet") {
     const token = process.env.SMARTSHEET_TOKEN;
     const contentSheetIds = sheetIds(process.env.SMARTSHEET_CONTENT_SHEET_ID);
@@ -80,7 +114,7 @@ export function createDataSource(): DataSource {
   }
 
   if (kind !== "seed") {
-    throw new Error(`Unknown DATA_SOURCE "${kind}" (expected "seed" or "smartsheet")`);
+    throw new Error(`Unknown DATA_SOURCE "${kind}" (expected "seed", "smartsheet" or "mirror")`);
   }
   return new SeedSource();
 }
@@ -113,6 +147,26 @@ export class CachedDataSource implements DataSource {
   }
 
   /**
+   * Read everything again, and drop what was being held.
+   *
+   * The second half is the half that matters and is easy to leave out. A
+   * refresh that reloads the mirror but keeps this cache is a button that
+   * appears to do nothing for up to a minute: the copy underneath is new, the
+   * page asks this object, and this object confidently answers with what it
+   * was holding before. Cleared wholesale rather than key by key, because
+   * `forget` takes four of the ten keys and a refresh means all of them.
+   */
+  async refresh(): Promise<{ kind: string; rows: number; ok: boolean; why?: string }[]> {
+    const below = this.inner as DataSource & {
+      refresh?: () => Promise<{ kind: string; rows: number; ok: boolean; why?: string }[]>;
+    };
+    if (!below.refresh) return [];
+    const results = await below.refresh();
+    this.cache.clear();
+    return results;
+  }
+
+  /**
    * When each thing was last actually read from the source.
    *
    * The Hub caches, the sheets are edited by people, and the trend extract
@@ -120,14 +174,30 @@ export class CachedDataSource implements DataSource {
    * is a real question with no answer anywhere on screen. This is the answer
    * for the reads; the pages report the rest.
    */
-  freshness(): { key: string; readAt: string; ageMs: number; cacheMs: number }[] {
+  async freshness(): Promise<
+    { key: string; readAt: string; ageMs: number; cacheMs: number; label?: string }[]
+  > {
     const at = Date.now();
-    return [...this.cache.entries()].map(([key, hit]) => ({
+    const mine = [...this.cache.entries()].map(([key, hit]) => ({
       key,
       readAt: new Date(hit.at).toISOString(),
       ageMs: at - hit.at,
       cacheMs: this.ttlMs,
     }));
+    /*
+     * And whatever the source underneath knows, which for the mirror is when
+     * it last pulled each sheet. Two ages rather than one, on purpose: this
+     * cache is sixty seconds old and the copy behind it may be ten minutes
+     * old, and reporting only the first would answer "how fresh is this"
+     * with the smaller and more flattering of the two numbers.
+     *
+     * Asynchronous for the same reason — the mirror's answer is a query, not
+     * a map lookup.
+     */
+    const below = this.inner as DataSource & {
+      freshness?: () => Promise<{ key: string; readAt: string; ageMs: number; cacheMs: number; label?: string }[]>;
+    };
+    return [...mine, ...((await below.freshness?.()) ?? [])];
   }
 
   private async through<T>(key: string, load: () => Promise<T>): Promise<T> {

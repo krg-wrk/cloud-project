@@ -930,6 +930,13 @@ export interface FreshnessRead {
   cacheMs: number;
 }
 
+/** What a hand-run refresh found, per sheet it could not read. */
+export interface RefreshResult {
+  refreshed: number;
+  rows: number;
+  failed: { kind: string; why: string }[];
+}
+
 /** A file somebody generates, rather than something read live. */
 export interface FreshnessExtract {
   label: string;
@@ -941,6 +948,8 @@ export interface FreshnessExtract {
 export interface FreshnessReport {
   visibleToAll: boolean;
   canChangeVisibility: boolean;
+  /** Whether this Hub keeps a copy that can be read again on demand. */
+  canRefresh: boolean;
   source: string;
   reads: FreshnessRead[];
   extracts: FreshnessExtract[];

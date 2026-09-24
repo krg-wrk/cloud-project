@@ -86,19 +86,26 @@ export const KIND_ICONS: Record<SessionKind, string> = {
   "trend-governance": "proof",
   "forecast-forums": "people",
   research: "search",
-  other: "more",
+  other: "note",
 };
 
-/** The same, for a calendar entry. */
+/**
+ * The same, for a calendar entry.
+ *
+ * Chosen to be legible at twelve pixels, which `more` is not: it is three
+ * dots a hundredth of a pixel wide, so an activity chip appeared to carry no
+ * icon at all. `brief` is a clipboard, which is what the Reminder bucket
+ * actually holds — a data brief, a freelance brief, a retail shoot.
+ */
 export const EVENT_ICONS: Record<EventType, string> = {
   leave: "leave",
   "public-holiday": "public-holiday",
   conference: "conference",
-  travel: "external",
+  travel: "send",
   marketing: "media",
   "client-call": "chat",
-  reminder: "bell",
-  other: "more",
+  reminder: "brief",
+  other: "note",
 };
 
 /** What the sign-up control should offer this person for this session. */

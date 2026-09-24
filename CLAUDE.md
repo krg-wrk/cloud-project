@@ -49,6 +49,12 @@ component → client/src/lib/api.ts → vite proxy → viewerMiddleware
           → DataSource (sheets, read) or HubStore/StudioStore (own tables)
 ```
 
+`DataSource` has three implementations and they are chosen by `DATA_SOURCE`:
+`seed`, `smartsheet`, and `mirror` — which is `smartsheet` with a local copy in
+front of its reads. The mirror never writes: it hands back the upstream's own
+`ContentWriter` with `current` untouched, so the preview that guards a write
+still asks Smartsheet. Smartsheet stays the system of record in all three.
+
 - **Every server module exports `createXRouter(...deps)`**, never a singleton.
   A new area is a new file exporting one, added to the single `app.use("/api",
   …)` list in `server/src/index.ts`.
@@ -219,9 +225,16 @@ These are silent. Each has bitten somebody.
 - **Two caches, and a write must clear both**: `CachedDataSource` (60s, keyed by
   table name) and `DatasetReader` (per connection+ref). `forget()` on the first
   accepts only four of its ten keys — widen the type if you add a write.
-- **`index.ts` checks `instanceof SmartsheetSource` on the raw source**, before
-  it is wrapped in `CachedDataSource`. Downstream code gets the wrapper. Ask for
-  a capability rather than a concrete type.
+  Under `DATA_SOURCE=mirror` there is a third layer, and it is not a cache: the
+  mirror *is* the read. `MirrorSource.writes.apply` pulls `content` again
+  before it returns, so a write is visible on reload; a write added anywhere
+  else must do the same or the page shows the value it had before.
+- **Ask a source for a capability, never for its class.** `index.ts` used to
+  check `instanceof SmartsheetSource` to turn writing on, which is true of
+  exactly one class — so `DATA_SOURCE=mirror`, which wraps it, switched writing
+  off at boot and took the Change button away with nothing logged.
+  `enableWrites?()` is on the `DataSource` contract for that reason. The same
+  trap is still open anywhere else a concrete type is tested.
 - **The JSON body limit is 100KB except one path, matched by exact string.** A
   new image endpoint silently gets 100KB and fails with a 413 that reads as a
   server fault.

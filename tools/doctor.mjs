@@ -125,8 +125,39 @@ if (!existsSync(join(root, "node_modules"))) {
 
 const source = process.env.DATA_SOURCE ?? "seed";
 console.log("\nThe schedule");
-if (source !== "smartsheet") {
-  idle(`DATA_SOURCE=${source}`, "the built-in sample schedule; no credentials needed");
+/*
+ * The mirror is a Smartsheet source with a copy in front of it, so every
+ * check below applies to it unchanged — a wrong sheet id is a wrong sheet id
+ * whether or not the answer is kept. Said here rather than silently treated
+ * as "smartsheet", because somebody reading this output needs to know that a
+ * page can be up to MIRROR_SYNC_MINUTES behind the sheet it names.
+ */
+if (source === "mirror") {
+  const upstream = process.env.MIRROR_UPSTREAM ?? "smartsheet";
+  const every = Number(process.env.MIRROR_SYNC_MINUTES ?? 10);
+  if (!process.env.HUB_DB_URL) {
+    say(
+      warn("!"),
+      "DATA_SOURCE=mirror",
+      "no HUB_DB_URL — the copy would be kept in the SQLite file, which works but is not the point of mirroring",
+    );
+  } else {
+    good("DATA_SOURCE=mirror", `${upstream} underneath, pulled every ${every} minutes`);
+  }
+  if (upstream === "smartsheet") {
+    say(dim("·"), "Writes", "still go to Smartsheet — the mirror is read-only by construction");
+  }
+}
+/*
+ * What is actually behind this, once the mirror is unwrapped. A mirror over
+ * the seed reaches no sheet at all, and asking for a token it will never use
+ * would report a problem that is not one.
+ */
+const reads = source === "mirror" ? (process.env.MIRROR_UPSTREAM ?? "smartsheet") : source;
+if (reads !== "smartsheet") {
+  // Named for what is underneath, so a mirror over the seed does not print
+  // the same label twice and leave somebody wondering which one is in charge.
+  idle(`DATA_SOURCE=${reads}`, "the built-in sample schedule; no credentials needed");
   /*
    * Asked for a comparison there is nothing to compare. Said out loud
    * because the alternative is what happened the first time somebody tried
@@ -289,9 +320,32 @@ if (process.env.NOTIFY_SCHEDULE === "1") {
   idle("Notifications", "off — nothing sends itself; an @ mention still goes as a note is saved");
 }
 
+/*
+ * The database, asked rather than reported.
+ *
+ * This used to print the address out of HUB_DB_URL and call it a tick, which
+ * proved only that a variable had been set — and the failure that actually
+ * happens with Postgres is not a missing variable. It is a container that is
+ * not running, or a port that another Postgres already holds, and both of
+ * those arrive later as a server that will not boot. The same argument as
+ * every sheet above: ask it, and say what came back.
+ *
+ * Counted tables rather than a bare "connected", because an empty database is
+ * the normal state before the first boot and an alarming one afterwards.
+ * `CREATE TABLE IF NOT EXISTS` on boot means zero tables is not a fault, so
+ * the two are worth telling apart on sight.
+ */
 const dbUrl = process.env.HUB_DB_URL;
-if (dbUrl) good("Database", `Postgres at ${hostOf(dbUrl)}`);
-else good("Database", `SQLite at ${process.env.HUB_DB ?? "./data/hub.db"}`);
+if (!dbUrl) {
+  good("Database", `SQLite at ${process.env.HUB_DB ?? "./data/hub.db"}`);
+} else {
+  const found = await askPostgres(dbUrl);
+  if (found.ok) {
+    good("Database", `Postgres at ${hostOf(dbUrl)} — ${found.note}`);
+  } else {
+    fail("Database", `Postgres at ${hostOf(dbUrl)} — ${found.note}`);
+  }
+}
 
 /*
  * Counted, not listed. The output of this is meant to be pasted into a
@@ -532,6 +586,68 @@ function reason(status, statusText) {
   if (status === 404) return "no sheet with that id (404) — check the number";
   if (status === 429) return "rate-limited (429) — try again shortly";
   return `${status} ${statusText}`;
+}
+
+/**
+ * Connect, count, disconnect — and say what went wrong in words.
+ *
+ * A single client rather than the pool the server opens: this asks one
+ * question and leaves, and a pool that is not drained keeps the process alive
+ * after the report has printed. `pg` is imported here rather than at the top
+ * so a machine that has not run `npm install` still gets the rest of the
+ * report instead of a stack trace on line one.
+ *
+ * The codes are mapped because Postgres's own messages name the wrong
+ * culprit for the two mistakes people actually make. `ECONNREFUSED` reads as
+ * a network fault when it is almost always `docker compose up -d` not yet
+ * run, and `3D000` says "database does not exist" about a connection that is
+ * otherwise perfect — which sends somebody to check the password.
+ */
+async function askPostgres(url) {
+  let pg;
+  try {
+    ({ default: pg } = await import("pg"));
+  } catch {
+    return { ok: false, note: "the pg driver is not installed — run `npm run setup`" };
+  }
+  const client = new pg.Client({ connectionString: url, connectionTimeoutMillis: 4000 });
+  try {
+    await client.connect();
+    const { rows } = await client.query(
+      "select current_database() as db, (select count(*) from information_schema.tables where table_schema = 'public') as tables",
+    );
+    const tables = Number(rows[0].tables);
+    const where = `database "${rows[0].db}"`;
+    if (tables === 0) {
+      return { ok: true, note: `answering, ${where} is empty — the schema is created on the first boot` };
+    }
+    return { ok: true, note: `answering, ${tables} tables in ${where}` };
+  } catch (err) {
+    return { ok: false, note: whyPostgres(err) };
+  } finally {
+    // A refused connection has nothing to end, and saying so is not useful.
+    await client.end().catch(() => {});
+  }
+}
+
+/** What a driver error means to somebody who has to fix it. */
+function whyPostgres(err) {
+  const code = err?.code ?? "";
+  if (code === "ECONNREFUSED") {
+    return "nothing is listening there — `docker compose up -d`, then try again";
+  }
+  if (code === "ETIMEDOUT" || /timeout/i.test(err?.message ?? "")) {
+    return "it did not answer in four seconds — a firewall, or the wrong host";
+  }
+  if (code === "28P01") return "the password was refused (28P01) — check HUB_DB_URL against docker-compose.yml";
+  if (code === "28000") return "that user may not connect (28000)";
+  if (code === "3D000") {
+    return "the server answered but has no database of that name (3D000) — the name is the last part of the URL";
+  }
+  if (code === "ENOTFOUND") return "that host does not resolve — check the address";
+  // Never the driver's own message unprompted: it can carry the connection
+  // string, and this output is meant to be safe to paste into a ticket.
+  return code ? `refused (${code})` : "refused";
 }
 
 /** A URL's host, so a connection string can be shown without its password. */

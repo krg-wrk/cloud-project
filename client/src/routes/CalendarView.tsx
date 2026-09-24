@@ -266,7 +266,7 @@ function chipMeaning(chip: Chip): string {
   }
 }
 
-function chipLabel(chip: Chip, people: Schedule["people"]): { kicker: string; title: string; icon: string; colour: string } {
+function chipLabel(chip: Chip): { kicker: string; title: string; icon: string; colour: string } {
   switch (chip.kind) {
     // No kicker on these two: the icon and the colour say which it is, and
     // the title is what people are scanning for. The day panel spells it out.
@@ -295,11 +295,20 @@ function chipLabel(chip: Chip, people: Schedule["people"]): { kicker: string; ti
       };
     case "event":
       return {
-        kicker: chip.event.personId
-          ? personName(people, chip.event.personId).split(" ")[0]
-          : EVENT_LABELS_SHORT[chip.event.type],
+        /*
+         * What it is, not whose it is.
+         *
+         * The kicker used to be the owner's first name wherever there was
+         * one, which read well when the diary was almost entirely leave —
+         * and leave rows already carry the name in their title ("Pia Fisher
+         * - AL"), so it was saying it twice. Now that the activity sheets
+         * are bucketed properly it was worse than redundant: a client call
+         * showed "CASSANDRA" where the kind should be, and the kind was the
+         * one thing the chip no longer said. Whose it is, is a hover away.
+         */
+        kicker: EVENT_LABELS_SHORT[chip.event.type],
         title: chip.event.title,
-        icon: EVENT_ICONS[chip.event.type] ?? "more",
+        icon: EVENT_ICONS[chip.event.type] ?? "note",
         colour: `var(--event-${chip.event.type})`,
       };
     case "entry":
@@ -660,8 +669,8 @@ export default function CalendarView() {
             <DayView
               date={anchor}
               chips={chipsForDay(anchor, feed, show, true)}
-              people={data.people}
               onRemoveEntry={removeEntry}
+              onOpen={opensInPanel ? setOpened : undefined}
             />
           ) : (
           /*
@@ -732,6 +741,7 @@ export default function CalendarView() {
                         bar={bar}
                         people={data.people}
                         onRemoveEntry={removeEntry}
+                        onOpen={opensInPanel ? setOpened : undefined}
                       />
                     ))}
                   </div>
@@ -789,10 +799,13 @@ function SpanBar({
   bar,
   people,
   onRemoveEntry,
+  onOpen,
 }: {
   bar: Bar<SpanItem>;
   people: Schedule["people"];
   onRemoveEntry: (id: string) => void;
+  /** Set when the studio says an entry opens over the calendar. */
+  onOpen?: (chip: Chip) => void;
 }) {
   const span = spanOf(bar.item);
   const colour =
@@ -813,12 +826,17 @@ function SpanBar({
     "--chip-color": colour,
   } as CSSProperties;
 
-  const who =
-    bar.item.kind === "event" && bar.item.event.personId
-      ? personName(people, bar.item.event.personId).split(" ")[0]
-      : null;
+  /*
+   * What it is, not whose — the same correction the chips needed.
+   *
+   * A bar carried the first owner's first name, so a trade show owned by
+   * four people read as Charlotte's. That is the display half of the bug the
+   * scoping had: one name in a cell of several, treated as the answer. All
+   * of them are named in the panel, which is a hover or a click away.
+   */
+  const who = bar.item.kind === "event" ? EVENT_LABELS_SHORT[bar.item.event.type] : null;
   const title = bar.item.kind === "event" ? bar.item.event.title : bar.item.entry.title;
-  const icon = bar.item.kind === "event" ? (EVENT_ICONS[bar.item.event.type] ?? "more") : "note";
+  const icon = bar.item.kind === "event" ? (EVENT_ICONS[bar.item.event.type] ?? "note") : "note";
   const dates = `${formatMedium(span.from)} to ${formatMedium(span.to)}`;
 
   const body = (
@@ -854,6 +872,22 @@ function SpanBar({
           style={style}
           title={`${title}, ${dates} (yours — click to remove)`}
           onClick={() => onRemoveEntry(id)}
+          {...preview.handlers()}
+        >
+          {body}
+        </button>
+        {panel}
+      </>
+    );
+  }
+  if (onOpen) {
+    return (
+      <>
+        <button
+          className="cal-span cal-span-button"
+          style={style}
+          title={`${title}${who ? ` — ${who}` : ""}, ${dates}`}
+          onClick={() => onOpen(asChip)}
           {...preview.handlers()}
         >
           {body}
@@ -1088,7 +1122,7 @@ function ChipView({
   /** Set when the studio says an entry opens over the calendar rather than away from it. */
   onOpen?: (chip: Chip) => void;
 }) {
-  const { kicker, title, icon, colour } = chipLabel(chip, people);
+  const { kicker, title, icon, colour } = chipLabel(chip);
   const preview = useHoverPreview();
   const style = { "--chip-color": colour } as CSSProperties;
   const body = (
@@ -1192,7 +1226,7 @@ function EntryPanel({
   people: Schedule["people"];
   onClose: () => void;
 }) {
-  const { title, icon, colour } = chipLabel(chip, people);
+  const { title, icon, colour } = chipLabel(chip);
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -1241,12 +1275,13 @@ function EntryPanel({
 function DayView({
   date,
   chips,
-  people,
   onRemoveEntry,
+  onOpen,
 }: {
   date: string;
   chips: Chip[];
-  people: Schedule["people"];
+  /** Set when the studio says an entry opens over the calendar. */
+  onOpen?: (chip: Chip) => void;
   onRemoveEntry: (id: string) => void;
 }) {
   // Timed things first, in time order; everything else after, in the order
@@ -1295,7 +1330,7 @@ function DayView({
       {ordered.length > 0 && (
         <div className="day-rows">
           {ordered.map((chip, i) => {
-            const { title, icon, colour } = chipLabel(chip, people);
+            const { title, icon, colour } = chipLabel(chip);
             const style = { "--chip-color": colour } as CSSProperties;
             const when = chip.kind === "session" ? chip.session.startTime : "";
             const body = (
@@ -1321,6 +1356,15 @@ function DayView({
                 style={style}
                 onClick={() => onRemoveEntry(chip.entry.id)}
                 title="Yours — click to remove"
+              >
+                {body}
+              </button>
+            ) : onOpen ? (
+              <button
+                key={`${chip.kind}-${i}`}
+                className="day-row day-row-button"
+                style={style}
+                onClick={() => onOpen(chip)}
               >
                 {body}
               </button>
