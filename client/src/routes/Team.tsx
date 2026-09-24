@@ -1,7 +1,11 @@
 import { Link, useParams } from "react-router-dom";
 import { query, useApi } from "../lib/api";
 import { TODAY, formatLong, formatShort, monthKey, relativeDays } from "../lib/date";
-import { isOutstanding, isOverdue } from "../lib/domain";
+import {
+  isOutstanding,
+  isOverdue,
+  personPlace,
+} from "../lib/domain";
 import type { Person, Schedule } from "../types";
 import { Avatar, ErrorNote, EventPill, Loading, StatusPill } from "../components/bits";
 import ShareLink from "../components/ShareLink";
@@ -35,7 +39,7 @@ export function TeamMember() {
           <Avatar id={p.id} name={p.name} size="lg" />
           <div>
             <div className="eyebrow">
-              {p.vertical} · {p.region}
+              {personPlace(p)}
             </div>
             <h1 className="page-title">{p.name}</h1>
           </div>
@@ -89,7 +93,7 @@ export function TeamMember() {
                 <div>
                   <div className="deadline-title">{item.title}</div>
                   <div className="deadline-meta">
-                    {item.type} · {item.season} · publishes {formatShort(item.publicationDate)}
+                    {item.type} · {item.forecastHorizon} · publishes {formatShort(item.publicationDate)}
                   </div>
                 </div>
                 <div className="deadline-right">

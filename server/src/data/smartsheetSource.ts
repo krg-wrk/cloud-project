@@ -27,6 +27,7 @@ import type {
   Vertical,
   WritableFields,
 } from "../types.js";
+import { hubAccessFor } from "../auth.js";
 import { WRITABLE_FIELDS } from "../types.js";
 
 /**
@@ -41,38 +42,121 @@ import { WRITABLE_FIELDS } from "../types.js";
 const API = (process.env.SMARTSHEET_API ?? "https://api.smartsheet.com/2.0").replace(/\/$/, "");
 
 /**
+ * How long a sheet's version number stands for before it is asked again.
+ *
+ * Shorter than the response cache above it on purpose: this is the thing
+ * that notices an edit at all, so it should notice sooner than the caller
+ * thinks to ask.
+ */
+const STAMP_TTL_MS = 30_000;
+
+/**
+ * How a column is named in a source sheet.
+ *
+ * A bare string is the title, which is what nearly every entry is and what
+ * every non-Smartsheet source has to use: a Google Sheet's header row is its
+ * only identity, and a database column has a name and no id.
+ *
+ * The object form adds the Smartsheet column id as a second way to find the
+ * same column. The title is still tried first, deliberately: it is the form
+ * that works on every sheet, so a schedule kept one sheet per year resolves
+ * in 2027 by the name it shares with 2026 rather than by an id that only ever
+ * existed in one of them. The id is the safety net underneath — when somebody
+ * renames the column, the title stops matching and the id still finds it, so
+ * the field goes on reading instead of quietly emptying every row.
+ *
+ * Trying the id first was the other order and is worse: an id recorded from
+ * one sheet has no meaning in another, and the first thing it would do is
+ * make the 2027 sheet resolve against 2026's columns.
+ */
+export type ColumnRef = string | { title: string; id?: string };
+
+/** The title half of a reference, for the places that need a plain heading. */
+export function titleOf(ref: ColumnRef): string {
+  return typeof ref === "string" ? ref : ref.title;
+}
+
+/** Every field of a group as the plain title the flattened row is keyed by. */
+export function titles<T extends Record<string, ColumnRef>>(group: T): { [K in keyof T]: string } {
+  const out = {} as { [K in keyof T]: string };
+  for (const key of Object.keys(group) as (keyof T)[]) out[key] = titleOf(group[key]);
+  return out;
+}
+
+/**
+ * Which heading in *this* sheet answers each field, where that differs from
+ * the mapping.
+ *
+ * Only the renames come back: a field whose title is present needs no help,
+ * and a field found by neither is left out so the caller reads an empty cell
+ * and the doctor reports it. Exported because a rename is worth saying out
+ * loud rather than silently working — `--columns` tells somebody the mapping
+ * has drifted while it is still cheap to correct.
+ */
+export function renamedColumns<T extends Record<string, ColumnRef>>(
+  group: T,
+  columns: { id: number; title: string }[],
+): { field: string; mapped: string; actual: string }[] {
+  const present = new Set(columns.map((c) => c.title));
+  const byId = new Map(columns.map((c) => [String(c.id), c.title]));
+  const out: { field: string; mapped: string; actual: string }[] = [];
+  for (const [field, ref] of Object.entries(group)) {
+    if (typeof ref === "string" || !ref.id) continue;
+    if (present.has(ref.title)) continue;
+    const actual = byId.get(ref.id);
+    if (actual) out.push({ field, mapped: ref.title, actual });
+  }
+  return out;
+}
+
+/**
  * Column titles as they appear in the source sheets. Change these to match the
  * real sheets rather than touching the mapping code below.
  */
 export const COLUMNS = {
+  /*
+   * An empty title is a field the team has said it does not keep, rather
+   * than one nobody has got to yet. It reads as absent, and `--columns`
+   * passes over it instead of reporting a column that was never wanted.
+   */
   content: {
-    id: "Content ID",
+    id: "Forecast ID",
     title: "Title",
-    type: "Content Type",
+    type: "Report Type",
     vertical: "Vertical",
-    season: "Season",
-    forecaster: "Forecaster",
-    manager: "Commissioning Manager",
-    submissionDate: "Submission Date",
-    publicationDate: "Publication Date",
+    /** The horizon a forecast points at — the team plans by it, not by season. */
+    forecastHorizon: "Forecast Horizon",
+    forecastCategory: "Forecast Category",
+    forecaster: "Owner",
+    /** Recorded outside the schedule. */
+    manager: "",
+    submissionDate: "Sub Date",
+    publicationDate: "Live Date",
     /** When the copy actually landed — what the timeliness KPIs measure. */
-    submittedOn: "Actual Submission",
+    submittedOn: "Content Submitted",
     status: "Status",
-    notes: "Notes",
-    /** Sole / Co-owned / Byline / Freelance. */
-    ownership: "Ownership",
-    /** Everyone credited, so co-owned work counts for both people. */
-    contributors: "Contributors",
+    /** The Hub keeps its own notes, threaded and attributed. */
+    notes: "",
+    /** Sole / Co-owned / Byline / Freelance. Recorded outside the schedule. */
+    ownership: "",
+    /** Everyone credited. Recorded outside the schedule. */
+    contributors: "",
   },
   events: {
-    type: "Event Type",
+    type: "Type",
     title: "Title",
-    person: "Person",
+    person: "Owner",
+    /**
+     * The country, which the region is worked out from — see `regionFor`.
+     * `region` is the fallback for a sheet that records one directly and no
+     * country, which is how the trade shows sheet is kept.
+     */
+    country: "Country",
     region: "Region",
-    startDate: "Start Date",
-    endDate: "End Date",
-    location: "Location",
-    notes: "Notes",
+    startDate: "Start",
+    endDate: "End",
+    location: "Country",
+    notes: "",
   },
   people: {
     name: "Name",
@@ -81,26 +165,43 @@ export const COLUMNS = {
     role: "Role",
     team: "Team",
     department: "Department",
-    vertical: "Vertical",
-    region: "Region",
+    vertical: "",
+    /** A country here too, turned into a region the same way. */
+    region: "Country",
     managerEmail: "Manager Email",
+    /** What somebody may do in the Hub. Blank reads as an ordinary forecaster. */
+    hubAccess: "Hub Access",
+    /**
+     * Employment status, read only for whether somebody is still here. The
+     * reason never leaves the server: "Maternity Leave" and "Medical Leave"
+     * sit in this column beside "Full-Time", and a Hub that published either
+     * would have taken something told to HR and shown it to two hundred
+     * people. Only "Inactive" changes anything, and it changes it to no.
+     */
+    status: "Status",
   },
   sessions: {
-    id: "Session ID",
+    id: "Event ID",
     title: "Title",
-    kind: "Kind",
+    kind: "Type",
+    /** The workshop lead. */
     host: "Host",
-    guest: "Guest Speaker",
-    date: "Date",
-    startTime: "Start Time",
-    endTime: "End Time",
-    location: "Location",
+    /** Everybody tagged into it — the Owner column is a multi-contact list. */
+    attendees: "Owner",
+    /** "All" here means the whole team, whatever anybody's country says. */
+    department: "Department",
+    guest: "",
+    startDate: "Start",
+    endDate: "End",
+    startTime: "",
+    endTime: "",
+    location: "Country",
     capacity: "Capacity",
-    signUpsOpen: "Sign-ups Open",
-    required: "Required",
-    summary: "Summary",
-    topics: "Topics",
-    recapUrl: "Recap",
+    signUpsOpen: "Sign-Ups",
+    required: "",
+    summary: "",
+    topics: "",
+    recapUrl: "",
   },
   signUps: {
     session: "Session ID",
@@ -189,10 +290,22 @@ export const COLUMNS = {
   },
 } as const;
 
+/** One contact in a cell: Smartsheet gives the name and the address apart. */
+interface SmartsheetContact {
+  name?: string;
+  email?: string;
+}
+
 interface SmartsheetCell {
   columnId: number;
   value?: string | number | boolean;
   displayValue?: string;
+  /**
+   * Only present when the sheet is asked for at level 2. A multi-contact or
+   * multi-picklist cell has no `value` at all, and its `displayValue` is the
+   * values joined with commas — so this is the only faithful reading of one.
+   */
+  objectValue?: SmartsheetContact & { objectType?: string; values?: SmartsheetContact[] };
 }
 
 interface SmartsheetRow {
@@ -207,14 +320,51 @@ interface SmartsheetSheet {
   /** `options` is a picklist column's allowed values, which a write must use. */
   columns: { id: number; title: string; type?: string; options?: string[] }[];
   rows: SmartsheetRow[];
+  /**
+   * Incremented by Smartsheet on every change to the sheet, and the same
+   * number `/sheets/{id}/version` reports on its own. Read from the body
+   * rather than asked for again, so a copy is filed under the version it
+   * actually is.
+   */
+  version?: number;
 }
 
 /** A sheet row flattened to { "Column Title": "value" }. */
-type FlatRow = Record<string, string>;
+/**
+ * A row flattened to its column titles, with the people kept as people.
+ *
+ * Every cell reads as a string because that is what the mapping code wants,
+ * and a contact column flattens to the names Smartsheet shows — "Allyson
+ * Rees, Hannah Allan" for a piece two people own. Read as one value that is
+ * nobody: `personId` turned it into "allyson-rees-hannah-allan", a person
+ * who does not exist, so the work belonged to neither of them and the access
+ * check refused them both.
+ *
+ * So the addresses are kept beside the string, under `_people`. Addresses
+ * rather than names because an address is the identity the directory is
+ * keyed on and the one thing that cannot be spelled two ways — the same
+ * person is "Ellie Bull" in one sheet and "Ellie  Bull" in another, and an
+ * id built from either has to be the same id.
+ */
+type FlatRow = Record<string, string> & {
+  _people?: Record<string, string[]>;
+  /** Multi-picklist cells as their own values, rather than a joined string. */
+  _list?: Record<string, string[]>;
+};
 
 export interface SmartsheetConfig {
   token: string;
-  contentSheetId: string;
+  /**
+   * Usually one, but a team that starts a fresh sheet each year has several.
+   *
+   * Read as one schedule, the way the calendar reads holidays and leave from
+   * wherever they are kept. Writing is the reason this is not simply the same
+   * change twice: the commissioning sheet is the one the Hub writes back to,
+   * and a row id is unique within its sheet rather than across sheets — so
+   * with several configured, `enableWrites` refuses rather than let an edit to
+   * a 2027 row land on whatever 2026 row happens to share its id.
+   */
+  contentSheetIds: string[];
   /**
    * Whether the Hub may write to the commissioning sheet.
    *
@@ -223,7 +373,26 @@ export interface SmartsheetConfig {
    * API refuses before it gets anywhere near a request.
    */
   allowWrites?: boolean;
-  eventsSheetId?: string;
+  /**
+   * How long a sheet's version number stands for before it is asked again.
+   *
+   * Here rather than only as a constant so a test can set it to nothing and
+   * watch the version decide, which is otherwise a thing that can only be
+   * proved by waiting half a minute.
+   */
+  stampTtlMs?: number;
+  /**
+   * Several, because a team keeps its calendar the way it already keeps it.
+   *
+   * Holidays in one sheet, leave in another, shows in a third is the ordinary
+   * arrangement, and the Hub is a reading surface over Smartsheet rather than
+   * a reason to reorganise it. Asking somebody to merge three sheets into one
+   * so the Hub can read them puts the tool's convenience ahead of the system
+   * of record, which is the wrong way round. A Smartsheet report across the
+   * three would have been the other answer and does not work: a report is
+   * served from /reports and this reads /sheets.
+   */
+  eventsSheetIds?: string[];
   peopleSheetId?: string;
   sessionsSheetId?: string;
   /** One row per person per session: Session ID, Person, State. */
@@ -383,20 +552,108 @@ export const STATUS_LABELS: Record<Status, string> = {
   "at-risk": "At Risk",
 };
 
+/**
+ * Whether a sheet already in hand can be served again without reading it.
+ *
+ * Smartsheet increments a sheet's version on every change to it, so a
+ * version that has not moved means the copy held is the copy the API would
+ * send back. Everything else answers no: a sheet never read, a sheet whose
+ * version could not be had, a check that failed. The asymmetry is on
+ * purpose. Reading again costs a second; serving a schedule somebody has
+ * already corrected costs them the afternoon they spend working from it.
+ *
+ * A version rather than a modified time, though the sheet reports both. The
+ * timestamp is only accurate to the second, so an edit landing in the same
+ * second as a read would leave a stamp that matches and a sheet that does
+ * not. A counter cannot do that.
+ */
+export function sheetIsCurrent(
+  held: number | undefined,
+  current: number | undefined,
+): boolean {
+  if (held === undefined || current === undefined) return false;
+  return held === current;
+}
+
 export class SmartsheetSource implements DataSource {
   readonly name = "smartsheet";
   readonly writes?: ContentWriter;
 
+  /*
+   * What has been read, and the version it was read at.
+   *
+   * Drawing the fixed pages reads thirteen sheets and takes about seven
+   * seconds, and most of them — the directory above all — change perhaps
+   * weekly. Asking each one for its version costs a few bytes and answers
+   * "has this moved", so the usual refresh reads nothing at all. The
+   * alternative was simply to cache for longer, which buys the same speed by
+   * showing people staler data; a schedule exists to be current, so that is
+   * the wrong end to save at.
+   */
+  private readonly held = new Map<string, { version: number; sheet: SmartsheetSheet }>();
+  private readonly versions = new Map<string, { at: number; version?: number }>();
+
   constructor(private readonly config: SmartsheetConfig) {}
+
+  /** A write of the Hub's own makes both the copy and its version wrong. */
+  forget(): void {
+    this.held.clear();
+    this.versions.clear();
+  }
+
+  /**
+   * What version Smartsheet holds of one sheet.
+   *
+   * Asked per sheet, of the sheets this deployment is pointed at, rather
+   * than by listing the account. Listing works and was how this started, but
+   * it returns all hundred and twenty-six sheets the token can see to answer
+   * a question about thirteen — twice as slow, and it means a token narrowed
+   * to the Hub's own folder would stop being able to answer it. What the Hub
+   * is configured to read is exactly what it should need to ask about.
+   *
+   * A version that cannot be had is remembered as absent for the usual
+   * interval: the sheet is then read the long way, which is the slow path
+   * rather than the wrong one, and one failed call rather than one per read.
+   */
+  private async versionOf(sheetId: string): Promise<number | undefined> {
+    const now = Date.now();
+    const ttl = this.config.stampTtlMs ?? STAMP_TTL_MS;
+    const known = this.versions.get(sheetId);
+    if (known && now - known.at < ttl) return known.version;
+    let version: number | undefined;
+    try {
+      const res = await fetch(`${API}/sheets/${sheetId}/version`, {
+        headers: { Authorization: `Bearer ${this.config.token}` },
+      });
+      if (res.ok) {
+        const body = (await res.json()) as { version?: number };
+        if (typeof body.version === "number") version = body.version;
+      }
+    } catch {
+      // Unreachable is not the same as unchanged, and no version says so.
+    }
+    this.versions.set(sheetId, { at: now, version });
+    return version;
+  }
 
   /** The token, for the writer only. Nothing else needs it from outside. */
   get tokenForWrite(): string {
     return this.config.token;
   }
 
-  /** The commissioning sheet as the API returns it, for the writer. */
+  /**
+   * The commissioning sheet as the API returns it, for the writer.
+   *
+   * Singular, and only ever reached with one sheet configured: everything
+   * that calls it is behind the writer, and `enableWrites` refuses to build
+   * a writer at all when the schedule spans several sheets.
+   *
+   * Always read afresh. This is the read the preview and the apply compare
+   * against, and a cached answer would turn "has somebody else changed this
+   * row" into a question asked of the Hub's own memory.
+   */
   contentSheet(): Promise<SmartsheetSheet> {
-    return this.fetchSheet(this.config.contentSheetId);
+    return this.fetchSheet(this.config.contentSheetIds[0], { fresh: true });
   }
 
   /**
@@ -409,18 +666,59 @@ export class SmartsheetSource implements DataSource {
    */
   async enableWrites(): Promise<string> {
     if (!this.config.allowWrites) return "off";
+    /*
+     * Refused outright while the schedule spans several sheets.
+     *
+     * A write addresses a row by `sourceRowId`, and a Smartsheet row id is
+     * unique within its sheet and not across sheets — so with 2026 and 2027
+     * both configured there is nothing in the address saying which sheet is
+     * meant. The writer holds one sheet id, so every edit would be sent to
+     * the first one: at best rejected, at worst applied to whichever row
+     * there happens to carry the same id. Carrying the sheet on the address
+     * would be the fix; until somebody does that, refusing is the only
+     * honest answer, and a refusal somebody can read beats a write nobody
+     * can trace.
+     */
+    if (this.config.contentSheetIds.length > 1) {
+      return `off — refused: the schedule is read from ${this.config.contentSheetIds.length} sheets, and a write cannot say which one it means`;
+    }
     const sheet = await this.contentSheet();
     const writer = new SmartsheetContentWriter(
       this,
-      this.config.contentSheetId,
+      this.config.contentSheetIds[0],
       sheet.name ?? "the commissioning sheet",
     );
     (this as { writes?: ContentWriter }).writes = writer;
     return writer.target;
   }
 
-  private async fetchSheet(sheetId: string): Promise<SmartsheetSheet> {
-    const res = await fetch(`${API}/sheets/${sheetId}`, {
+  private async fetchSheet(
+    sheetId: string,
+    { fresh = false }: { fresh?: boolean } = {},
+  ): Promise<SmartsheetSheet> {
+    /*
+     * A read that may be answered from the copy in hand, and one that may
+     * not. The writer's re-read asks for fresh, because comparing a row
+     * against a copy the Hub is already holding would compare it against
+     * itself and agree every time — which is the concurrency check gone,
+     * with every test still passing.
+     */
+    const current = fresh ? undefined : await this.versionOf(sheetId);
+    const held = this.held.get(sheetId);
+    if (held && sheetIsCurrent(held.version, current)) return held.sheet;
+
+    /*
+     * Level 2, with the object values.
+     *
+     * Asked for plainly, Smartsheet answers in a shape that predates
+     * multi-select: a multi-contact or multi-picklist column reports its type
+     * as TEXT_NUMBER and its cells arrive as the values joined with commas,
+     * with no structure at all. Every person in a co-owned cell is then one
+     * unsplittable string, and a name containing a comma makes it
+     * unsplittable in principle rather than only in practice. This is the
+     * request that returns the people as people.
+     */
+    const res = await fetch(`${API}/sheets/${sheetId}?level=2&include=objectValue`, {
       headers: {
         Authorization: `Bearer ${this.config.token}`,
         "Content-Type": "application/json",
@@ -431,40 +729,135 @@ export class SmartsheetSource implements DataSource {
         `Smartsheet request for sheet ${sheetId} failed: ${res.status} ${res.statusText}`,
       );
     }
-    return (await res.json()) as SmartsheetSheet;
+    const sheet = (await res.json()) as SmartsheetSheet;
+    /*
+     * Filed under the version the sheet itself reports, not the one asked
+     * for a moment earlier. An edit landing between the two would otherwise
+     * be labelled with the version before it, and the copy would look
+     * current until somebody edited the sheet again.
+     */
+    if (typeof sheet.version === "number") {
+      this.held.set(sheetId, { version: sheet.version, sheet });
+      this.versions.set(sheetId, { at: Date.now(), version: sheet.version });
+    }
+    return sheet;
   }
 
   private async fetchRows(sheetId: string): Promise<FlatRow[]> {
-    const sheet = await this.fetchSheet(sheetId);
+    return this.flatten(await this.fetchSheet(sheetId));
+  }
+
+  /** A fetched sheet as rows keyed by column title. */
+  private flatten(sheet: SmartsheetSheet): FlatRow[] {
     const titleById = new Map(sheet.columns.map((c) => [c.id, c.title]));
+    /*
+     * Which columns hold days, so those cells can be read the other way
+     * round. The sheet already says — every column arrives with its type —
+     * so this costs nothing beyond noticing.
+     */
+    const dateColumns = new Set(
+      sheet.columns.filter((c) => isDateColumn(c.type)).map((c) => c.id),
+    );
     return sheet.rows.map((row) => {
       const flat: FlatRow = { _rowId: String(row.id) };
       for (const cell of row.cells) {
         const title = titleById.get(cell.columnId);
         if (!title) continue;
-        flat[title] = cell.displayValue ?? (cell.value != null ? String(cell.value) : "");
+        flat[title] = dateColumns.has(cell.columnId)
+          ? String(cell.value ?? cell.displayValue ?? "")
+          : (cell.displayValue ?? (cell.value != null ? String(cell.value) : ""));
+
+        const who = peopleIn(cell);
+        if (who.length) (flat._people ??= {})[title] = who;
+        // A multi-picklist as its own values, so nothing downstream has to
+        // split a string that may legitimately contain a comma.
+        if (cell.objectValue?.objectType === "MULTI_PICKLIST") {
+          const picked = valuesIn(cell);
+          if (picked.length) (flat._list ??= {})[title] = picked;
+        }
       }
       return flat;
     });
   }
 
+  /**
+   * Rows, with a renamed column answering to the name the mapping knows it by.
+   *
+   * The alternative was to resolve the mapping into this sheet's own titles
+   * and hand that down, which would have meant every reader taking a second
+   * argument for a case that almost never happens. Aliasing instead keeps
+   * `row[c.submissionDate]` reading exactly as it did, whether the sheet
+   * still calls that column what it was called when somebody mapped it or
+   * not.
+   */
+  private async readRows<T extends Record<string, ColumnRef>>(
+    sheetId: string,
+    group: T,
+  ): Promise<FlatRow[]> {
+    const sheet = await this.fetchSheet(sheetId);
+    const rows = this.flatten(sheet);
+    const renamed = renamedColumns(group, sheet.columns);
+    if (renamed.length === 0) return rows;
+    for (const row of rows) {
+      for (const { mapped, actual } of renamed) {
+        if (row[actual] !== undefined) row[mapped] = row[actual];
+      }
+    }
+    return rows;
+  }
+
   async listPeople(): Promise<Person[]> {
     if (!this.config.peopleSheetId) return [];
-    const c = COLUMNS.people;
-    const rows = await this.fetchRows(this.config.peopleSheetId);
+    const c = titles(COLUMNS.people);
+    const rows = await this.readRows(this.config.peopleSheetId, COLUMNS.people);
     return rows
       .filter((row) => row[c.email])
       .map((row) => ({
         id: personId(row[c.email]),
         name: row[c.name] ?? row[c.email],
         email: row[c.email],
-        role: row[c.role]?.toLowerCase().includes("commission")
-          ? ("commissioning-manager" as const)
-          : ("forecaster" as const),
+        /*
+         * Which side of the team somebody is on, read from the access column
+         * first and the grade only as a fallback.
+         *
+         * The grade was doing both jobs and doing one of them badly: it
+         * matched on the word "commission", and this directory writes "CM",
+         * so six commissioning managers were reading as forecasters and could
+         * not see the team they commission for. The grade is what the KPI
+         * benchmarks key on; what somebody may do is a separate question and
+         * now has a column of its own.
+         */
+        role:
+          hubAccessFor(row[c.hubAccess]).role === "commissioning-manager" ||
+          hubAccessFor(row[c.hubAccess]).role === "admin" ||
+          /commission|^cm$/i.test((row[c.role] ?? "").trim())
+            ? ("commissioning-manager" as const)
+            : ("forecaster" as const),
+        hubAccess: hubAccessFor(row[c.hubAccess]).role,
+        /*
+         * Still here, or not. Both halves can say no and either is enough:
+         * the access column for somebody who was never to have an account,
+         * the status column for somebody who has left.
+         */
+        active:
+          hubAccessFor(row[c.hubAccess]).active !== false &&
+          !/^inactive$/i.test((row[c.status] ?? "").trim()),
         forecasterRole: row[c.role] || undefined,
         vertical: (row[c.vertical] || row[c.team] || undefined) as Vertical | undefined,
         department: row[c.department] || undefined,
-        region: row[c.region] || "UK",
+        /*
+         * No country means no region, rather than London.
+         *
+         * "UK" was the default for an unfilled row and it is a guess dressed
+         * as a fact: nineteen of a hundred and thirty-nine rows have no
+         * country, and every one of them was being filed under a region
+         * somebody would then read off the page as though the directory said
+         * it. Blank is the honest answer, and it is the one that gets the
+         * column filled in.
+         */
+        region: regionFor(row[c.region]) ?? row[c.region] ?? "",
+        country: row[c.region] || undefined,
+        managerEmail: row[c.managerEmail] || undefined,
       }));
   }
 
@@ -481,46 +874,113 @@ export class SmartsheetSource implements DataSource {
     return readDirectory(await this.fetchRows(this.config.directorySheetId));
   }
 
+  /**
+   * The schedule, from every sheet it is kept in.
+   *
+   * Asked for together rather than one after another, for the same reason
+   * the calendar is: the wait is the slowest sheet rather than the sum of
+   * them.
+   *
+   * The made-up id for a row with no Content ID carries its sheet only when
+   * there is more than one, because `/content/ss-4021` is an address people
+   * paste to each other and a link that changes shape because a second sheet
+   * was configured is a link that stops working. With one sheet this reads
+   * exactly as it always has.
+   */
   async listContent(): Promise<ContentItem[]> {
-    const c = COLUMNS.content;
-    const rows = await this.fetchRows(this.config.contentSheetId);
-    return rows
-      .filter((row) => row[c.title])
-      .map((row) => ({
-        id: row[c.id] || `ss-${row._rowId}`,
+    const c = titles(COLUMNS.content);
+    const sheetIds = this.config.contentSheetIds;
+    const several = sheetIds.length > 1;
+    const perSheet = await Promise.all(
+      sheetIds.map(async (sheetId) =>
+        (await this.readRows(sheetId, COLUMNS.content)).map((row) => ({ row, sheetId })),
+      ),
+    );
+    return perSheet
+      .flat()
+      .filter(({ row }) => row[c.title])
+      .map(({ row, sheetId }) => ({
+        id: row[c.id] || (several ? `ss-${sheetId}-${row._rowId}` : `ss-${row._rowId}`),
         // The row, not the Content ID: the only address a write may use.
         sourceRowId: row._rowId,
         title: row[c.title],
         type: (row[c.type] || "Market Report") as ContentType,
         vertical: (row[c.vertical] || "Womenswear") as Vertical,
-        season: row[c.season] || "",
-        forecasterId: personId(row[c.forecaster]),
-        managerId: personId(row[c.manager]),
+        forecastHorizon: row[c.forecastHorizon] || "",
+        forecastCategory: row[c.forecastCategory] || undefined,
+        /*
+         * The first person named owns it, and everybody named is credited.
+         *
+         * Smartsheet's contact column has no notion of a lead — the people in
+         * it are equal — so the Hub picks the first for the one field that
+         * takes a single person and keeps the whole list beside it. That is
+         * the reading that matches the team's practice without inventing a
+         * hierarchy their sheet does not record, and it is why a co-owned
+         * piece now shows up for both of them rather than for neither.
+         */
+        forecasterId: personId(whoIn(row, c.forecaster)[0] ?? row[c.forecaster]),
+        managerId: personId(whoIn(row, c.manager)[0] ?? row[c.manager]),
         submissionDate: isoDate(row[c.submissionDate]),
         publicationDate: isoDate(row[c.publicationDate]),
         status: normaliseStatus(row[c.status]),
         notes: row[c.notes] || undefined,
         submittedOn: isoDate(row[c.submittedOn]) || undefined,
         ownership: normaliseOwnership(row[c.ownership]),
-        contributorIds: (row[c.contributors] || "")
-          .split(/\s*,\s*/)
-          .filter(Boolean)
-          .map(personId),
+        /*
+         * Everybody on the piece, the owners included.
+         *
+         * A team with no separate Contributors column still co-owns work, and
+         * it says so by putting two people in the owner cell. Splitting the
+         * display string on commas was the old reading and is wrong twice
+         * over: it cannot tell "Rees, Allyson" from two people, and a team
+         * that maps no Contributors column at all got an empty list while
+         * the owner cell plainly named two.
+         */
+        contributorIds: [
+          ...new Set([...whoIn(row, c.forecaster), ...whoIn(row, c.contributors)]),
+        ].map(personId),
       }));
   }
 
+  /**
+   * Every events sheet, read as one calendar.
+   *
+   * The sheets are asked for together rather than one after another: three
+   * sequential round trips to Smartsheet is three times the wait on a page
+   * somebody opens every morning, and they do not depend on each other.
+   *
+   * A row's id carries its sheet, because a Smartsheet row id is unique
+   * within its sheet and not across sheets — two rows in two sheets can
+   * collide, and an event quietly standing in for another on the calendar is
+   * the sort of thing nobody reports as a bug because it just looks wrong.
+   */
   async listEvents(): Promise<CalendarEvent[]> {
-    if (!this.config.eventsSheetId) return [];
-    const c = COLUMNS.events;
-    const rows = await this.fetchRows(this.config.eventsSheetId);
-    return rows
-      .filter((row) => row[c.title] && row[c.startDate])
-      .map((row, i) => ({
-        id: row._rowId || `ev-${i}`,
+    const sheetIds = this.config.eventsSheetIds ?? [];
+    if (sheetIds.length === 0) return [];
+    const c = titles(COLUMNS.events);
+    const perSheet = await Promise.all(
+      sheetIds.map(async (sheetId) =>
+        (await this.readRows(sheetId, COLUMNS.events)).map((row) => ({ row, sheetId })),
+      ),
+    );
+    return perSheet
+      .flat()
+      .filter(({ row }) => row[c.title] && row[c.startDate])
+      .map(({ row, sheetId }, i) => ({
+        id: row._rowId ? `${sheetId}-${row._rowId}` : `ev-${i}`,
         type: normaliseEventType(row[c.type]),
         title: row[c.title],
-        personId: row[c.person] ? personId(row[c.person]) : undefined,
-        region: row[c.region] || undefined,
+        /*
+         * Everybody in the cell, and the first of them kept separately.
+         *
+         * Leave really does belong to one person and the whole Hub reads it
+         * that way, but a trade show is owned by two or three — and taking
+         * the first name was quietly deciding which of them it was for.
+         */
+        personId: whoIn(row, c.person)[0] ? personId(whoIn(row, c.person)[0]) : undefined,
+        personIds: whoIn(row, c.person).map(personId),
+        countries: row._list?.[c.country] ?? listCell(row[c.country]),
+        region: regionFor(row[c.country]) ?? regionFor(row[c.region]) ?? row[c.region] ?? undefined,
         startDate: isoDate(row[c.startDate]),
         endDate: isoDate(row[c.endDate] || row[c.startDate]),
         location: row[c.location] || undefined,
@@ -530,10 +990,10 @@ export class SmartsheetSource implements DataSource {
 
   async listSessions(): Promise<KnowledgeSession[]> {
     if (!this.config.sessionsSheetId) return [];
-    const c = COLUMNS.sessions;
-    const rows = await this.fetchRows(this.config.sessionsSheetId);
+    const c = titles(COLUMNS.sessions);
+    const rows = await this.readRows(this.config.sessionsSheetId, COLUMNS.sessions);
     return rows
-      .filter((row) => row[c.title] && row[c.date])
+      .filter((row) => row[c.title] && row[c.startDate])
       .map((row) => {
         const capacity = Number.parseInt(row[c.capacity] ?? "", 10);
         const location = row[c.location] ?? "";
@@ -541,11 +1001,23 @@ export class SmartsheetSource implements DataSource {
           id: row[c.id] || `ws-${row._rowId}`,
           title: row[c.title],
           kind: normaliseSessionKind(row[c.kind]),
-          hostId: row[c.host] ? personId(row[c.host]) : undefined,
-          hostExternal: row[c.guest] || undefined,
-          date: isoDate(row[c.date]),
-          startTime: row[c.startTime] || "09:00",
-          endTime: row[c.endTime] || "10:00",
+          /*
+           * "Unassigned" is the sheet saying there is no host yet, not the
+           * name of one. Treated as absent so the panel leaves the line out
+           * rather than printing a placeholder as though it were a person.
+           */
+          hostId: namedHost(whoIn(row, c.host)[0]) ? personId(whoIn(row, c.host)[0]) : undefined,
+          hostExternal: namedHost(row[c.guest]) ? row[c.guest] : undefined,
+          attendeeIds: whoIn(row, c.attendees).map(personId),
+          department: row[c.department] || undefined,
+          departments: row._list?.[c.department] ?? listCell(row[c.department]),
+          countries: row._list?.[c.location] ?? listCell(row[c.location]),
+          // A session with no end runs for the day it starts, which is what a
+          // blank End cell means on a workshop sheet rather than a gap.
+          startDate: isoDate(row[c.startDate]),
+          endDate: isoDate(row[c.endDate]) || isoDate(row[c.startDate]),
+          startTime: row[c.startTime] || undefined,
+          endTime: row[c.endTime] || undefined,
           location,
           online: /remote|zoom|teams|online/i.test(location),
           capacity: Number.isFinite(capacity) ? capacity : null,
@@ -562,8 +1034,8 @@ export class SmartsheetSource implements DataSource {
 
   async listSignUps(): Promise<Record<string, SessionSignUps>> {
     if (!this.config.signUpsSheetId) return {};
-    const c = COLUMNS.signUps;
-    const rows = await this.fetchRows(this.config.signUpsSheetId);
+    const c = titles(COLUMNS.signUps);
+    const rows = await this.readRows(this.config.signUpsSheetId, COLUMNS.signUps);
     const out: Record<string, SessionSignUps> = {};
     for (const row of rows) {
       const session = row[c.session];
@@ -578,8 +1050,8 @@ export class SmartsheetSource implements DataSource {
 
   async listAccess(): Promise<AccessRow[]> {
     if (!this.config.accessSheetId) return [];
-    const c = COLUMNS.access;
-    const rows = await this.fetchRows(this.config.accessSheetId);
+    const c = titles(COLUMNS.access);
+    const rows = await this.readRows(this.config.accessSheetId, COLUMNS.access);
     return rows
       .filter((row) => row[c.email]?.includes("@"))
       .map((row) => ({
@@ -598,8 +1070,8 @@ export class SmartsheetSource implements DataSource {
    */
   async listMetrics(): Promise<MetricDefinition[]> {
     if (!this.config.metricsSheetId) return seedMetrics;
-    const c = COLUMNS.metrics;
-    const rows = await this.fetchRows(this.config.metricsSheetId);
+    const c = titles(COLUMNS.metrics);
+    const rows = await this.readRows(this.config.metricsSheetId, COLUMNS.metrics);
     const supplied = rows
       .filter((row) => row[c.id] && row[c.label])
       .map((row) => {
@@ -632,8 +1104,8 @@ export class SmartsheetSource implements DataSource {
    */
   async listTrends(): Promise<TrendProfile[]> {
     if (!this.config.trendsSheetId) return [];
-    const c = COLUMNS.trends;
-    const rows = await this.fetchRows(this.config.trendsSheetId);
+    const c = titles(COLUMNS.trends);
+    const rows = await this.readRows(this.config.trendsSheetId, COLUMNS.trends);
     return rows
       .filter((row) => row[c.id] && row[c.title])
       .map((row) => {
@@ -684,8 +1156,8 @@ export class SmartsheetSource implements DataSource {
 
   async listMetricObservations(): Promise<MetricObservation[]> {
     if (!this.config.observationsSheetId) return [];
-    const c = COLUMNS.observations;
-    const rows = await this.fetchRows(this.config.observationsSheetId);
+    const c = titles(COLUMNS.observations);
+    const rows = await this.readRows(this.config.observationsSheetId, COLUMNS.observations);
     return rows
       .map((row) => ({
         metricId: (row[c.metric] ?? "").trim(),
@@ -765,13 +1237,31 @@ function isYes(value: string | undefined): boolean {
   return /^(true|yes|y|1)$/i.test((value ?? "").trim());
 }
 
-function normaliseSessionKind(value: string | undefined): SessionKind {
-  const v = (value ?? "").toLowerCase();
-  if (v.includes("masterclass")) return "masterclass";
-  if (v.includes("lunch")) return "lunch-and-learn";
-  if (v.includes("critique") || v.includes("review")) return "critique";
-  if (v.includes("training") || v.includes("course")) return "training";
-  return "workshop";
+/**
+ * What the workshop sheet's Type dropdown says, as the Hub's own kinds.
+ *
+ * A table for the same reason the calendar's is, and one the team has already
+ * said it will add to. The five before these were Masterclass, Lunch and
+ * learn, Critique, Training and Workshop, and the sheet has never held any of
+ * them — so every one of the fifty-seven rows read as "Workshop" and four of
+ * the five colours an admin could set coloured nothing at all.
+ *
+ * A value not listed becomes `other` rather than `workshop`. That is the
+ * whole difference: a new dropdown value shows up on the calendar as
+ * something nobody has bucketed yet, which is a thing somebody notices and
+ * fixes in one line, rather than quietly joining the largest group.
+ */
+export const SESSION_KINDS: Record<string, SessionKind> = {
+  workshop: "workshop",
+  "scoring session": "scoring-session",
+  "trend governance": "trend-governance",
+  "forecast forums": "forecast-forums",
+  "forecast forum": "forecast-forums",
+  research: "research",
+};
+
+export function normaliseSessionKind(value: string | undefined): SessionKind {
+  return SESSION_KINDS[(value ?? "").trim().toLowerCase()] ?? "other";
 }
 
 /**
@@ -785,12 +1275,218 @@ function personId(nameOrEmail: string | undefined): string {
   return local.replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 }
 
-/** Smartsheet returns dates as YYYY-MM-DD already, but display values vary by sheet locale. */
-function isoDate(value: string | undefined): string {
-  if (!value) return "";
-  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return value;
-  const parsed = new Date(value);
-  return Number.isNaN(parsed.getTime()) ? "" : parsed.toISOString().slice(0, 10);
+/**
+ * The region a country belongs to.
+ *
+ * The sheets record a country and the Hub compares regions, so something has
+ * to bridge the two. Holding the bridge here rather than asking the team to
+ * add a Region column to ten calendar sheets is the point: `Country` is
+ * already filled in on the sheets that have it, and a column nobody
+ * remembers to populate is worse than a table one person maintains.
+ *
+ * A value that is already a region passes straight through, so a sheet may
+ * say "EMEA" in the country column and still work. A country nobody has
+ * listed comes back undefined rather than guessed — an event with no region
+ * reaches everybody, which is the safer failure for a public holiday, and
+ * the doctor is where an unrecognised country should be noticed.
+ */
+const REGIONS: Record<string, string[]> = {
+  EMEA: [
+    "UK", "United Kingdom", "England", "Scotland", "Wales", "Northern Ireland", "Ireland",
+    "France", "Germany", "Italy", "Spain", "Portugal", "Netherlands", "Holland", "Belgium",
+    "Luxembourg", "Denmark", "Sweden", "Norway", "Finland", "Iceland", "Switzerland",
+    "Austria", "Poland", "Czech Republic", "Czechia", "Hungary", "Romania", "Bulgaria",
+    "Greece", "Croatia", "Serbia", "Ukraine", "Russia", "Turkey", "Israel",
+    "UAE", "United Arab Emirates", "Dubai", "Saudi Arabia", "Qatar", "Kuwait",
+    "Egypt", "Morocco", "Tunisia", "South Africa", "Nigeria", "Kenya", "Ghana", "Ethiopia",
+  ],
+  APAC: [
+    "China", "Hong Kong", "Macau", "Taiwan", "Japan", "Korea", "South Korea",
+    "India", "Pakistan", "Bangladesh", "Sri Lanka", "Singapore", "Malaysia", "Thailand",
+    "Vietnam", "Indonesia", "Philippines", "Cambodia", "Myanmar",
+    "Australia", "New Zealand",
+  ],
+  NAM: ["USA", "US", "United States", "United States of America", "Canada"],
+  LATAM: [
+    "Brazil", "Mexico", "Argentina", "Chile", "Colombia", "Peru", "Uruguay",
+    "Ecuador", "Bolivia", "Paraguay", "Venezuela", "Costa Rica", "Panama",
+  ],
+};
+
+const REGION_BY_COUNTRY = new Map<string, string>();
+for (const [region, countries] of Object.entries(REGIONS)) {
+  REGION_BY_COUNTRY.set(region.toLowerCase(), region);
+  for (const country of countries) REGION_BY_COUNTRY.set(country.toLowerCase(), region);
+}
+
+/**
+ * Everybody named in a cell, as addresses.
+ *
+ * A contact cell carries its people in `objectValue.values`, each with a name
+ * and an address, and that is the only place the two are still separate — the
+ * display value has already joined them with commas, which cannot be undone
+ * safely because a name may contain one. Reading the structure rather than
+ * unpicking the string is the whole fix.
+ *
+ * The address is preferred and the name is the fallback, for an entry
+ * somebody typed by hand that Smartsheet never resolved to an account: a
+ * cell holding a person the Hub cannot address is still a cell holding a
+ * person, and dropping them would quietly un-assign the work.
+ */
+/**
+ * The people in one column of a row, as addresses.
+ *
+ * Falls back to splitting the display string on commas, because not every
+ * source is Smartsheet: a Google Sheet's contact column is a line of text
+ * somebody typed, and the old reading is the only one available for it. The
+ * structured list is preferred wherever it exists, which is why a name with
+ * a comma in it survives on a real sheet and not in a spreadsheet — that is
+ * the difference between the two sources, not a bug in the reader.
+ */
+function whoIn(row: FlatRow, column: string): string[] {
+  if (!column) return [];
+  const structured = row._people?.[column];
+  if (structured?.length) return structured;
+  return (row[column] || "").split(/\s*,\s*/).filter(Boolean);
+}
+
+/**
+ * A multi-picklist cell as the several values it actually holds.
+ *
+ * The same argument `peopleIn` makes, for the same reason. Asked plainly, a
+ * multi-picklist arrives as its values joined with commas, and splitting that
+ * back apart is a guess that the directory already disproves: one of its
+ * coverage tags is "Decor / DIY & Hardware, to include lighting", which
+ * splitting turns into two things nobody covers. At level 2 the API says
+ * which values are in the cell, so nothing has to be guessed.
+ *
+ * Empty when the cell is not a picklist, which leaves the caller to read the
+ * text — a Google Sheet has no structure to offer and never will.
+ */
+export function valuesIn(cell: SmartsheetCell): string[] {
+  const values = cell.objectValue?.values;
+  if (!Array.isArray(values)) return [];
+  return values
+    .map((v) => (typeof v === "string" ? v : ((v as { value?: string }).value ?? "")))
+    .map((v) => String(v).trim())
+    .filter(Boolean);
+}
+
+export function peopleIn(cell: SmartsheetCell): string[] {
+  const values = cell.objectValue?.values;
+  if (Array.isArray(values)) {
+    return values.map((v) => (v.email || v.name || "").trim()).filter(Boolean);
+  }
+  const one = cell.objectValue;
+  if (one && (one.email || one.name)) return [(one.email || one.name || "").trim()].filter(Boolean);
+  return [];
+}
+
+/**
+ * A multi-picklist cell as the several values it holds.
+ *
+ * Smartsheet hands a multi-picklist back as its values joined with commas,
+ * so "UK, USA" is two countries and reading it whole would match neither.
+ * Splitting on the comma is right here and would not be for a contact cell —
+ * a person's name can contain one, which is why `peopleIn` asks the API for
+ * the structure instead. A picklist option is chosen from a fixed list
+ * somebody wrote, and none of these has a comma in it.
+ */
+/**
+ * Whether a host cell names somebody, or says nobody has been found yet.
+ *
+ * "Unassigned" and "TBC" are words a person typed into a column that holds
+ * people, meaning the opposite of a person. Printing them under "Host" tells
+ * a reader the workshop is run by somebody called Unassigned.
+ */
+export function namedHost(value: string | undefined): boolean {
+  const text = (value ?? "").trim();
+  if (!text) return false;
+  return !/^(unassigned|tbc|tbd|n\/a|none|unknown)$/i.test(text);
+}
+
+export function listCell(value: string | undefined): string[] {
+  return (value ?? "")
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+export function regionFor(country: string | undefined): string | undefined {
+  const key = (country ?? "").trim().toLowerCase();
+  if (!key) return undefined;
+  return REGION_BY_COUNTRY.get(key);
+}
+
+/**
+ * Whether an event in a region reaches a particular person.
+ *
+ * One function because the rule was written out twice — in the notice
+ * builder and in the calendar feed — and two copies of a rule are two
+ * chances to change one of them. Somebody reading their calendar and
+ * somebody reading the email about it must be told the same thing.
+ *
+ * An event with no region reaches everybody, and so does one marked "all":
+ * matched without regard to case, because a team that agrees to tag things
+ * ALL will type ALL, and a rule that quietly excludes everybody from an
+ * event meant for everybody is the worst way to find that out.
+ */
+export function inRegion(eventRegion: string | undefined, personRegion: string | undefined): boolean {
+  const theirs = (eventRegion ?? "").trim();
+  if (!theirs) return true;
+  if (theirs.toLowerCase() === "all") return true;
+  return theirs.toLowerCase() === (personRegion ?? "").trim().toLowerCase();
+}
+
+/**
+ * A cell that holds a calendar day rather than words.
+ *
+ * Worth knowing about because a date column is the one place where the
+ * display value is the wrong one to read: Smartsheet renders it to the
+ * account's regional format, so a UK sheet says "06/01/26" for the sixth of
+ * January and the underlying value says "2026-01-06". Everywhere else the
+ * display value is the one a person would recognise — a contact column shows
+ * a name over an address, a formula shows its result — so the preference is
+ * inverted here and nowhere else.
+ */
+export function isDateColumn(type: string | undefined): boolean {
+  return type === "DATE" || type === "DATETIME" || type === "ABSTRACT_DATETIME";
+}
+
+/**
+ * A calendar day, as the domain model holds them.
+ *
+ * Three rules, and each one exists because the obvious version was wrong.
+ *
+ * An ISO date is taken as characters, never parsed and reformatted. Reading
+ * "2026-09-21" into a Date and calling toISOString on it returns the
+ * twentieth anywhere east of Greenwich, because the string is read as
+ * midnight UTC but a datetime is rendered back in local time. A date that
+ * arrives correct must leave untouched.
+ *
+ * A date written only in digits and slashes is refused rather than guessed.
+ * "06/01/26" is the sixth of January to the team who typed it and the first
+ * of June to `new Date`, and there is nothing in the string that says which —
+ * so the honest answer is no answer. An empty cell on a page is somebody
+ * asking why; a deadline five months out is nobody asking anything.
+ *
+ * Anything else — "21 Sep 2026" and the like — is parsed, but the day is read
+ * back off the local clock rather than through UTC, for the same reason as
+ * the first rule.
+ */
+export function isoDate(value: string | undefined): string {
+  const text = (value ?? "").trim();
+  if (!text) return "";
+
+  const iso = /^(\d{4}-\d{2}-\d{2})(?:[T ]|$)/.exec(text);
+  if (iso) return iso[1];
+
+  if (/^\d{1,4}[/.]\d{1,2}[/.]\d{1,4}$/.test(text)) return "";
+
+  const parsed = new Date(text);
+  if (Number.isNaN(parsed.getTime())) return "";
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${parsed.getFullYear()}-${pad(parsed.getMonth() + 1)}-${pad(parsed.getDate())}`;
 }
 
 /**
@@ -812,11 +1508,75 @@ function normaliseStatus(value: string | undefined): Status {
   return "not-started";
 }
 
-function normaliseEventType(value: string | undefined): EventType {
-  const v = (value ?? "").toLowerCase();
-  if (v.includes("holiday") || v.includes("bank")) return "public-holiday";
-  if (v.includes("workshop")) return "workshop";
-  if (v.includes("training") || v.includes("course")) return "training";
-  if (v.includes("conference") || v.includes("show") || v.includes("week")) return "conference";
-  return "leave";
+/**
+ * Which bucket each of the calendar sheets' dropdown values falls in.
+ *
+ * Held as a table rather than a chain of `includes` tests, because this is
+ * the team's own vocabulary and it changes: a new value in a Smartsheet
+ * dropdown should be a line here, read by somebody who has never seen the
+ * function, rather than a guess about which substring test it will fall
+ * through. The chain it replaces sent eleven distinct activity types —
+ * Marketing, Data Brief, Client Call, Retail Shoot and the rest — to "leave",
+ * so the calendar told people their colleagues were off when they were
+ * working.
+ *
+ * Matched whole and case-insensitively, not by substring. "Sick Leave" and
+ * "Annual Leave" are both leave because both are listed, not because they
+ * both contain the word.
+ *
+ * Anything not listed is `other`, which is the honest answer and a visible
+ * one: it gets its own colour, so a value nobody has bucketed shows up on
+ * the calendar as unbucketed rather than disguised as something else.
+ */
+export const EVENT_TYPES: Record<string, EventType> = {
+  // The two sheets that are wholly one thing.
+  "public holiday": "public-holiday",
+  "bank holiday": "public-holiday",
+  "trade show": "conference",
+
+  "annual leave": "leave",
+  "sick leave": "leave",
+  "sick day": "leave",
+  "lieu day": "leave",
+
+  travel: "travel",
+
+  video: "marketing",
+  podcast: "marketing",
+  "video/podcast": "marketing",
+  marketing: "marketing",
+  webinar: "marketing",
+  presentation: "marketing",
+
+  /*
+   * Everything the team meets a client for.
+   *
+   * Mindset is here and only here. It appeared under both Client Call and
+   * Reminder when the buckets were first sketched, and the team has since
+   * said it belongs in this one — which is the whole reason these are a list
+   * somebody can read rather than a chain of guesses that would have settled
+   * it silently on whichever branch was written first.
+   *
+   * "Analyst" is deliberately not an alias for "Analyst Call". It read like
+   * a shorter name for the same thing and was a half-typed line; guessing at
+   * a value the dropdown does not hold is how eleven types came to read as
+   * leave. Anything the list does not name is visibly `other`.
+   */
+  "client call": "client-call",
+  mindset: "client-call",
+  enterprise: "client-call",
+  "analyst call": "client-call",
+  "value added services": "client-call",
+  prospect: "client-call",
+  "creative intelligence": "client-call",
+  "at risk initiative": "client-call",
+
+  "freelance brief": "reminder",
+  "data brief": "reminder",
+  "retail shoot": "reminder",
+  reminder: "reminder",
+};
+
+export function normaliseEventType(value: string | undefined): EventType {
+  return EVENT_TYPES[(value ?? "").trim().toLowerCase()] ?? "other";
 }

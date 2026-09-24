@@ -31,7 +31,7 @@ const REMEMBERED = ["forecaster", "vertical", "type", "status", "q"];
 
 export default function Deadlines() {
   const [params, setParams] = useSearchParams();
-  const { person, isManager, me } = useViewer();
+  const { person, isManager, me, reports } = useViewer();
   const custom = useCustom();
 
   // What this person last filtered to, when the address carries nothing.
@@ -122,6 +122,24 @@ export default function Deadlines() {
             onChange={(e) => setParam("forecaster", e.target.value)}
           >
             <option value="">Everyone</option>
+            {/*
+              Somebody's own reports, listed first and named as such.
+              A Head Of scrolling two hundred names to find their five is
+              doing the directory's work for it, and the directory already
+              knows. Absent for everybody the column says nothing about, so
+              the filter reads exactly as it did for them.
+            */}
+            {reports.length > 0 && (
+              <optgroup label="Reporting to you">
+                {(people.data ?? [])
+                  .filter((p) => reports.includes(p.id))
+                  .map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+              </optgroup>
+            )}
             {(people.data ?? [])
               .filter((p) => p.role === "forecaster")
               .map((p) => (
@@ -198,7 +216,7 @@ export default function Deadlines() {
               { header: "Title", value: (r) => r.title },
               { header: "Type", value: (r) => r.type },
               { header: "Vertical", value: (r) => r.vertical },
-              { header: "Season", value: (r) => r.season },
+              { header: "Forecast horizon", value: (r) => r.forecastHorizon },
               { header: "Forecaster", value: (r) => personName(people.data ?? [], r.forecasterId) },
               { header: "Status", value: (r) => STATUS_LABELS[r.status] },
               { header: "Submission date", value: (r) => r.submissionDate },
@@ -282,7 +300,7 @@ export default function Deadlines() {
                   ),
                   "deadlines.column.type": item.type,
                   "deadlines.column.vertical": item.vertical,
-                  "deadlines.column.season": item.season,
+                  "deadlines.column.season": item.forecastHorizon,
                   "deadlines.column.forecaster": (
                     <Link to={`/team/${item.forecasterId}`}>
                       <Who

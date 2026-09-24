@@ -159,7 +159,7 @@ export function search(q: string, corpus: Corpus): SearchResult {
     const body = [
       item.type,
       item.vertical,
-      item.season,
+      item.forecastHorizon,
       item.status,
       name.get(item.forecasterId) ?? "",
       item.notes ?? "",
@@ -238,10 +238,10 @@ export function search(q: string, corpus: Corpus): SearchResult {
       kind: "session",
       to: `/workshops/${session.id}`,
       title: session.title,
-      sub: `${session.kind.replace(/-/g, " ")} · ${session.date} · ${session.location}`,
+      sub: `${session.kind.replace(/-/g, " ")} · ${session.startDate} · ${session.location}`,
       why: context(terms, session.summary),
       score,
-      at: session.date,
+      at: session.startDate,
     });
   }
 

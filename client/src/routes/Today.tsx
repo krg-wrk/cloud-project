@@ -13,6 +13,7 @@ import {
   isOutstanding,
   isOverdue,
   personName,
+  personPlace,
 } from "../lib/domain";
 import { useViewer } from "../lib/viewer";
 import type { ContentItem, Schedule, SessionWithSignUps } from "../types";
@@ -39,7 +40,7 @@ function DeadlineRow({
       <div>
         <div className="deadline-title">{item.title}</div>
         <div className="deadline-meta">
-          {item.type} · {item.vertical} · {item.season}
+          {item.type} · {item.vertical} · {item.forecastHorizon}
           {showOwner && ` · ${personName(people, item.forecasterId)}`}
         </div>
       </div>
@@ -249,8 +250,8 @@ export default function Today() {
             {mySessions.slice(0, 5).map((session) => (
               <Link key={session.id} to={`/workshops/${session.id}`} className="deadline">
                 <div className="deadline-date">
-                  {formatShort(session.date)}
-                  <span className="rel">{session.startTime}</span>
+                  {formatShort(session.startDate)}
+                  <span className="rel">{session.startTime ?? ""}</span>
                 </div>
                 <div>
                   <div className="deadline-title">{session.title}</div>
@@ -313,7 +314,7 @@ export default function Today() {
                         <Who id={p.id} name={p.name} />
                       </div>
                       <div className="deadline-meta">
-                        {p.vertical} · {p.region}
+                        {personPlace(p)}
                       </div>
                     </div>
                     <div className="deadline-right">

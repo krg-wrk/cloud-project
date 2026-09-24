@@ -1,4 +1,5 @@
 import type { PeerReview, PersonalEntry } from "./store.js";
+import { inRegion } from "./data/smartsheetSource.js";
 import type { CalendarEvent, ContentItem, KnowledgeSession, Person } from "./types.js";
 
 /**
@@ -121,16 +122,16 @@ export function buildFeed(input: FeedInput): string {
   for (const item of mine) {
     entries.push({
       uid: `submission-${item.id}@forecasters-hub`,
-      summary: `Copy due: ${item.title}`,
+      summary: `Due with subbing: ${item.title}`,
       date: item.submissionDate,
-      description: `${item.type} · ${item.vertical} · ${item.season}\nStatus: ${item.status}`,
+      description: `${item.type} · ${item.vertical} · ${item.forecastHorizon}\nStatus: ${item.status}`,
       url: `${baseUrl}/content/${item.id}`,
     });
     entries.push({
       uid: `publication-${item.id}@forecasters-hub`,
       summary: `Publishes: ${item.title}`,
       date: item.publicationDate,
-      description: `${item.type} · ${item.vertical} · ${item.season}`,
+      description: `${item.type} · ${item.vertical} · ${item.forecastHorizon}`,
       url: `${baseUrl}/content/${item.id}`,
     });
   }
@@ -149,7 +150,7 @@ export function buildFeed(input: FeedInput): string {
           ? `Reviewing ${counterpart?.name ?? "a colleague"}'s piece.`
           : `${counterpart?.name ?? "A colleague"} is reviewing this.`,
         review.note ?? "",
-        `Copy due ${item.submissionDate}, publishes ${item.publicationDate}.`,
+        `Due with the subbing team ${item.submissionDate}, publishes ${item.publicationDate}.`,
       ]
         .filter(Boolean)
         .join("\n"),
@@ -162,7 +163,7 @@ export function buildFeed(input: FeedInput): string {
     entries.push({
       uid: `session-${session.id}@forecasters-hub`,
       summary: session.title,
-      date: session.date,
+      date: session.startDate,
       startTime: session.startTime,
       endTime: session.endTime,
       description: session.summary,
@@ -184,7 +185,7 @@ export function buildFeed(input: FeedInput): string {
   for (const event of input.events) {
     const forThisPerson = event.personId
       ? event.personId === person.id
-      : !event.region || event.region === "All" || event.region === person.region;
+      : inRegion(event.region, person.region);
     if (!forThisPerson) continue;
     entries.push({
       uid: `event-${event.id}@forecasters-hub`,

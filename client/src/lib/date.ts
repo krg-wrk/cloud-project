@@ -176,9 +176,52 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((b - a) / 86_400_000);
 }
 
-/** "in 4 days", "today", "3 days ago" */
+/**
+ * "in 4 days", "today", "3 days ago" — and nothing at all for a day that is
+ * not there.
+ *
+ * A real sheet has blank date cells in it: a hundred rows of the
+ * commissioning schedule have no submission date yet. `Date.parse` answers
+ * NaN for those, which arithmetic carries all the way to the screen, and the
+ * page told somebody a forecast was "NaN days ago". An empty string is the
+ * honest reading — the row already shows an em dash where the date would be,
+ * and a date nobody has set needs no elaboration.
+ *
+ * The shape is checked rather than the arithmetic, because `Date.parse` is
+ * lenient enough to be dangerous: a Country column with "19 Sept" typed into
+ * it parses to a real instant, and a finiteness test waves through
+ * "9135 days ago". A calendar day in this domain is YYYY-MM-DD and nothing
+ * else is worth a reading.
+ */
+/**
+ * The days something runs, as one phrase.
+ *
+ * "17 Sept" for a day, "17–19 Sept" when it stays inside a month, and both
+ * months written out when it crosses one. A workshop programme keeps ranges
+ * and printing only the first day was how the Hub hid the rest of an R&D
+ * week; printing "17 Sept – 17 Sept" for the ordinary case would be the
+ * other way of getting it wrong.
+ */
+export function dayRange(startDate: string, endDate?: string): string {
+  if (!startDate) return "";
+  if (!endDate || endDate === startDate) return formatMedium(startDate);
+  /*
+   * No weekday once it is a range. "Thu 17 – Sat 19 Sept" is three ideas
+   * where one will do, and a weekday earns its place only when there is a
+   * single day somebody is deciding whether they can make.
+   */
+  if (startDate.slice(0, 7) === endDate.slice(0, 7)) {
+    return `${dayOfMonth(startDate)}–${formatShort(endDate)}`;
+  }
+  return `${formatShort(startDate)} – ${formatShort(endDate)}`;
+}
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
 export function relativeDays(date: string, today = TODAY): string {
+  if (!ISO_DAY.test((date ?? "").trim())) return "";
   const diff = daysBetween(today, date);
+  if (!Number.isFinite(diff)) return "";
   if (diff === 0) return "today";
   if (diff === 1) return "tomorrow";
   if (diff === -1) return "yesterday";

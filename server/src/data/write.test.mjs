@@ -87,21 +87,41 @@ function stub({ rowNow = ROW, cols = COLS, fail } = {}) {
 }
 
 const source = async (allowWrites = true) => {
-  const s = new SmartsheetSource({ token: "stub-token", contentSheetId: SHEET, allowWrites });
+  const s = new SmartsheetSource({ token: "stub-token", contentSheetIds: [SHEET], allowWrites });
   await s.enableWrites();
   return s;
 };
 
 test("a source the deployment did not open for writing cannot write at all", async () => {
   stub();
-  const s = new SmartsheetSource({ token: "stub-token", contentSheetId: SHEET });
+  const s = new SmartsheetSource({ token: "stub-token", contentSheetIds: [SHEET] });
   assert.equal(await s.enableWrites(), "off");
   assert.equal(s.writes, undefined, "there is no object to call");
 
   // And with the flag off but explicitly false, the same.
-  const off = new SmartsheetSource({ token: "t", contentSheetId: SHEET, allowWrites: false });
+  const off = new SmartsheetSource({ token: "t", contentSheetIds: [SHEET], allowWrites: false });
   await off.enableWrites();
   assert.equal(off.writes, undefined);
+});
+
+test("a schedule spread over several sheets cannot be written to, because the address cannot say which", async () => {
+  stub();
+  const many = new SmartsheetSource({
+    token: "stub-token",
+    contentSheetIds: [SHEET, "7777777777777777"],
+    allowWrites: true,
+  });
+  const target = await many.enableWrites();
+  assert.equal(many.writes, undefined, "there is no writer to call");
+  assert.match(target, /^off/, "the banner says writing is off");
+  assert.match(target, /2 sheets/, "and says why, in words somebody can act on");
+});
+
+test("one sheet in a list still writes, so the refusal is about ambiguity rather than the list", async () => {
+  stub();
+  const one = new SmartsheetSource({ token: "stub-token", contentSheetIds: [SHEET], allowWrites: true });
+  await one.enableWrites();
+  assert.ok(one.writes, "a single-sheet schedule is unambiguous and writes as before");
 });
 
 test("switching writing on names the sheet, so a person is told what they are changing", async () => {
@@ -200,7 +220,7 @@ test("a sheet without the column says so rather than writing elsewhere", async (
   const s = await source();
   await assert.rejects(
     () => s.writes.apply("900", { submittedOn: "2026-09-17" }, {}),
-    /has no "Actual Submission" column/,
+    /has no "Content Submitted" column/,
   );
   assert.equal(writes.length, 0);
 });

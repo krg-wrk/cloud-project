@@ -1,6 +1,6 @@
 /** Domain model for the Forecasters Hub. Mirrors the columns held in Smartsheet. */
 
-import type { AccessRow } from "./auth.js";
+import type { AccessRow, Role } from "./auth.js";
 
 export type { AccessRow };
 
@@ -44,6 +44,30 @@ export interface Person {
   /** The department the KPI sheet groups them under. */
   department?: string;
   region: string;
+  /**
+   * What the directory's Hub Access column says they may do, where it says
+   * anything. Separate from `role` above, which is the grade the KPI
+   * benchmarks key on — somebody can be a Strategist and an admin.
+   */
+  hubAccess?: Role;
+  /** False when the directory marks them inactive, or as having no access. */
+  active?: boolean;
+  /**
+   * The country as the directory writes it, kept beside the region it was
+   * worked out from. A workshop is tagged by country and a holiday reaches a
+   * region, so throwing the country away to keep only the region would make
+   * one of those two questions unanswerable.
+   */
+  country?: string;
+  /**
+   * Their line manager's address, as the directory writes it.
+   *
+   * The line manager, deliberately, and not the commissioning manager the
+   * `cm` column names. A commissioning manager already sees everybody, so
+   * reading that column would say nothing new; a Head Of with five people
+   * reporting to them currently sees only their own name in a filter.
+   */
+  managerEmail?: string;
 }
 
 /**
@@ -70,12 +94,15 @@ export interface ContentItem {
   title: string;
   type: ContentType;
   vertical: Vertical;
-  season: string;
+  /** The horizon a forecast points at: the team plans by horizon, not by season. */
+  forecastHorizon: string;
+  /** How the team files it — the planning view groups and filters on it. */
+  forecastCategory?: string;
   /** Person id of the forecaster who writes it. */
   forecasterId: string;
   /** Person id of the commissioning manager who owns the slot. */
   managerId: string;
-  /** ISO date (YYYY-MM-DD) the copy is due with the commissioning manager. */
+  /** ISO date (YYYY-MM-DD) the forecast is due with the subbing team. */
   submissionDate: string;
   /** ISO date (YYYY-MM-DD) it goes live on the platform. */
   publicationDate: string;
@@ -102,12 +129,27 @@ export interface ContentItem {
 
 export type Ownership = "sole" | "co-owned" | "byline" | "freelance";
 
+/**
+ * What a calendar entry is, in the team's own words.
+ *
+ * The buckets the team keeps its dropdowns in — see `EVENT_TYPES` for which
+ * sheet value lands in which. `workshop` and `training` used to be here and
+ * are gone: the workshop programme is its own sheet with its own vocabulary,
+ * and no calendar row ever produced either.
+ *
+ * `other` is deliberate and visible. A dropdown value nobody has bucketed
+ * gets its own colour rather than being folded into leave, which is what was
+ * happening to eleven of them.
+ */
 export type EventType =
   | "leave"
   | "public-holiday"
-  | "workshop"
-  | "training"
-  | "conference";
+  | "conference"
+  | "travel"
+  | "marketing"
+  | "client-call"
+  | "reminder"
+  | "other";
 
 export interface CalendarEvent {
   id: string;
@@ -115,7 +157,28 @@ export interface CalendarEvent {
   title: string;
   /** Person id, when the event belongs to one person (e.g. annual leave). */
   personId?: string;
-  /** Region the event applies to, for public holidays. */
+  /**
+   * Everybody named in the Owner cell, not only the first.
+   *
+   * A trade show is owned by several people often enough that taking the
+   * first name silently decided which of them the show belonged to. `personId`
+   * stays as the first of these because a leave row really does belong to one
+   * person and half the Hub reads it that way.
+   */
+  personIds?: string[];
+  /**
+   * The countries the event applies to, as the sheet's Country column says.
+   *
+   * A list because the column is a multi-picklist and a holiday can be marked
+   * for two places at once. "All" in it reaches everybody, which is how the
+   * holidays sheet says a thing is not regional at all.
+   */
+  countries?: string[];
+  /**
+   * Region, which only the trade shows sheet records and only as a fallback.
+   * A country is what a person's directory row holds, so a country is what
+   * gets compared where there is one — see `eventReaches`.
+   */
   region?: string;
   startDate: string;
   endDate: string;
@@ -281,12 +344,21 @@ export interface MetricObservation {
   value: number;
 }
 
+/**
+ * What kind of session the workshop programme is running.
+ *
+ * The team's own dropdown, and one it has said it will add to — so a value
+ * the Hub has not met becomes `other` rather than the largest group, and
+ * shows up as unbucketed on somebody's calendar instead of disguised.
+ * See `SESSION_KINDS` for the mapping.
+ */
 export type SessionKind =
   | "workshop"
-  | "masterclass"
-  | "lunch-and-learn"
-  | "critique"
-  | "training";
+  | "scoring-session"
+  | "trend-governance"
+  | "forecast-forums"
+  | "research"
+  | "other";
 
 /**
  * A workshop or knowledge-sharing session. Separate from CalendarEvent
@@ -301,16 +373,41 @@ export interface KnowledgeSession {
   hostId?: string;
   /** Named guest speaker, when the host is not on the team. */
   hostExternal?: string;
-  date: string;
-  /** 24h "HH:MM", in UK time. */
-  startTime: string;
-  endTime: string;
+  /**
+   * The days it runs. An R&D day is one day, so `endDate` equals `startDate`.
+   * The Hub held a single day and a workshop programme keeps ranges, which
+   * quietly hid every day of a session after its first.
+   */
+  startDate: string;
+  endDate: string;
+  /** 24h "HH:MM", in UK time, where a team records them at all. */
+  startTime?: string;
+  endTime?: string;
   location: string;
   online: boolean;
   /** null when there is no limit on numbers. */
   capacity: number | null;
   /** False for sessions nobody signs up for — the required ones. */
   signUpsOpen: boolean;
+  /** Everybody tagged into it, from the sheet's own contact column. */
+  attendeeIds?: string[];
+  /**
+   * The department it is for, as one string for the places that show it.
+   * "All" reaches everybody.
+   */
+  department?: string;
+  /**
+   * Every value in the Department cell, which is a multi-picklist — so a
+   * session marked for two departments is two values rather than one string
+   * that matches neither.
+   */
+  departments?: string[];
+  /**
+   * Every country the session is for, same column as `location` and split
+   * the same way. Read alongside the department: a session reaches somebody
+   * if it names them, says All, or happens where they are.
+   */
+  countries?: string[];
   /** The whole team is expected, so there is nothing to opt into. */
   required?: boolean;
   summary: string;
@@ -413,11 +510,19 @@ export interface DirectoryPerson {
   role?: string;
   /** The industry team: Fashion Design, Interiors, Beauty, Insight… */
   team?: string;
+  /** The department the directory files them under. */
+  department?: string;
   /** The categories they cover — the sheet's Secondary Team Tags. */
   tags: string[];
   /** The knowledge networks they sit on — Signals, Macro, Sustainability… */
   knowledge: string[];
-  region?: string;
+  /**
+   * The part of the world somebody knows, which is not where they live.
+   * A forecaster in London can hold the APAC lens, so this and `country`
+   * are asked separately and labelled apart.
+   */
+  regionalLens?: string;
+  /** Where they are based. */
   country?: string;
   /** Whether they run their team's feed. */
   feedLead: boolean;
@@ -463,4 +568,28 @@ export interface DataSource {
    * source has nothing to do.
    */
   forget?(key: "content" | "events" | "people" | "trends"): void;
+  /**
+   * Turn writing on at boot, and say what it will write to.
+   *
+   * Here as a capability rather than left to a type test at the call site,
+   * which is what this replaced. `index.ts` asked `source instanceof
+   * SmartsheetSource`, and that is true of exactly one class — so the moment
+   * a source is wrapped in another, as the mirror wraps it, writing was
+   * switched off at boot with nothing said and the Change button simply
+   * stopped being there.
+   *
+   * Called once, at startup rather than lazily, so a write flag set against a
+   * sheet the token cannot see fails with a message instead of failing the
+   * first time a manager presses Apply.
+   */
+  enableWrites?(): Promise<string>;
+  /**
+   * Read everything again, now, and say what came back.
+   *
+   * Only a source that keeps a copy has anything to do here — a source that
+   * reads live is always as fresh as its last request. Present as a
+   * capability so the freshness page can offer the button exactly when there
+   * is something behind it, rather than testing for a class.
+   */
+  refresh?(): Promise<{ kind: string; rows: number; ok: boolean; why?: string }[]>;
 }

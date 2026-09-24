@@ -261,7 +261,7 @@ test("the digest carries the week's deadlines, publications, reviews and session
     forecast({ id: "ss-3", title: "Already late", submissionDate: "2026-09-01" }),
     forecast({ id: "ss-4", title: "Next month", submissionDate: "2026-10-20" }),
   ];
-  const sessions = [{ id: "ws-1", title: "Colour critique", date: "2026-09-16" }];
+  const sessions = [{ id: "ws-1", title: "Colour critique", startDate: "2026-09-16", endDate: "2026-09-16" }];
   const notices = buildNotices(
     world({
       today: MONDAY,
@@ -289,7 +289,7 @@ test("a session you did not sign up for is not in your digest", () => {
   const notices = buildNotices(
     world({
       today: MONDAY,
-      sessions: [{ id: "ws-1", title: "Colour critique", date: "2026-09-16" }],
+      sessions: [{ id: "ws-1", title: "Colour critique", startDate: "2026-09-16", endDate: "2026-09-16" }],
       goingBySession: { "ws-1": ["tb"] },
     }),
     ["digest"],

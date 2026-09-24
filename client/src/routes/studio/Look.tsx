@@ -13,6 +13,7 @@ import {
   type Token,
 } from "../../lib/appearance";
 import { usePreferences } from "../../lib/preferences";
+import { PALETTE, paletteName } from "../../lib/palette";
 import { ErrorNote, Loading } from "../../components/bits";
 
 /**
@@ -54,6 +55,7 @@ export default function Look() {
   const [icons, setIcons] = useState<Record<string, string> | null>(null);
   const [gradients, setGradients] = useState<boolean | null>(null);
   const [washes, setWashes] = useState<Record<string, string> | null>(null);
+  const [opens, setOpens] = useState<"page" | "panel" | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
@@ -64,6 +66,7 @@ export default function Look() {
       setIcons(stored.data.icons ?? {});
       setGradients(stored.data.gradients !== false);
       setWashes(stored.data.washes ?? {});
+      setOpens(stored.data.opens === "panel" ? "panel" : "page");
     }
   }, [stored.data, colours]);
 
@@ -101,7 +104,7 @@ export default function Look() {
   }, [gradients, savedGradients, washOffForMe]);
 
   if (stored.error) return <ErrorNote message={stored.error} />;
-  if (!stored.data || !colours || !icons || gradients === null || !washes) {
+  if (!stored.data || !colours || !icons || gradients === null || !washes || !opens) {
     return <Loading what="the colours" />;
   }
 
@@ -112,6 +115,7 @@ export default function Look() {
     Object.keys(colours).length > 0 ||
     Object.keys(icons).length > 0 ||
     Object.keys(washes).length > 0 ||
+    opens !== "page" ||
     !gradients;
 
   const set = (id: string, value: string) => {
@@ -136,12 +140,13 @@ export default function Look() {
       const res = await send<Appearance & { dropped?: number }>(
         "/studio/appearance",
         "PUT",
-        { colours, icons, gradients, washes },
+        { colours, icons, gradients, washes, opens },
       );
       setColours(res.colours);
       setIcons(res.icons);
       setGradients(res.gradients !== false);
       setWashes(res.washes ?? {});
+      setOpens(res.opens === "panel" ? "panel" : "page");
       setNote(
         res.dropped
           ? `Saved. ${res.dropped} value${res.dropped === 1 ? " was" : "s were"} left out — a colour has to be a hex code like #4c5578.`
@@ -175,6 +180,7 @@ export default function Look() {
             setIcons({});
             setGradients(true);
             setWashes({});
+            setOpens("page");
           }}
           disabled={!changed}
         >
@@ -241,6 +247,57 @@ export default function Look() {
         )}
       </div>
 
+      {/*
+        What a click on the calendar does. Next to the background switch
+        because both are decisions about how the Hub behaves rather than about
+        what one chip means, and both are the kind of thing a team argues
+        about once and then leaves alone.
+      */}
+      <div className="studio-item">
+        <div className="studio-item-head">
+          <div>
+            <h2>Opening an entry</h2>
+            <p className="muted small">
+              What clicking a forecast, a workshop or a diary entry on the calendar does.
+              One setting for everybody, because it changes what a click means.
+            </p>
+          </div>
+        </div>
+        <div className="opens-rows">
+          <label className="check">
+            <input
+              type="radio"
+              name="opens"
+              checked={opens === "page"}
+              onChange={() => setOpens("page")}
+            />
+            <span>
+              <b>Open its own page</b>
+              <small>
+                The way it works now. The address is the entry, so it can be pasted to
+                somebody, and going back returns to the month you were looking at.
+              </small>
+            </span>
+          </label>
+          <label className="check">
+            <input
+              type="radio"
+              name="opens"
+              checked={opens === "panel"}
+              onChange={() => setOpens("panel")}
+            />
+            <span>
+              <b>Open a panel over the calendar</b>
+              <small>
+                The month stays where it is and the detail opens over it — quicker when
+                you are reading down a week rather than going somewhere. The panel still
+                offers the full page.
+              </small>
+            </span>
+          </label>
+        </div>
+      </div>
+
       {groups.map((group) => (
         <div className="studio-item" key={group}>
           <div className="studio-item-head">
@@ -267,6 +324,41 @@ export default function Look() {
                       <b>{token.label}</b>
                       <span className="muted small">{token.css}</span>
                     </div>
+                    {/*
+                      The palette, beside the two ways of saying a colour that
+                      were already here. A named list is the one most people
+                      want — it is the design team's own sheet and the colours
+                      the Hub already uses, so picking from it keeps a team
+                      inside a palette somebody approved. The hex field stays
+                      for anybody who has a code in their hand, and picks up
+                      whatever the dropdown chooses, so neither is the
+                      authority and both read the same value.
+                    */}
+                    <select
+                      className="swatch-pick"
+                      value={paletteName(value) ?? ""}
+                      onChange={(e) => {
+                        const picked = PALETTE.find((c) => c.name === e.target.value);
+                        if (picked) set(token.id, picked.hex);
+                      }}
+                      aria-label={`Palette colour for ${token.label}`}
+                    >
+                      {/*
+                        Only shown while the value is one nobody named, and it
+                        cannot be chosen: "Custom" is a description of where
+                        the hex field has got to, not a thing to select.
+                      */}
+                      {!paletteName(value) && (
+                        <option value="" disabled>
+                          Custom — {value}
+                        </option>
+                      )}
+                      {PALETTE.map((colour) => (
+                        <option key={colour.hex} value={colour.name}>
+                          {colour.name} — {colour.hex}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       className="swatch-hex"
                       value={value}

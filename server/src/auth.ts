@@ -1,7 +1,50 @@
 import type { NextFunction, Request, Response } from "express";
 import type { ContentItem, Person, Vertical } from "./types.js";
 
-export type Role = "forecaster" | "commissioning-manager" | "admin";
+/**
+ * What somebody may do in the Hub, as the directory's Hub Access column says.
+ *
+ * Five levels rather than three, because two distinctions the team makes were
+ * not expressible. `leadership` sees the whole team and changes nothing —
+ * previously the only way to see everyone was to be a manager, which also
+ * granted the right to edit the commissioning sheet. `view-only` can open the
+ * Hub and write nowhere, which is what a leaver's notice period or an
+ * observer from another team actually needs.
+ *
+ * Deliberately not a list of jobs. Data and Subbing are teams and the
+ * directory already records them in `Team`; an access level that moves when
+ * somebody changes desk is an access level nobody can reason about.
+ */
+export type Role =
+  | "forecaster"
+  | "commissioning-manager"
+  | "leadership"
+  | "view-only"
+  | "admin";
+
+/**
+ * The Hub Access column's words, as the dropdown writes them.
+ *
+ * Matched loosely and case-insensitively for the same reason statuses are:
+ * the column is maintained by people, and "Commissioning Manager" arriving as
+ * "commissioning manager" should not silently demote somebody.
+ */
+export function hubAccessFor(
+  value: string | undefined,
+): { role?: Role; active?: boolean } {
+  const v = (value ?? "").trim().toLowerCase();
+  if (!v) return {};
+  // "No Access" is not a quiet level, it is the absence of one: somebody who
+  // may not sign in at all, which is a different answer from somebody who may
+  // look and not touch.
+  if (v.includes("no access")) return { active: false };
+  if (v.includes("admin")) return { role: "admin" };
+  if (v.includes("view")) return { role: "view-only" };
+  if (v.includes("leader")) return { role: "leadership" };
+  if (v.includes("commission") || v === "cm") return { role: "commissioning-manager" };
+  if (v.includes("forecaster")) return { role: "forecaster" };
+  return {};
+}
 
 /**
  * Who is making this request, and what they are allowed to see and change.
@@ -16,6 +59,14 @@ export interface Viewer {
   /** Verticals a manager or admin oversees; "all" for everything. */
   verticals: Vertical[] | "all";
   active: boolean;
+  /**
+   * The people who report to this one, by person id.
+   *
+   * Empty for nearly everybody, and empty for a commissioning manager too:
+   * they already see the whole team, so listing their reports separately
+   * would be a narrower answer to a question they are not asking.
+   */
+  reports: string[];
 }
 
 /** An access-sheet row, as maintained by the commissioning managers. */
@@ -31,9 +82,27 @@ export interface AccessRow {
 const isAdmin = (v: Viewer) => v.role === "admin";
 const isManager = (v: Viewer) => v.role === "commissioning-manager" || v.role === "admin";
 
-/** Managers and admins see the whole team; forecasters see themselves first. */
+/**
+ * Somebody who may look and not touch.
+ *
+ * Checked first in every write, before the question of whose work it is.
+ * Owning a forecast is what usually grants the right to annotate it, so
+ * without this a view-only account would get that right the moment their
+ * name appeared in an owner cell — which is precisely the account it must
+ * not happen to.
+ */
+const isViewOnly = (v: Viewer) => v.role === "view-only";
+
+/**
+ * Who sees the whole team rather than themselves first.
+ *
+ * Leadership is here and not in `isManager`: the two were the same question
+ * while the only way to see everyone was to be able to edit the sheet, and
+ * they are not the same question. A director wants the shape of the team's
+ * work; they are not commissioning it.
+ */
 export function seesWholeTeam(viewer: Viewer): boolean {
-  return isManager(viewer);
+  return isManager(viewer) || viewer.role === "leadership";
 }
 
 function inScope(viewer: Viewer, vertical: string): boolean {
@@ -46,11 +115,148 @@ export function canRead(viewer: Viewer): boolean {
   return viewer.active;
 }
 
+/**
+ * Whether a workshop is one of somebody's.
+ *
+ * Relevance rather than permission — nothing here is secret, and a manager
+ * can still ask for the whole programme with `everyone=1`. It exists because
+ * the sheet holds every session every team runs, and a forecaster in London
+ * opening the calendar was reading a Seoul research week and four Beauty
+ * scoring days that had nothing to do with them.
+ *
+ * Three ways in, in the order the team described them: named in the session,
+ * or a session for the whole team, or one happening where they are. A session
+ * that answers none of them belongs to somebody else.
+ *
+ * Being named comes first and beats the country, because somebody tagged into
+ * a workshop in another country was tagged on purpose and hiding it from them
+ * would be the Hub overruling the tag.
+ *
+ * A session with nothing filled in reaches **nobody**. It used to reach
+ * everybody, on the argument that a half-tagged sheet should not empty the
+ * page — the same argument the calendar made and the same one the sheets
+ * settled. An untagged row is a row waiting to be tagged, and putting it in
+ * front of two hundred people is not how it gets noticed.
+ */
+export function sessionReaches(
+  session: {
+    attendeeIds?: string[];
+    departments?: string[];
+    countries?: string[];
+    hostId?: string;
+  },
+  person: { id: string; country?: string } | null | undefined,
+): boolean {
+  const named = session.attendeeIds ?? [];
+  const departments = session.departments ?? [];
+  const countries = session.countries ?? [];
+
+  if (!person) return false;
+  if (named.includes(person.id)) return true;
+  if (session.hostId === person.id) return true;
+  if (saysAll(departments)) return true;
+  if (countries.length) return saysAll(countries) || inCountries(countries, person.country);
+  return false;
+}
+
+/** A multi-valued cell holds "All" when any one of its values says so. */
+function saysAll(values: string[]): boolean {
+  return values.some((value) => /^all$/i.test(value.trim()));
+}
+
+/** Whether somebody's own country is one of the ones a cell names. */
+function inCountries(countries: string[], country: string | undefined): boolean {
+  const theirs = (country ?? "").trim().toLowerCase();
+  if (!theirs) return false;
+  return countries.some((c) => c.trim().toLowerCase() === theirs);
+}
+
+/**
+ * Whether a calendar entry is one of somebody's.
+ *
+ * The same question `sessionReaches` asks, of the sheets the calendar is read
+ * from. It was answered by region, which is both too coarse and not what any
+ * of those sheets records — a South African public holiday reached every one
+ * of the sixty people the Hub files under EMEA.
+ *
+ * Two ways in, and only two:
+ *
+ * - **Named owners win, and limit.** A trade show names the people going to
+ *   it; leave and an activity day name one person. Two thousand of the two
+ *   and a half thousand rows are tagged this way.
+ * - **Then the country**, which is what a holiday records — matched against
+ *   the person's own, with "All" in the column meaning everybody. That is how
+ *   the holidays sheet says a thing is not regional at all.
+ *
+ * **A region grants nothing**, deliberately, and this is the second time that
+ * has had to be said. Seven trade shows carry a region and no owner — IAA
+ * among them — and reading it put a Frankfurt motor show on the calendar of
+ * every forecaster in EMEA who had nothing to do with it. A region is a
+ * filing category rather than a statement about who a thing is for, so it is
+ * not consulted; it stays on the record because the panel still shows it.
+ *
+ * And a row that names nobody and nowhere reaches **nobody**, rather than
+ * everybody. That was the other way round on the argument that a half-tagged
+ * sheet should not empty somebody's page — which the real sheets settle:
+ * four rows out of two and a half thousand say nothing at all, so the cost of
+ * being strict is four rows and the cost of being loose is a calendar full of
+ * other people's work.
+ *
+ * None of this narrows what somebody may look at. Asking for the whole
+ * calendar is not filtering, and is answered in full.
+ */
+export function eventReaches(
+  event: { personId?: string; personIds?: string[]; countries?: string[] },
+  person: { id: string; country?: string } | null | undefined,
+): boolean {
+  // Nobody to filter for: the caller wants the whole calendar.
+  if (!person) return true;
+
+  const owners = event.personIds?.length
+    ? event.personIds
+    : event.personId
+      ? [event.personId]
+      : [];
+  if (owners.length) return owners.includes(person.id);
+
+  const countries = event.countries ?? [];
+  if (countries.length) return saysAll(countries) || inCountries(countries, person.country);
+  return false;
+}
+
+/**
+ * Whether this forecast is theirs, however they are credited on it.
+ *
+ * `forecasterId` is whoever was named first in a contact cell that has no
+ * notion of a lead, so treating it as the only owner refuses the second
+ * person named access to work that is equally theirs. The KPI page already
+ * counts a forecast for everybody credited and the notices already go to all
+ * of them; the permission checks were the last place still asking who came
+ * first alphabetically in a Smartsheet cell.
+ */
+export function isTheirs(viewer: Viewer, item: ContentItem): boolean {
+  if (!viewer.personId) return false;
+  /*
+   * A forecast with nobody in the Owner column is nobody's.
+   *
+   * Said out loud rather than left to fall out of the comparisons below,
+   * which is what it did: two blank ids comparing equal is the sort of thing
+   * that starts being true after a refactor and hands a forecaster somebody
+   * else's work. Every one of the two thousand three hundred rows is owned
+   * today, so this guards a case that does not exist yet rather than one
+   * that does — which is the point of writing it down.
+   */
+  if (!item.forecasterId && !(item.contributorIds ?? []).length) return false;
+  if (viewer.personId === item.forecasterId) return true;
+  return (item.contributorIds ?? []).includes(viewer.personId);
+}
+
 /** Notes belong to the person writing them, but managers can annotate their own verticals. */
 export function canWriteNote(viewer: Viewer, item: ContentItem): boolean {
   if (!viewer.active) return false;
+  if (isViewOnly(viewer)) return false;
   if (isAdmin(viewer)) return true;
-  if (viewer.personId === item.forecasterId) return true;
+  if (isTheirs(viewer, item)) return true;
   return isManager(viewer) && inScope(viewer, item.vertical);
 }
 
@@ -61,6 +267,7 @@ export function canEditNote(
   authorId: string,
 ): boolean {
   if (!viewer.active) return false;
+  if (isViewOnly(viewer)) return false;
   if (isAdmin(viewer)) return true;
   if (viewer.personId === authorId) return true;
   return isManager(viewer) && inScope(viewer, item.vertical);
@@ -76,8 +283,9 @@ export function canWritePeerReview(
   currentReviewerId?: string,
 ): boolean {
   if (!viewer.active) return false;
+  if (isViewOnly(viewer)) return false;
   if (isAdmin(viewer)) return true;
-  if (viewer.personId === item.forecasterId) return true;
+  if (isTheirs(viewer, item)) return true;
   if (currentReviewerId && viewer.personId === currentReviewerId) return true;
   return isManager(viewer) && inScope(viewer, item.vertical);
 }
@@ -102,6 +310,7 @@ export function canWriteDetails(viewer: Viewer, item: ContentItem): boolean {
  */
 export function canWriteSchedule(viewer: Viewer, item: ContentItem): boolean {
   if (!viewer.active) return false;
+  if (isViewOnly(viewer)) return false;
   if (isAdmin(viewer)) return true;
   return isManager(viewer) && inScope(viewer, item.vertical);
 }
@@ -115,7 +324,7 @@ export function canWriteSchedule(viewer: Viewer, item: ContentItem): boolean {
  * `canWriteSchedule` on the server, so a yes here buys nothing.
  */
 export function mayWriteSomeSchedule(viewer: Viewer): boolean {
-  return viewer.active && isManager(viewer);
+  return viewer.active && !isViewOnly(viewer) && isManager(viewer);
 }
 
 /**
@@ -131,6 +340,7 @@ export function canWriteTrend(
   viewerName?: string,
 ): boolean {
   if (!viewer.active) return false;
+  if (isViewOnly(viewer)) return false;
   if (isAdmin(viewer)) return true;
   const mine = new Set([viewer.personId, nameId(viewerName)].filter(Boolean));
   if (mine.has(trend.ownerId)) return true;
@@ -171,12 +381,13 @@ export function canViewKpis(viewer: Viewer, subject: Person): boolean {
 
 /** Personal entries are private: only their owner touches them. */
 export function canWriteEntry(viewer: Viewer, ownerId: string): boolean {
-  return viewer.active && viewer.personId === ownerId;
+  return viewer.active && !isViewOnly(viewer) && viewer.personId === ownerId;
 }
 
 /** Signing up is for yourself; admins can add someone who asked by email. */
 export function canSignUpAs(viewer: Viewer, personId: string): boolean {
   if (!viewer.active) return false;
+  if (isViewOnly(viewer)) return false;
   return isAdmin(viewer) || viewer.personId === personId;
 }
 
@@ -236,29 +447,102 @@ export function emailFromRequest(req: Request, config: AuthConfig): string | nul
  * list. Someone signed in but absent from both is inactive: they can reach
  * the Hub but see nothing, which is the safe default for a leaver.
  */
+/**
+ * The addresses this deployment names as admins, whatever the sheets say.
+ *
+ * `HUB_ADMINS=someone@wgsn.com,someone.else@wgsn.com`. Rights normally come
+ * from the access sheet, which is right: they are operational, the
+ * commissioning managers maintain them, and changing who may do what should
+ * not need a deploy.
+ *
+ * This is the one exception, and it is the way back in. Before an access
+ * sheet exists there is no way to be an admin at all, so the person setting
+ * the Hub up cannot reach the studio that configures it. And once one does
+ * exist, a row marking the wrong person inactive locks them out with no
+ * remedy inside the Hub — a door that can only be opened from a room you are
+ * locked out of. Naming an address in the environment is a statement by
+ * whoever runs the deployment, so it wins over the sheet rather than being
+ * overridden by it.
+ */
+export function adminList(raw = process.env.HUB_ADMINS): string[] {
+  return (raw ?? "")
+    .split(",")
+    .map((address) => address.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 export function resolveViewer(
   email: string | null,
   access: AccessRow[],
   people: Person[],
+  admins: string[] = adminList(),
 ): Viewer | null {
   if (!email) return null;
   const row = access.find((a) => a.email.toLowerCase() === email);
   const person = people.find((p) => p.email.toLowerCase() === email);
+  const named = admins.includes(email.toLowerCase());
 
-  if (!row && !person) {
-    return { email, name: email, personId: null, role: "forecaster", verticals: [], active: false };
+  if (!row && !person && !named) {
+    return {
+      email,
+      name: email,
+      personId: null,
+      role: "forecaster",
+      verticals: [],
+      active: false,
+      reports: [],
+    };
   }
 
-  const verticals = parseVerticals(row?.verticals);
+  const verticals = named ? "all" : parseVerticals(row?.verticals);
+  /*
+   * Three sources, and the order is the argument.
+   *
+   * HUB_ADMINS is the deployment's own statement and the way back into a
+   * locked room, so nothing overrides it. The access sheet is next, because
+   * it is the exception list the commissioning managers keep by hand and a
+   * hand-written exception should beat a column filled in for everybody. The
+   * directory's Hub Access column answers for the other two hundred people,
+   * which is the case that actually comes up.
+   */
   return {
     email,
     name: row?.name ?? person?.name ?? email,
     personId: person?.id ?? null,
-    // Absent from the access sheet: a known team member with no extra rights.
-    role: row?.role ?? (person?.role === "commissioning-manager" ? "commissioning-manager" : "forecaster"),
+    role: named
+      ? "admin"
+      : (row?.role ??
+        person?.hubAccess ??
+        (person?.role === "commissioning-manager" ? "commissioning-manager" : "forecaster")),
     verticals,
-    active: row ? row.active : true,
+    // A named admin is never locked out, which is the whole point of naming one.
+    active: named ? true : row ? row.active : (person?.active ?? true),
+    reports: reportsTo(email, people),
   };
+}
+
+/**
+ * Who names this address as their line manager.
+ *
+ * The directory already answers this and nothing was reading it, so a Head Of
+ * looking at the schedule saw the same two choices as everybody else: their
+ * own name, or nothing. This is the middle one — the handful of people whose
+ * work is actually theirs to worry about.
+ *
+ * Deliberately by address rather than by name. Two people share a name often
+ * enough to matter in a directory of two hundred, and the column holds an
+ * address precisely because it is the thing that is unique. Somebody absent
+ * from the directory manages nobody, which is also what an empty column
+ * means — so the answer to "who reports to a stranger" is nobody rather than
+ * everybody with a blank cell.
+ */
+export function reportsTo(email: string | null, people: Person[]): string[] {
+  const manager = (email ?? "").trim().toLowerCase();
+  if (!manager) return [];
+  return people
+    .filter((p) => (p.managerEmail ?? "").trim().toLowerCase() === manager)
+    .filter((p) => p.email.toLowerCase() !== manager)
+    .map((p) => p.id);
 }
 
 function parseVerticals(raw: string | undefined): Vertical[] | "all" {

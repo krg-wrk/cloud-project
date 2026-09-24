@@ -56,7 +56,7 @@ export const RULE_FIELDS: RuleField[] = [
   { key: "status", label: "Status", type: "choice", options: STATUSES },
   { key: "type", label: "Format", type: "text" },
   { key: "vertical", label: "Vertical", type: "text" },
-  { key: "season", label: "Season", type: "text" },
+  { key: "season", label: "Forecast horizon", type: "text" },
   { key: "title", label: "Title", type: "text" },
   {
     key: "daysToSubmission",
@@ -146,7 +146,7 @@ export function factsFor(item: ContentItem, today: string): Record<string, strin
     status: item.status,
     type: item.type ?? "",
     vertical: item.vertical ?? "",
-    season: item.season ?? "",
+    season: item.forecastHorizon ?? "",
     title: item.title ?? "",
     daysToSubmission: String(daysUntil(today, item.submissionDate)),
     daysToPublication: String(daysUntil(today, item.publicationDate)),

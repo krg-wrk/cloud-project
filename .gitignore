@@ -33,3 +33,9 @@ hub.db-wal
 # somebody deliberately put it on, not in a repository or the shared demo.
 # Named rather than the whole directory, for the reason above.
 directory.json
+
+# Claude Code keeps a per-person permission file here. It records the exact
+# commands one machine approved — home directory paths, process ids, scratch
+# folders — so it is somebody's settings rather than the project's, and two
+# people committing theirs would conflict over every line.
+.claude/settings.local.json

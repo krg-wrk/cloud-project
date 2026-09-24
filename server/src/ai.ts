@@ -51,8 +51,8 @@ function buildPrompt(input: DraftInput): string {
     `Piece: ${item.title}`,
     `Type: ${item.type}`,
     `Vertical: ${item.vertical}`,
-    `Season: ${item.season}`,
-    `Copy due: ${item.submissionDate}`,
+    `Forecast horizon: ${item.forecastHorizon}`,
+    `Due with the subbing team: ${item.submissionDate}`,
     `Publishes: ${item.publicationDate}`,
     `Status: ${item.status}`,
     forecaster ? `Forecaster: ${forecaster.name} (${forecaster.vertical}, ${forecaster.region})` : "",
@@ -66,7 +66,7 @@ function buildPrompt(input: DraftInput): string {
     lines.push(
       "",
       "Other pieces commissioned in this vertical (avoid overlapping with these):",
-      ...siblings.map((s) => `- ${s.title} (${s.type}, ${s.season}, publishes ${s.publicationDate})`),
+      ...siblings.map((s) => `- ${s.title} (${s.type}, ${s.forecastHorizon}, publishes ${s.publicationDate})`),
     );
   }
   if (steer) {
@@ -91,7 +91,7 @@ interface GeminiResponse {
 export class GeminiDrafter implements NoteDrafter {
   constructor(
     private readonly apiKey: string,
-    readonly model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash",
+    readonly model = process.env.GEMINI_MODEL ?? "gemini-3.5-flash-lite",
   ) {}
 
   async draft(input: DraftInput): Promise<string> {

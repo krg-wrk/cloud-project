@@ -12,12 +12,22 @@ export type Status =
   | "published"
   | "at-risk";
 
+/**
+ * What a calendar entry is, in the team's own words.
+ *
+ * The buckets the team keeps its dropdowns in. `workshop` and `training` used
+ * to be here and are gone: the workshop programme is its own sheet with its
+ * own vocabulary, and no calendar row ever produced either.
+ */
 export type EventType =
   | "leave"
   | "public-holiday"
-  | "workshop"
-  | "training"
-  | "conference";
+  | "conference"
+  | "travel"
+  | "marketing"
+  | "client-call"
+  | "reminder"
+  | "other";
 
 export interface Person {
   id: string;
@@ -29,6 +39,8 @@ export interface Person {
   vertical?: string;
   department?: string;
   region: string;
+  /** The country the directory writes, which is what a holiday is matched on. */
+  country?: string;
   /**
    * When this person last changed their photo, if they have one.
    *
@@ -57,7 +69,10 @@ export interface ContentItem {
   title: string;
   type: string;
   vertical: string;
-  season: string;
+  /** The horizon a forecast points at: the team plans by horizon, not by season. */
+  forecastHorizon: string;
+  /** How the team files it — the planning view groups and filters on it. */
+  forecastCategory?: string;
   forecasterId: string;
   managerId: string;
   submissionDate: string;
@@ -78,7 +93,13 @@ export interface CalendarEvent {
   id: string;
   type: EventType;
   title: string;
+  /** The first name in the Owner cell — leave belongs to one person. */
   personId?: string;
+  /** Everybody named there, because a trade show is owned by several. */
+  personIds?: string[];
+  /** What the sheet's Country column says, which is what a holiday is scoped by. */
+  countries?: string[];
+  /** Only the trade shows sheet records one, and only as a fallback. */
   region?: string;
   startDate: string;
   endDate: string;
@@ -86,12 +107,21 @@ export interface CalendarEvent {
   notes?: string;
 }
 
+/**
+ * What kind of session the workshop programme is running.
+ *
+ * The team's own dropdown, and one it has said it will add to — so a value
+ * the Hub has not met becomes `other` rather than the largest group, and
+ * shows up as unbucketed on somebody's calendar instead of disguised.
+ * See `SESSION_KINDS` for the mapping.
+ */
 export type SessionKind =
   | "workshop"
-  | "masterclass"
-  | "lunch-and-learn"
-  | "critique"
-  | "training";
+  | "scoring-session"
+  | "trend-governance"
+  | "forecast-forums"
+  | "research"
+  | "other";
 
 export interface KnowledgeSession {
   id: string;
@@ -99,10 +129,23 @@ export interface KnowledgeSession {
   kind: SessionKind;
   hostId?: string;
   hostExternal?: string;
-  date: string;
-  startTime: string;
-  endTime: string;
+  /**
+   * The days it runs. An R&D day is one day, so `endDate` equals
+   * `startDate` — a workshop programme keeps ranges and the Hub used to hold
+   * a single day, which quietly hid the second half of everything longer.
+   */
+  startDate: string;
+  endDate: string;
+  /** Clock times, where a team records them. Many keep only the days. */
+  startTime?: string;
+  endTime?: string;
   location: string;
+  /** Every country the Country cell names, which is a multi-picklist. */
+  countries?: string[];
+  /** Every department it names. "All" reaches the whole team. */
+  departments?: string[];
+  /** Everybody tagged into it, from the sheet's own Owner column. */
+  attendeeIds?: string[];
   online: boolean;
   capacity: number | null;
   signUpsOpen: boolean;
@@ -120,7 +163,12 @@ export interface SessionWithSignUps extends KnowledgeSession {
   full: boolean;
 }
 
-export type Role = "forecaster" | "commissioning-manager" | "admin";
+export type Role =
+  | "forecaster"
+  | "commissioning-manager"
+  | "leadership"
+  | "view-only"
+  | "admin";
 
 /** The signed-in account, as /api/me returns it. */
 export interface Me {
@@ -132,6 +180,11 @@ export interface Me {
   active: boolean;
   person?: Person;
   seesWholeTeam: boolean;
+  /**
+   * The people who report to this one, by person id. Empty for somebody who
+   * already sees the whole team, and for nearly everybody else.
+   */
+  reports: string[];
   aiNotes: boolean;
   /**
    * Whether changing the sheet is worth offering at all. Says nothing about
@@ -530,9 +583,18 @@ export interface DirectoryPerson {
   email?: string;
   role?: string;
   team?: string;
+  /** The department the directory files them under. */
+  department?: string;
   tags: string[];
   knowledge: string[];
-  region?: string;
+  /**
+   * The part of the world somebody knows, which is not where they live — a
+   * forecaster in London can hold the APAC lens. Asked separately from
+   * `country` and labelled apart, because one heading answering both read as
+   * where somebody sits.
+   */
+  regionalLens?: string;
+  /** Where they are based. */
   country?: string;
   feedLead: boolean;
   deiBoard: boolean;
@@ -868,6 +930,13 @@ export interface FreshnessRead {
   cacheMs: number;
 }
 
+/** What a hand-run refresh found, per sheet it could not read. */
+export interface RefreshResult {
+  refreshed: number;
+  rows: number;
+  failed: { kind: string; why: string }[];
+}
+
 /** A file somebody generates, rather than something read live. */
 export interface FreshnessExtract {
   label: string;
@@ -879,6 +948,8 @@ export interface FreshnessExtract {
 export interface FreshnessReport {
   visibleToAll: boolean;
   canChangeVisibility: boolean;
+  /** Whether this Hub keeps a copy that can be read again on demand. */
+  canRefresh: boolean;
   source: string;
   reads: FreshnessRead[];
   extracts: FreshnessExtract[];

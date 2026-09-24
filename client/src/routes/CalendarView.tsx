@@ -9,6 +9,7 @@ import {
   formatLong,
   formatMedium,
   formatWeekday,
+  dayRange,
   isSameMonth,
   isWeekend,
   lastOfMonth,
@@ -24,12 +25,16 @@ import {
 import {
   EVENT_LABELS,
   EVENT_LABELS_SHORT,
+  EVENT_ICONS,
+  KIND_ICONS,
   KIND_LABELS,
   eventCovers,
+  eventWho,
   personName,
 } from "../lib/domain";
 import { Icon } from "../lib/icons";
-import { isMultiDay, packWeek, type Bar } from "../lib/spans";
+import { coversDay, isMultiDay, packWeek, type Bar } from "../lib/spans";
+import { useAppearance } from "../lib/appearance";
 import { useViewer } from "../lib/viewer";
 import type {
   CalendarEvent,
@@ -166,7 +171,15 @@ function chipsForDay(date: string, feed: Feed, show: Show, includeSpans = false)
       if (wanted({ from: event.startDate, to: event.endDate })) chips.push({ kind: "event", event });
     }
     for (const session of feed.sessions) {
-      if (session.date === date) chips.push({ kind: "session", session });
+      // Every day it runs, not only the day it starts: an R&D week belongs on
+      // the calendar all week, the way leave and a trade show already do. And
+      // only the days it runs — spanning the week is a reason to ask which
+      // days those are, not a reason to stop asking.
+      const span = { from: session.startDate, to: session.endDate };
+      if (!coversDay(span, date)) continue;
+      if (wanted(span)) {
+        chips.push({ kind: "session", session });
+      }
     }
   }
   if (show.submissions) {
@@ -231,13 +244,21 @@ function chipHref(chip: Chip): string {
 function chipMeaning(chip: Chip): string {
   switch (chip.kind) {
     case "submission":
-      return "Copy due with the commissioning manager";
+      return "Forecast due with the subbing team";
     case "publication":
       return "Publishes on the platform";
     case "review":
       return chip.review.iAmReviewer ? "Peer review — you are reviewing" : "Peer review of your piece";
     case "session":
-      return `${KIND_LABELS[chip.session.kind]}, ${chip.session.startTime}–${chip.session.endTime}`;
+      // The days always; the times only where a team records them. Printing
+      // them regardless is how every workshop read "undefined–undefined".
+      return [
+        KIND_LABELS[chip.session.kind],
+        dayRange(chip.session.startDate, chip.session.endDate),
+        chip.session.startTime ? `${chip.session.startTime}–${chip.session.endTime ?? ""}` : "",
+      ]
+        .filter(Boolean)
+        .join(", ");
     case "event":
       return EVENT_LABELS[chip.event.type];
     case "entry":
@@ -245,7 +266,7 @@ function chipMeaning(chip: Chip): string {
   }
 }
 
-function chipLabel(chip: Chip, people: Schedule["people"]): { kicker: string; title: string; icon: string; colour: string } {
+function chipLabel(chip: Chip): { kicker: string; title: string; icon: string; colour: string } {
   switch (chip.kind) {
     // No kicker on these two: the icon and the colour say which it is, and
     // the title is what people are scanning for. The day panel spells it out.
@@ -267,18 +288,27 @@ function chipLabel(chip: Chip, people: Schedule["people"]): { kicker: string; ti
       };
     case "session":
       return {
-        kicker: chip.session.startTime,
+        kicker: chip.session.startTime ?? "",
         title: chip.session.title,
-        icon: chip.session.kind === "training" ? "training" : "workshop",
+        icon: KIND_ICONS[chip.session.kind] ?? "workshop",
         colour: `var(--kind-${chip.session.kind})`,
       };
     case "event":
       return {
-        kicker: chip.event.personId
-          ? personName(people, chip.event.personId).split(" ")[0]
-          : EVENT_LABELS_SHORT[chip.event.type],
+        /*
+         * What it is, not whose it is.
+         *
+         * The kicker used to be the owner's first name wherever there was
+         * one, which read well when the diary was almost entirely leave —
+         * and leave rows already carry the name in their title ("Pia Fisher
+         * - AL"), so it was saying it twice. Now that the activity sheets
+         * are bucketed properly it was worse than redundant: a client call
+         * showed "CASSANDRA" where the kind should be, and the kind was the
+         * one thing the chip no longer said. Whose it is, is a hover away.
+         */
+        kicker: EVENT_LABELS_SHORT[chip.event.type],
         title: chip.event.title,
-        icon: chip.event.type,
+        icon: EVENT_ICONS[chip.event.type] ?? "note",
         colour: `var(--event-${chip.event.type})`,
       };
     case "entry":
@@ -346,6 +376,17 @@ export default function CalendarView() {
   // Workshops belong to the whole team, so they are not narrowed by forecaster.
   const sessions = useApi<SessionWithSignUps[]>("/sessions");
 
+  /*
+   * Whether an entry opens over the calendar, and which one is open.
+   *
+   * Read from the appearance record the studio writes, so the choice is the
+   * deployment's rather than this page's — and held here rather than in the
+   * address, because a panel is a way of looking at the month you are already
+   * on rather than a place. Anything worth pasting to somebody is the full
+   * page, which the panel offers.
+   */
+  const opensInPanel = useAppearance().opens === "panel";
+  const [opened, setOpened] = useState<Chip | null>(null);
   const [adding, setAdding] = useState(false);
   const [extraEntries, setExtraEntries] = useState<PersonalEntry[]>([]);
   const [dropped, setDropped] = useState<string[]>([]);
@@ -455,7 +496,20 @@ export default function CalendarView() {
             value={forecaster}
             onChange={(e) => setParam("forecaster", e.target.value)}
           >
-            <option value="">Everyone</option>
+            {/*
+              A forecaster is not offered everybody's calendar.
+
+              On the real schedule that is two and a half thousand events —
+              every colleague's leave, every activity day, every submission —
+              and the month view answers "+21 more" in every cell. It is not
+              a permission: a forecaster may look up any one colleague, which
+              is the question people actually have. It is that the whole team
+              at once is not a view of anything, and offering it as the
+              default reading of the calendar buries the fortnight somebody
+              came to look at. Managers keep it, because comparing the team is
+              their job.
+            */}
+            {isManager && <option value="">Everyone</option>}
             {people
               .filter((p) => p.role === "forecaster")
               .map((p) => (
@@ -615,8 +669,8 @@ export default function CalendarView() {
             <DayView
               date={anchor}
               chips={chipsForDay(anchor, feed, show, true)}
-              people={data.people}
               onRemoveEntry={removeEntry}
+              onOpen={opensInPanel ? setOpened : undefined}
             />
           ) : (
           /*
@@ -666,6 +720,7 @@ export default function CalendarView() {
                               chip={chip}
                               people={data.people}
                               onRemoveEntry={removeEntry}
+                              onOpen={opensInPanel ? setOpened : undefined}
                             />
                           ))}
                           {hidden > 0 && (
@@ -686,6 +741,7 @@ export default function CalendarView() {
                         bar={bar}
                         people={data.people}
                         onRemoveEntry={removeEntry}
+                        onOpen={opensInPanel ? setOpened : undefined}
                       />
                     ))}
                   </div>
@@ -712,13 +768,23 @@ export default function CalendarView() {
             <span style={{ "--legend-color": "var(--mine)" } as CSSProperties}>
               <i /> Yours only
             </span>
-            {(["leave", "public-holiday", "conference"] as (keyof typeof EVENT_LABELS)[]).map((type) => (
+            {/*
+              Every kind rather than three. The three were the whole diary
+              once; now that the activity sheets are bucketed properly there
+              are eight, and a legend that named a third of them would be
+              worse than no legend.
+            */}
+            {(Object.keys(EVENT_LABELS) as (keyof typeof EVENT_LABELS)[]).map((type) => (
               <span key={type} style={{ "--legend-color": `var(--event-${type})` } as CSSProperties}>
                 <i /> {EVENT_LABELS[type]}
               </span>
             ))}
           </div>
         </>
+      )}
+
+      {opened && data && (
+        <EntryPanel chip={opened} people={data.people} onClose={() => setOpened(null)} />
       )}
     </>
   );
@@ -733,24 +799,44 @@ function SpanBar({
   bar,
   people,
   onRemoveEntry,
+  onOpen,
 }: {
   bar: Bar<SpanItem>;
   people: Schedule["people"];
   onRemoveEntry: (id: string) => void;
+  /** Set when the studio says an entry opens over the calendar. */
+  onOpen?: (chip: Chip) => void;
 }) {
   const span = spanOf(bar.item);
+  const colour =
+    bar.item.kind === "event" ? `var(--event-${bar.item.event.type})` : "var(--mine)";
+  /*
+   * The bars get the panel too.
+   *
+   * They did not, and the effect was that the preview looked like a thing
+   * that only worked on entries in the future — because a bar is what leave
+   * and a trade show are drawn as, and most of those in view have been and
+   * gone. Nothing was ever checking the date; the bars were simply a second
+   * way of drawing a chip that had never been given the handlers.
+   */
+  const preview = useHoverPreview();
   const style = {
     gridColumn: `${bar.startCol + 1} / ${bar.endCol + 2}`,
     gridRow: bar.lane + 1,
-    "--chip-color": bar.item.kind === "event" ? `var(--event-${bar.item.event.type})` : "var(--mine)",
+    "--chip-color": colour,
   } as CSSProperties;
 
-  const who =
-    bar.item.kind === "event" && bar.item.event.personId
-      ? personName(people, bar.item.event.personId).split(" ")[0]
-      : null;
+  /*
+   * What it is, not whose — the same correction the chips needed.
+   *
+   * A bar carried the first owner's first name, so a trade show owned by
+   * four people read as Charlotte's. That is the display half of the bug the
+   * scoping had: one name in a cell of several, treated as the answer. All
+   * of them are named in the panel, which is a hover or a click away.
+   */
+  const who = bar.item.kind === "event" ? EVENT_LABELS_SHORT[bar.item.event.type] : null;
   const title = bar.item.kind === "event" ? bar.item.event.title : bar.item.entry.title;
-  const icon = bar.item.kind === "event" ? bar.item.event.type : "note";
+  const icon = bar.item.kind === "event" ? (EVENT_ICONS[bar.item.event.type] ?? "note") : "note";
   const dates = `${formatMedium(span.from)} to ${formatMedium(span.to)}`;
 
   const body = (
@@ -762,28 +848,67 @@ function SpanBar({
     </>
   );
 
+  const asChip: Chip =
+    bar.item.kind === "event"
+      ? { kind: "event", event: bar.item.event }
+      : { kind: "entry", entry: bar.item.entry };
+  const panel = (
+    <HoverPreview at={preview.at}>
+      <b className="preview-title">{title}</b>
+      <span className="preview-what" style={{ "--chip-color": colour } as CSSProperties}>
+        <Icon name={icon} size={12} />
+        {chipMeaning(asChip)}
+      </span>
+      {chipDetail(asChip, people)}
+    </HoverPreview>
+  );
+
   if (bar.item.kind === "entry") {
     const id = bar.item.entry.id;
     return (
-      <button
-        className="cal-span cal-span-button"
-        style={style}
-        title={`${title}, ${dates} (yours — click to remove)`}
-        onClick={() => onRemoveEntry(id)}
-      >
-        {body}
-      </button>
+      <>
+        <button
+          className="cal-span cal-span-button"
+          style={style}
+          title={`${title}, ${dates} (yours — click to remove)`}
+          onClick={() => onRemoveEntry(id)}
+          {...preview.handlers()}
+        >
+          {body}
+        </button>
+        {panel}
+      </>
+    );
+  }
+  if (onOpen) {
+    return (
+      <>
+        <button
+          className="cal-span cal-span-button"
+          style={style}
+          title={`${title}${who ? ` — ${who}` : ""}, ${dates}`}
+          onClick={() => onOpen(asChip)}
+          {...preview.handlers()}
+        >
+          {body}
+        </button>
+        {panel}
+      </>
     );
   }
   return (
-    <Link
-      className="cal-span"
-      style={style}
-      to={`/whats-on?type=${bar.item.event.type}&from=calendar`}
-      title={`${title}${who ? ` — ${who}` : ""}, ${dates}`}
-    >
-      {body}
-    </Link>
+    <>
+      <Link
+        className="cal-span"
+        style={style}
+        to={`/whats-on?type=${bar.item.event.type}&from=calendar`}
+        title={`${title}${who ? ` — ${who}` : ""}, ${dates}`}
+        {...preview.handlers()}
+      >
+        {body}
+      </Link>
+      {panel}
+    </>
   );
 }
 
@@ -890,13 +1015,13 @@ function chipDetail(chip: Chip, people: Schedule["people"]): ReactNode {
             {row("Forecaster", personName(people, item.forecasterId))}
             {row("Type", item.type)}
             {row("Vertical", item.vertical)}
-            {row("Season", item.season)}
+            {row("Forecast horizon", item.forecastHorizon)}
             {row(
-              chip.kind === "submission" ? "Copy due" : "Publishes",
+              chip.kind === "submission" ? "Due with subbing" : "Publishes",
               due ? `${formatLong(due)} · ${relativeDays(due)}` : "",
             )}
             {row(
-              chip.kind === "submission" ? "Publishes" : "Copy due",
+              chip.kind === "submission" ? "Publishes" : "Due with subbing",
               chip.kind === "submission"
                 ? item.publicationDate && formatMedium(item.publicationDate)
                 : item.submissionDate && formatMedium(item.submissionDate),
@@ -926,8 +1051,21 @@ function chipDetail(chip: Chip, people: Schedule["people"]): ReactNode {
       return (
         <dl className="preview-facts">
           {row("Kind", KIND_LABELS[chip.session.kind])}
-          {row("When", `${chip.session.startTime}–${chip.session.endTime}`)}
+          {row(
+            "When",
+            [
+              dayRange(chip.session.startDate, chip.session.endDate),
+              chip.session.startTime ? `${chip.session.startTime}–${chip.session.endTime ?? ""}` : "",
+            ]
+              .filter(Boolean)
+              .join(" · "),
+          )}
           {row("Where", chip.session.online ? `${chip.session.location} · online` : chip.session.location)}
+          {/*
+            Left out entirely when nobody is hosting yet. `row` already drops
+            an empty value, and the sheet's own "Unassigned" is read as absent
+            on the way in rather than printed as though it were a name.
+          */}
           {row("Host", chip.session.hostId ? personName(people, chip.session.hostId) : chip.session.hostExternal)}
           {row("Going", chip.session.going.length ? `${chip.session.going.length} signed up` : "")}
           {row("About", chip.session.summary)}
@@ -937,7 +1075,14 @@ function chipDetail(chip: Chip, people: Schedule["people"]): ReactNode {
       return (
         <dl className="preview-facts">
           {row("Kind", EVENT_LABELS[chip.event.type])}
-          {row("Who", chip.event.personId ? personName(people, chip.event.personId) : chip.event.region)}
+          {/*
+            Everybody named, then where it applies. A trade show is owned by
+            two or three people and printing only the first said the show was
+            one person's; a public holiday belongs to a country, and printing
+            the region it was filed under told sixty people in EMEA that a
+            South African holiday was theirs.
+          */}
+          {row("Who", eventWho(chip.event, people))}
           {row(
             "When",
             chip.event.startDate === chip.event.endDate
@@ -969,12 +1114,15 @@ function ChipView({
   chip,
   people,
   onRemoveEntry,
+  onOpen,
 }: {
   chip: Chip;
   people: Schedule["people"];
   onRemoveEntry: (id: string) => void;
+  /** Set when the studio says an entry opens over the calendar rather than away from it. */
+  onOpen?: (chip: Chip) => void;
 }) {
-  const { kicker, title, icon, colour } = chipLabel(chip, people);
+  const { kicker, title, icon, colour } = chipLabel(chip);
   const preview = useHoverPreview();
   const style = { "--chip-color": colour } as CSSProperties;
   const body = (
@@ -1019,6 +1167,29 @@ function ChipView({
       </>
     );
   }
+  /*
+   * A button when the detail opens over the calendar, a link when it opens
+   * away from it. Deliberately not a link with the navigation cancelled: the
+   * one that opens a panel is not a destination, and rendering it as a link
+   * would put a URL in the status bar and on the right-click menu that
+   * clicking it does not go to.
+   */
+  if (onOpen) {
+    return (
+      <>
+        <button
+          className="cal-chip cal-chip-button"
+          style={style}
+          title={`${title} — ${chipMeaning(chip)}`}
+          onClick={() => onOpen(chip)}
+          {...preview.handlers()}
+        >
+          {body}
+        </button>
+        {panel}
+      </>
+    );
+  }
   return (
     <>
       <Link
@@ -1036,6 +1207,65 @@ function ChipView({
 }
 
 /**
+ * An entry opened over the calendar rather than instead of it.
+ *
+ * The same facts the hover panel shows, which is on purpose — a person who
+ * has been reading previews all week should not meet a different summary the
+ * moment they click. What it adds is the way onward: the full page is one
+ * more click, so choosing the panel never costs somebody the page.
+ *
+ * Escape closes it and the backdrop closes it, because both are what every
+ * other thing of this shape in the Hub does.
+ */
+function EntryPanel({
+  chip,
+  people,
+  onClose,
+}: {
+  chip: Chip;
+  people: Schedule["people"];
+  onClose: () => void;
+}) {
+  const { title, icon, colour } = chipLabel(chip);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  return (
+    <div className="entry-backdrop" onClick={onClose}>
+      <div
+        className="entry-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="entry-panel-head" style={{ "--chip-color": colour } as CSSProperties}>
+          <span className="preview-what" style={{ "--chip-color": colour } as CSSProperties}>
+            <Icon name={icon} size={12} />
+            {chipMeaning(chip)}
+          </span>
+          <button className="entry-panel-close" onClick={onClose} aria-label="Close this entry">
+            &times;
+          </button>
+        </div>
+        <b className="entry-panel-title">{title}</b>
+        {chipDetail(chip, people)}
+        <div className="entry-panel-foot">
+          <Link className="btn" to={chipHref(chip)}>
+            Open the full page
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * One day in full — what clicking a date opens.
  *
  * Everything on the day, in the order it happens where there is a time and
@@ -1045,12 +1275,13 @@ function ChipView({
 function DayView({
   date,
   chips,
-  people,
   onRemoveEntry,
+  onOpen,
 }: {
   date: string;
   chips: Chip[];
-  people: Schedule["people"];
+  /** Set when the studio says an entry opens over the calendar. */
+  onOpen?: (chip: Chip) => void;
   onRemoveEntry: (id: string) => void;
 }) {
   // Timed things first, in time order; everything else after, in the order
@@ -1059,7 +1290,7 @@ function DayView({
     .filter((c) => c.kind === "session")
     .sort((a, b) =>
       a.kind === "session" && b.kind === "session"
-        ? a.session.startTime.localeCompare(b.session.startTime)
+        ? (a.session.startTime ?? "").localeCompare(b.session.startTime ?? "")
         : 0,
     );
   const untimed = chips.filter((c) => c.kind !== "session");
@@ -1099,7 +1330,7 @@ function DayView({
       {ordered.length > 0 && (
         <div className="day-rows">
           {ordered.map((chip, i) => {
-            const { title, icon, colour } = chipLabel(chip, people);
+            const { title, icon, colour } = chipLabel(chip);
             const style = { "--chip-color": colour } as CSSProperties;
             const when = chip.kind === "session" ? chip.session.startTime : "";
             const body = (
@@ -1125,6 +1356,15 @@ function DayView({
                 style={style}
                 onClick={() => onRemoveEntry(chip.entry.id)}
                 title="Yours — click to remove"
+              >
+                {body}
+              </button>
+            ) : onOpen ? (
+              <button
+                key={`${chip.kind}-${i}`}
+                className="day-row day-row-button"
+                style={style}
+                onClick={() => onOpen(chip)}
               >
                 {body}
               </button>

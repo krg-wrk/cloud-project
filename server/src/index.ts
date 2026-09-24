@@ -8,7 +8,7 @@ import { createApiRouter, createFeedRouter } from "./api.js";
 import { readAuthConfig, viewerMiddleware } from "./auth.js";
 import { CachedDataSource, createDataSource } from "./data/index.js";
 import { openDb } from "./db.js";
-import { SmartsheetSource } from "./data/smartsheetSource.js";
+import { MirrorSource, syncEveryMs } from "./data/mirrorSource.js";
 import { createNotifyRouter } from "./notify/api.js";
 import { startSchedule } from "./notify/schedule.js";
 import { createProofPointRouter } from "./proofPoints/api.js";
@@ -16,6 +16,7 @@ import { createAppearanceRouter } from "./appearance.js";
 import { createDirectoryRouter } from "./directory.js";
 import { createLabRouter } from "./lab/api.js";
 import { createResourcesRouter } from "./resources.js";
+import { createPlanRouter } from "./planApi.js";
 import { createSearchRouter } from "./searchApi.js";
 import { ProofPointLibrary } from "./proofPoints/library.js";
 import { SignUps } from "./signUps.js";
@@ -28,16 +29,20 @@ const app = express();
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3001;
 
 /*
+ * SQLite by default; Postgres when HUB_DB_URL says so. The same SQL runs on
+ * both — see db.ts for the two words of difference.
+ *
+ * Opened before the source rather than after it, which is the order it used
+ * to be in: `DATA_SOURCE=mirror` keeps its copy of the schedule in this same
+ * database, so the source cannot be built until there is one.
+ */
+const db = openDb();
+/*
  * The schedule, from the sheets. Read-only unless the deployment turned
  * writing on below; everything else the team writes goes in the store.
  */
-const source = createDataSource();
+const source = createDataSource(db);
 const data = new CachedDataSource(source);
-/*
- * SQLite by default; Postgres when HUB_DB_URL says so. The same SQL runs on
- * both — see db.ts for the two words of difference.
- */
-const db = openDb();
 const store = new HubStore(db);
 // Connections, datasets and views: configuration, in the same database.
 const studio = new StudioStore(db);
@@ -60,6 +65,52 @@ const proofPoints = new ProofPointLibrary();
 await store.init();
 await studio.init();
 
+/*
+ * Fill the mirror before anything is served from it.
+ *
+ * Before `seedSignUpsIfEmpty` below, which reads the schedule, and before the
+ * first request for the same reason: the mirror refuses to answer for a kind
+ * it has never pulled rather than reporting an empty schedule, and an empty
+ * schedule that renders as a real one is the failure worth going to this
+ * trouble to avoid.
+ *
+ * A failed pull is only fatal when there is nothing to fall back on. With a
+ * previous copy in the database the Hub starts and serves it, because
+ * carrying on with data of a stated age is the whole point of keeping a copy
+ * — a Smartsheet outage should not be a Hub outage. The banner says which of
+ * the two happened.
+ */
+let mirrorNote = "";
+if (source instanceof MirrorSource) {
+  await source.init();
+  const results = await source.sync();
+  const failed = results.filter((r) => !r.ok);
+  const held = new Set(await source.synced());
+  const missing = failed.filter((r) => !held.has(r.kind));
+  if (missing.length > 0) {
+    throw new Error(
+      `The mirror could not read ${missing.map((r) => r.kind).join(", ")} and has no earlier copy to serve. ` +
+        `First reason given: ${missing[0].why}`,
+    );
+  }
+  const every = Math.round(syncEveryMs() / 60_000);
+  mirrorNote =
+    failed.length > 0
+      ? `every ${every}m — ${failed.length} of ${results.length} could not be read just now, serving the previous copy`
+      : `every ${every}m — ${results.reduce((n, r) => n + r.rows, 0)} rows`;
+  /*
+   * `unref` so the timer is not a reason the process stays alive. A Hub told
+   * to shut down should shut down rather than wait out the interval.
+   */
+  setInterval(() => {
+    void source.sync().catch((err) => {
+      // Never thrown: a sync that fails leaves the previous copy serving, and
+      // an unhandled rejection here would take the whole server down over it.
+      console.error("The mirror could not sync:", (err as Error).message);
+    });
+  }, syncEveryMs()).unref();
+}
+
 await store.seedSignUpsIfEmpty(await data.listSignUps());
 
 /*
@@ -70,7 +121,15 @@ await store.seedSignUpsIfEmpty(await data.listSignUps());
  * a manager presses Apply on a change they thought they had made.
  */
 let writeTarget = "off";
-if (source instanceof SmartsheetSource) {
+/*
+ * Asked as a capability, not as a type.
+ *
+ * This read `source instanceof SmartsheetSource`, which is true of exactly
+ * one class — so wrapping the source, as `DATA_SOURCE=mirror` does, turned
+ * writing off at boot and took the Change button away with nothing logged.
+ * `enableWrites` is on the DataSource contract for that reason.
+ */
+if (source.enableWrites) {
   try {
     writeTarget = await source.enableWrites();
   } catch (err) {
@@ -146,6 +205,7 @@ app.use(
   createProofPointRouter(proofPoints, data, store),
   createNotifyRouter(data, store, signUps, proofPoints, studio, viewRunner),
   createSearchRouter(data, studio, proofPoints),
+  createPlanRouter(data, store),
   createResourcesRouter(store),
   createAppearanceRouter(store),
   createDirectoryRouter(data),
@@ -225,6 +285,7 @@ app.listen(PORT, async () => {
     `Forecasters Hub API on http://localhost:${PORT}\n` +
       `  schedule:  ${data.name}\n` +
       `  database:  ${store.kind}\n` +
+      (mirrorNote ? `  mirror:    ${mirrorNote}\n` : "") +
       `  auth:      ${auth.mode}${auth.mode === "proxy" ? ` (${auth.emailHeader})` : " — switcher enabled"}\n` +
       `  AI notes:  ${drafter.model === "none" ? "off (no GEMINI_API_KEY)" : drafter.model}\n` +
       `  studio:    ${(await studio.listConnections()).length} connections, ` +

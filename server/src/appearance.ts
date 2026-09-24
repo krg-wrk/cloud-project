@@ -39,29 +39,33 @@ export interface Token {
 }
 
 export const TOKENS: Token[] = [
-  { id: "accent", css: "--accent", label: "Accent", group: "The house colour", fallback: "#4c5578" },
+  { id: "accent", css: "--accent", label: "Accent", group: "The house colour", fallback: "#4868b3" },
 
-  { id: "status-not-started", css: "--status-not-started", label: "Not started", group: "Status", fallback: "#8b8b91" },
-  { id: "status-in-progress", css: "--status-in-progress", label: "In progress", group: "Status", fallback: "#2f5f9e" },
-  { id: "status-submitted", css: "--status-submitted", label: "Submitted", group: "Status", fallback: "#6b4fc0" },
-  { id: "status-in-review", css: "--status-in-review", label: "In review", group: "Status", fallback: "#875d13" },
-  { id: "status-published", css: "--status-published", label: "Published", group: "Status", fallback: "#256b48" },
-  { id: "status-at-risk", css: "--status-at-risk", label: "At risk, and anything late", group: "Status", fallback: "#b8341f" },
+  { id: "status-not-started", css: "--status-not-started", label: "Not started", group: "Status", fallback: "#ef6c02" },
+  { id: "status-in-progress", css: "--status-in-progress", label: "In progress", group: "Status", fallback: "#f09400" },
+  { id: "status-submitted", css: "--status-submitted", label: "Submitted", group: "Status", fallback: "#e4c442" },
+  { id: "status-in-review", css: "--status-in-review", label: "In review", group: "Status", fallback: "#bae8da" },
+  { id: "status-published", css: "--status-published", label: "Published", group: "Status", fallback: "#049be5" },
+  { id: "status-at-risk", css: "--status-at-risk", label: "At risk, and anything late", group: "Status", fallback: "#d50101" },
 
-  { id: "event-leave", css: "--event-leave", label: "Leave", group: "The diary", fallback: "#6b4fc0" },
-  { id: "event-public-holiday", css: "--event-public-holiday", label: "Public holiday", group: "The diary", fallback: "#17706c" },
-  { id: "event-workshop", css: "--event-workshop", label: "Workshop", group: "The diary", fallback: "#9c6b16" },
-  { id: "event-training", css: "--event-training", label: "Training", group: "The diary", fallback: "#2f5f9e" },
-  { id: "event-conference", css: "--event-conference", label: "Show or conference", group: "The diary", fallback: "#a33a60" },
+  { id: "event-leave", css: "--event-leave", label: "Leave", group: "The diary", fallback: "#7cb342" },
+  { id: "event-public-holiday", css: "--event-public-holiday", label: "Public holiday", group: "The diary", fallback: "#009688" },
+  { id: "event-conference", css: "--event-conference", label: "Show or conference", group: "The diary", fallback: "#9c6b16" },
+  { id: "event-travel", css: "--event-travel", label: "Travel", group: "The diary", fallback: "#049be5" },
+  { id: "event-marketing", css: "--event-marketing", label: "Marketing", group: "The diary", fallback: "#d91a60" },
+  { id: "event-client-call", css: "--event-client-call", label: "Client call", group: "The diary", fallback: "#8e24aa" },
+  { id: "event-reminder", css: "--event-reminder", label: "Reminder", group: "The diary", fallback: "#a68550" },
+  { id: "event-other", css: "--event-other", label: "Anything not bucketed yet", group: "The diary", fallback: "#6e7e8b" },
 
-  { id: "kind-workshop", css: "--kind-workshop", label: "Workshop", group: "Learning sessions", fallback: "#4c5578" },
-  { id: "kind-masterclass", css: "--kind-masterclass", label: "Masterclass", group: "Learning sessions", fallback: "#a33a60" },
-  { id: "kind-lunch-and-learn", css: "--kind-lunch-and-learn", label: "Lunch and learn", group: "Learning sessions", fallback: "#17706c" },
-  { id: "kind-critique", css: "--kind-critique", label: "Critique", group: "Learning sessions", fallback: "#9c6b16" },
-  { id: "kind-training", css: "--kind-training", label: "Training", group: "Learning sessions", fallback: "#2f5f9e" },
+  { id: "kind-workshop", css: "--kind-workshop", label: "Workshop", group: "Learning sessions", fallback: "#9f6aaf" },
+  { id: "kind-scoring-session", css: "--kind-scoring-session", label: "Scoring session", group: "Learning sessions", fallback: "#7a86cb" },
+  { id: "kind-trend-governance", css: "--kind-trend-governance", label: "Trend governance", group: "Learning sessions", fallback: "#3f52b5" },
+  { id: "kind-forecast-forums", css: "--kind-forecast-forums", label: "Forecast forums", group: "Learning sessions", fallback: "#308d9a" },
+  { id: "kind-research", css: "--kind-research", label: "Research", group: "Learning sessions", fallback: "#508a4d" },
+  { id: "kind-other", css: "--kind-other", label: "Anything not bucketed yet", group: "Learning sessions", fallback: "#6e7e8b" },
 
-  { id: "mine", css: "--mine", label: "Yours, and nobody else’s", group: "Marks", fallback: "#8e3b74" },
-  { id: "review", css: "--review", label: "Waiting on a review", group: "Marks", fallback: "#a94c16" },
+  { id: "mine", css: "--mine", label: "Yours, and nobody else’s", group: "Marks", fallback: "#8b8b91" },
+  { id: "review", css: "--review", label: "Waiting on a review", group: "Marks", fallback: "#b8341f" },
 ];
 
 const BY_ID = new Map(TOKENS.map((t) => [t.id, t]));
@@ -91,7 +95,23 @@ export interface Appearance {
    * ones they changed.
    */
   washes: Record<string, string>;
+  /**
+   * What clicking an entry on the calendar does.
+   *
+   * "page" opens the forecast, the workshop or the diary entry on its own
+   * page, which is the address somebody pastes to a colleague. "panel" keeps
+   * the month in place and opens the same detail over it, which is what you
+   * want when you are reading down a week rather than going somewhere.
+   *
+   * A deployment-wide setting rather than a per-person one, deliberately: it
+   * changes what a link does, and two people describing the same click
+   * differently is worse than either behaviour.
+   */
+  opens: "page" | "panel";
 }
+
+/** The two ways a calendar entry can open. */
+export const OPENS = ["page", "panel"] as const;
 
 /** The hues on offer, each one a colour the Hub already uses somewhere. */
 export const WASHES = [
@@ -124,7 +144,16 @@ export const DEFAULT_WASHES: Record<string, string> = {
 /** A nav group id, which is what a wash choice is keyed on. */
 const isGroup = (key: string): boolean => key in DEFAULT_WASHES;
 
-export const EMPTY: Appearance = { colours: {}, icons: {}, gradients: true, washes: {} };
+export const EMPTY: Appearance = {
+  colours: {},
+  icons: {},
+  gradients: true,
+  washes: {},
+  // Going somewhere is what the calendar has always done, so it stays the
+  // default: a change of setting should not change what a click means for
+  // everybody who never asked for it.
+  opens: "page",
+};
 
 /**
  * A colour the browser will take and a person meant.
@@ -169,6 +198,7 @@ export function readAppearance(value: unknown): { kept: Appearance; dropped: num
     icons?: unknown;
     gradients?: unknown;
     washes?: unknown;
+    opens?: unknown;
   };
   /*
    * Absent means on, which matters for the records written before the switch
@@ -180,6 +210,9 @@ export function readAppearance(value: unknown): { kept: Appearance; dropped: num
     icons: {},
     gradients: body.gradients !== false,
     washes: {},
+    // Rebuilt from the two words that mean anything, rather than trusted:
+    // anything else a client sends falls back to the way it has always been.
+    opens: body.opens === "panel" ? "panel" : "page",
   };
   let dropped = 0;
 

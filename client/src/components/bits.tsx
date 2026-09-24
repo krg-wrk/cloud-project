@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import type { EventType, Status } from "../types";
-import { EVENT_LABELS, STATUS_LABELS, initials, personHue } from "../lib/domain";
+import { EVENT_ICONS, EVENT_LABELS, STATUS_LABELS, initials, personHue } from "../lib/domain";
 import { Icon } from "../lib/icons";
 import { usePhoto } from "../lib/viewer";
 
@@ -21,7 +21,7 @@ export function StatusPill({ status }: { status: Status }) {
 export function EventPill({ type }: { type: EventType }) {
   return (
     <span className="pill" style={{ "--pill-color": `var(--event-${type})` } as CSSProperties}>
-      <Icon name={type} size={13} />
+      <Icon name={EVENT_ICONS[type] ?? "note"} size={13} />
       {EVENT_LABELS[type]}
     </span>
   );
@@ -71,8 +71,59 @@ export function Who({ id, name }: { id: string; name: string }) {
   );
 }
 
+/**
+ * Something to watch while a sheet is being read.
+ *
+ * Three rings round a nucleus, because a read of Smartsheet is several sheets
+ * fetched at once and an atom is the one familiar picture of separate things
+ * going round together. A spinner would have said the same thing the way
+ * every other page on the internet says it.
+ *
+ * The rings hold still and the electrons travel them, which is the way round
+ * that reads as an atom. Spinning the rings themselves was the first attempt
+ * and is the cheaper effect: within a second or two the three of them drift
+ * into the same angle and the figure becomes a tangle rather than a thing
+ * with a shape.
+ *
+ * Not called `atom` — the Forecast Builder already has that class for the
+ * cards somebody drags, and the two would have fought over a border.
+ *
+ * Purely decorative, so it is hidden from anybody listening rather than read
+ * out as a row of shapes. The sentence underneath says what is happening.
+ */
+export function Atom({ size = 46 }: { size?: number }) {
+  return (
+    <svg
+      className="loader-atom"
+      width={size}
+      height={size}
+      viewBox="0 0 40 40"
+      aria-hidden="true"
+      focusable="false"
+    >
+      {[0, 60, 120].map((tilt, i) => (
+        <g key={tilt} transform={`rotate(${tilt} 20 20)`}>
+          <ellipse cx="20" cy="20" rx="16.5" ry="6.4" />
+          {/*
+            Placed on the ring by its own coordinates, so a browser that does
+            not follow the path still draws an atom at rest rather than a dot
+            stranded in the corner.
+          */}
+          <circle className={`loader-electron loader-electron-${i + 1}`} cx="36.5" cy="20" r="2.1" />
+        </g>
+      ))}
+      <circle className="loader-core" cx="20" cy="20" r="3.4" />
+    </svg>
+  );
+}
+
 export function Loading({ what = "the schedule" }: { what?: string }) {
-  return <div className="loading">Loading {what}…</div>;
+  return (
+    <div className="loading">
+      <Atom />
+      <div>Loading {what}…</div>
+    </div>
+  );
 }
 
 /**

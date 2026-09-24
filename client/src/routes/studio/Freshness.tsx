@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { send, useApi } from "../../lib/api";
 import { Icon } from "../../lib/icons";
-import type { FreshnessReport } from "../../types";
+import type { FreshnessReport, RefreshResult } from "../../types";
 import { ErrorNote, Loading } from "../../components/bits";
 
 /**
@@ -43,6 +43,14 @@ export default function Freshness() {
   const report = useApi<FreshnessReport>("/freshness");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /*
+   * Kept apart from `busy`, which the visibility switch also uses. Reading
+   * every sheet again takes about ten seconds against real ones, and a button
+   * that looks idle for ten seconds gets pressed twice — so this one says
+   * what it is doing while it does it.
+   */
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshed, setRefreshed] = useState<RefreshResult | null>(null);
 
   if (report.error) return <ErrorNote message={report.error} />;
   if (!report.data) return <Loading what="the freshness report" />;
@@ -62,6 +70,29 @@ export default function Freshness() {
     }
   }
 
+  /**
+   * Read every sheet again, rather than waiting for the timer.
+   *
+   * The result is kept and shown rather than folded into a reload, because
+   * the thing worth saying is what came back — a refresh that reached nine
+   * sheets and not the tenth has succeeded and failed at the same time, and
+   * a page that only said "done" would be reporting the first half.
+   */
+  async function refreshCopy() {
+    setRefreshing(true);
+    setError(null);
+    setRefreshed(null);
+    try {
+      const result = await send<RefreshResult>("/freshness/refresh", "POST", {});
+      setRefreshed(result);
+      report.reload();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "The copy could not be read again.");
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   return (
     <>
       {error && <ErrorNote message={error} />}
@@ -77,10 +108,41 @@ export default function Freshness() {
             <>. Nothing here writes to the sheets.</>
           )}
         </p>
-        <button className="btn" onClick={() => report.reload()}>
-          <Icon name="refresh" /> Check again
-        </button>
+        <div className="studio-item-actions">
+          {r.canRefresh && (
+            <button
+              className="btn accent"
+              onClick={() => void refreshCopy()}
+              disabled={refreshing}
+              aria-label="Read every sheet again now, instead of waiting for the next scheduled sync."
+            >
+              <Icon name="refresh" />
+              {refreshing ? "Reading the sheets…" : "Refresh the copy"}
+            </button>
+          )}
+          <button className="btn" onClick={() => report.reload()} disabled={refreshing}>
+            <Icon name="refresh" /> Check again
+          </button>
+        </div>
       </div>
+
+      {refreshed && (
+        <p className="studio-note">
+          {refreshed.failed.length === 0 ? (
+            <>
+              Read again just now &mdash; {refreshed.rows.toLocaleString()} rows across{" "}
+              {refreshed.refreshed} sheets.
+            </>
+          ) : (
+            <>
+              Read again just now &mdash; {refreshed.rows.toLocaleString()} rows, but{" "}
+              {refreshed.failed.length} could not be read and{" "}
+              {refreshed.failed.length === 1 ? "is" : "are"} still showing the previous copy:{" "}
+              {refreshed.failed.map((f) => `${f.kind} (${f.why})`).join("; ")}
+            </>
+          )}
+        </p>
+      )}
 
       <div className="studio-item">
         <div className="studio-item-head">

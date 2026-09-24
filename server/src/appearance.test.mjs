@@ -44,7 +44,7 @@ test("setting a token back to its own colour stores nothing", () => {
 
 test("an empty value is a reset rather than a mistake", () => {
   const { kept, dropped } = readAppearance({ colours: { accent: "" }, icons: { "nav.item.today": "" } });
-  assert.deepEqual(kept, { colours: {}, icons: {}, gradients: true, washes: {} });
+  assert.deepEqual(kept, { colours: {}, icons: {}, gradients: true, washes: {}, opens: "page" });
   assert.equal(dropped, 0);
 });
 
@@ -57,7 +57,7 @@ test("icons are keyed on sidebar slots and nothing else", () => {
 });
 
 test("nothing sent is nothing stored", () => {
-  const bare = { colours: {}, icons: {}, gradients: true, washes: {} };
+  const bare = { colours: {}, icons: {}, gradients: true, washes: {}, opens: "page" };
   assert.deepEqual(readAppearance(undefined).kept, bare);
   assert.deepEqual(readAppearance({ colours: null, icons: null }).kept, bare);
 });
@@ -105,4 +105,24 @@ test("every token names a real variable and a real colour", () => {
     assert.ok(token.label && token.group, `${token.id} is named for the editor`);
   }
   assert.equal(new Set(TOKENS.map((t) => t.id)).size, TOKENS.length, "ids are unique");
+});
+
+/**
+ * How a calendar entry opens.
+ *
+ * The thing that must never happen is a client inventing a third behaviour:
+ * the value decides what a click does for everybody, and anything but the two
+ * words that mean something falls back to the way it has always worked.
+ */
+
+test("the two ways of opening an entry are kept, and nothing else is", () => {
+  assert.equal(readAppearance({ opens: "panel" }).kept.opens, "panel");
+  assert.equal(readAppearance({ opens: "page" }).kept.opens, "page");
+});
+
+test("a way of opening nobody offered falls back to the page, which is how it has always worked", () => {
+  assert.equal(readAppearance({ opens: "sidebar" }).kept.opens, "page");
+  assert.equal(readAppearance({ opens: true }).kept.opens, "page");
+  assert.equal(readAppearance({ opens: { nested: "panel" } }).kept.opens, "page");
+  assert.equal(readAppearance({}).kept.opens, "page");
 });

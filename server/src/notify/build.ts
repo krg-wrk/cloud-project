@@ -1,3 +1,4 @@
+import { inRegion } from "../data/smartsheetSource.js";
 import type { CalendarEvent, ContentItem, KnowledgeSession, Person } from "../types.js";
 import type { PeerReview } from "../store.js";
 import type { Notice, NoticeKind } from "./types.js";
@@ -101,7 +102,7 @@ export function awayOn(events: CalendarEvent[], person: Person, date: string): b
     // Leave belongs to one person; a holiday to a region, or to everybody.
     if (e.type === "leave") return e.personId === person.id;
     if (e.type !== "public-holiday") return false;
-    return !e.region || e.region === "All" || e.region === person.region;
+    return inRegion(e.region, person.region);
   });
 }
 
@@ -271,13 +272,14 @@ function digestNotices(world: World): Notice[] {
     }
 
     const sessions = world.sessions
-      .filter((s) => s.date >= week && s.date <= end)
+      // Anything running during the week, not only starting in it.
+      .filter((s) => s.endDate >= week && s.startDate <= end)
       .filter((s) => (world.goingBySession[s.id] ?? []).includes(person.id))
-      .sort((a, b) => a.date.localeCompare(b.date));
+      .sort((a, b) => a.startDate.localeCompare(b.startDate));
     if (sessions.length) {
       lines.push(
         `You are signed up for (${sessions.length}):`,
-        ...sessions.map((s) => `  · ${shortDate(s.date)} — ${s.title}`),
+        ...sessions.map((s) => `  · ${shortDate(s.startDate)} — ${s.title}`),
       );
     }
 

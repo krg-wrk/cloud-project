@@ -18,6 +18,14 @@ interface ViewerContextValue {
   isManager: boolean;
   isAdmin: boolean;
   /**
+   * The people who report to this one, by person id.
+   *
+   * A filter that offers only "me" or "everyone" has nothing to say to a Head
+   * Of with five people under them, and the directory has known who they are
+   * all along. Empty for somebody who already sees the whole team.
+   */
+  reports: string[];
+  /**
    * Where to find a person's photograph, for the few who have set one.
    *
    * Built here because the team list is already loaded here and an avatar can
@@ -54,6 +62,7 @@ export function ViewerProvider({
     people,
     person: me.person,
     isManager: me.seesWholeTeam,
+    reports: me.reports ?? [],
     isAdmin: me.role === "admin",
     photos,
   };

@@ -238,8 +238,8 @@ export default function DetailsPanel({
               </div>
             )}
             <div className="fact">
-              <dt>Season</dt>
-              <dd>{item.season}</dd>
+              <dt>Forecast horizon</dt>
+              <dd>{item.forecastHorizon}</dd>
             </div>
             {(current!.editorId || current!.editorUrl) && (
               <div className="fact">

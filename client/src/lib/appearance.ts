@@ -30,6 +30,11 @@ export interface Appearance {
   gradients: boolean;
   /** Nav group id → wash hue id, with the defaults already filled in. */
   washes: Record<string, string>;
+  /**
+   * What clicking a calendar entry does — its own page, or a panel over the
+   * month. Mirrors `server/src/appearance.ts`.
+   */
+  opens?: "page" | "panel";
   tokens?: Token[];
 }
 

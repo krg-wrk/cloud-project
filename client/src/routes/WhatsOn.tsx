@@ -2,7 +2,7 @@ import type { CSSProperties } from "react";
 import { useSearchParams } from "react-router-dom";
 import { query, useApi } from "../lib/api";
 import { TODAY, formatMedium, monthKey, monthLabel } from "../lib/date";
-import { EVENT_LABELS, personName } from "../lib/domain";
+import { EVENT_LABELS, eventWho } from "../lib/domain";
 import type { CalendarEvent, EventType, Person } from "../types";
 import BackLink from "../components/BackLink";
 import { ErrorNote, EventPill, Loading } from "../components/bits";
@@ -111,14 +111,13 @@ export default function WhatsOn() {
                   </div>
                   <div>
                     <div className="deadline-title">{event.title}</div>
-                    <div className="deadline-meta">
-                      {event.personId
-                        ? personName(people.data ?? [], event.personId)
-                        : event.region
-                          ? `${event.region} team`
-                          : (event.location ?? "Everyone")}
-                      {event.location && event.personId ? ` · ${event.location}` : ""}
-                    </div>
+                    {/*
+                      Everybody named, or the countries it applies to. It
+                      read "EMEA team" under a South African public holiday,
+                      which is the region the country had been turned into on
+                      the way in rather than anything the sheet says.
+                    */}
+                    <div className="deadline-meta">{eventWho(event, people.data ?? [])}</div>
                   </div>
                   <EventPill type={event.type} />
                 </div>
