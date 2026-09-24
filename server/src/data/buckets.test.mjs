@@ -25,7 +25,14 @@ test("every value the team listed lands in the bucket they put it in", () => {
     Marketing: "marketing",
     Webinar: "marketing",
     Presentation: "marketing",
-    Analyst: "client-call",
+    "Client Call": "client-call",
+    Mindset: "client-call",
+    Enterprise: "client-call",
+    "Analyst Call": "client-call",
+    "Value Added Services": "client-call",
+    Prospect: "client-call",
+    "Creative Intelligence": "client-call",
+    "At Risk Initiative": "client-call",
     "Freelance Brief": "reminder",
     "Data Brief": "reminder",
     "Retail Shoot": "reminder",
@@ -35,6 +42,15 @@ test("every value the team listed lands in the bucket they put it in", () => {
   for (const [value, bucket] of Object.entries(expected)) {
     assert.equal(normaliseEventType(value), bucket, `${value} should be ${bucket}`);
   }
+});
+
+test("Mindset is a client call, which the second table settled and the first did not", () => {
+  /*
+   * It appeared under both Client Call and Reminder when the buckets were
+   * first described. A table somebody can read is what made that a question
+   * worth asking rather than a guess buried in a chain of substring tests.
+   */
+  assert.equal(normaliseEventType("Mindset"), "client-call");
 });
 
 test("a dropdown value nobody has bucketed is visibly other, not quietly leave", () => {

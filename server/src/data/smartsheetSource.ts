@@ -1549,14 +1549,20 @@ export const EVENT_TYPES: Record<string, EventType> = {
   presentation: "marketing",
 
   /*
-   * Mindset is listed under both Client Call and Reminder in the team's own
-   * table. It sits here with Analyst, which is the reading that groups two
-   * client-facing things rather than putting it among the briefs. One line
-   * to move if that is the wrong way round.
+   * Everything the team meets a client for, whatever it is called on the
+   * day. Mindset appeared under both Client Call and Reminder in the first
+   * table and is settled here by the second — which is the whole reason
+   * these are a list somebody can read rather than a chain of guesses.
    */
-  mindset: "client-call",
-  analyst: "client-call",
   "client call": "client-call",
+  mindset: "client-call",
+  enterprise: "client-call",
+  "analyst call": "client-call",
+  analyst: "client-call",
+  "value added services": "client-call",
+  prospect: "client-call",
+  "creative intelligence": "client-call",
+  "at risk initiative": "client-call",
 
   "freelance brief": "reminder",
   "data brief": "reminder",
