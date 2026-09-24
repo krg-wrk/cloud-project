@@ -44,13 +44,25 @@ test("every value the team listed lands in the bucket they put it in", () => {
   }
 });
 
-test("Mindset is a client call, which the second table settled and the first did not", () => {
+test("Mindset is a client call and nothing else", () => {
   /*
    * It appeared under both Client Call and Reminder when the buckets were
-   * first described. A table somebody can read is what made that a question
-   * worth asking rather than a guess buried in a chain of substring tests.
+   * first described, and the team has settled it here. A table somebody can
+   * read is what made that a question worth asking rather than a guess
+   * buried in a chain of substring tests.
    */
   assert.equal(normaliseEventType("Mindset"), "client-call");
+  assert.notEqual(normaliseEventType("Mindset"), "reminder");
+});
+
+test("a half-written dropdown value is not quietly taken for the whole one", () => {
+  /*
+   * "Analyst" was "Analyst Call" with the line unfinished. Reading it as an
+   * alias would have been a small, reasonable guess of exactly the kind that
+   * put eleven activity types under leave.
+   */
+  assert.equal(normaliseEventType("Analyst Call"), "client-call");
+  assert.equal(normaliseEventType("Analyst"), "other");
 });
 
 test("a dropdown value nobody has bucketed is visibly other, not quietly leave", () => {

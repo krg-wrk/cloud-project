@@ -1549,16 +1549,23 @@ export const EVENT_TYPES: Record<string, EventType> = {
   presentation: "marketing",
 
   /*
-   * Everything the team meets a client for, whatever it is called on the
-   * day. Mindset appeared under both Client Call and Reminder in the first
-   * table and is settled here by the second — which is the whole reason
-   * these are a list somebody can read rather than a chain of guesses.
+   * Everything the team meets a client for.
+   *
+   * Mindset is here and only here. It appeared under both Client Call and
+   * Reminder when the buckets were first sketched, and the team has since
+   * said it belongs in this one — which is the whole reason these are a list
+   * somebody can read rather than a chain of guesses that would have settled
+   * it silently on whichever branch was written first.
+   *
+   * "Analyst" is deliberately not an alias for "Analyst Call". It read like
+   * a shorter name for the same thing and was a half-typed line; guessing at
+   * a value the dropdown does not hold is how eleven types came to read as
+   * leave. Anything the list does not name is visibly `other`.
    */
   "client call": "client-call",
   mindset: "client-call",
   enterprise: "client-call",
   "analyst call": "client-call",
-  analyst: "client-call",
   "value added services": "client-call",
   prospect: "client-call",
   "creative intelligence": "client-call",
